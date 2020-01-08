@@ -9,6 +9,8 @@ import zio.redis.Parse.{ Implicits => Parsers }
 import zio.stream.{ ZStream, ZStreamChunk }
 import zio._
 
+import scala.language.implicitConversions
+
 private[redis] trait Commands {
 
   val ERROR  = '-'

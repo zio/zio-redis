@@ -6,7 +6,8 @@ inThisBuild(
     homepage := Some(url("https://github.com/zio/zio-redis/")),
     licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     developers := List(
-      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
+      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd")),
+      Developer("Dapperware", "Paul Daniels", "paul@leadiq.com", url("https://github.com/Dapperware"))
     ),
     pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
