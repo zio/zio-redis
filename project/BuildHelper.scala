@@ -62,6 +62,9 @@ object BuildHelper {
         Seq("-Xexperimental") ++ stdOptsUpto212
     }
 
+  val zioVersion    = "1.0.0-RC17"
+  val zioNioVersion = "0.4.0"
+
   def buildInfoSettings(packageName: String) =
     Seq(
       buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
@@ -78,7 +81,7 @@ object BuildHelper {
       Seq(
         "com.github.ghik" % "silencer-lib" % SilencerVersion % Provided cross CrossVersion.full,
         compilerPlugin("com.github.ghik" % "silencer-plugin" % SilencerVersion cross CrossVersion.full),
-        compilerPlugin("org.typelevel" %% "kind-projector" % "0.10.3")
+        compilerPlugin("org.typelevel"   %% "kind-projector" % "0.10.3")
       ),
     incOptions ~= (_.withLogRecompileOnMacro(false))
   )
