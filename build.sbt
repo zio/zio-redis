@@ -1,59 +1,39 @@
-// *****************************************************************************
-// Projects
-// *****************************************************************************
+import BuildHelper._
 
-lazy val root =
+inThisBuild(
+  List(
+    organization := "dev.zio",
+    homepage := Some(url("https://github.com/zio/zio-redis/")),
+    licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    developers := List(
+      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
+    ),
+    pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
+    pgpPublicRing := file("/tmp/public.asc"),
+    pgpSecretRing := file("/tmp/secret.asc"),
+    scmInfo := Some(
+      ScmInfo(url("https://github.com/zio/zio-redis/"), "scm:git:git@github.com:zio/zio-redis.git")
+    )
+  )
+)
+
+ThisBuild / publishTo := sonatypePublishToBundle.value
+
+addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
+addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+
+lazy val redis =
   project
     .in(file("."))
-    .settings(settings)
+    .settings(stdSettings("zio-redis"))
+    .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        library.zio,
-        library.zioNio,
-        library.zioTest    % Test,
-        library.zioTestSbt % Test
+        "dev.zio" %% "zio"          % zioVersion,
+        "dev.zio" %% "zio-nio"      % zioNioVersion,
+        "dev.zio" %% "zio-test"     % zioVersion % Test,
+        "dev.zio" %% "zio-test-sbt" % zioVersion % Test
       ),
-      publishArtifact := false,
-      testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+      testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
-
-// *****************************************************************************
-// Library dependencies
-// *****************************************************************************
-
-lazy val library =
-  new {
-    object Version {
-      val zio    = "1.0.0-RC17"
-      val zioNio = "0.4.0"
-    }
-    val zio        = "dev.zio" %% "zio"          % Version.zio
-    val zioNio     = "dev.zio" %% "zio-nio"      % Version.zioNio
-    val zioTest    = "dev.zio" %% "zio-test"     % Version.zio
-    val zioTestSbt = "dev.zio" %% "zio-test-sbt" % Version.zio
-  }
-
-// *****************************************************************************
-// Settings
-// *****************************************************************************
-
-lazy val settings =
-  commonSettings ++
-    scalafmtSettings ++
-    commandAliases
-
-lazy val commonSettings =
-  Seq(
-    name := "ZIO Redis",
-    scalaVersion := "2.13.1",
-    organization := "com.leadiq"
-  )
-
-lazy val scalafmtSettings =
-  Seq(
-    scalafmtOnCompile := true
-  )
-
-lazy val commandAliases =
-  addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt") ++
-    addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+    .enablePlugins(BuildInfoPlugin)
