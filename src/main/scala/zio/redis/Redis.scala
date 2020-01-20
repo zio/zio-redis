@@ -14,7 +14,7 @@ object Redis {
     def ping: RIO[R, Unit]
     def quit: RIO[R, Unit]
     def select(index: Int): RIO[R, Unit]
-    def swapdb(index1: Int, index2: Int): RIO[R, Unit]
+    def swapDb(index1: Int, index2: Int): RIO[R, Unit]
 
     // geo
     def geoAdd(key: String, member: GeoMemberInfo, members: GeoMemberInfo*): RIO[R, Long]
@@ -51,7 +51,22 @@ object Redis {
       storeDist: Option[String] = None
     ): RIO[R, List[GeoInfo]]
 
-    // TODO: hashes
+    // hashes
+    def hDel(key: String, field: String, fields: String*): RIO[R, Long]
+    def hExists(key: String, field: String): RIO[R, Boolean]
+    def hGet(key: String, field: String): RIO[R, Option[String]]
+    def hGetAll(key: String): RIO[R, List[(String, String)]]
+    def hIncrBy(key: String, field: String, amount: Long): RIO[R, Long]
+    def hIncrByFloat(key: String, field: String, amount: Float): RIO[R, Float]
+    def hKeys(key: String): RIO[R, List[String]]
+    def hLen(key: String): RIO[R, Long]
+    def hMGet(key: String, field: String, fields: String*): RIO[R, List[HashPair]]
+    def hSet(key: String, pair: HashPair, pairs: HashPair*): RIO[R, Long]
+    def hSetNx(key: String, pair: HashPair): RIO[R, Boolean]
+    def hStrLen(key: String, field: String): RIO[R, Long]
+    def hVals(key: String): RIO[R, List[String]]
+    def hScan(key: String, pattern: Option[String], count: Option[Long], `type`: Option[String]): RIO[R, Chunk[Byte]]
+
     // TODO: keys
     // TODO: lists
     // TODO: server
