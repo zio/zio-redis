@@ -4,11 +4,11 @@ package object redis {
   import Command.Input._
   import Command.Output._
 
-  lazy val append   = Command("APPEND", Tuple2(KeyInput, StringInput), UnitOutput)
-  lazy val auth     = Command("AUTH", StringInput, UnitOutput)
-  lazy val bitcount = Command("BITCOUNT", Tuple2(KeyInput, RangeInput), LongOutput)
-  lazy val get      = Command("GET", KeyInput, ValueOutput)
-  lazy val incr     = Command("INCR", KeyInput, LongOutput)
-  lazy val incrBy   = Command("INCRBY", Tuple2(KeyInput, LongInput), LongOutput)
-  lazy val lrange   = Command("LRANGE", Tuple2(KeyInput, RangeInput), StreamOutput)
+  // connection
+  lazy val auth   = Command("AUTH", StringInput, UnitOutput)
+  lazy val echo   = Command("ECHO", StringInput, ValueOutput)
+  lazy val ping   = Command("PING", Varargs(StringInput), ValueOutput)
+  lazy val quit   = Command[Any, IO[Error, Unit]]("QUIT", NoInput, UnitOutput)
+  lazy val select = Command("SELECT", LongInput, UnitOutput)
+  lazy val swapDB = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
 }
