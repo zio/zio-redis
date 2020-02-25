@@ -29,6 +29,7 @@ object Command {
     case object NoInput                                                           extends Input[Any]
     case object RangeInput                                                        extends Input[Range]
     case object LongInput                                                         extends Input[Long]
+    case object DoubleInput                                                       extends Input[Double]
     final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B])                   extends Input[(A, B)]
     final case class Tuple3[-A, -B, -C](_1: Input[A], _2: Input[B], _3: Input[C]) extends Input[(A, B, C)]
     final case class Tuple4[-A, -B, -C, -D](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D])
@@ -41,6 +42,7 @@ object Command {
   object Output {
     case object UnitOutput   extends Output[IO[Error, Unit]]
     case object LongOutput   extends Output[IO[Error, Long]]
+    case object BoolOutput   extends Output[IO[Error, Boolean]]
     case object ValueOutput  extends Output[IO[Error, Chunk[Byte]]]
     case object StreamOutput extends Output[Stream[Error, Chunk[Byte]]]
   }
