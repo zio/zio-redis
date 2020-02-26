@@ -40,14 +40,14 @@ object Command {
   sealed trait Input[-A]
 
   object Input {
-    case object DoubleInput extends Input[Double]
+    case object DoubleInput   extends Input[Double]
     case object DurationInput extends Input[Duration]
-    case object LongInput   extends Input[Long]
-    case object NoInput     extends Input[Unit]
-    case object RangeInput  extends Input[Range]
-    case object StringInput extends Input[String]
-    case object TimeInput   extends Input[Instant]
-    case object ValueInput  extends Input[Chunk[Byte]]
+    case object LongInput     extends Input[Long]
+    case object NoInput       extends Input[Unit]
+    case object RangeInput    extends Input[Range]
+    case object StringInput   extends Input[String]
+    case object TimeInput     extends Input[Instant]
+    case object ValueInput    extends Input[Chunk[Byte]]
 
     final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]]
 
@@ -66,12 +66,12 @@ object Command {
   sealed trait Output[+A]
 
   object Output {
-    case object BoolOutput   extends Output[IO[Error, Boolean]]
+    case object BoolOutput     extends Output[IO[Error, Boolean]]
     case object DurationOutput extends Output[IO[Error, Duration]]
-    case object LongOutput   extends Output[IO[Error, Long]]
-    case object StreamOutput extends Output[Stream[Error, Chunk[Byte]]]
-    case object StringOutput extends Output[IO[Error, String]]
-    case object UnitOutput   extends Output[IO[Error, Unit]]
-    case object ValueOutput  extends Output[IO[Error, Chunk[Byte]]]
+    case object LongOutput     extends Output[IO[Error, Long]]
+    case object StreamOutput   extends Output[Stream[Error, Chunk[Byte]]]
+    case object StringOutput   extends Output[IO[Error, String]]
+    case object UnitOutput     extends Output[IO[Error, Unit]]
+    case object ValueOutput    extends Output[IO[Error, Chunk[Byte]]]
   }
 }

@@ -46,14 +46,18 @@ package object redis {
     lazy val hvals   = Command("HVALS", StringInput, ValueOutput)
   }
 
+  object hll {
+    lazy val pfadd   = Command("PFADD", Tuple2(StringInput, NonEmptyList(ValueInput)), BoolOutput)
+    lazy val pfcount = Command("PFCOUNT", NonEmptyList(StringInput), LongOutput)
+    lazy val pfmerge = Command("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
+  }
+
   /*
    * Keys
    *
    * Problems:
-   *   - should EXPIREAT and PEXPIREAT accept Date (lettuce approach)?
    *   - optional parameters in MIGRATE
    *   - should we support OBJECT?
-   *   - should we refine response to commands like PTTL (e.g. -2 one error, -1 another error etc.)
    *   - should we support RANDOMKEY?
    *   - should we support RESTORE?
    *   - optional parameters in SCAN
