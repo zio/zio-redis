@@ -1,8 +1,9 @@
 package zio.redis
 
+import java.time.Instant
+
 import zio.{ Chunk, IO }
 import zio.stream.Stream
-import java.time.Instant
 import zio.duration.Duration
 
 final case class Command[-In, +Out] private[redis] (
