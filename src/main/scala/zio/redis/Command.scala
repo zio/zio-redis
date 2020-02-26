@@ -44,7 +44,7 @@ object Command {
     case object DoubleInput   extends Input[Double]
     case object DurationInput extends Input[Duration]
     case object LongInput     extends Input[Long]
-    case object NoInput       extends Input[Unit]
+    case object UnitInput     extends Input[Unit]
     case object RangeInput    extends Input[Range]
     case object StringInput   extends Input[String]
     case object TimeInput     extends Input[Instant]

@@ -9,7 +9,7 @@ package object redis {
     lazy val auth   = Command("AUTH", StringInput, UnitOutput)
     lazy val echo   = Command("ECHO", StringInput, ByteOutput)
     lazy val ping   = Command("PING", Varargs(StringInput), ByteOutput)
-    lazy val quit   = Command("QUIT", NoInput, UnitOutput)
+    lazy val quit   = Command("QUIT", UnitInput, UnitOutput)
     lazy val select = Command("SELECT", LongInput, UnitOutput)
     lazy val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
   }
