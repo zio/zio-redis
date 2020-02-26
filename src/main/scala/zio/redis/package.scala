@@ -5,7 +5,7 @@ package object redis {
   import Command.Output._
 
   /*
-   * connection
+   * Connection
    *
    * Problems:
    *   - is quit properly represented
@@ -18,7 +18,7 @@ package object redis {
   lazy val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
 
   /*
-   * hashes
+   * Hashes
    *
    * Problems:
    *   - varargs must be passed (is non-empty varargs a solution)
@@ -45,7 +45,7 @@ package object redis {
   lazy val hvals   = Command("HVALS", StringInput, ValueOutput)
 
   /*
-   * keys
+   * Keys
    *
    * Problems:
    *   - varargs must be passed (is non-empty varargs a solution)
@@ -76,4 +76,27 @@ package object redis {
   lazy val ttl       = Command("TTL", StringInput, LongOutput)
   lazy val `type`    = Command("TYPE", StringInput, StringOutput)
   lazy val unlink    = Command("UNLINK", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
+
+  /*
+   * Sets
+   *
+   * Problems:
+   *   - varargs must be passed (is non-empty varargs a solution)
+   *   - optional parameters in SPOP and SRANDMEMBER
+   *   - optional parameters in SSCAN
+   */
+  lazy val sadd        = Command("SADD", Tuple3(StringInput, ValueInput, Varargs(ValueInput)), LongOutput)
+  lazy val scard       = Command("SCARD", StringInput, LongOutput)
+  lazy val sdiff       = Command("SDIFF", Tuple2(StringInput, Varargs(StringInput)), ValueOutput)
+  lazy val sdiffstore  = Command("SDIFFSTORE", Tuple3(StringInput, StringInput, Varargs(StringInput)), LongOutput)
+  lazy val sinter      = Command("SINTER", Tuple2(StringInput, Varargs(StringInput)), ValueOutput)
+  lazy val sinterstore = Command("SINTERSTORE", Tuple3(StringInput, StringInput, Varargs(StringInput)), LongOutput)
+  lazy val sismember   = Command("SISMEMBER", Tuple2(StringInput, ValueInput), BoolOutput)
+  lazy val smembers    = Command("SMEMBERS", StringInput, ValueOutput)
+  lazy val smove       = Command("SMOVE", Tuple3(StringInput, StringInput, ValueInput), BoolOutput)
+  lazy val spop        = Command("SPOP", Tuple2(StringInput, LongInput), ValueOutput)
+  lazy val srandmember = Command("SRANDMEMBER", Tuple2(StringInput, LongInput), ValueOutput)
+  lazy val srem        = Command("SREM", Tuple3(StringInput, ValueInput, Varargs(ValueInput)), LongOutput)
+  lazy val sunion      = Command("SUNION", Tuple2(StringInput, Varargs(StringInput)), ValueOutput)
+  lazy val sinterstore = Command("SUNIONSTORE", Tuple3(StringInput, StringInput, Varargs(StringInput)), LongOutput)
 }

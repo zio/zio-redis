@@ -24,14 +24,14 @@ object Command {
   sealed trait Input[-A]
 
   object Input {
-    case object StringInput                                                       extends Input[String]
-    case object NoInput                                                           extends Input[Any]
-    case object RangeInput                                                        extends Input[Range]
-    case object LongInput                                                         extends Input[Long]
-    case object DoubleInput                                                       extends Input[Double]
-    case object ValueInput extends Input[Chunk[Byte]]
+    case object StringInput extends Input[String]
+    case object NoInput     extends Input[Any]
+    case object RangeInput  extends Input[Range]
+    case object LongInput   extends Input[Long]
+    case object DoubleInput extends Input[Double]
+    case object ValueInput  extends Input[Chunk[Byte]]
 
-    final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B])                   extends Input[(A, B)]
+    final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)]
 
     final case class Tuple3[-A, -B, -C](_1: Input[A], _2: Input[B], _3: Input[C]) extends Input[(A, B, C)]
 
