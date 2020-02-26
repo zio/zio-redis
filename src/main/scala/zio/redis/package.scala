@@ -14,18 +14,6 @@ package object redis {
     lazy val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
   }
 
-  /*
-   * Hashes
-   *
-   * Problems:
-   *   - optional parameters in HSCAN
-   *   - should we generalize fields and keys?
-   *
-   * TODO:
-   *   - keys as chunks
-   *   - implicit conversion fron string to chunk
-   *   - Chunk.fromString (maybe)
-   */
   object hashes {
     lazy val hdel         = Command("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
     lazy val hexists      = Command("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
@@ -36,6 +24,11 @@ package object redis {
     lazy val hkeys        = Command("HKEYS", StringInput, StreamOutput)
     lazy val hlen         = Command("HLEN", StringInput, LongOutput)
     lazy val hmget        = Command("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
+    lazy val hscan = Command(
+      "HSCAN",
+      Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(CountInput), OptionalInput(TypeInput)),
+      ScanOutput
+    )
     lazy val hset = Command(
       "HSET",
       Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, ByteInput))),
@@ -60,7 +53,6 @@ package object redis {
    *   - should we support OBJECT?
    *   - should we support RANDOMKEY?
    *   - should we support RESTORE?
-   *   - optional parameters in SCAN
    *   - optional parameters in SORT
    *   - should we support WAIT?
    */
@@ -78,18 +70,17 @@ package object redis {
     lazy val pttl      = Command("PTTL", StringInput, DurationOutput)
     lazy val rename    = Command("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
     lazy val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), UnitOutput)
-    lazy val touch     = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
-    lazy val ttl       = Command("TTL", StringInput, DurationOutput)
-    lazy val `type`    = Command("TYPE", StringInput, StringOutput)
-    lazy val unlink    = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
+    lazy val scan = Command(
+      "SCAN",
+      Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(CountInput), OptionalInput(TypeInput)),
+      ScanOutput
+    )
+    lazy val touch  = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
+    lazy val ttl    = Command("TTL", StringInput, DurationOutput)
+    lazy val `type` = Command("TYPE", StringInput, StringOutput)
+    lazy val unlink = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
   }
 
-  /*
-   * Sets
-   *
-   * Problems:
-   *   - optional parameters in SSCAN
-   */
   object sets {
     lazy val sadd        = Command("SADD", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
     lazy val scard       = Command("SCARD", StringInput, LongOutput)
@@ -103,6 +94,12 @@ package object redis {
     lazy val spop        = Command("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
     lazy val srandmember = Command("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
     lazy val srem        = Command("SREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+    lazy val sscan = Command(
+      "SSCAN",
+      Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(CountInput), OptionalInput(TypeInput)),
+      ScanOutput
+    )
+    lazy val touch       = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
     lazy val sunion      = Command("SUNION", NonEmptyList(StringInput), ByteOutput)
     lazy val sunionstore = Command("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   }

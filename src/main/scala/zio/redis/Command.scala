@@ -6,6 +6,8 @@ import zio.{ Chunk, IO }
 import zio.stream.Stream
 import zio.duration.Duration
 
+import scala.util.matching.Regex
+
 final case class Command[-In, +Out] private[redis] (
   name: String,
   input: Command.Input[In],
@@ -41,13 +43,16 @@ object Command {
 
   object Input {
     case object ByteInput     extends Input[Chunk[Byte]]
+    case object CountInput    extends Input[Long]
     case object DoubleInput   extends Input[Double]
     case object DurationInput extends Input[Duration]
     case object LongInput     extends Input[Long]
+    case object MatchInput    extends Input[Regex]
     case object UnitInput     extends Input[Unit]
     case object RangeInput    extends Input[Range]
     case object StringInput   extends Input[String]
     case object TimeInput     extends Input[Instant]
+    case object TypeInput     extends Input[String]
 
     final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]]
 
@@ -70,6 +75,7 @@ object Command {
     case object ByteOutput     extends Output[IO[Error, Chunk[Byte]]]
     case object DurationOutput extends Output[IO[Error, Duration]]
     case object LongOutput     extends Output[IO[Error, Long]]
+    case object ScanOutput     extends Output[IO[Error, (Long, Stream[Error, Chunk[Byte]])]]
     case object StreamOutput   extends Output[Stream[Error, Chunk[Byte]]]
     case object StringOutput   extends Output[IO[Error, String]]
     case object UnitOutput     extends Output[IO[Error, Unit]]
