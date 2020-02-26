@@ -4,7 +4,12 @@ package object redis {
   import Command.Input._
   import Command.Output._
 
-  // connection
+  /*
+   * connection
+   *
+   * Problems:
+   *   - is quit properly represented
+   */
   lazy val auth   = Command("AUTH", StringInput, UnitOutput)
   lazy val echo   = Command("ECHO", StringInput, ValueOutput)
   lazy val ping   = Command("PING", Varargs(StringInput), ValueOutput)
