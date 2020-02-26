@@ -24,7 +24,6 @@ object Command {
   sealed trait Input[-A]
 
   object Input {
-    case object KeyInput                                                          extends Input[String]
     case object StringInput                                                       extends Input[String]
     case object NoInput                                                           extends Input[Any]
     case object RangeInput                                                        extends Input[Range]
@@ -43,6 +42,7 @@ object Command {
     case object UnitOutput   extends Output[IO[Error, Unit]]
     case object LongOutput   extends Output[IO[Error, Long]]
     case object BoolOutput   extends Output[IO[Error, Boolean]]
+    case object StringOutput extends Output[IO[Error, String]]
     case object ValueOutput  extends Output[IO[Error, Chunk[Byte]]]
     case object StreamOutput extends Output[Stream[Error, Chunk[Byte]]]
   }

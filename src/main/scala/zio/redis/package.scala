@@ -15,7 +15,7 @@ package object redis {
   lazy val ping   = Command("PING", Varargs(StringInput), ValueOutput)
   lazy val quit   = Command[Any, IO[Error, Unit]]("QUIT", NoInput, UnitOutput)
   lazy val select = Command("SELECT", LongInput, UnitOutput)
-  lazy val swapDB = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
+  lazy val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
 
   /*
    * hashes
@@ -25,21 +25,53 @@ package object redis {
    *   - optional parameters in HSCAN
    *   - should we specialize value output for commands like HVALS
    */
-  lazy val hDel         = Command("HDEL", Tuple3(KeyInput, StringInput, Varargs(StringInput)), LongOutput)
-  lazy val hExists      = Command("HEXISTS", Tuple2(KeyInput, StringInput), BoolOutput)
-  lazy val hGet         = Command("HGET", Tuple2(KeyInput, StringInput), ValueOutput)
-  lazy val hGetAll      = Command("HGETALL", KeyInput, StreamOutput)
-  lazy val hIncrBy      = Command("HINCRBY", Tuple3(KeyInput, StringInput, LongInput), LongOutput)
-  lazy val hIncrByFloat = Command("HINCRBYFLOAT", Tuple3(KeyInput, StringInput, DoubleInput), ValueOutput)
-  lazy val hKeys        = Command("HKEYS", KeyInput, StreamOutput)
-  lazy val hLen         = Command("HLEN", KeyInput, LongOutput)
-  lazy val hmGet        = Command("HMGET", Tuple3(KeyInput, StringInput, Varargs(StringInput)), StreamOutput)
-  lazy val hSet = Command(
+  lazy val hdel         = Command("HDEL", Tuple3(StringInput, StringInput, Varargs(StringInput)), LongOutput)
+  lazy val hexists      = Command("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
+  lazy val hget         = Command("HGET", Tuple2(StringInput, StringInput), ValueOutput)
+  lazy val hgetall      = Command("HGETALL", StringInput, StreamOutput)
+  lazy val hincrby      = Command("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
+  lazy val hincrbyfloat = Command("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), ValueOutput)
+  lazy val hkeys        = Command("HKEYS", StringInput, StreamOutput)
+  lazy val hlen         = Command("HLEN", StringInput, LongOutput)
+  lazy val hmget        = Command("HMGET", Tuple3(StringInput, StringInput, Varargs(StringInput)), StreamOutput)
+  lazy val hset = Command(
     "HSET",
-    Tuple3(KeyInput, Tuple2(StringInput, StringInput), Varargs(Tuple2(StringInput, StringInput))),
+    Tuple3(StringInput, Tuple2(StringInput, StringInput), Varargs(Tuple2(StringInput, StringInput))),
     UnitOutput
   )
-  lazy val hSetNX  = Command("HSETNX", Tuple3(KeyInput, StringInput, StringInput), BoolOutput)
-  lazy val hStrLen = Command("HSTRLEN", Tuple2(KeyInput, StringInput), LongOutput)
-  lazy val hVals   = Command("HVALS", KeyInput, ValueOutput)
+  lazy val hsetnx  = Command("HSETNX", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
+  lazy val hstrlen = Command("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
+  lazy val hvals   = Command("HVALS", StringInput, ValueOutput)
+
+  /*
+   * keys
+   *
+   * Problems:
+   *   - varargs must be passed (is non-empty varargs a solution)
+   *   - optional parameters in MIGRATE
+   *   - should we support OBJECT?
+   *   - should we refine response to commands like PTTL (e.g. -2 one error, -1 another error etc.)
+   *   - should we support RANDOMKEY?
+   *   - should we support RESTORE?
+   *   - optional parameters in SCAN
+   *   - optional parameters in SORT
+   *   - should we support WAIT?
+   */
+  lazy val del       = Command("DEL", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
+  lazy val dump      = Command("DUMP", StringInput, ValueOutput)
+  lazy val exists    = Command("EXISTS", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
+  lazy val expire    = Command("EXPIRE", Tuple2(StringInput, LongInput), BoolOutput)
+  lazy val expireat  = Command("EXPIREAT", Tuple2(StringInput, LongInput), BoolOutput)
+  lazy val keys      = Command("KEYS", StringInput, StreamOutput)
+  lazy val move      = Command("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
+  lazy val persist   = Command("PERSIST", StringInput, BoolOutput)
+  lazy val pexpire   = Command("PEXPIRE", Tuple2(StringInput, LongInput), BoolOutput)
+  lazy val pexpireat = Command("PEXPIREAT", Tuple2(StringInput, LongInput), BoolOutput)
+  lazy val pttl      = Command("PTTL", StringInput, LongOutput)
+  lazy val rename    = Command("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
+  lazy val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), UnitOutput)
+  lazy val touch = Command("TOUCH", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
+  lazy val ttl      = Command("TTL", StringInput, LongOutput)
+  lazy val `type` = Command("TYPE", StringInput, StringOutput)
+  lazy val unlink = Command("UNLINK", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
 }
