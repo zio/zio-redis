@@ -24,6 +24,7 @@ package object redis {
    *   - varargs must be passed (is non-empty varargs a solution)
    *   - optional parameters in HSCAN
    *   - should we specialize value output for commands like HVALS
+   *   - should we generalize fields and keys?
    */
   lazy val hdel         = Command("HDEL", Tuple3(StringInput, StringInput, Varargs(StringInput)), LongOutput)
   lazy val hexists      = Command("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
@@ -36,10 +37,10 @@ package object redis {
   lazy val hmget        = Command("HMGET", Tuple3(StringInput, StringInput, Varargs(StringInput)), StreamOutput)
   lazy val hset = Command(
     "HSET",
-    Tuple3(StringInput, Tuple2(StringInput, StringInput), Varargs(Tuple2(StringInput, StringInput))),
-    UnitOutput
+    Tuple3(StringInput, Tuple2(StringInput, ValueInput), Varargs(Tuple2(StringInput, ValueInput))),
+    LongOutput
   )
-  lazy val hsetnx  = Command("HSETNX", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
+  lazy val hsetnx  = Command("HSETNX", Tuple3(StringInput, StringInput, ValueInput), BoolOutput)
   lazy val hstrlen = Command("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
   lazy val hvals   = Command("HVALS", StringInput, ValueOutput)
 
@@ -48,6 +49,7 @@ package object redis {
    *
    * Problems:
    *   - varargs must be passed (is non-empty varargs a solution)
+   *   - should EXPIREAT and PEXPIREAT accept Date (lettuce approach)?
    *   - optional parameters in MIGRATE
    *   - should we support OBJECT?
    *   - should we refine response to commands like PTTL (e.g. -2 one error, -1 another error etc.)
@@ -70,8 +72,8 @@ package object redis {
   lazy val pttl      = Command("PTTL", StringInput, LongOutput)
   lazy val rename    = Command("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   lazy val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), UnitOutput)
-  lazy val touch = Command("TOUCH", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
-  lazy val ttl      = Command("TTL", StringInput, LongOutput)
-  lazy val `type` = Command("TYPE", StringInput, StringOutput)
-  lazy val unlink = Command("UNLINK", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
+  lazy val touch     = Command("TOUCH", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
+  lazy val ttl       = Command("TTL", StringInput, LongOutput)
+  lazy val `type`    = Command("TYPE", StringInput, StringOutput)
+  lazy val unlink    = Command("UNLINK", Tuple2(StringInput, Varargs(StringInput)), LongOutput)
 }
