@@ -103,4 +103,18 @@ package object redis {
     lazy val sunion      = Command("SUNION", NonEmptyList(StringInput), ByteOutput)
     lazy val sunionstore = Command("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   }
+
+  /*
+   * TODO:
+   *   - BITFIELD
+   *   - BITOP
+   *   - BITPOS
+   */
+  object strings {
+    lazy val append   = Command("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
+    lazy val bitcount = Command("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
+    lazy val decr     = Command("DECR", StringInput, LongOutput)
+    lazy val decrby   = Command("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
+    lazy val get      = Command("GET", StringInput, ByteOutput)
+  }
 }
