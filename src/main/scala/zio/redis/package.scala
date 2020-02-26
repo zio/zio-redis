@@ -7,8 +7,8 @@ package object redis {
 
   object connection {
     lazy val auth   = Command("AUTH", StringInput, UnitOutput)
-    lazy val echo   = Command("ECHO", StringInput, ValueOutput)
-    lazy val ping   = Command("PING", Varargs(StringInput), ValueOutput)
+    lazy val echo   = Command("ECHO", StringInput, ByteOutput)
+    lazy val ping   = Command("PING", Varargs(StringInput), ByteOutput)
     lazy val quit   = Command("QUIT", NoInput, UnitOutput)
     lazy val select = Command("SELECT", LongInput, UnitOutput)
     lazy val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
@@ -29,25 +29,25 @@ package object redis {
   object hashes {
     lazy val hdel         = Command("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
     lazy val hexists      = Command("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
-    lazy val hget         = Command("HGET", Tuple2(StringInput, StringInput), ValueOutput)
+    lazy val hget         = Command("HGET", Tuple2(StringInput, StringInput), ByteOutput)
     lazy val hgetall      = Command("HGETALL", StringInput, StreamOutput)
     lazy val hincrby      = Command("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
-    lazy val hincrbyfloat = Command("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), ValueOutput)
+    lazy val hincrbyfloat = Command("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), ByteOutput)
     lazy val hkeys        = Command("HKEYS", StringInput, StreamOutput)
     lazy val hlen         = Command("HLEN", StringInput, LongOutput)
     lazy val hmget        = Command("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
     lazy val hset = Command(
       "HSET",
-      Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, ValueInput))),
+      Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, ByteInput))),
       LongOutput
     )
-    lazy val hsetnx  = Command("HSETNX", Tuple3(StringInput, StringInput, ValueInput), BoolOutput)
+    lazy val hsetnx  = Command("HSETNX", Tuple3(StringInput, StringInput, ByteInput), BoolOutput)
     lazy val hstrlen = Command("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
-    lazy val hvals   = Command("HVALS", StringInput, ValueOutput)
+    lazy val hvals   = Command("HVALS", StringInput, ByteOutput)
   }
 
   object hll {
-    lazy val pfadd   = Command("PFADD", Tuple2(StringInput, NonEmptyList(ValueInput)), BoolOutput)
+    lazy val pfadd   = Command("PFADD", Tuple2(StringInput, NonEmptyList(ByteInput)), BoolOutput)
     lazy val pfcount = Command("PFCOUNT", NonEmptyList(StringInput), LongOutput)
     lazy val pfmerge = Command("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
   }
@@ -66,7 +66,7 @@ package object redis {
    */
   object keys {
     lazy val del       = Command("DEL", NonEmptyList(StringInput), LongOutput)
-    lazy val dump      = Command("DUMP", StringInput, ValueOutput)
+    lazy val dump      = Command("DUMP", StringInput, ByteOutput)
     lazy val exists    = Command("EXISTS", NonEmptyList(StringInput), LongOutput)
     lazy val expire    = Command("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
     lazy val expireat  = Command("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
@@ -91,19 +91,19 @@ package object redis {
    *   - optional parameters in SSCAN
    */
   object sets {
-    lazy val sadd        = Command("SADD", Tuple2(StringInput, NonEmptyList(ValueInput)), LongOutput)
+    lazy val sadd        = Command("SADD", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
     lazy val scard       = Command("SCARD", StringInput, LongOutput)
-    lazy val sdiff       = Command("SDIFF", NonEmptyList(StringInput), ValueOutput)
+    lazy val sdiff       = Command("SDIFF", NonEmptyList(StringInput), ByteOutput)
     lazy val sdiffstore  = Command("SDIFFSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-    lazy val sinter      = Command("SINTER", NonEmptyList(StringInput), ValueOutput)
+    lazy val sinter      = Command("SINTER", NonEmptyList(StringInput), ByteOutput)
     lazy val sinterstore = Command("SINTERSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-    lazy val sismember   = Command("SISMEMBER", Tuple2(StringInput, ValueInput), BoolOutput)
-    lazy val smembers    = Command("SMEMBERS", StringInput, ValueOutput)
-    lazy val smove       = Command("SMOVE", Tuple3(StringInput, StringInput, ValueInput), BoolOutput)
-    lazy val spop        = Command("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), ValueOutput)
-    lazy val srandmember = Command("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), ValueOutput)
-    lazy val srem        = Command("SREM", Tuple2(StringInput, NonEmptyList(ValueInput)), LongOutput)
-    lazy val sunion      = Command("SUNION", NonEmptyList(StringInput), ValueOutput)
+    lazy val sismember   = Command("SISMEMBER", Tuple2(StringInput, ByteInput), BoolOutput)
+    lazy val smembers    = Command("SMEMBERS", StringInput, ByteOutput)
+    lazy val smove       = Command("SMOVE", Tuple3(StringInput, StringInput, ByteInput), BoolOutput)
+    lazy val spop        = Command("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
+    lazy val srandmember = Command("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
+    lazy val srem        = Command("SREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+    lazy val sunion      = Command("SUNION", NonEmptyList(StringInput), ByteOutput)
     lazy val sunionstore = Command("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   }
 }
