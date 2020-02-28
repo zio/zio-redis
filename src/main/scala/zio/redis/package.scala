@@ -109,12 +109,28 @@ package object redis {
    *   - BITFIELD
    *   - BITOP
    *   - BITPOS
+   *   - SET
    */
   object strings {
-    lazy val append   = Command("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
-    lazy val bitcount = Command("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
-    lazy val decr     = Command("DECR", StringInput, LongOutput)
-    lazy val decrby   = Command("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
-    lazy val get      = Command("GET", StringInput, ByteOutput)
+    lazy val append      = Command("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
+    lazy val bitcount    = Command("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
+    lazy val decr        = Command("DECR", StringInput, LongOutput)
+    lazy val decrby      = Command("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
+    lazy val get         = Command("GET", StringInput, ByteOutput)
+    lazy val getbit      = Command("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
+    lazy val getrange    = Command("GETRANGE", Tuple2(StringInput, RangeInput), ByteOutput)
+    lazy val getset      = Command("GETSET", Tuple2(StringInput, ByteInput), ByteOutput)
+    lazy val incr        = Command("INCR", StringInput, LongOutput)
+    lazy val incrby      = Command("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
+    lazy val incrbyfloat = Command("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), ByteOutput)
+    lazy val mget        = Command("MGET", NonEmptyList(StringInput), StreamOutput)
+    lazy val mset        = Command("MSET", NonEmptyList(Tuple2(StringInput, ByteInput)), UnitOutput)
+    lazy val msetnx      = Command("MSETNX", NonEmptyList(Tuple2(StringInput, ByteInput)), BoolOutput)
+    lazy val psetex      = Command("PSETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
+    lazy val setbit      = Command("SETBIT", Tuple3(StringInput, LongInput, ByteInput), ByteOutput)
+    lazy val setex       = Command("SETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
+    lazy val setnx       = Command("SETNX", Tuple2(StringInput, ByteInput), BoolOutput)
+    lazy val setrange    = Command("SETRANGE", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
+    lazy val strlen      = Command("STRLEN", StringInput, LongOutput)
   }
 }
