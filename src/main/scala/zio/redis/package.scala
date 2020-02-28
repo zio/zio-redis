@@ -133,4 +133,27 @@ package object redis {
     lazy val setrange    = Command("SETRANGE", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
     lazy val strlen      = Command("STRLEN", StringInput, LongOutput)
   }
+
+  /*
+   * TODO:
+   *   - BLPOP (non-empty list not in last position)
+   *   - BRPOP
+   *   - LINSERT
+   */
+  object lists {
+    lazy val brpoplpush = Command("BRPOPLPUSH", Tuple3(StringInput, StringInput, DurationInput), ByteOutput)
+    lazy val lindex     = Command("LINDEX", Tuple2(StringInput, LongInput), ByteOutput)
+    lazy val llen       = Command("LLEN", StringInput, LongOutput)
+    lazy val lpop       = Command("LPOP", StringInput, ByteOutput)
+    lazy val lpush      = Command("LPUSH", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+    lazy val lpushx     = Command("LPUSHX", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+    lazy val lrange     = Command("LRANGE", Tuple2(StringInput, RangeInput), StreamOutput)
+    lazy val lrem       = Command("LREM", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
+    lazy val lset       = Command("LSET", Tuple3(StringInput, LongInput, ByteInput), UnitOutput)
+    lazy val ltrim      = Command("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput)
+    lazy val rpop       = Command("RPOP", StringInput, ByteOutput)
+    lazy val rpoplpush  = Command("RPOPLPUSH", Tuple2(StringInput, StringInput), ByteOutput)
+    lazy val rpush      = Command("RPUSH", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+    lazy val rpushx     = Command("RPUSHX", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+  }
 }
