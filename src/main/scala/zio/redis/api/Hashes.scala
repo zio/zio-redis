@@ -16,7 +16,7 @@ trait Hashes {
   final val hmget        = Command("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
   final val hscan = Command(
     "HSCAN",
-    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(CountInput), OptionalInput(TypeInput)),
+    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(TypeInput)),
     ScanOutput
   )
   final val hset = Command(
