@@ -1,7 +1,8 @@
-package zio.redis
+package zio.redis.api
 
-import Command.Input._
-import Command.Output._
+import zio.redis.Command
+import zio.redis.Command.Input._
+import zio.redis.Command.Output._
 
 /*
  * TODO:

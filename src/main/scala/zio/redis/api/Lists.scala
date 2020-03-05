@@ -1,7 +1,8 @@
-package zio.redis
+package zio.redis.api
 
-import Command.Input._
-import Command.Output._
+import zio.redis.Command
+import zio.redis.Command.Input._
+import zio.redis.Command.Output._
 
 /*
  * TODO:
@@ -24,5 +25,4 @@ trait Lists {
   val rpoplpush  = Command("RPOPLPUSH", Tuple2(StringInput, StringInput), ByteOutput)
   val rpush      = Command("RPUSH", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
   val rpushx     = Command("RPUSHX", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
-
 }
