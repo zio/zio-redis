@@ -113,7 +113,7 @@ release: &release
           command: echo -n "${PGP_SECRET}" | base64 -di > /tmp/secret.asc
       - run:
           name: Release artifacts
-          command: ./sbt ++${SCALA_VERSION}! clean ci-release
+          command: ./sbt ++${SCALA_VERSION}! ci-release
 
 jobs:
   lint:
