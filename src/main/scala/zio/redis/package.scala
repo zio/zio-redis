@@ -1,16 +1,11 @@
 package zio
 
-package object redis {
-  import api._
-
-  object all extends Connection with Hashes with HyperLogLog with Keys with Lists with Sets with Strings with SortedSets
-
-  object connection extends Connection
-  object hashes     extends Hashes
-  object hll        extends HyperLogLog
-  object keys       extends Keys
-  object lists      extends Lists
-  object sets       extends Sets
-  object strings    extends Strings
-  object zsets      extends SortedSets
-}
+package object redis
+    extends api.Connection
+    with api.Hashes
+    with api.HyperLogLog
+    with api.Keys
+    with api.Lists
+    with api.Sets
+    with api.Strings
+    with api.SortedSets
