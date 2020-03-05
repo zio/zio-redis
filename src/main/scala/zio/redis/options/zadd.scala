@@ -11,6 +11,6 @@ object zadd {
   case object CH
   case object INCR
 
-  type CH = CH.type
+  type CH   = CH.type
   type INCR = INCR.type
 }
