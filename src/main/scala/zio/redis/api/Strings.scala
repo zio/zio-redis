@@ -1,8 +1,8 @@
 package zio.redis.api
 
 import zio.redis.Command
-import zio.redis.Command.Input._
-import zio.redis.Command.Output._
+import zio.redis.Input._
+import zio.redis.Output._
 
 trait Strings {
   final val append      = Command("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
