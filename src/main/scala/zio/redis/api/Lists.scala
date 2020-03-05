@@ -4,12 +4,6 @@ import zio.redis.Command
 import zio.redis.Command.Input._
 import zio.redis.Command.Output._
 
-/*
- * TODO:
- *   - BLPOP (non-empty list not in last position)
- *   - BRPOP
- *   - LINSERT
- */
 trait Lists {
   final val brpoplpush = Command("BRPOPLPUSH", Tuple3(StringInput, StringInput, DurationInput), ByteOutput)
   final val lindex     = Command("LINDEX", Tuple2(StringInput, LongInput), ByteOutput)

@@ -4,13 +4,6 @@ import zio.redis.Command
 import zio.redis.Command.Input._
 import zio.redis.Command.Output._
 
-/*
- * TODO:
- *   - BITFIELD
- *   - BITOP
- *   - BITPOS
- *   - SET
- */
 trait Strings {
   final val append      = Command("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
   final val bitcount    = Command("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)

@@ -4,15 +4,6 @@ import zio.redis.Command
 import zio.redis.Command.Input._
 import zio.redis.Command.Output._
 
-/*
- * Problems:
- *   - optional parameters in MIGRATE
- *   - should we support OBJECT?
- *   - should we support RANDOMKEY?
- *   - should we support RESTORE?
- *   - optional parameters in SORT
- *   - should we support WAIT?
- */
 trait Keys {
   final val del       = Command("DEL", NonEmptyList(StringInput), LongOutput)
   final val dump      = Command("DUMP", StringInput, ByteOutput)
