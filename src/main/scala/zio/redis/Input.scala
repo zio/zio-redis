@@ -19,9 +19,9 @@ object Input {
   case object RangeInput            extends Input[Range]
   case object StringInput           extends Input[String]
   case object TimeInput             extends Input[Instant]
-  case object ZAddUpdate            extends Input[options.zadd.Updates]
-  case object ZAddChanged           extends Input[options.zadd.CH]
-  case object ZAddIncrement         extends Input[options.zadd.INCR]
+  case object ZAddUpdateInput       extends Input[options.zadd.Updates]
+  case object ZAddChangedInput      extends Input[options.zadd.CH]
+  case object ZAddIncrementInput    extends Input[options.zadd.INCR]
   case object ZRangeWithScoresInput extends Input[options.zrange.WithScores]
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]]
