@@ -62,9 +62,6 @@ object BuildHelper {
         Seq("-Xexperimental") ++ stdOptsUpto212
     }
 
-  val zioVersion    = "1.0.0-RC17"
-  val zioNioVersion = "0.4.0"
-
   def buildInfoSettings(packageName: String) =
     Seq(
       buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
@@ -72,17 +69,18 @@ object BuildHelper {
       buildInfoObject := "BuildInfo"
     )
 
-  def stdSettings(prjName: String) = Seq(
-    name := s"$prjName",
-    crossScalaVersions := Seq(Scala212, Scala213),
-    scalaVersion in ThisBuild := Scala212,
-    scalacOptions := stdOptions ++ extraOptions(scalaVersion.value),
-    libraryDependencies ++=
-      Seq(
-        "com.github.ghik" % "silencer-lib" % SilencerVersion % Provided cross CrossVersion.full,
-        compilerPlugin("com.github.ghik" % "silencer-plugin" % SilencerVersion cross CrossVersion.full),
-        compilerPlugin("org.typelevel"   %% "kind-projector" % "0.10.3")
-      ),
-    incOptions ~= (_.withLogRecompileOnMacro(false))
-  )
+  def stdSettings(prjName: String) =
+    Seq(
+      name := s"$prjName",
+      crossScalaVersions := Seq(Scala212, Scala213),
+      scalaVersion in ThisBuild := Scala212,
+      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value),
+      libraryDependencies ++=
+        Seq(
+          "com.github.ghik" % "silencer-lib" % SilencerVersion % Provided cross CrossVersion.full,
+          compilerPlugin("com.github.ghik" % "silencer-plugin" % SilencerVersion cross CrossVersion.full),
+          compilerPlugin("org.typelevel"   %% "kind-projector" % "0.10.3")
+        ),
+      incOptions ~= (_.withLogRecompileOnMacro(false))
+    )
 }

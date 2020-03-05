@@ -2,15 +2,13 @@
 
 | CI                                       | Discord                                   |
 |------------------------------------------|-------------------------------------------|
-| [![CircleCI][badge-circle]][link-circle] | [![Discord][badge-discord]][link-discord] |
+| [![CircleCI][Badge-Circle]][Link-Circle] | [![Discord][Badge-Discord]][Link-Discord] |
 
 ZIO-based Redis client.
 
 > The client is still a work-in-progress. Watch this space!
 
-[badge-circle]: https://circleci.com/gh/zio/zio-keeper/tree/master.svg?style=svg
-[badge-discord]: https://img.shields.io/discord/629491597070827530?logo=discord
-[link-circle]: https://circleci.com/gh/zio/zio-keeper/tree/master
-[link-discord]: https://discord.gg/2ccFBr4
-[link-zio]: https://zio.dev
-[link-nio]: https://zio.github.io/zio-nio/
+[Badge-Circle]: https://circleci.com/gh/zio/zio-redis/tree/master.svg?style=svg
+[Badge-Discord]: https://img.shields.io/discord/629491597070827530?logo=discord
+[Link-Circle]: https://circleci.com/gh/zio/zio-redis/tree/master
+[Link-Discord]: https://discord.gg/2ccFBr4
