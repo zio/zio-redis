@@ -19,7 +19,7 @@ trait Sets {
   final val srem        = Command("SREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
   final val sscan = Command(
     "SSCAN",
-    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(TypeInput)),
+    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
   final val sunion      = Command("SUNION", NonEmptyList(StringInput), ByteOutput)

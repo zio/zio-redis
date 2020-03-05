@@ -20,7 +20,7 @@ trait Keys {
   final val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), UnitOutput)
   final val scan = Command(
     "SCAN",
-    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(TypeInput)),
+    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
   final val touch  = Command("TOUCH", NonEmptyList(StringInput), LongOutput)

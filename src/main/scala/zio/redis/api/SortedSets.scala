@@ -31,7 +31,7 @@ trait SortedSets {
   final val zrevrank = Command("ZREVRANK", Tuple2(StringInput, ByteInput), LongOutput)
   final val zscan = Command(
     "ZSCAN",
-    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(TypeInput)),
+    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
   final val zscore = Command("ZSCORE", Tuple2(StringInput, ByteInput), LongOutput)

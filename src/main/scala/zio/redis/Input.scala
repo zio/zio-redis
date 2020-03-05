@@ -19,7 +19,6 @@ object Input {
   case object RangeInput            extends Input[Range]
   case object StringInput           extends Input[String]
   case object TimeInput             extends Input[Instant]
-  case object TypeInput             extends Input[String]
   case object ZAddUpdate            extends Input[options.zadd.Updates]
   case object ZAddChanged           extends Input[options.zadd.CH]
   case object ZAddIncrement         extends Input[options.zadd.INCR]
