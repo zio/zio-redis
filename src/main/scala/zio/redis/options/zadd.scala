@@ -8,9 +8,6 @@ object zadd {
     case object NX extends Updates
   }
 
-  case object CH
-  case object INCR
-
-  type CH   = CH.type
-  type INCR = INCR.type
+  sealed trait CH
+  sealed trait INCR
 }
