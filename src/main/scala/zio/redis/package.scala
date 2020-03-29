@@ -9,3 +9,4 @@ package object redis
     with api.Sets
     with api.Strings
     with api.SortedSets
+    with api.Transactions
