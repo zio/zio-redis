@@ -50,4 +50,11 @@ object Command {
       extends AnyVal {
     def apply(a: A, b: B, c: C, d: D, e: E): Out = command.run((a, b, c, d, e))
   }
+
+  implicit final class Arg11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K, +Out](
+    private val command: Command[(A, B, C, D, E, F, G, H, I, J, K), Out]
+  ) extends AnyVal {
+    def apply(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K): Out =
+      command.run((a, b, c, d, e, f, g, h, i, j, k))
+  }
 }
