@@ -2,7 +2,7 @@ package zio.redis.api
 
 import zio.redis.Command
 import zio.redis.Input._
-import zio.redis.Output.{ DoubleOutput, LongOutput, OptionalOutput, StreamOutput, StringOutput }
+import zio.redis.Output.{ DoubleOutput, LongOutput, OptionalOutput, StreamOutput }
 
 trait Geo {
   lazy val geoAdd =
