@@ -46,13 +46,6 @@ trait SortedSets {
   case object WithScores
   type WithScores = WithScores.type
 
-  sealed trait Updates
-
-  object Updates {
-    case object XX extends Updates
-    case object NX extends Updates
-  }
-
   case object CH
   type CH = CH.type
   case object INCR
