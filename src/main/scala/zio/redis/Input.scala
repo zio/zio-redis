@@ -28,6 +28,15 @@ object Input {
   case object SortedSetWithScoresInput  extends Input[options.WithScores]
   case object SortedSetLimitInput       extends Input[options.Limit]
   case object SortedSetScoreRangeInput  extends Input[options.ScoreRange]
+  case object GeoCountInput             extends Input[options.Count]
+  case object GeoLongLatInput           extends Input[options.LongLat]
+  case object GeoOrderInput             extends Input[options.Order]
+  case object GeoRadiusUnitInput        extends Input[options.RadiusUnit]
+  case object GeoStoreInput             extends Input[options.Store]
+  case object GeoStoreDistInput         extends Input[options.StoreDist]
+  case object GeoWithCoordInput         extends Input[options.WithCoord]
+  case object GeoWithDistInput          extends Input[options.WithDist]
+  case object GeoWithHashInput          extends Input[options.WithHash]
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]]
 
@@ -43,14 +52,19 @@ object Input {
   final case class Tuple5[-A, -B, -C, -D, -E](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D], _5: Input[E])
       extends Input[(A, B, C, D, E)]
 
-  final case class Tuple6[-A, -B, -C, -D, -E, -F](
+  final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
     _1: Input[A],
     _2: Input[B],
     _3: Input[C],
     _4: Input[D],
     _5: Input[E],
-    _6: Input[F]
-  ) extends Input[(A, B, C, D, E, F)]
+    _6: Input[F],
+    _7: Input[G],
+    _8: Input[H],
+    _9: Input[I],
+    _10: Input[J],
+    _11: Input[K]
+  ) extends Input[(A, B, C, D, E, F, G, H, I, J, K)]
 
   final case class Varargs[-A](value: Input[A]) extends Input[Iterable[A]]
 }
