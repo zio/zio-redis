@@ -52,15 +52,6 @@ object Input {
   final case class Tuple5[-A, -B, -C, -D, -E](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D], _5: Input[E])
       extends Input[(A, B, C, D, E)]
 
-  final case class Tuple6[-A, -B, -C, -D, -E, -F](
-    _1: Input[A],
-    _2: Input[B],
-    _3: Input[C],
-    _4: Input[D],
-    _5: Input[E],
-    _6: Input[F]
-  ) extends Input[(A, B, C, D, E, F)]
-
   final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
     _1: Input[A],
     _2: Input[B],

@@ -2,7 +2,7 @@ package zio.redis.api
 
 import zio.redis.Command
 import zio.redis.Input._
-import zio.redis.Output.{ LongOutput, StreamOutput, StringOutput }
+import zio.redis.Output.{ DoubleOutput, LongOutput, OptionalOutput, StreamOutput, StringOutput }
 
 trait Geo {
   lazy val geoAdd =
@@ -24,13 +24,13 @@ trait Geo {
         StringInput,
         OptionalInput(GeoRadiusUnitInput)
       ),
-      StringOutput
+      OptionalOutput(DoubleOutput)
     )
 
   lazy val geoHash =
     Command(
       "GEOHASH",
-      NonEmptyList(StringInput),
+      Tuple2(StringInput, NonEmptyList(StringInput)),
       StreamOutput
     )
 
