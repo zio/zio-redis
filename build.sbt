@@ -8,7 +8,7 @@ inThisBuild(
     developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd")),
-      Developer("Dapperware", "Paul Daniels", "paul@leadiq.com", url("https://github.com/Dapperware"))
+      Developer("paulpdaniels", "Paul Daniels", "paulpdaniels@gmail.com", url("https://github.com/paulpdaniels"))
     ),
     pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
