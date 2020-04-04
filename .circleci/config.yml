@@ -58,10 +58,10 @@ save_cache: &save_cache
   - save_cache:
       key: sbt-zio-redis-cache
       paths:
-          - "~/.ivy2/cache"
-          - "~/.sbt"
-          - "~/.m2"
-          - "~/.cache"
+        - "~/.ivy2/cache"
+        - "~/.sbt"
+        - "~/.m2"
+        - "~/.cache"
 
 filter_tags: &filter_tags
   tags:
@@ -97,23 +97,23 @@ test: &test
 
 release: &release
   steps:
-      - checkout
-      - run:
-          name: Fetch git tags
-          command: git fetch --tags
-      - <<: *load_cache
-      - run: 
-          name: Write sonatype credentials
-          command: echo "credentials += Credentials(\"Sonatype Nexus Repository Manager\", \"oss.sonatype.org\", \"${SONATYPE_USER}\", \"${SONATYPE_PASSWORD}\")" > ~/.sbt/1.0/sonatype.sbt
-      - run:
-          name: Write PGP public key
-          command: echo -n "${PGP_PUBLIC}" | base64 -di > /tmp/public.asc
-      - run:
-          name: Write PGP secret key
-          command: echo -n "${PGP_SECRET}" | base64 -di > /tmp/secret.asc
-      - run:
-          name: Release artifacts
-          command: ./sbt ++${SCALA_VERSION}! ci-release
+    - checkout
+    - run:
+        name: Fetch git tags
+        command: git fetch --tags
+    - <<: *load_cache
+    - run: 
+        name: Write sonatype credentials
+        command: echo "credentials += Credentials(\"Sonatype Nexus Repository Manager\", \"oss.sonatype.org\", \"${SONATYPE_USER}\", \"${SONATYPE_PASSWORD}\")" > ~/.sbt/1.0/sonatype.sbt
+    - run:
+        name: Write PGP public key
+        command: echo -n "${PGP_PUBLIC}" | base64 -di > /tmp/public.asc
+    - run:
+        name: Write PGP secret key
+        command: echo -n "${PGP_SECRET}" | base64 -di > /tmp/secret.asc
+    - run:
+        name: Release artifacts
+        command: ./sbt ++${SCALA_VERSION}! ci-release
 
 jobs:
   lint:
