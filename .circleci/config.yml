@@ -16,7 +16,7 @@ machine_ubuntu: &machine_ubuntu
   machine:
     image: ubuntu-1604:201903-01
 
-install_jdk: &install_jdk
+install_deps: &install_jdk
   - run:
       name: Install JDK
       command: |
@@ -90,6 +90,9 @@ test: &test
     - checkout
     - <<: *load_cache
     - <<: *install_jdk
+    - run:
+        name: Run Redis
+        command: docker run -d redis:5-alpine
     - run:
         name: Run tests
         command: ./sbt ++${SCALA_VERSION}! test
