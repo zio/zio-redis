@@ -12,7 +12,7 @@ trait SortedSets {
     "ZADD",
     Tuple5(
       StringInput,
-      OptionalInput(SortedSetUpdateInput),
+      OptionalInput(UpdatesInput),
       OptionalInput(SortedSetChangedInput),
       OptionalInput(SortedSetIncrementInput),
       NonEmptyList(SortedSetMemberScoreInput)
