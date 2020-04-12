@@ -30,8 +30,8 @@ trait Strings {
 
   sealed trait Expiration
   object Expiration {
-    sealed case class EX(seconds: Long)
-    sealed case class PX(milliSeconds: Long)
+    sealed case class EX(seconds: Long)      extends Expiration
+    sealed case class PX(milliSeconds: Long) extends Expiration
   }
 
   case object KEEPTTL

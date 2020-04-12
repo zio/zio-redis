@@ -28,7 +28,8 @@ trait Strings {
       ),
       LongOutput
     )
-  final val bitpos      = Command("BITPOS", Tuple3(StringInput, BoolInput, StringBitPosRangeInput), LongOutput)
+  final val bitpos =
+    Command("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(StringBitPosRangeInput)), LongOutput)
   final val decr        = Command("DECR", StringInput, LongOutput)
   final val decrby      = Command("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
   final val get         = Command("GET", StringInput, ByteOutput)
@@ -46,7 +47,7 @@ trait Strings {
     "SET",
     Tuple5(
       StringInput,
-      StringInput,
+      ByteInput,
       OptionalInput(StringExpirationInput),
       OptionalInput(UpdatesInput),
       OptionalInput(StringKeepTimeToLiveInput)
