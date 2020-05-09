@@ -8,9 +8,9 @@ trait Strings {
     sealed case class SignedInt(size: Int)   extends BitFieldType
   }
 
-  case class BitFieldGet(`type`: BitFieldType, offset: Int)
-  case class BitFieldSet(`type`: BitFieldType, offset: Int, value: BigInt)
-  case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: BigInt)
+  sealed case class BitFieldGet(`type`: BitFieldType, offset: Int)
+  sealed case class BitFieldSet(`type`: BitFieldType, offset: Int, value: BigInt)
+  sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: BigInt)
 
   sealed trait BitFieldOverflow
   object BitFieldOverflow {
@@ -26,7 +26,7 @@ trait Strings {
     case object XOR extends BitOperation
   }
 
-  case class BitPosRange(start: Long, end: Option[Long])
+  sealed case class BitPosRange(start: Long, end: Option[Long])
 
   sealed trait Expiration
   object Expiration {
