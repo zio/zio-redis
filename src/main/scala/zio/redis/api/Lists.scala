@@ -11,7 +11,7 @@ trait Lists {
   final val lpop       = Command("LPOP", StringInput, ByteOutput)
   final val lpush      = Command("LPUSH", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
   final val lpushx     = Command("LPUSHX", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
-  final val lrange     = Command("LRANGE", Tuple2(StringInput, RangeInput), StreamOutput)
+  final val lrange     = Command("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput)
   final val lrem       = Command("LREM", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
   final val lset       = Command("LSET", Tuple3(StringInput, LongInput, ByteInput), UnitOutput)
   final val ltrim      = Command("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput)

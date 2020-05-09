@@ -10,7 +10,7 @@ trait Keys {
   final val exists    = Command("EXISTS", NonEmptyList(StringInput), LongOutput)
   final val expire    = Command("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
   final val expireat  = Command("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
-  final val keys      = Command("KEYS", StringInput, StreamOutput)
+  final val keys      = Command("KEYS", StringInput, ChunkOutput)
   final val move      = Command("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
   final val persist   = Command("PERSIST", StringInput, BoolOutput)
   final val pexpire   = Command("PEXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)

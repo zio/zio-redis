@@ -16,7 +16,7 @@ trait Strings {
       OptionalInput(NonEmptyList(StringBitFieldIncrInput)),
       OptionalInput(NonEmptyList(StringBitFieldOverflowInput))
     ),
-    StreamOutput
+    ChunkOutput
   )
   final val bitop       =
     Command(
@@ -39,7 +39,7 @@ trait Strings {
   final val incr        = Command("INCR", StringInput, LongOutput)
   final val incrby      = Command("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
   final val incrbyfloat = Command("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), ByteOutput)
-  final val mget        = Command("MGET", NonEmptyList(StringInput), StreamOutput)
+  final val mget        = Command("MGET", NonEmptyList(StringInput), ChunkOutput)
   final val mset        = Command("MSET", NonEmptyList(Tuple2(StringInput, ByteInput)), UnitOutput)
   final val msetnx      = Command("MSETNX", NonEmptyList(Tuple2(StringInput, ByteInput)), BoolOutput)
   final val psetex      = Command("PSETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)

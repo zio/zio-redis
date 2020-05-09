@@ -2,7 +2,7 @@ package zio.redis.api
 
 import zio.redis.Command
 import zio.redis.Input._
-import zio.redis.Output.{ DoubleOutput, LongOutput, OptionalOutput, StreamOutput }
+import zio.redis.Output._
 
 trait Geo {
   final val geoAdd =
@@ -15,11 +15,8 @@ trait Geo {
       OptionalOutput(DoubleOutput)
     )
 
-  final val geoHash =
-    Command("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
-
-  final val geoPos =
-    Command("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
+  final val geoHash = Command("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val geoPos  = Command("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
 
   final val geoRadius =
     Command(
@@ -37,7 +34,7 @@ trait Geo {
         OptionalInput(GeoStoreInput),
         OptionalInput(GeoStoreDistInput)
       ),
-      StreamOutput
+      ChunkOutput
     )
 
   final val geoRadiusByMember =
@@ -56,6 +53,6 @@ trait Geo {
         OptionalInput(GeoStoreInput),
         OptionalInput(GeoStoreDistInput)
       ),
-      StreamOutput
+      ChunkOutput
     )
 }

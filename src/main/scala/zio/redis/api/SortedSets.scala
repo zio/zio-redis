@@ -37,11 +37,11 @@ trait SortedSets {
     LongOutput
   )
 
-  final val zpopmax = Command("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), StreamOutput)
-  final val zpopmin = Command("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), StreamOutput)
+  final val zpopmax = Command("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+  final val zpopmin = Command("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
 
   final val zrange =
-    Command("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), StreamOutput)
+    Command("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), ChunkOutput)
 
   final val zrangebylex = Command(
     "ZRANGEBYLEX",
@@ -50,7 +50,7 @@ trait SortedSets {
       SortedSetLexRangeInput,
       OptionalInput(SortedSetLimitInput)
     ),
-    StreamOutput
+    ChunkOutput
   )
 
   final val zrangebyscore = Command(
@@ -61,7 +61,7 @@ trait SortedSets {
       OptionalInput(SortedSetWithScoresInput),
       OptionalInput(SortedSetLimitInput)
     ),
-    StreamOutput
+    ChunkOutput
   )
 
   final val zrank = Command("ZRANK", Tuple2(StringInput, ByteInput), ByteOutput)
@@ -78,7 +78,7 @@ trait SortedSets {
       SortedSetLexRangeInput,
       OptionalInput(SortedSetLimitInput)
     ),
-    StreamOutput
+    ChunkOutput
   )
   final val zrevrangebyscore = Command(
     "ZREVRANGEBYSCORE",
@@ -88,11 +88,11 @@ trait SortedSets {
       OptionalInput(SortedSetWithScoresInput),
       OptionalInput(SortedSetLimitInput)
     ),
-    StreamOutput
+    ChunkOutput
   )
 
   final val revrange =
-    Command("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), StreamOutput)
+    Command("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), ChunkOutput)
   final val zrevrank = Command("ZREVRANK", Tuple2(StringInput, ByteInput), LongOutput)
   final val zscan    = Command(
     "ZSCAN",
