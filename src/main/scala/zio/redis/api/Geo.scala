@@ -6,43 +6,20 @@ import zio.redis.Output.{ DoubleOutput, LongOutput, OptionalOutput, StreamOutput
 
 trait Geo {
   final val geoAdd =
-    Command(
-      "GEOADD",
-      Tuple2(
-        StringInput,
-        NonEmptyList(Tuple2(GeoLongLatInput, StringInput))
-      ),
-      LongOutput
-    )
+    Command("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(GeoLongLatInput, StringInput))), LongOutput)
 
   final val geoDist =
     Command(
       "GEODIST",
-      Tuple4(
-        StringInput,
-        StringInput,
-        StringInput,
-        OptionalInput(GeoRadiusUnitInput)
-      ),
+      Tuple4(StringInput, StringInput, StringInput, OptionalInput(GeoRadiusUnitInput)),
       OptionalOutput(DoubleOutput)
     )
 
   final val geoHash =
-    Command(
-      "GEOHASH",
-      Tuple2(StringInput, NonEmptyList(StringInput)),
-      StreamOutput
-    )
+    Command("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
 
   final val geoPos =
-    Command(
-      "GEOPOS",
-      Tuple2(
-        StringInput,
-        NonEmptyList(StringInput)
-      ),
-      StreamOutput
-    )
+    Command("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), StreamOutput)
 
   final val geoRadius =
     Command(
