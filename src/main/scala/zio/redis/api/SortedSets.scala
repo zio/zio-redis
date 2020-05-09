@@ -71,7 +71,7 @@ trait SortedSets {
   final val zremrangebyrank  = Command("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
   final val zremrangebyscore = Command("ZREMRANGEBYSCORE", Tuple2(StringInput, SortedSetScoreRangeInput), LongOutput)
 
-  final val zrevrangebylex = Command(
+  final val zrevrangebylex   = Command(
     "ZREVRANGEBYLEX",
     Tuple3(
       StringInput,
@@ -94,12 +94,12 @@ trait SortedSets {
   final val revrange =
     Command("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), StreamOutput)
   final val zrevrank = Command("ZREVRANK", Tuple2(StringInput, ByteInput), LongOutput)
-  final val zscan = Command(
+  final val zscan    = Command(
     "ZSCAN",
     Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
-  final val zscore = Command("ZSCORE", Tuple2(StringInput, ByteInput), LongOutput)
+  final val zscore   = Command("ZSCORE", Tuple2(StringInput, ByteInput), LongOutput)
 
   final val zunionstore = Command(
     "ZUNIONSTORE",

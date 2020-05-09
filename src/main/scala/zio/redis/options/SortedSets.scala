@@ -47,7 +47,7 @@ trait SortedSets {
   type WithScores = WithScores.type
 
   case object CH
-  type CH = CH.type
+  type CH   = CH.type
   case object INCR
   type INCR = INCR.type
 
