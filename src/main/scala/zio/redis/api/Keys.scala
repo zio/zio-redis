@@ -18,13 +18,13 @@ trait Keys {
   final val pttl      = Command("PTTL", StringInput, DurationOutput)
   final val rename    = Command("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   final val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), UnitOutput)
-  final val scan = Command(
+  final val scan      = Command(
     "SCAN",
     Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
-  final val touch  = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
-  final val ttl    = Command("TTL", StringInput, DurationOutput)
-  final val `type` = Command("TYPE", StringInput, StringOutput)
-  final val unlink = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
+  final val touch     = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
+  final val ttl       = Command("TTL", StringInput, DurationOutput)
+  final val `type`    = Command("TYPE", StringInput, StringOutput)
+  final val unlink    = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
 }
