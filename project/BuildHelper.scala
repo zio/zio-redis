@@ -88,6 +88,6 @@ object BuildHelper {
           "-Ywarn-unused-import"
         )
 
-      case _ => Seq.empty
+      case _             => Seq.empty
     }
 }
