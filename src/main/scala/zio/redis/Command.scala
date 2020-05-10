@@ -49,12 +49,12 @@ object Command {
     def apply(a: A)(b: B, bs: B*): IO[RedisError, Out] = command.run((a, (b, bs.toList)))
   }
 
-  implicit final class Arg1Varargs1[-A, -B, -C, +Out](private val command: Command[(A, (B, List[B]), C), Out])
+  implicit final class Arg1VarargsArg1[-A, -B, -C, +Out](private val command: Command[(A, (B, List[B]), C), Out])
       extends AnyVal {
     def apply(a: A)(b: B, bs: B*)(c: C): IO[RedisError, Out] = command.run((a, (b, bs.toList), c))
   }
 
-  implicit final class Arg1Varargs2[-A, -B, -C, -D, -E, +Out](
+  implicit final class Arg2VarargsArg2[-A, -B, -C, -D, -E, +Out](
     private val command: Command[(A, B, (C, List[C]), D, E), Out]
   ) extends AnyVal {
     def apply(a: A, b: B)(c: C, cs: C*)(d: D, e: E): IO[RedisError, Out] = command.run((a, b, (c, cs.toList), d, e))
