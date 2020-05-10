@@ -3,7 +3,9 @@ package zio.redis
 import zio.Chunk
 import zio.duration.Duration
 
-sealed trait Output[+A]
+sealed trait Output[+A] {
+  def decode(text: Chunk[Byte]): Either[RedisError, A] = ???
+}
 
 object Output {
   type Bytes = Chunk[Byte]

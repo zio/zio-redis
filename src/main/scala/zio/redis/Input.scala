@@ -7,7 +7,9 @@ import zio.duration.Duration
 
 import scala.util.matching.Regex
 
-sealed trait Input[-A]
+sealed trait Input[-A] {
+  def encode(name: String, data: A): Chunk[Byte] = ???
+}
 
 object Input {
   case object AbsTtlInput           extends Input[AbsTtl]

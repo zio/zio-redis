@@ -1,12 +1,13 @@
 package zio.redis
 
-import com.github.ghik.silencer.silent
 import zio.ZIO
 
-@silent
 final class RedisCommand[-In, +Out] private (name: String, input: Input[In], output: Output[Out]) {
-  // main command interpreter
-  def run(in: In): ZIO[RedisExecutor, RedisError, Out] = ???
+  def run(data: In): ZIO[RedisExecutor, RedisError, Out] =
+    ZIO
+      .accessM[RedisExecutor](_.get.execute(input.encode(name, data)))
+      .map(output.decode)
+      .absolve
 }
 
 // format: off
