@@ -1,14 +1,21 @@
 package zio.redis.options
 
 trait SortedSets {
+  sealed trait Aggregate
+
+  object Aggregate {
+    case object Sum extends Aggregate
+    case object Min extends Aggregate
+    case object Max extends Aggregate
+  }
+
+  case object Changed
+  type Changed = Changed.type
+
+  case object Increment
+  type Increment = Increment.type
 
   sealed trait LexMinimum
-
-  object LexMinimum {
-    case object Unbounded                   extends LexMinimum
-    sealed case class Open(value: String)   extends LexMinimum
-    sealed case class Closed(value: String) extends LexMinimum
-  }
 
   sealed trait LexMaximum
 
@@ -18,15 +25,17 @@ trait SortedSets {
     sealed case class Closed(value: String) extends LexMaximum
   }
 
+  object LexMinimum {
+    case object Unbounded                   extends LexMinimum
+    sealed case class Open(value: String)   extends LexMinimum
+    sealed case class Closed(value: String) extends LexMinimum
+  }
+
   sealed case class LexRange(min: LexMinimum, max: LexMaximum)
 
-  sealed trait ScoreMinimum
+  sealed case class Limit(offset: Long, count: Long)
 
-  object ScoreMinimum {
-    case object Infinity                    extends ScoreMinimum
-    sealed case class Open(value: String)   extends ScoreMinimum
-    sealed case class Closed(value: String) extends ScoreMinimum
-  }
+  sealed case class MemberScore(score: Double, member: String)
 
   sealed trait ScoreMaximum
 
@@ -36,26 +45,16 @@ trait SortedSets {
     sealed case class Closed(value: String) extends ScoreMaximum
   }
 
-  sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
+  sealed trait ScoreMinimum
 
-  sealed trait Aggregate
-
-  object Aggregate {
-    case object Sum extends Aggregate
-    case object Min extends Aggregate
-    case object Max extends Aggregate
+  object ScoreMinimum {
+    case object Infinity                    extends ScoreMinimum
+    sealed case class Open(value: String)   extends ScoreMinimum
+    sealed case class Closed(value: String) extends ScoreMinimum
   }
 
-  sealed case class Limit(offset: Long, count: Long)
+  sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
 
   case object WithScores
   type WithScores = WithScores.type
-
-  case object Change
-  type Change = Change.type
-
-  case object Increment
-  type Increment = Increment.type
-
-  sealed case class MemberScore(score: Double, member: String)
 }

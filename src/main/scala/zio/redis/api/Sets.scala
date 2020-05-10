@@ -20,7 +20,7 @@ trait Sets {
 
   final val sScan = Command(
     "SSCAN",
-    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+    Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
 
