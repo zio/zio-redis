@@ -28,12 +28,6 @@ trait Strings {
 
   sealed case class BitPosRange(start: Long, end: Option[Long])
 
-  sealed trait Expiration
-  object Expiration {
-    sealed case class EX(seconds: Long)      extends Expiration
-    sealed case class PX(milliSeconds: Long) extends Expiration
-  }
-
   case object KEEPTTL
   type KEEPTTL = KEEPTTL.type
 }

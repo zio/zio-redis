@@ -45,7 +45,6 @@ object Input {
   case object StringBitFieldOverflowInput extends Input[BitFieldOverflow]
   case object StringBitOperationInput     extends Input[BitOperation]
   case object StringBitPosRangeInput      extends Input[BitPosRange]
-  case object StringExpirationInput       extends Input[Expiration]
   case object StringKeepTimeToLiveInput   extends Input[KEEPTTL]
   case object UpdatesInput                extends Input[Updates]
 

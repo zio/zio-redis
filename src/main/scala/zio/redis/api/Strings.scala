@@ -48,7 +48,7 @@ trait Strings {
     Tuple5(
       StringInput,
       ByteInput,
-      OptionalInput(StringExpirationInput),
+      OptionalInput(DurationInput),
       OptionalInput(UpdatesInput),
       OptionalInput(StringKeepTimeToLiveInput)
     ),
