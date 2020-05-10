@@ -3,9 +3,9 @@ package zio.redis
 import zio.ZIO
 
 final class RedisCommand[-In, +Out] private (name: String, input: Input[In], output: Output[Out]) {
-  def run(data: In): ZIO[RedisExecutor, RedisError, Out] =
+  private[redis] def run(in: In): ZIO[RedisExecutor, RedisError, Out] =
     ZIO
-      .accessM[RedisExecutor](_.get.execute(input.encode(name, data)))
+      .accessM[RedisExecutor](_.get.execute(input.encode(name, in)))
       .map(output.decode)
       .absolve
 }
