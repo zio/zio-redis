@@ -1,32 +1,32 @@
 package zio.redis.api
 
-import zio.redis.Command
+import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
 
 trait Keys {
-  final val del       = Command("DEL", NonEmptyList(StringInput), LongOutput)
-  final val dump      = Command("DUMP", StringInput, ByteOutput)
-  final val exists    = Command("EXISTS", NonEmptyList(StringInput), BoolOutput)
-  final val expire    = Command("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
-  final val expireAt  = Command("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
-  final val keys      = Command("KEYS", StringInput, ChunkOutput)
-  final val move      = Command("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
-  final val persist   = Command("PERSIST", StringInput, BoolOutput)
-  final val pExpire   = Command("PEXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
-  final val pExpireAt = Command("PEXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
-  final val pTtl      = Command("PTTL", StringInput, DurationOutput)
-  final val rename    = Command("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
-  final val renameNx  = Command("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
+  final val del       = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
+  final val dump      = RedisCommand("DUMP", StringInput, ByteOutput)
+  final val exists    = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
+  final val expire    = RedisCommand("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
+  final val expireAt  = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
+  final val keys      = RedisCommand("KEYS", StringInput, ChunkOutput)
+  final val move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
+  final val persist   = RedisCommand("PERSIST", StringInput, BoolOutput)
+  final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
+  final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
+  final val pTtl      = RedisCommand("PTTL", StringInput, DurationOutput)
+  final val rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
+  final val renameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
-  final val scan = Command(
+  final val scan = RedisCommand(
     "SCAN",
     Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
 
-  final val touch  = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
-  final val ttl    = Command("TTL", StringInput, DurationOutput)
-  final val typeOf = Command("TYPE", StringInput, StringOutput)
-  final val unlink = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
+  final val touch  = RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
+  final val ttl    = RedisCommand("TTL", StringInput, DurationOutput)
+  final val typeOf = RedisCommand("TYPE", StringInput, StringOutput)
+  final val unlink = RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
 }
