@@ -1,13 +1,13 @@
 package zio.redis.api
 
-import zio.redis.Command
-import zio.redis.Input.{ NonEmptyList, StringInput, UnitInput }
-import zio.redis.Output.{ StreamOutput, UnitOutput }
+import zio.redis.RedisCommand
+import zio.redis.Input.{ NoInput, NonEmptyList, StringInput }
+import zio.redis.Output.{ ChunkOutput, UnitOutput }
 
 trait Transactions {
-  final val discard = Command("DISCARD", UnitInput, UnitOutput)
-  final val exec    = Command("EXEC", UnitInput, StreamOutput)
-  final val multi   = Command("MULTI", UnitInput, UnitOutput)
-  final val unwatch = Command("UNWATCH", UnitInput, UnitOutput)
-  final val watch   = Command("WATCH", NonEmptyList(StringInput), UnitOutput)
+  final val discard = RedisCommand("DISCARD", NoInput, UnitOutput)
+  final val exec    = RedisCommand("EXEC", NoInput, ChunkOutput)
+  final val multi   = RedisCommand("MULTI", NoInput, UnitOutput)
+  final val unwatch = RedisCommand("UNWATCH", NoInput, UnitOutput)
+  final val watch   = RedisCommand("WATCH", NonEmptyList(StringInput), UnitOutput)
 }

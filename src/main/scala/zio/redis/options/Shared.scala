@@ -1,10 +1,10 @@
 package zio.redis.options
 
 trait Shared {
-  sealed trait Updates
+  sealed trait Update
 
-  object Updates {
-    case object XX extends Updates
-    case object NX extends Updates
+  object Update {
+    case object SetExisting extends Update
+    case object SetNew      extends Update
   }
 }

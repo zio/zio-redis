@@ -1,84 +1,58 @@
 package zio.redis.api
 
-import zio.redis.Command
+import zio.redis.RedisCommand
 import zio.redis.Input._
-import zio.redis.Output.{ DoubleOutput, LongOutput, OptionalOutput, StreamOutput }
+import zio.redis.Output._
 
 trait Geo {
-  lazy val geoAdd =
-    Command(
-      "GEOADD",
-      Tuple2(
-        StringInput,
-        NonEmptyList(Tuple2(GeoLongLatInput, StringInput))
-      ),
-      LongOutput
-    )
+  final val geoAdd =
+    RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
 
-  lazy val geoDist =
-    Command(
+  final val geoDist =
+    RedisCommand(
       "GEODIST",
-      Tuple4(
-        StringInput,
-        StringInput,
-        StringInput,
-        OptionalInput(GeoRadiusUnitInput)
-      ),
+      Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
       OptionalOutput(DoubleOutput)
     )
 
-  lazy val geoHash =
-    Command(
-      "GEOHASH",
-      Tuple2(StringInput, NonEmptyList(StringInput)),
-      StreamOutput
-    )
+  final val geoHash = RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val geoPos  = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
 
-  lazy val geoPos =
-    Command(
-      "GEOPOS",
-      Tuple2(
-        StringInput,
-        NonEmptyList(StringInput)
-      ),
-      StreamOutput
-    )
-
-  lazy val geoRadius =
-    Command(
+  final val geoRadius =
+    RedisCommand(
       "GEORADIUS",
       Tuple11(
         StringInput,
-        GeoLongLatInput,
+        LongLatInput,
         DoubleInput,
-        GeoRadiusUnitInput,
-        OptionalInput(GeoWithCoordInput),
-        OptionalInput(GeoWithDistInput),
-        OptionalInput(GeoWithHashInput),
-        OptionalInput(GeoCountInput),
-        OptionalInput(GeoOrderInput),
-        OptionalInput(GeoStoreInput),
-        OptionalInput(GeoStoreDistInput)
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput),
+        OptionalInput(StoreInput),
+        OptionalInput(StoreDistInput)
       ),
-      StreamOutput
+      ChunkOutput
     )
 
-  lazy val geoRadiusByMember =
-    Command(
+  final val geoRadiusByMember =
+    RedisCommand(
       "GEORADIUSBYMEMBER",
       Tuple11(
         StringInput,
         StringInput,
         DoubleInput,
-        GeoRadiusUnitInput,
-        OptionalInput(GeoWithCoordInput),
-        OptionalInput(GeoWithDistInput),
-        OptionalInput(GeoWithHashInput),
-        OptionalInput(GeoCountInput),
-        OptionalInput(GeoOrderInput),
-        OptionalInput(GeoStoreInput),
-        OptionalInput(GeoStoreDistInput)
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput),
+        OptionalInput(StoreInput),
+        OptionalInput(StoreDistInput)
       ),
-      StreamOutput
+      ChunkOutput
     )
 }

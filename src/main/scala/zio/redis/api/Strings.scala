@@ -1,62 +1,60 @@
 package zio.redis.api
 
-import zio.redis.Command
+import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
 
 trait Strings {
-  final val append      = Command("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
-  final val bitcount    = Command("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
-  final val bitfield    = Command(
+  final val append   = RedisCommand("APPEND", Tuple2(StringInput, ByteInput), LongOutput)
+  final val bitCount = RedisCommand("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
+
+  final val bitField = RedisCommand(
     "BITFIELD",
     Tuple5(
       StringInput,
-      OptionalInput(NonEmptyList(StringBitFieldGetInput)),
-      OptionalInput(NonEmptyList(StringBitFieldSetInput)),
-      OptionalInput(NonEmptyList(StringBitFieldIncrInput)),
-      OptionalInput(NonEmptyList(StringBitFieldOverflowInput))
+      OptionalInput(NonEmptyList(BitFieldGetInput)),
+      OptionalInput(NonEmptyList(BitFieldSetInput)),
+      OptionalInput(NonEmptyList(BitFieldIncrInput)),
+      OptionalInput(NonEmptyList(BitFieldOverflowInput))
     ),
-    StreamOutput
+    ChunkOutput
   )
-  final val bitop       =
-    Command(
-      "BITOP",
-      Tuple3(
-        StringBitOperationInput,
-        StringInput,
-        NonEmptyList(StringInput)
-      ),
-      LongOutput
-    )
-  final val bitpos      =
-    Command("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(StringBitPosRangeInput)), LongOutput)
-  final val decr        = Command("DECR", StringInput, LongOutput)
-  final val decrby      = Command("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
-  final val get         = Command("GET", StringInput, ByteOutput)
-  final val getbit      = Command("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
-  final val getrange    = Command("GETRANGE", Tuple2(StringInput, RangeInput), ByteOutput)
-  final val getset      = Command("GETSET", Tuple2(StringInput, ByteInput), ByteOutput)
-  final val incr        = Command("INCR", StringInput, LongOutput)
-  final val incrby      = Command("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
-  final val incrbyfloat = Command("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), ByteOutput)
-  final val mget        = Command("MGET", NonEmptyList(StringInput), StreamOutput)
-  final val mset        = Command("MSET", NonEmptyList(Tuple2(StringInput, ByteInput)), UnitOutput)
-  final val msetnx      = Command("MSETNX", NonEmptyList(Tuple2(StringInput, ByteInput)), BoolOutput)
-  final val psetex      = Command("PSETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
-  final val set         = Command(
+
+  final val bitOp =
+    RedisCommand("BITOP", Tuple3(BitOperationInput, StringInput, NonEmptyList(StringInput)), LongOutput)
+
+  final val bitPos =
+    RedisCommand("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
+
+  final val decr        = RedisCommand("DECR", StringInput, LongOutput)
+  final val decrBy      = RedisCommand("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
+  final val get         = RedisCommand("GET", StringInput, ByteOutput)
+  final val getBit      = RedisCommand("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
+  final val getRange    = RedisCommand("GETRANGE", Tuple2(StringInput, RangeInput), ByteOutput)
+  final val getSet      = RedisCommand("GETSET", Tuple2(StringInput, ByteInput), ByteOutput)
+  final val incr        = RedisCommand("INCR", StringInput, LongOutput)
+  final val incrBy      = RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
+  final val incrByFloat = RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), ByteOutput)
+  final val mGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOutput)
+  final val mSet        = RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, ByteInput)), UnitOutput)
+  final val mSetNx      = RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, ByteInput)), BoolOutput)
+  final val pSetEx      = RedisCommand("PSETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
+
+  final val set = RedisCommand(
     "SET",
     Tuple5(
       StringInput,
       ByteInput,
-      OptionalInput(StringExpirationInput),
-      OptionalInput(UpdatesInput),
-      OptionalInput(StringKeepTimeToLiveInput)
+      OptionalInput(DurationInput),
+      OptionalInput(UpdateInput),
+      OptionalInput(KeepTtlInput)
     ),
     OptionalOutput(UnitOutput)
   )
-  final val setbit      = Command("SETBIT", Tuple3(StringInput, LongInput, ByteInput), ByteOutput)
-  final val setex       = Command("SETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
-  final val setnx       = Command("SETNX", Tuple2(StringInput, ByteInput), BoolOutput)
-  final val setrange    = Command("SETRANGE", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
-  final val strlen      = Command("STRLEN", StringInput, LongOutput)
+
+  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, ByteInput), ByteOutput)
+  final val setEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
+  final val setNx    = RedisCommand("SETNX", Tuple2(StringInput, ByteInput), BoolOutput)
+  final val setRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
+  final val strLen   = RedisCommand("STRLEN", StringInput, LongOutput)
 }

@@ -1,27 +1,29 @@
 package zio.redis.api
 
-import zio.redis.Command
+import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
 
 trait Sets {
-  final val sadd        = Command("SADD", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
-  final val scard       = Command("SCARD", StringInput, LongOutput)
-  final val sdiff       = Command("SDIFF", NonEmptyList(StringInput), ByteOutput)
-  final val sdiffstore  = Command("SDIFFSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val sinter      = Command("SINTER", NonEmptyList(StringInput), ByteOutput)
-  final val sinterstore = Command("SINTERSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val sismember   = Command("SISMEMBER", Tuple2(StringInput, ByteInput), BoolOutput)
-  final val smembers    = Command("SMEMBERS", StringInput, ByteOutput)
-  final val smove       = Command("SMOVE", Tuple3(StringInput, StringInput, ByteInput), BoolOutput)
-  final val spop        = Command("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
-  final val srandmember = Command("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
-  final val srem        = Command("SREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
-  final val sscan       = Command(
+  final val sAdd        = RedisCommand("SADD", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+  final val sCard       = RedisCommand("SCARD", StringInput, LongOutput)
+  final val sDiff       = RedisCommand("SDIFF", NonEmptyList(StringInput), ChunkOutput)
+  final val sDiffStore  = RedisCommand("SDIFFSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val sInter      = RedisCommand("SINTER", NonEmptyList(StringInput), ChunkOutput)
+  final val sInterStore = RedisCommand("SINTERSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val sIsMember   = RedisCommand("SISMEMBER", Tuple2(StringInput, ByteInput), BoolOutput)
+  final val sMembers    = RedisCommand("SMEMBERS", StringInput, ChunkOutput)
+  final val sMove       = RedisCommand("SMOVE", Tuple3(StringInput, StringInput, ByteInput), BoolOutput)
+  final val sPop        = RedisCommand("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), ByteOutput)
+  final val sRandMember = RedisCommand("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+  final val sRem        = RedisCommand("SREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+
+  final val sScan = RedisCommand(
     "SSCAN",
-    Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+    Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
-  final val sunion      = Command("SUNION", NonEmptyList(StringInput), ByteOutput)
-  final val sunionstore = Command("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+
+  final val sUnion      = RedisCommand("SUNION", NonEmptyList(StringInput), ChunkOutput)
+  final val sUnionStore = RedisCommand("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 }
