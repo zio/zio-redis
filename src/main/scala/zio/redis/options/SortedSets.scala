@@ -46,10 +46,11 @@ trait SortedSets {
   case object WithScores
   type WithScores = WithScores.type
 
-  case object CH
-  type CH   = CH.type
-  case object INCR
-  type INCR = INCR.type
+  case object Change
+  type Change   = Change.type
+
+  case object Increment
+  type Increment = Increment.type
 
   sealed case class MemberScore(score: Double, member: String)
 }

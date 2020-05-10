@@ -11,10 +11,10 @@ trait Strings {
     "BITFIELD",
     Tuple5(
       StringInput,
-      OptionalInput(NonEmptyList(StringBitFieldGetInput)),
-      OptionalInput(NonEmptyList(StringBitFieldSetInput)),
-      OptionalInput(NonEmptyList(StringBitFieldIncrInput)),
-      OptionalInput(NonEmptyList(StringBitFieldOverflowInput))
+      OptionalInput(NonEmptyList(BitFieldGetInput)),
+      OptionalInput(NonEmptyList(BitFieldSetInput)),
+      OptionalInput(NonEmptyList(BitFieldIncrInput)),
+      OptionalInput(NonEmptyList(BitFieldOverflowInput))
     ),
     ChunkOutput
   )
@@ -22,14 +22,14 @@ trait Strings {
     Command(
       "BITOP",
       Tuple3(
-        StringBitOperationInput,
+        BitOperationInput,
         StringInput,
         NonEmptyList(StringInput)
       ),
       LongOutput
     )
   final val bitpos      =
-    Command("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(StringBitPosRangeInput)), LongOutput)
+    Command("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
   final val decr        = Command("DECR", StringInput, LongOutput)
   final val decrby      = Command("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
   final val get         = Command("GET", StringInput, ByteOutput)
@@ -50,7 +50,7 @@ trait Strings {
       ByteInput,
       OptionalInput(DurationInput),
       OptionalInput(UpdatesInput),
-      OptionalInput(StringKeepTimeToLiveInput)
+      OptionalInput(KeepTtlInput)
     ),
     OptionalOutput(UnitOutput)
   )

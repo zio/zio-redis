@@ -13,9 +13,9 @@ trait SortedSets {
     Tuple5(
       StringInput,
       OptionalInput(UpdatesInput),
-      OptionalInput(SortedSetChangedInput),
-      OptionalInput(SortedSetIncrementInput),
-      NonEmptyList(SortedSetMemberScoreInput)
+      OptionalInput(ChangedInput),
+      OptionalInput(IncrementInput),
+      NonEmptyList(MemberScoreInput)
     ),
     LongOutput
   )
@@ -24,7 +24,7 @@ trait SortedSets {
   final val zcount  = Command("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
   final val zincrby = Command("ZINCRBY", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
 
-  final val zlexcount = Command("ZLEXCOUNT", Tuple2(StringInput, SortedSetLexRangeInput), LongOutput)
+  final val zlexcount = Command("ZLEXCOUNT", Tuple2(StringInput, LexRangeInput), LongOutput)
 
   final val zinterstore = Command(
     "ZINTERSTORE",
@@ -32,7 +32,7 @@ trait SortedSets {
       StringInput,
       NonEmptyList(StringInput),
       OptionalInput(NonEmptyList(DoubleInput)),
-      OptionalInput(SortedSetAggregateInput)
+      OptionalInput(AggregateInput)
     ),
     LongOutput
   )
@@ -41,14 +41,14 @@ trait SortedSets {
   final val zpopmin = Command("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
 
   final val zrange =
-    Command("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), ChunkOutput)
+    Command("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
 
   final val zrangebylex = Command(
     "ZRANGEBYLEX",
     Tuple3(
       StringInput,
-      SortedSetLexRangeInput,
-      OptionalInput(SortedSetLimitInput)
+      LexRangeInput,
+      OptionalInput(LimitInput)
     ),
     ChunkOutput
   )
@@ -57,9 +57,9 @@ trait SortedSets {
     "ZRANGEBYSCORE",
     Tuple4(
       StringInput,
-      SortedSetScoreRangeInput,
-      OptionalInput(SortedSetWithScoresInput),
-      OptionalInput(SortedSetLimitInput)
+      ScoreRangeInput,
+      OptionalInput(WithScoresInput),
+      OptionalInput(LimitInput)
     ),
     ChunkOutput
   )
@@ -67,16 +67,16 @@ trait SortedSets {
   final val zrank = Command("ZRANK", Tuple2(StringInput, ByteInput), ByteOutput)
   final val zrem  = Command("ZREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
 
-  final val zremrangebylex   = Command("ZREMRANGEBYLEX", Tuple2(StringInput, SortedSetLexRangeInput), LongOutput)
+  final val zremrangebylex   = Command("ZREMRANGEBYLEX", Tuple2(StringInput, LexRangeInput), LongOutput)
   final val zremrangebyrank  = Command("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
-  final val zremrangebyscore = Command("ZREMRANGEBYSCORE", Tuple2(StringInput, SortedSetScoreRangeInput), LongOutput)
+  final val zremrangebyscore = Command("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
 
   final val zrevrangebylex   = Command(
     "ZREVRANGEBYLEX",
     Tuple3(
       StringInput,
-      SortedSetLexRangeInput,
-      OptionalInput(SortedSetLimitInput)
+      LexRangeInput,
+      OptionalInput(LimitInput)
     ),
     ChunkOutput
   )
@@ -84,15 +84,15 @@ trait SortedSets {
     "ZREVRANGEBYSCORE",
     Tuple4(
       StringInput,
-      SortedSetScoreRangeInput,
-      OptionalInput(SortedSetWithScoresInput),
-      OptionalInput(SortedSetLimitInput)
+      ScoreRangeInput,
+      OptionalInput(WithScoresInput),
+      OptionalInput(LimitInput)
     ),
     ChunkOutput
   )
 
   final val revrange =
-    Command("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(SortedSetWithScoresInput)), ChunkOutput)
+    Command("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
   final val zrevrank = Command("ZREVRANK", Tuple2(StringInput, ByteInput), LongOutput)
   final val zscan    = Command(
     "ZSCAN",
@@ -107,7 +107,7 @@ trait SortedSets {
       StringInput,
       NonEmptyList(StringInput),
       OptionalInput(NonEmptyList(DoubleInput)),
-      OptionalInput(SortedSetAggregateInput)
+      OptionalInput(AggregateInput)
     ),
     LongOutput
   )

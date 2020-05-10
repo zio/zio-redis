@@ -6,12 +6,12 @@ import zio.redis.Output._
 
 trait Geo {
   final val geoAdd =
-    Command("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(GeoLongLatInput, StringInput))), LongOutput)
+    Command("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
 
   final val geoDist =
     Command(
       "GEODIST",
-      Tuple4(StringInput, StringInput, StringInput, OptionalInput(GeoRadiusUnitInput)),
+      Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
       OptionalOutput(DoubleOutput)
     )
 
@@ -23,16 +23,16 @@ trait Geo {
       "GEORADIUS",
       Tuple11(
         StringInput,
-        GeoLongLatInput,
+        LongLatInput,
         DoubleInput,
-        GeoRadiusUnitInput,
-        OptionalInput(GeoWithCoordInput),
-        OptionalInput(GeoWithDistInput),
-        OptionalInput(GeoWithHashInput),
-        OptionalInput(GeoCountInput),
-        OptionalInput(GeoOrderInput),
-        OptionalInput(GeoStoreInput),
-        OptionalInput(GeoStoreDistInput)
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput),
+        OptionalInput(StoreInput),
+        OptionalInput(StoreDistInput)
       ),
       ChunkOutput
     )
@@ -44,14 +44,14 @@ trait Geo {
         StringInput,
         StringInput,
         DoubleInput,
-        GeoRadiusUnitInput,
-        OptionalInput(GeoWithCoordInput),
-        OptionalInput(GeoWithDistInput),
-        OptionalInput(GeoWithHashInput),
-        OptionalInput(GeoCountInput),
-        OptionalInput(GeoOrderInput),
-        OptionalInput(GeoStoreInput),
-        OptionalInput(GeoStoreDistInput)
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput),
+        OptionalInput(StoreInput),
+        OptionalInput(StoreDistInput)
       ),
       ChunkOutput
     )
