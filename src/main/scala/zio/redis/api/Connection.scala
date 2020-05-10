@@ -9,5 +9,4 @@ trait Connection {
   final val echo   = Command("ECHO", StringInput, StringOutput)
   final val ping   = Command("PING", Varargs(StringInput), ByteOutput)
   final val select = Command("SELECT", LongInput, UnitOutput)
-  final val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
 }
