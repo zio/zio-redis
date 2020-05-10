@@ -54,7 +54,7 @@ trait Strings {
       StringInput,
       ByteInput,
       OptionalInput(DurationInput),
-      OptionalInput(UpdatesInput),
+      OptionalInput(UpdateInput),
       OptionalInput(KeepTtlInput)
     ),
     OptionalOutput(UnitOutput)

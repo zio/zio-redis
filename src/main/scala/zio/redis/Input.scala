@@ -44,7 +44,7 @@ object Input {
   case object BitOperationInput     extends Input[BitOperation]
   case object BitPosRangeInput      extends Input[BitPosRange]
   case object KeepTtlInput          extends Input[KeepTtl]
-  case object UpdatesInput          extends Input[Updates]
+  case object UpdateInput          extends Input[Update]
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]]
 

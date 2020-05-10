@@ -41,9 +41,9 @@ trait SortedSets {
   sealed trait Aggregate
 
   object Aggregate {
-    case object SUM extends Aggregate
-    case object MIN extends Aggregate
-    case object MAX extends Aggregate
+    case object Sum extends Aggregate
+    case object Min extends Aggregate
+    case object Max extends Aggregate
   }
 
   sealed case class Limit(offset: Long, count: Long)

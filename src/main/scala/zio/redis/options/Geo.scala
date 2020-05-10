@@ -9,17 +9,17 @@ trait Geo {
   sealed trait Order
 
   object Order {
-    case object ASC  extends Order
-    case object DESC extends Order
+    case object Ascending  extends Order
+    case object Descending extends Order
   }
 
   sealed trait RadiusUnit
 
   object RadiusUnit {
-    case object m  extends RadiusUnit
-    case object km extends RadiusUnit
-    case object ft extends RadiusUnit
-    case object mi extends RadiusUnit
+    case object Meters     extends RadiusUnit
+    case object Kilometers extends RadiusUnit
+    case object Feet       extends RadiusUnit
+    case object Miles      extends RadiusUnit
   }
 
   sealed case class Store(key: String)
