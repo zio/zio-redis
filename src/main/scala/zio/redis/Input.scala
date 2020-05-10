@@ -45,7 +45,7 @@ object Input {
   case object StringBitFieldOverflowInput extends Input[BitFieldOverflow]
   case object StringBitOperationInput     extends Input[BitOperation]
   case object StringBitPosRangeInput      extends Input[BitPosRange]
-  case object StringKeepTimeToLiveInput   extends Input[KEEPTTL]
+  case object StringKeepTimeToLiveInput   extends Input[KeepTtl]
   case object UpdatesInput                extends Input[Updates]
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]]

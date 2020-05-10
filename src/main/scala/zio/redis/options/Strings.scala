@@ -28,6 +28,6 @@ trait Strings {
 
   sealed case class BitPosRange(start: Long, end: Option[Long])
 
-  case object KEEPTTL
-  type KEEPTTL = KEEPTTL.type
+  case object KeepTtl
+  type KeepTtl = KeepTtl.type
 }
