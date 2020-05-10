@@ -1,14 +1,12 @@
 package zio.redis.api
 
-import zio.redis.Command
+import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
 
 trait Connection {
-  final val auth   = Command("AUTH", StringInput, UnitOutput)
-  final val echo   = Command("ECHO", StringInput, ByteOutput)
-  final val ping   = Command("PING", Varargs(StringInput), ByteOutput)
-  final val quit   = Command("QUIT", UnitInput, UnitOutput)
-  final val select = Command("SELECT", LongInput, UnitOutput)
-  final val swapdb = Command("SWAPDB", Tuple2(LongInput, LongInput), UnitOutput)
+  final val auth   = RedisCommand("AUTH", StringInput, UnitOutput)
+  final val echo   = RedisCommand("ECHO", StringInput, StringOutput)
+  final val ping   = RedisCommand("PING", Varargs(StringInput), ByteOutput)
+  final val select = RedisCommand("SELECT", LongInput, UnitOutput)
 }

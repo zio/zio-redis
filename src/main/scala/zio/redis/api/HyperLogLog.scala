@@ -1,11 +1,11 @@
 package zio.redis.api
 
-import zio.redis.Command
+import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
 
 trait HyperLogLog {
-  final val pfadd   = Command("PFADD", Tuple2(StringInput, NonEmptyList(ByteInput)), BoolOutput)
-  final val pfcount = Command("PFCOUNT", NonEmptyList(StringInput), LongOutput)
-  final val pfmerge = Command("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
+  final val pfAdd   = RedisCommand("PFADD", Tuple2(StringInput, NonEmptyList(ByteInput)), BoolOutput)
+  final val pfCount = RedisCommand("PFCOUNT", NonEmptyList(StringInput), LongOutput)
+  final val pfMerge = RedisCommand("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
 }
