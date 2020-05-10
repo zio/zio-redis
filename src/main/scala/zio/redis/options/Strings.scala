@@ -3,6 +3,7 @@ package zio.redis.options
 trait Strings {
 
   sealed trait BitFieldType
+
   object BitFieldType {
     sealed case class UnsignedInt(size: Int) extends BitFieldType
     sealed case class SignedInt(size: Int)   extends BitFieldType
@@ -13,6 +14,7 @@ trait Strings {
   sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: BigInt)
 
   sealed trait BitFieldOverflow
+
   object BitFieldOverflow {
     case object FAIL extends BitFieldOverflow
     case object SAT  extends BitFieldOverflow
@@ -20,6 +22,7 @@ trait Strings {
   }
 
   sealed trait BitOperation
+
   object BitOperation {
     case object AND extends BitOperation
     case object OR  extends BitOperation

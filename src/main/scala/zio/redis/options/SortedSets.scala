@@ -3,6 +3,7 @@ package zio.redis.options
 trait SortedSets {
 
   sealed trait LexMinimum
+
   object LexMinimum {
     case object Unbounded                   extends LexMinimum
     sealed case class Open(value: String)   extends LexMinimum
@@ -10,6 +11,7 @@ trait SortedSets {
   }
 
   sealed trait LexMaximum
+
   object LexMaximum {
     case object Unbounded                   extends LexMaximum
     sealed case class Open(value: String)   extends LexMaximum
@@ -19,6 +21,7 @@ trait SortedSets {
   sealed case class LexRange(min: LexMinimum, max: LexMaximum)
 
   sealed trait ScoreMinimum
+
   object ScoreMinimum {
     case object Infinity                    extends ScoreMinimum
     sealed case class Open(value: String)   extends ScoreMinimum
@@ -26,6 +29,7 @@ trait SortedSets {
   }
 
   sealed trait ScoreMaximum
+
   object ScoreMaximum {
     case object Infinity                    extends ScoreMaximum
     sealed case class Open(value: String)   extends ScoreMaximum
@@ -35,6 +39,7 @@ trait SortedSets {
   sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
 
   sealed trait Aggregate
+
   object Aggregate {
     case object SUM extends Aggregate
     case object MIN extends Aggregate
@@ -47,7 +52,7 @@ trait SortedSets {
   type WithScores = WithScores.type
 
   case object Change
-  type Change   = Change.type
+  type Change = Change.type
 
   case object Increment
   type Increment = Increment.type

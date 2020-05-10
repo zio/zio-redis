@@ -11,7 +11,7 @@ package object redis
     with api.Strings
     with api.SortedSets
     with api.Transactions
-    with options.Geo 
+    with options.Geo
     with options.Shared
     with options.SortedSets
     with options.Strings

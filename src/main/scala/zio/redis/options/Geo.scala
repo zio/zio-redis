@@ -7,12 +7,14 @@ trait Geo {
   sealed case class LongLat(longitude: Double, latitude: Double)
 
   sealed trait Order
+
   object Order {
     case object ASC  extends Order
     case object DESC extends Order
   }
 
   sealed trait RadiusUnit
+
   object RadiusUnit {
     case object m  extends RadiusUnit
     case object km extends RadiusUnit
