@@ -7,7 +7,7 @@ import zio.redis.Output._
 trait Keys {
   final val del       = Command("DEL", NonEmptyList(StringInput), LongOutput)
   final val dump      = Command("DUMP", StringInput, ByteOutput)
-  final val exists    = Command("EXISTS", NonEmptyList(StringInput), LongOutput)
+  final val exists    = Command("EXISTS", NonEmptyList(StringInput), BoolOutput)
   final val expire    = Command("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
   final val expireat  = Command("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
   final val keys      = Command("KEYS", StringInput, ChunkOutput)
@@ -17,14 +17,16 @@ trait Keys {
   final val pexpireat = Command("PEXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
   final val pttl      = Command("PTTL", StringInput, DurationOutput)
   final val rename    = Command("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
-  final val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), UnitOutput)
-  final val scan      = Command(
+  final val renamenx  = Command("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
+
+  final val scan = Command(
     "SCAN",
     Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
-  final val touch     = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
-  final val ttl       = Command("TTL", StringInput, DurationOutput)
-  final val `type`    = Command("TYPE", StringInput, StringOutput)
-  final val unlink    = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
+
+  final val touch  = Command("TOUCH", NonEmptyList(StringInput), LongOutput)
+  final val ttl    = Command("TTL", StringInput, DurationOutput)
+  final val `type` = Command("TYPE", StringInput, StringOutput)
+  final val unlink = Command("UNLINK", NonEmptyList(StringInput), LongOutput)
 }
