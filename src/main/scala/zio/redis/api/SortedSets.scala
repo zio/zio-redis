@@ -5,10 +5,10 @@ import zio.redis.Input._
 import zio.redis.Output._
 
 trait SortedSets {
-  final val bzpopmin = Command("BZPOPMIN", Tuple2(DurationInput, NonEmptyList(StringInput)), ByteOutput)
-  final val bzpopmax = Command("BZPOPMAX", Tuple2(DurationInput, NonEmptyList(StringInput)), ByteOutput)
+  final val bzPopMin = Command("BZPOPMIN", Tuple2(DurationInput, NonEmptyList(StringInput)), ByteOutput)
+  final val bzPopMax = Command("BZPOPMAX", Tuple2(DurationInput, NonEmptyList(StringInput)), ByteOutput)
 
-  final val zadd = Command(
+  final val zAdd = Command(
     "ZADD",
     Tuple5(
       StringInput,
@@ -20,13 +20,12 @@ trait SortedSets {
     LongOutput
   )
 
-  final val zcard   = Command("ZCARD", StringInput, LongOutput)
-  final val zcount  = Command("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
-  final val zincrby = Command("ZINCRBY", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
+  final val zCard     = Command("ZCARD", StringInput, LongOutput)
+  final val zCount    = Command("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
+  final val zIncrBy   = Command("ZINCRBY", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
+  final val zLexCount = Command("ZLEXCOUNT", Tuple2(StringInput, LexRangeInput), LongOutput)
 
-  final val zlexcount = Command("ZLEXCOUNT", Tuple2(StringInput, LexRangeInput), LongOutput)
-
-  final val zinterstore = Command(
+  final val zInterStore = Command(
     "ZINTERSTORE",
     Tuple4(
       StringInput,
@@ -37,71 +36,50 @@ trait SortedSets {
     LongOutput
   )
 
-  final val zpopmax = Command("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
-  final val zpopmin = Command("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+  final val zPopMax = Command("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+  final val zPopMin = Command("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
 
-  final val zrange =
+  final val zRange =
     Command("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
 
-  final val zrangebylex = Command(
-    "ZRANGEBYLEX",
-    Tuple3(
-      StringInput,
-      LexRangeInput,
-      OptionalInput(LimitInput)
-    ),
-    ChunkOutput
-  )
+  final val zRangeByLex =
+    Command("ZRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput)
 
-  final val zrangebyscore = Command(
+  final val zRangeByScore = Command(
     "ZRANGEBYSCORE",
-    Tuple4(
-      StringInput,
-      ScoreRangeInput,
-      OptionalInput(WithScoresInput),
-      OptionalInput(LimitInput)
-    ),
+    Tuple4(StringInput, ScoreRangeInput, OptionalInput(WithScoresInput), OptionalInput(LimitInput)),
     ChunkOutput
   )
 
-  final val zrank = Command("ZRANK", Tuple2(StringInput, ByteInput), ByteOutput)
-  final val zrem  = Command("ZREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+  final val zRank            = Command("ZRANK", Tuple2(StringInput, ByteInput), ByteOutput)
+  final val zRem             = Command("ZREM", Tuple2(StringInput, NonEmptyList(ByteInput)), LongOutput)
+  final val zRemRangeByLex   = Command("ZREMRANGEBYLEX", Tuple2(StringInput, LexRangeInput), LongOutput)
+  final val zRemRangeByRank  = Command("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
+  final val zRemRangeByScore = Command("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
 
-  final val zremrangebylex   = Command("ZREMRANGEBYLEX", Tuple2(StringInput, LexRangeInput), LongOutput)
-  final val zremrangebyrank  = Command("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
-  final val zremrangebyscore = Command("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
+  final val zRevRangeByLex =
+    Command("ZREVRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput)
 
-  final val zrevrangebylex   = Command(
-    "ZREVRANGEBYLEX",
-    Tuple3(
-      StringInput,
-      LexRangeInput,
-      OptionalInput(LimitInput)
-    ),
-    ChunkOutput
-  )
-  final val zrevrangebyscore = Command(
+  final val zRevRangeByScore = Command(
     "ZREVRANGEBYSCORE",
-    Tuple4(
-      StringInput,
-      ScoreRangeInput,
-      OptionalInput(WithScoresInput),
-      OptionalInput(LimitInput)
-    ),
+    Tuple4(StringInput, ScoreRangeInput, OptionalInput(WithScoresInput), OptionalInput(LimitInput)),
     ChunkOutput
   )
 
-  final val revrange =
+  final val revRange =
     Command("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
-  final val zrevrank = Command("ZREVRANK", Tuple2(StringInput, ByteInput), LongOutput)
-  final val zscan    = Command(
+
+  final val zRevRank = Command("ZREVRANK", Tuple2(StringInput, ByteInput), LongOutput)
+
+  final val zScan = Command(
     "ZSCAN",
     Tuple4(LongInput, OptionalInput(MatchInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
   )
-  final val zscore   = Command("ZSCORE", Tuple2(StringInput, ByteInput), LongOutput)
 
-  final val zunionstore = Command(
+  final val zScore = Command("ZSCORE", Tuple2(StringInput, ByteInput), LongOutput)
+
+  final val zUnionStore = Command(
     "ZUNIONSTORE",
     Tuple4(
       StringInput,

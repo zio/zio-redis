@@ -5,7 +5,7 @@ import zio.redis.Input._
 import zio.redis.Output._
 
 trait HyperLogLog {
-  final val pfadd   = Command("PFADD", Tuple2(StringInput, NonEmptyList(ByteInput)), BoolOutput)
-  final val pfcount = Command("PFCOUNT", NonEmptyList(StringInput), LongOutput)
-  final val pfmerge = Command("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
+  final val pfAdd   = Command("PFADD", Tuple2(StringInput, NonEmptyList(ByteInput)), BoolOutput)
+  final val pfCount = Command("PFCOUNT", NonEmptyList(StringInput), LongOutput)
+  final val pfMerge = Command("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
 }
