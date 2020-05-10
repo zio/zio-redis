@@ -29,5 +29,5 @@ trait Hashes {
 
   final val hsetnx  = Command("HSETNX", Tuple3(StringInput, StringInput, ByteInput), BoolOutput)
   final val hstrlen = Command("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
-  final val hvals   = Command("HVALS", StringInput, ByteOutput)
+  final val hvals   = Command("HVALS", StringInput, ChunkOutput)
 }
