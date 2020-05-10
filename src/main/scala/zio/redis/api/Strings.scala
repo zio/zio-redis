@@ -18,6 +18,7 @@ trait Strings {
     ),
     ChunkOutput
   )
+
   final val bitop       =
     Command(
       "BITOP",

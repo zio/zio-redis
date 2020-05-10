@@ -4,7 +4,6 @@ import java.time.Instant
 
 import zio.Chunk
 import zio.duration.Duration
-import zio.redis.options._
 
 import scala.util.matching.Regex
 
