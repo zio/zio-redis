@@ -16,7 +16,7 @@ object BuildHelper {
       name := s"$prjName",
       crossScalaVersions := Seq(Scala211, Scala212, Scala213),
       scalaVersion in ThisBuild := Scala212,
-      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value),
+      scalacOptions := StdOpts ++ extraOptions(scalaVersion.value),
       libraryDependencies ++=
         Seq(
           "com.github.ghik" % "silencer-lib" % SilencerVersion % Provided cross CrossVersion.full,
@@ -30,7 +30,7 @@ object BuildHelper {
   private val Scala213        = "2.13.1"
   private val SilencerVersion = "1.4.4"
 
-  private val stdOptions =
+  private val StdOpts =
     Seq(
       "-deprecation",
       "-encoding",
