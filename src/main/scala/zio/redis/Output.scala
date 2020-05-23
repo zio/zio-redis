@@ -4,7 +4,7 @@ import zio.Chunk
 import zio.duration.Duration
 
 sealed trait Output[+A] {
-  def decode(blob: Chunk[Byte]): Either[RedisError, A] = ???
+  private[redis] def decode(blob: Chunk[Byte]): Either[RedisError, A] = ???
 }
 
 object Output {
