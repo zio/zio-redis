@@ -10,9 +10,7 @@ final class RedisCommand[-In, +Out] private (name: String, input: Input[In], out
       .absolve
 }
 
-// format: off
 object RedisCommand {
-// format: on
 
   private[redis] def apply[In, Out](name: String, input: Input[In], output: Output[Out]): RedisCommand[In, Out] =
     new RedisCommand(name, input, output)
