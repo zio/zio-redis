@@ -1,6 +1,5 @@
 package zio.redis
 
-// import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
 
 import zio.Chunk
@@ -13,40 +12,37 @@ sealed trait Input[-A] {
 }
 
 object Input {
-  // private[this] def wrap(text: String): String = s"$$${text.length}\r\n$text\r\n"
-
-  // def chunk(args: Chunk[String]): Chunk[Byte] = {
-  //   val wrapped  = args.map(wrap).mkString
-  //   val envelope = s"*${args.length}\r\n$wrapped"
-  //   Chunk.fromArray(envelope.getBytes(UTF_8))
-  // }
+  private[this] def wrap(text: String): String = s"$$${text.length}\r\n$text\r\n"
 
   case object AggregateInput extends Input[Aggregate] {
-    def encode(data: Aggregate): Chunk[String] = ???
+    def encode(data: Aggregate): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object BoolInput extends Input[Boolean] {
-    def encode(data: Boolean): Chunk[String] = ???
+    def encode(data: Boolean): Chunk[String] = Chunk.single(wrap(if (data) "1" else "0"))
   }
 
   case object BitFieldGetInput extends Input[BitFieldGet] {
-    def encode(data: BitFieldGet): Chunk[String] = ???
+    def encode(data: BitFieldGet): Chunk[String] =
+      Chunk(wrap("GET"), wrap(data.`type`.stringify), wrap(data.offset.toString))
   }
 
   case object BitFieldSetInput extends Input[BitFieldSet] {
-    def encode(data: BitFieldSet): Chunk[String] = ???
+    def encode(data: BitFieldSet): Chunk[String] =
+      Chunk(wrap("SET"), wrap(data.`type`.stringify), wrap(data.offset.toString), wrap(data.value.toString))
   }
 
   case object BitFieldIncrInput extends Input[BitFieldIncr] {
-    def encode(data: BitFieldIncr): Chunk[String] = ???
+    def encode(data: BitFieldIncr): Chunk[String] =
+      Chunk(wrap("INCRBY"), wrap(data.`type`.stringify), wrap(data.offset.toString), wrap(data.increment.toString))
   }
 
   case object BitFieldOverflowInput extends Input[BitFieldOverflow] {
-    def encode(data: BitFieldOverflow): Chunk[String] = ???
+    def encode(data: BitFieldOverflow): Chunk[String] = Chunk(wrap("OVERFLOW"), wrap(data.stringify))
   }
 
   case object BitOperationInput extends Input[BitOperation] {
-    def encode(data: BitOperation): Chunk[String] = ???
+    def encode(data: BitOperation): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object BitPosRangeInput extends Input[BitPosRange] {
@@ -150,21 +146,23 @@ object Input {
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
-    def encode(data: (A, B)): Chunk[String] = ???
+    def encode(data: (A, B)): Chunk[String] = _1.encode(data._1) ++ _2.encode(data._2)
   }
 
   final case class Tuple3[-A, -B, -C](_1: Input[A], _2: Input[B], _3: Input[C]) extends Input[(A, B, C)] {
-    def encode(data: (A, B, C)): Chunk[String] = ???
+    def encode(data: (A, B, C)): Chunk[String] = _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3)
   }
 
   final case class Tuple4[-A, -B, -C, -D](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D])
       extends Input[(A, B, C, D)] {
-    def encode(data: (A, B, C, D)): Chunk[String] = ???
+    def encode(data: (A, B, C, D)): Chunk[String] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4)
   }
 
   final case class Tuple5[-A, -B, -C, -D, -E](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D], _5: Input[E])
       extends Input[(A, B, C, D, E)] {
-    def encode(data: (A, B, C, D, E)): Chunk[String] = ???
+    def encode(data: (A, B, C, D, E)): Chunk[String] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5)
   }
 
   final case class Tuple7[-A, -B, -C, -D, -E, -F, -G](
@@ -202,7 +200,10 @@ object Input {
     _10: Input[J],
     _11: Input[K]
   ) extends Input[(A, B, C, D, E, F, G, H, I, J, K)] {
-    def encode(data: (A, B, C, D, E, F, G, H, I, J, K)): Chunk[String] = ???
+    def encode(data: (A, B, C, D, E, F, G, H, I, J, K)): Chunk[String] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++
+        _5.encode(data._5) ++ _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8) ++
+        _9.encode(data._9) ++ _10.encode(data._10) ++ _11.encode(data._11)
   }
 
   case object UpdateInput extends Input[Update] {
@@ -210,7 +211,8 @@ object Input {
   }
 
   final case class Varargs[-A](value: Input[A]) extends Input[Iterable[A]] {
-    def encode(data: Iterable[A]): Chunk[String] = ???
+    def encode(data: Iterable[A]): Chunk[String] =
+      data.foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ value.encode(a))
   }
 
   case object WithScoresInput extends Input[WithScores] {

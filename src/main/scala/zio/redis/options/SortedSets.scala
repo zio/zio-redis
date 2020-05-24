@@ -1,7 +1,14 @@
 package zio.redis.options
 
 trait SortedSets {
-  sealed trait Aggregate
+  sealed trait Aggregate { self =>
+    final def stringify: String =
+      self match {
+        case Aggregate.Max => "MAX"
+        case Aggregate.Min => "MIN"
+        case Aggregate.Sum => "SUM"
+      }
+  }
 
   object Aggregate {
     case object Sum extends Aggregate
@@ -15,8 +22,6 @@ trait SortedSets {
   case object Increment
   type Increment = Increment.type
 
-  sealed trait LexMinimum
-
   sealed trait LexMaximum
 
   object LexMaximum {
@@ -24,6 +29,8 @@ trait SortedSets {
     sealed case class Open(value: String)   extends LexMaximum
     sealed case class Closed(value: String) extends LexMaximum
   }
+
+  sealed trait LexMinimum
 
   object LexMinimum {
     case object Unbounded                   extends LexMinimum
