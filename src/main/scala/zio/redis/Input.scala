@@ -62,7 +62,7 @@ object Input {
   }
 
   case object DoubleInput extends Input[Double] {
-    def encode(data: Double): Chunk[String] = ???
+    def encode(data: Double): Chunk[String] = Chunk.single(wrap(data.toString))
   }
 
   case object DurationInput extends Input[Duration] {
@@ -74,7 +74,7 @@ object Input {
   }
 
   case object KeepTtlInput extends Input[KeepTtl] {
-    def encode(data: KeepTtl): Chunk[String] = ???
+    def encode(data: KeepTtl): Chunk[String] = Chunk.single(wrap("KEEPTTL"))
   }
 
   case object LexRangeInput extends Input[LexRange] {
@@ -86,7 +86,7 @@ object Input {
   }
 
   case object LongInput extends Input[Long] {
-    def encode(data: Long): Chunk[String] = ???
+    def encode(data: Long): Chunk[String] = Chunk.single(wrap(data.toString))
   }
 
   case object LongLatInput extends Input[LongLat] {
@@ -101,8 +101,9 @@ object Input {
     def encode(data: Unit): Chunk[String] = ???
   }
 
-  final case class NonEmptyList[-A](a: Input[A]) extends Input[(A, List[A])] {
-    def encode(data: (A, List[A])): Chunk[String] = ???
+  final case class NonEmptyList[-A](input: Input[A]) extends Input[(A, List[A])] {
+    def encode(data: (A, List[A])): Chunk[String] =
+      (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ input.encode(a))
   }
 
   case object OrderInput extends Input[Order] {
@@ -210,13 +211,13 @@ object Input {
     def encode(data: Update): Chunk[String] = ???
   }
 
-  final case class Varargs[-A](value: Input[A]) extends Input[Iterable[A]] {
+  final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
     def encode(data: Iterable[A]): Chunk[String] =
-      data.foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ value.encode(a))
+      data.foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ input.encode(a))
   }
 
   case object WithScoresInput extends Input[WithScores] {
-    def encode(data: WithScores): Chunk[String] = ???
+    def encode(data: WithScores): Chunk[String] = Chunk.single(wrap("WITHSCORES"))
   }
 
   case object WithCoordInput extends Input[WithCoord] {
