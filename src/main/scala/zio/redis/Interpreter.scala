@@ -24,7 +24,7 @@ trait Interpreter {
       ZLayer.fromManaged {
         for {
           channel <- ZManaged.fromAutoCloseable(connect)
-          queue   <- Queue.bounded[Request](100).toManaged_
+          queue   <- Queue.unbounded[Request].toManaged_
           _       <- dequeue(queue, channel).forever.forkManaged
         } yield new Service {
           def execute(command: Chunk[String]): IO[RedisError, String] = enqueue(command, queue).flatMap(_.await)
