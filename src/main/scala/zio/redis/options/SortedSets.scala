@@ -2,7 +2,7 @@ package zio.redis.options
 
 trait SortedSets {
   sealed trait Aggregate { self =>
-    final def stringify: String =
+    private[redis] final def stringify: String =
       self match {
         case Aggregate.Max => "MAX"
         case Aggregate.Min => "MIN"
@@ -16,10 +16,16 @@ trait SortedSets {
     case object Max extends Aggregate
   }
 
-  case object Changed
+  case object Changed {
+    private[redis] def stringify: String = "CH"
+  }
+
   type Changed = Changed.type
 
-  case object Increment
+  case object Increment {
+    private[redis] def stringify: String = "INCR"
+  }
+
   type Increment = Increment.type
 
   sealed trait LexMaximum
@@ -60,6 +66,9 @@ trait SortedSets {
 
   sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
 
-  case object WithScores
+  case object WithScores {
+    private[redis] def stringify: String = "WITHSCORES"
+  }
+
   type WithScores = WithScores.type
 }

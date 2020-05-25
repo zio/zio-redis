@@ -9,7 +9,7 @@ trait Strings {
   sealed case class BitFieldSet(`type`: BitFieldType, offset: Int, value: Long)
 
   sealed trait BitFieldOverflow { self =>
-    final def stringify: String =
+    private[redis] final def stringify: String =
       self match {
         case BitFieldOverflow.Fail => "FAIL"
         case BitFieldOverflow.Sat  => "SAT"
@@ -24,7 +24,7 @@ trait Strings {
   }
 
   sealed trait BitFieldType { self =>
-    final def stringify: String =
+    private[redis] final def stringify: String =
       self match {
         case BitFieldType.UnsignedInt(size) => s"u$size"
         case BitFieldType.SignedInt(size)   => s"i$size"
@@ -37,7 +37,7 @@ trait Strings {
   }
 
   sealed trait BitOperation { self =>
-    final def stringify: String =
+    private[redis] final def stringify: String =
       self match {
         case BitOperation.AND => "AND"
         case BitOperation.OR  => "OR"
@@ -53,6 +53,9 @@ trait Strings {
 
   sealed case class BitPosRange(start: Long, end: Option[Long])
 
-  case object KeepTtl
+  case object KeepTtl {
+    private[redis] def stringify: String = "KEEPTTL"
+  }
+
   type KeepTtl = KeepTtl.type
 }

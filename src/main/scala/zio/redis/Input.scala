@@ -54,7 +54,7 @@ object Input {
   }
 
   case object ChangedInput extends Input[Changed] {
-    def encode(data: Changed): Chunk[String] = ???
+    def encode(data: Changed): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object CountInput extends Input[Count] {
@@ -70,11 +70,11 @@ object Input {
   }
 
   case object IncrementInput extends Input[Increment] {
-    def encode(data: Increment): Chunk[String] = ???
+    def encode(data: Increment): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object KeepTtlInput extends Input[KeepTtl] {
-    def encode(data: KeepTtl): Chunk[String] = Chunk.single(wrap("KEEPTTL"))
+    def encode(data: KeepTtl): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object LexRangeInput extends Input[LexRange] {
@@ -98,7 +98,7 @@ object Input {
   }
 
   case object NoInput extends Input[Unit] {
-    def encode(data: Unit): Chunk[String] = ???
+    def encode(data: Unit): Chunk[String] = Chunk.empty
   }
 
   final case class NonEmptyList[-A](input: Input[A]) extends Input[(A, List[A])] {
@@ -123,11 +123,11 @@ object Input {
   }
 
   case object StoreDistInput extends Input[StoreDist] {
-    def encode(data: StoreDist): Chunk[String] = ???
+    def encode(data: StoreDist): Chunk[String] = Chunk(wrap("STOREDIST"), wrap(data.key))
   }
 
   case object StoreInput extends Input[Store] {
-    def encode(data: Store): Chunk[String] = ???
+    def encode(data: Store): Chunk[String] = Chunk(wrap("STORE"), wrap(data.key))
   }
 
   case object ScoreRangeInput extends Input[ScoreRange] {
@@ -135,7 +135,7 @@ object Input {
   }
 
   case object StringInput extends Input[String] {
-    def encode(data: String): Chunk[String] = ???
+    def encode(data: String): Chunk[String] = Chunk.single(wrap(data))
   }
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]] {
@@ -208,7 +208,7 @@ object Input {
   }
 
   case object UpdateInput extends Input[Update] {
-    def encode(data: Update): Chunk[String] = ???
+    def encode(data: Update): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
@@ -217,18 +217,18 @@ object Input {
   }
 
   case object WithScoresInput extends Input[WithScores] {
-    def encode(data: WithScores): Chunk[String] = Chunk.single(wrap("WITHSCORES"))
+    def encode(data: WithScores): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object WithCoordInput extends Input[WithCoord] {
-    def encode(data: WithCoord): Chunk[String] = ???
+    def encode(data: WithCoord): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object WithDistInput extends Input[WithDist] {
-    def encode(data: WithDist): Chunk[String] = ???
+    def encode(data: WithDist): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object WithHashInput extends Input[WithHash] {
-    def encode(data: WithHash): Chunk[String] = ???
+    def encode(data: WithHash): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 }

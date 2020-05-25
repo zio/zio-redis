@@ -26,13 +26,22 @@ trait Geo {
 
   sealed case class StoreDist(key: String)
 
-  case object WithCoord
+  case object WithCoord {
+    private[redis] def stringify: String = "WITHCOORD"
+  }
+
   type WithCoord = WithCoord.type
 
-  case object WithDist
+  case object WithDist {
+    private[redis] def stringify: String = "WITHDIST"
+  }
+
   type WithDist = WithDist.type
 
-  case object WithHash
+  case object WithHash {
+    private[redis] def stringify: String = "WITHHASH"
+  }
+
   type WithHash = WithHash.type
 
 }
