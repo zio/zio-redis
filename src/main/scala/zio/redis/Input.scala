@@ -10,7 +10,9 @@ import scala.util.matching.Regex
 sealed trait Input[-A]
 
 object Input {
+  case object AbsTtlInput           extends Input[AbsTtl]
   case object AggregateInput        extends Input[Aggregate]
+  case object AuthInput             extends Input[Auth]
   case object BoolInput             extends Input[Boolean]
   case object BitFieldGetInput      extends Input[BitFieldGet]
   case object BitFieldSetInput      extends Input[BitFieldSet]
@@ -20,9 +22,12 @@ object Input {
   case object BitPosRangeInput      extends Input[BitPosRange]
   case object ByteInput             extends Input[Chunk[Byte]]
   case object ChangedInput          extends Input[Changed]
+  case object CopyInput             extends Input[Copy]
   case object CountInput            extends Input[Count]
   case object DoubleInput           extends Input[Double]
   case object DurationInput         extends Input[Duration]
+  case object FreqInput             extends Input[Freq]
+  case object IdleTimeInput         extends Input[IdleTime]
   case object IncrementInput        extends Input[Increment]
   case object KeepTtlInput          extends Input[KeepTtl]
   case object LexRangeInput         extends Input[LexRange]
@@ -38,6 +43,8 @@ object Input {
   case object RadiusUnitInput extends Input[RadiusUnit]
   case object RangeInput      extends Input[Range]
   case object RegexInput      extends Input[Regex]
+  case object ReplaceInput    extends Input[Replace]
+
   case object StoreDistInput  extends Input[StoreDist]
   case object StoreInput      extends Input[Store]
   case object ScoreRangeInput extends Input[ScoreRange]
@@ -56,6 +63,28 @@ object Input {
 
   final case class Tuple5[-A, -B, -C, -D, -E](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D], _5: Input[E])
       extends Input[(A, B, C, D, E)]
+
+  final case class Tuple7[-A, -B, -C, -D, -E, -F, -G](
+    _1: Input[A],
+    _2: Input[B],
+    _3: Input[C],
+    _4: Input[D],
+    _5: Input[E],
+    _6: Input[F],
+    _7: Input[G]
+  ) extends Input[(A, B, C, D, E, F, G)]
+
+  final case class Tuple9[-A, -B, -C, -D, -E, -F, -G, -H, -I](
+    _1: Input[A],
+    _2: Input[B],
+    _3: Input[C],
+    _4: Input[D],
+    _5: Input[E],
+    _6: Input[F],
+    _7: Input[G],
+    _8: Input[H],
+    _9: Input[I]
+  ) extends Input[(A, B, C, D, E, F, G, H, I)]
 
   final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
     _1: Input[A],
