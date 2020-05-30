@@ -14,8 +14,16 @@ sealed trait Input[-A] {
 object Input {
   private[this] def wrap(text: String): String = s"$$${text.length}\r\n$text\r\n"
 
+  case object AbsTtlInput extends Input[AbsTtl] {
+    def encode(data: AbsTtl): Chunk[String] = ???
+  }
+
   case object AggregateInput extends Input[Aggregate] {
     def encode(data: Aggregate): Chunk[String] = Chunk.single(wrap(data.stringify))
+  }
+
+  case object AuthInput extends Input[Auth] {
+    def encode(data: Auth): Chunk[String] = ???
   }
 
   case object BoolInput extends Input[Boolean] {
@@ -57,6 +65,10 @@ object Input {
     def encode(data: Changed): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
+  case object CopyInput extends Input[Copy] {
+    def encode(data: Copy): Chunk[String] = ???
+  }
+
   case object CountInput extends Input[Count] {
     def encode(data: Count): Chunk[String] = ???
   }
@@ -67,6 +79,14 @@ object Input {
 
   case object DurationInput extends Input[Duration] {
     def encode(data: Duration): Chunk[String] = ???
+  }
+
+  case object FreqInput extends Input[Freq] {
+    def encode(data: Freq): Chunk[String] = ???
+  }
+
+  case object IdleTimeInput extends Input[IdleTime] {
+    def encode(data: IdleTime): Chunk[String] = ???
   }
 
   case object IncrementInput extends Input[Increment] {
@@ -122,6 +142,10 @@ object Input {
     def encode(data: Regex): Chunk[String] = ???
   }
 
+  case object ReplaceInput extends Input[Replace] {
+    def encode(data: Replace): Chunk[String] = ???
+  }
+
   case object StoreDistInput extends Input[StoreDist] {
     def encode(data: StoreDist): Chunk[String] = Chunk(wrap("STOREDIST"), wrap(data.key))
   }
@@ -174,7 +198,9 @@ object Input {
     _5: Input[E],
     _6: Input[F],
     _7: Input[G]
-  ) extends Input[(A, B, C, D, E, F, G)]
+  ) extends Input[(A, B, C, D, E, F, G)] {
+    def encode(data: (A, B, C, D, E, F, G)): Chunk[String] = ???
+  }
 
   final case class Tuple9[-A, -B, -C, -D, -E, -F, -G, -H, -I](
     _1: Input[A],
@@ -186,7 +212,9 @@ object Input {
     _7: Input[G],
     _8: Input[H],
     _9: Input[I]
-  ) extends Input[(A, B, C, D, E, F, G, H, I)]
+  ) extends Input[(A, B, C, D, E, F, G, H, I)] {
+    def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[String] = ???
+  }
 
   final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
     _1: Input[A],
