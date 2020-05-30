@@ -33,8 +33,6 @@ trait SortedSets {
 
   sealed case class LexRange(min: LexMinimum, max: LexMaximum)
 
-  sealed case class Limit(offset: Long, count: Long)
-
   sealed case class MemberScore(score: Double, member: String)
 
   sealed trait ScoreMaximum

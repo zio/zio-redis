@@ -1,8 +1,8 @@
 package zio.redis.api
 
-import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
+import zio.redis.RedisCommand
 
 trait Keys {
   final val del       = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
@@ -11,15 +11,44 @@ trait Keys {
   final val expire    = RedisCommand("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
   final val expireAt  = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
   final val keys      = RedisCommand("KEYS", StringInput, ChunkOutput)
+  final val migrate   = RedisCommand(
+    "MIGRATE",
+    Tuple9(
+      StringInput,
+      LongInput,
+      StringInput,
+      LongInput,
+      LongInput,
+      OptionalInput(CopyInput),
+      OptionalInput(ReplaceInput),
+      OptionalInput(AuthInput),
+      OptionalInput(NonEmptyList(StringInput))
+    ),
+    StringOutput
+  )
   final val move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
   final val persist   = RedisCommand("PERSIST", StringInput, BoolOutput)
   final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
   final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
   final val pTtl      = RedisCommand("PTTL", StringInput, DurationOutput)
+  final val randomKey = RedisCommand("RANDOMKEY", NoInput, ByteOutput)
   final val rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   final val renameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
-  final val scan = RedisCommand(
+  final val restore = RedisCommand(
+    "RESTORE",
+    Tuple7(
+      StringInput,
+      LongInput,
+      ByteInput,
+      OptionalInput(ReplaceInput),
+      OptionalInput(AbsTtlInput),
+      OptionalInput(IdleTimeInput),
+      OptionalInput(FreqInput)
+    ),
+    StringOutput
+  )
+  final val scan    = RedisCommand(
     "SCAN",
     Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
@@ -29,4 +58,5 @@ trait Keys {
   final val ttl    = RedisCommand("TTL", StringInput, DurationOutput)
   final val typeOf = RedisCommand("TYPE", StringInput, StringOutput)
   final val unlink = RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
+  final val wait_  = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
 }
