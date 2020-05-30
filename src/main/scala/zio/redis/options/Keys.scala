@@ -2,7 +2,10 @@ package zio.redis.options
 
 trait Keys {
 
-  case object AbsTtl
+  case object AbsTtl {
+    private[redis] def stringify: String = "ABSTTL"
+  }
+
   type AbsTtl = AbsTtl.type
 
   case object Alpha
@@ -19,7 +22,10 @@ trait Keys {
 
   sealed case class Freq(frequency: String)
 
-  case object Replace
+  case object Replace {
+    private[redis] def stringify: String = "REPLACE"
+  }
+
   type Replace = Replace.type
 
 }

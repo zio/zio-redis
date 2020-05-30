@@ -15,7 +15,7 @@ object Input {
   private[this] def wrap(text: String): String = s"$$${text.length}\r\n$text\r\n"
 
   case object AbsTtlInput extends Input[AbsTtl] {
-    def encode(data: AbsTtl): Chunk[String] = ???
+    def encode(data: AbsTtl): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object AggregateInput extends Input[Aggregate] {
@@ -23,7 +23,7 @@ object Input {
   }
 
   case object AuthInput extends Input[Auth] {
-    def encode(data: Auth): Chunk[String] = ???
+    def encode(data: Auth): Chunk[String] = Chunk(wrap("AUTH"), wrap(data.password))
   }
 
   case object BoolInput extends Input[Boolean] {
@@ -82,11 +82,11 @@ object Input {
   }
 
   case object FreqInput extends Input[Freq] {
-    def encode(data: Freq): Chunk[String] = ???
+    def encode(data: Freq): Chunk[String] = Chunk(wrap("FREQ"), wrap(data.frequency))
   }
 
   case object IdleTimeInput extends Input[IdleTime] {
-    def encode(data: IdleTime): Chunk[String] = ???
+    def encode(data: IdleTime): Chunk[String] = Chunk(wrap("IDLETIME"), wrap(data.seconds.toString))
   }
 
   case object IncrementInput extends Input[Increment] {
@@ -143,7 +143,7 @@ object Input {
   }
 
   case object ReplaceInput extends Input[Replace] {
-    def encode(data: Replace): Chunk[String] = ???
+    def encode(data: Replace): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object StoreDistInput extends Input[StoreDist] {
@@ -199,7 +199,8 @@ object Input {
     _6: Input[F],
     _7: Input[G]
   ) extends Input[(A, B, C, D, E, F, G)] {
-    def encode(data: (A, B, C, D, E, F, G)): Chunk[String] = ???
+    def encode(data: (A, B, C, D, E, F, G)): Chunk[String] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5)
   }
 
   final case class Tuple9[-A, -B, -C, -D, -E, -F, -G, -H, -I](
@@ -213,7 +214,9 @@ object Input {
     _8: Input[H],
     _9: Input[I]
   ) extends Input[(A, B, C, D, E, F, G, H, I)] {
-    def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[String] = ???
+    def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[String] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++
+        _5.encode(data._5) ++ _6.encode(data._6) ++ _7.encode(data._7)
   }
 
   final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
