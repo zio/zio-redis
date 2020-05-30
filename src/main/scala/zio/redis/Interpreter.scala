@@ -60,10 +60,10 @@ trait Interpreter {
       }
 
       def unsafeSend(command: Chunk[String], channel: SocketChannel): Unit = {
-        val data = unsafeEncode(command)
-        data.flip()
-        while (data.hasRemaining())
-          channel.write(data)
+        val buffer = unsafeEncode(command)
+        buffer.flip()
+        while (buffer.hasRemaining())
+          channel.write(buffer)
       }
 
       def unsafeReceive(channel: SocketChannel): String = ???
