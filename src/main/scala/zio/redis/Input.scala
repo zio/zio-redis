@@ -113,7 +113,8 @@ object Input {
   }
 
   case object LimitInput extends Input[Limit] {
-    def encode(data: Limit): Chunk[String] = ???
+    def encode(data: Limit): Chunk[String] =
+      Chunk(wrap("LIMIT"), wrap(data.offset.toString), wrap(data.count.toString))
   }
 
   case object LongInput extends Input[Long] {
