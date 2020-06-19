@@ -28,7 +28,14 @@ trait SortedSets {
 
   type Increment = Increment.type
 
-  sealed trait LexMaximum
+  sealed trait LexMaximum { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case LexMaximum.Unbounded     => "+"
+        case LexMaximum.Open(value)   => s"($value"
+        case LexMaximum.Closed(value) => s"[$value"
+      }
+  }
 
   object LexMaximum {
     case object Unbounded                   extends LexMaximum
@@ -36,7 +43,14 @@ trait SortedSets {
     sealed case class Closed(value: String) extends LexMaximum
   }
 
-  sealed trait LexMinimum
+  sealed trait LexMinimum { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case LexMinimum.Unbounded     => "-"
+        case LexMinimum.Open(value)   => s"($value"
+        case LexMinimum.Closed(value) => s"[$value"
+      }
+  }
 
   object LexMinimum {
     case object Unbounded                   extends LexMinimum

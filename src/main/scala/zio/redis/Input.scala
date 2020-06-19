@@ -109,7 +109,7 @@ object Input {
   }
 
   case object LexRangeInput extends Input[LexRange] {
-    def encode(data: LexRange): Chunk[String] = ???
+    def encode(data: LexRange): Chunk[String] = Chunk(wrap(data.min.stringify), wrap(data.max.stringify))
   }
 
   case object LimitInput extends Input[Limit] {
