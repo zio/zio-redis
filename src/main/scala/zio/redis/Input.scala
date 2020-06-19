@@ -167,7 +167,7 @@ object Input {
   }
 
   case object ScoreRangeInput extends Input[ScoreRange] {
-    def encode(data: ScoreRange): Chunk[String] = ???
+    def encode(data: ScoreRange): Chunk[String] = Chunk(wrap(data.min.stringify), wrap(data.max.stringify))
   }
 
   case object StringInput extends Input[String] {

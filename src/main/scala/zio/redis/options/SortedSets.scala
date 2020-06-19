@@ -50,20 +50,34 @@ trait SortedSets {
 
   sealed case class MemberScore(score: Double, member: String)
 
-  sealed trait ScoreMaximum
+  sealed trait ScoreMaximum { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case ScoreMaximum.Infinity      => "+inf"
+        case ScoreMaximum.Open(value)   => s"($value"
+        case ScoreMaximum.Closed(value) => s"[$value"
+      }
+  }
 
   object ScoreMaximum {
     case object Infinity                    extends ScoreMaximum
-    sealed case class Open(value: String)   extends ScoreMaximum
-    sealed case class Closed(value: String) extends ScoreMaximum
+    sealed case class Open(value: Double)   extends ScoreMaximum
+    sealed case class Closed(value: Double) extends ScoreMaximum
   }
 
-  sealed trait ScoreMinimum
+  sealed trait ScoreMinimum { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case ScoreMinimum.Infinity      => "-inf"
+        case ScoreMinimum.Open(value)   => s"($value"
+        case ScoreMinimum.Closed(value) => s"[$value"
+      }
+  }
 
   object ScoreMinimum {
     case object Infinity                    extends ScoreMinimum
-    sealed case class Open(value: String)   extends ScoreMinimum
-    sealed case class Closed(value: String) extends ScoreMinimum
+    sealed case class Open(value: Double)   extends ScoreMinimum
+    sealed case class Closed(value: Double) extends ScoreMinimum
   }
 
   sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
