@@ -122,7 +122,7 @@ object Input {
   }
 
   case object LongLatInput extends Input[LongLat] {
-    def encode(data: LongLat): Chunk[String] = ???
+    def encode(data: LongLat): Chunk[String] = Chunk(wrap(data.longitude.toString), wrap(data.latitude.toString))
   }
 
   case object MemberScoreInput extends Input[MemberScore] {
