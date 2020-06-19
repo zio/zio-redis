@@ -177,8 +177,12 @@ object Input {
     def encode(data: Option[A]): Chunk[String] = ???
   }
 
-  case object TimeInput extends Input[Instant] {
-    def encode(data: Instant): Chunk[String] = ???
+  case object TimeSecondsInput extends Input[Instant] {
+    def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.getEpochSecond.toString))
+  }
+
+  case object TimeMillisecondsInput extends Input[Instant] {
+    def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.toEpochMilli.toString))
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
