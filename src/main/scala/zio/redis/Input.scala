@@ -143,7 +143,7 @@ object Input {
   }
 
   case object RadiusUnitInput extends Input[RadiusUnit] {
-    def encode(data: RadiusUnit): Chunk[String] = ???
+    def encode(data: RadiusUnit): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object RangeInput extends Input[Range] {

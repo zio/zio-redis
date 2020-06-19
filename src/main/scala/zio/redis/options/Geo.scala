@@ -19,7 +19,15 @@ trait Geo {
     case object Descending extends Order
   }
 
-  sealed trait RadiusUnit
+  sealed trait RadiusUnit { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case RadiusUnit.Meters     => "m"
+        case RadiusUnit.Kilometers => "km"
+        case RadiusUnit.Feet       => "ft"
+        case RadiusUnit.Miles      => "mi"
+      }
+  }
 
   object RadiusUnit {
     case object Meters     extends RadiusUnit
