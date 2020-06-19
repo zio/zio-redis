@@ -139,7 +139,7 @@ object Input {
   }
 
   case object OrderInput extends Input[Order] {
-    def encode(data: Order): Chunk[String] = ???
+    def encode(data: Order): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object RadiusUnitInput extends Input[RadiusUnit] {

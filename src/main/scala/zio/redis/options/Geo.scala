@@ -6,7 +6,13 @@ trait Geo {
 
   sealed case class LongLat(longitude: Double, latitude: Double)
 
-  sealed trait Order
+  sealed trait Order { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case Order.Ascending  => "ASC"
+        case Order.Descending => "DESC"
+      }
+  }
 
   object Order {
     case object Ascending  extends Order
