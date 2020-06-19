@@ -147,7 +147,7 @@ object Input {
   }
 
   case object RangeInput extends Input[Range] {
-    def encode(data: Range): Chunk[String] = ???
+    def encode(data: Range): Chunk[String] = Chunk(wrap(data.start.toString), wrap(data.end.toString))
   }
 
   case object RegexInput extends Input[Regex] {
