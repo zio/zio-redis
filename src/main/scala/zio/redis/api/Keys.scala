@@ -5,13 +5,14 @@ import zio.redis.Output._
 import zio.redis.RedisCommand
 
 trait Keys {
-  final val del       = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
-  final val dump      = RedisCommand("DUMP", StringInput, ByteOutput)
-  final val exists    = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
-  final val expire    = RedisCommand("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
-  final val expireAt  = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
-  final val keys      = RedisCommand("KEYS", StringInput, ChunkOutput)
-  final val migrate   = RedisCommand(
+  final val del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
+  final val dump     = RedisCommand("DUMP", StringInput, ByteOutput)
+  final val exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
+  final val expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
+  final val expireAt = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
+  final val keys     = RedisCommand("KEYS", StringInput, ChunkOutput)
+
+  final val migrate = RedisCommand(
     "MIGRATE",
     Tuple9(
       StringInput,
@@ -26,6 +27,7 @@ trait Keys {
     ),
     StringOutput
   )
+
   final val move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
   final val persist   = RedisCommand("PERSIST", StringInput, BoolOutput)
   final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
@@ -48,7 +50,8 @@ trait Keys {
     ),
     StringOutput
   )
-  final val scan    = RedisCommand(
+
+  final val scan = RedisCommand(
     "SCAN",
     Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
     ScanOutput
