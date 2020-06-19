@@ -73,7 +73,7 @@ object Input {
   }
 
   case object CountInput extends Input[Count] {
-    def encode(data: Count): Chunk[String] = ???
+    def encode(data: Count): Chunk[String] = Chunk(wrap("COUNT"), wrap(s"${data.count}"))
   }
 
   case object DoubleInput extends Input[Double] {
