@@ -69,7 +69,7 @@ object Input {
   }
 
   case object CopyInput extends Input[Copy] {
-    def encode(data: Copy): Chunk[String] = ???
+    def encode(data: Copy): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
 
   case object CountInput extends Input[Count] {

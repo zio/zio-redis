@@ -2,21 +2,24 @@ package zio.redis.options
 
 trait Keys {
 
+  type AbsTtl = AbsTtl.type
+
   case object AbsTtl {
     private[redis] def stringify: String = "ABSTTL"
   }
 
-  type AbsTtl = AbsTtl.type
-
-  case object Alpha
   type Alpha = Alpha.type
+  case object Alpha
 
   sealed case class Auth(password: String)
 
   sealed case class By(pattern: String)
 
-  case object Copy
   type Copy = Copy.type
+
+  case object Copy {
+    private[redis] def stringify: String = "COPY"
+  }
 
   sealed case class IdleTime(seconds: Long)
 
