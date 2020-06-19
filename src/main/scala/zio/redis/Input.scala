@@ -55,13 +55,13 @@ object Input {
 
   case object BitPosRangeInput extends Input[BitPosRange] {
     def encode(data: BitPosRange): Chunk[String] = {
-      val start = wrap(s"${data.start}")
-      data.end.fold(Chunk.single(start))(end => Chunk(start, wrap(s"$end")))
+      val start = wrap(data.start.toString)
+      data.end.fold(Chunk.single(start))(end => Chunk(start, wrap(end.toString)))
     }
   }
 
   case object ByteInput extends Input[Chunk[Byte]] {
-    def encode(data: Chunk[Byte]): Chunk[String] = data.map(byte => wrap(s"$byte"))
+    def encode(data: Chunk[Byte]): Chunk[String] = data.map(byte => wrap(byte.toString))
   }
 
   case object ChangedInput extends Input[Changed] {
@@ -73,7 +73,7 @@ object Input {
   }
 
   case object CountInput extends Input[Count] {
-    def encode(data: Count): Chunk[String] = Chunk(wrap("COUNT"), wrap(s"${data.count}"))
+    def encode(data: Count): Chunk[String] = Chunk(wrap("COUNT"), wrap(data.count.toString))
   }
 
   case object DoubleInput extends Input[Double] {
