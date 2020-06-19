@@ -38,14 +38,14 @@ trait Strings {
   final val mGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOutput)
   final val mSet        = RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, ByteInput)), UnitOutput)
   final val mSetNx      = RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, ByteInput)), BoolOutput)
-  final val pSetEx      = RedisCommand("PSETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
+  final val pSetEx      = RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, ByteInput), UnitOutput)
 
   final val set = RedisCommand(
     "SET",
     Tuple5(
       StringInput,
       ByteInput,
-      OptionalInput(DurationInput),
+      OptionalInput(DurationSecondsInput),
       OptionalInput(UpdateInput),
       OptionalInput(KeepTtlInput)
     ),
@@ -53,7 +53,7 @@ trait Strings {
   )
 
   final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, ByteInput), ByteOutput)
-  final val setEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationInput, ByteInput), UnitOutput)
+  final val setEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, ByteInput), UnitOutput)
   final val setNx    = RedisCommand("SETNX", Tuple2(StringInput, ByteInput), BoolOutput)
   final val setRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, ByteInput), LongOutput)
   final val strLen   = RedisCommand("STRLEN", StringInput, LongOutput)

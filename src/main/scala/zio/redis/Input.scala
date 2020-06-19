@@ -1,6 +1,7 @@
 package zio.redis
 
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 import zio.Chunk
 import zio.duration.Duration
@@ -80,8 +81,15 @@ object Input {
     def encode(data: Double): Chunk[String] = Chunk.single(wrap(data.toString))
   }
 
-  case object DurationInput extends Input[Duration] {
-    def encode(data: Duration): Chunk[String] = ???
+  case object DurationMillisecondsInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[String] = Chunk.single(wrap(data.toMillis.toString))
+  }
+
+  case object DurationSecondsInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[String] = {
+      val seconds = TimeUnit.MILLISECONDS.toSeconds(data.toMillis)
+      Chunk.single(wrap(seconds.toString))
+    }
   }
 
   case object FreqInput extends Input[Freq] {

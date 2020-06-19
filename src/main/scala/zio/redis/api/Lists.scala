@@ -5,7 +5,7 @@ import zio.redis.Input._
 import zio.redis.Output._
 
 trait Lists {
-  final val brPopLPush = RedisCommand("BRPOPLPUSH", Tuple3(StringInput, StringInput, DurationInput), ByteOutput)
+  final val brPopLPush = RedisCommand("BRPOPLPUSH", Tuple3(StringInput, StringInput, DurationSecondsInput), ByteOutput)
   final val lIndex     = RedisCommand("LINDEX", Tuple2(StringInput, LongInput), ByteOutput)
   final val lLen       = RedisCommand("LLEN", StringInput, LongOutput)
   final val lPop       = RedisCommand("LPOP", StringInput, ByteOutput)

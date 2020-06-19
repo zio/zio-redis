@@ -5,8 +5,8 @@ import zio.redis.Input._
 import zio.redis.Output._
 
 trait SortedSets {
-  final val bzPopMin = RedisCommand("BZPOPMIN", Tuple2(DurationInput, NonEmptyList(StringInput)), ByteOutput)
-  final val bzPopMax = RedisCommand("BZPOPMAX", Tuple2(DurationInput, NonEmptyList(StringInput)), ByteOutput)
+  final val bzPopMin = RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ByteOutput)
+  final val bzPopMax = RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ByteOutput)
 
   final val zAdd = RedisCommand(
     "ZADD",

@@ -8,7 +8,7 @@ trait Keys {
   final val del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
   final val dump     = RedisCommand("DUMP", StringInput, ByteOutput)
   final val exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
-  final val expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
+  final val expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
   final val expireAt = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
   final val keys     = RedisCommand("KEYS", StringInput, ChunkOutput)
 
@@ -30,7 +30,7 @@ trait Keys {
 
   final val move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
   final val persist   = RedisCommand("PERSIST", StringInput, BoolOutput)
-  final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationInput), BoolOutput)
+  final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
   final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeInput), BoolOutput)
   final val pTtl      = RedisCommand("PTTL", StringInput, DurationOutput)
   final val randomKey = RedisCommand("RANDOMKEY", NoInput, ByteOutput)
