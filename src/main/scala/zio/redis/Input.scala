@@ -175,7 +175,7 @@ object Input {
   }
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]] {
-    def encode(data: Option[A]): Chunk[String] = ???
+    def encode(data: Option[A]): Chunk[String] = data.fold(Chunk.empty: Chunk[String])(a.encode)
   }
 
   case object TimeSecondsInput extends Input[Instant] {
