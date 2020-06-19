@@ -151,7 +151,7 @@ object Input {
   }
 
   case object RegexInput extends Input[Regex] {
-    def encode(data: Regex): Chunk[String] = ???
+    def encode(data: Regex): Chunk[String] = Chunk(wrap("MATCH"), wrap(data.regex))
   }
 
   case object ReplaceInput extends Input[Replace] {
