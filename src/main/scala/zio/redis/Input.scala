@@ -126,7 +126,7 @@ object Input {
   }
 
   case object MemberScoreInput extends Input[MemberScore] {
-    def encode(data: MemberScore): Chunk[String] = ???
+    def encode(data: MemberScore): Chunk[String] = Chunk(wrap(data.score.toString), wrap(data.member))
   }
 
   case object NoInput extends Input[Unit] {
