@@ -54,7 +54,10 @@ object Input {
   }
 
   case object BitPosRangeInput extends Input[BitPosRange] {
-    def encode(data: BitPosRange): Chunk[String] = ???
+    def encode(data: BitPosRange): Chunk[String] = {
+      val start = wrap(s"${data.start}")
+      data.end.fold(Chunk.single(start))(end => Chunk(start, wrap(s"$end")))
+    }
   }
 
   case object ByteInput extends Input[Chunk[Byte]] {
