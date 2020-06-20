@@ -50,23 +50,34 @@ trait Interpreter {
       def enqueue(command: Chunk[String], queue: Queue[Request]): UIO[Promise[RedisError, String]] =
         Promise.make[RedisError, String].flatMap(p => queue.offer((command, p)).as(p))
 
-      def unsafeConnect(host: String, port: Int): SocketChannel = SocketChannel.open(new InetSocketAddress(host, port))
+      def unsafeConnect(host: String, port: Int): SocketChannel = {
+        val channel = SocketChannel.open(new InetSocketAddress(host, port))
 
-      def unsafeEncode(command: Chunk[String]): ByteBuffer = {
-        val data     = command.mkString
-        val envelope = s"*${command.length}\r\n$data"
+        channel.configureBlocking(false)
 
-        ByteBuffer.wrap(envelope.getBytes(UTF_8))
+        channel
       }
 
       def unsafeSend(command: Chunk[String], channel: SocketChannel): Unit = {
-        val buffer = unsafeEncode(command)
-        buffer.flip()
+        val data     = command.mkString
+        val envelope = s"*${command.length}\r\n$data"
+        val buffer   = ByteBuffer.wrap(envelope.getBytes(UTF_8))
+
         while (buffer.hasRemaining())
           channel.write(buffer)
       }
 
-      def unsafeReceive(channel: SocketChannel): String = ???
+      def unsafeReceive(channel: SocketChannel): String = {
+        val buffer = ByteBuffer.allocate(1024)
+        val sb     = new StringBuilder
+
+        while (channel.read(buffer) > 0) {
+          sb ++= new String(buffer.array(), UTF_8)
+          buffer.clear()
+        }
+
+        sb.toString
+      }
     }
   }
 }
