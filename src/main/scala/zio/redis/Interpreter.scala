@@ -44,7 +44,7 @@ trait Interpreter {
                 unsafeReceive(channel)
               }
 
-            result.completeWith(exchange.refineOrDie(RedisError.asProtocolError))
+            result.completeWith(exchange.catchAll(RedisError.make))
         }
 
       def enqueue(command: Chunk[String], queue: Queue[Request]): UIO[Promise[RedisError, String]] =
