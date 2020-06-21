@@ -80,7 +80,7 @@ trait Interpreter {
           response.clear()
         }
 
-        sb.toString.trim()
+        sb.toString
       }
 
       private def unsafeSend(command: Chunk[String]): Unit = {
