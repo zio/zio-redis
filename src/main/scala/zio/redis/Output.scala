@@ -38,7 +38,20 @@ object Output {
   }
 
   case object LongOutput extends Output[Long] {
-    def tryDecode(text: String): Either[RedisError, Long] = ???
+    def tryDecode(text: String): Either[RedisError, Long] =
+      Either.cond(text.startsWith(":"), parse(text), ProtocolError(s"$text isn't an integer."))
+
+    private[this] def parse(text: String): Long = {
+      var pos   = 1
+      var value = 0L
+
+      while (text.charAt(pos) != '\r') {
+        value = value * 10 + text.charAt(pos) - '0'
+        pos += 1
+      }
+
+      value
+    }
   }
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
@@ -54,12 +67,12 @@ object Output {
     def tryDecode(text: String): Either[RedisError, String] =
       Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
 
-    private def parse(text: String): String = {
+    private[this] def parse(text: String): String = {
       var pos = 1
       var len = 0
 
       while (text.charAt(pos) != '\r') {
-        len = len * 10 + (text.charAt(pos) - '0')
+        len = len * 10 + text.charAt(pos) - '0'
         pos += 1
       }
 
@@ -71,7 +84,7 @@ object Output {
   }
 
   case object UnitOutput extends Output[Unit] {
-    def tryDecode(text: String): Either[RedisError,Unit] =
+    def tryDecode(text: String): Either[RedisError, Unit] =
       Either.cond(text == "+OK\r\n", (), ProtocolError(s"$text isn't unit."))
   }
 }

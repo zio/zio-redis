@@ -18,6 +18,14 @@ object CommandsSpec extends BaseSpec {
         },
         testM("get non-existing key") {
           assertM(get("non-existent"))(isNone)
+        },
+        testM("handles wront types") {
+          val set = "test-set"
+
+          for {
+            _ <- sAdd(set)("1", "2", "3")
+            v <- get(set).either
+          } yield assert(v)(isLeft)
         }
       )
     ).provideCustomLayerShared(Executor)
