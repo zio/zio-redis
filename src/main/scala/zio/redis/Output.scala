@@ -52,7 +52,7 @@ object Output {
         pos += 1
       }
 
-      // skip to first payload char
+      // skip to the first payload char
       pos += 2
 
       text.substring(pos, pos + len)
