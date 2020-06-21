@@ -14,7 +14,7 @@ object Output {
     // def decode(text: String): Either[RedisError, Boolean] = ???
   }
 
-  case object ChunkOutput extends Output[Chunk[Chunk[Byte]]] {
+  case object ChunkOutput extends Output[Chunk[String]] {
     // def decode(text: String): Either[RedisError, Chunk[Chunk[Byte]]] = ???
   }
 
@@ -34,7 +34,7 @@ object Output {
     override def decode(text: String): Either[RedisError, Option[A]] = output.decode(text).map(Some(_))
   }
 
-  case object ScanOutput extends Output[(Long, Chunk[Chunk[Byte]])] {
+  case object ScanOutput extends Output[(Long, Chunk[String])] {
     // def decode(text: String): Either[RedisError, (Long, Chunk[Chunk[Byte]])] = ???
   }
 
