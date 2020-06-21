@@ -1,6 +1,5 @@
 package zio.redis
 
-import zio.Chunk
 import zio.test._
 import zio.test.Assertion._
 
@@ -8,13 +7,14 @@ object CommandsSpec extends BaseSpec {
   def spec =
     suite("Redis commands")(
       suite("keys")(
-        testM("put followed by get") {
-          val data = Chunk.fromArray("test".getBytes)
+        testM("set followed by get") {
+          val key   = "key"
+          val value = "value"
 
           for {
-            _ <- set("key", data, None, None, None).ignore
-            v <- get("key")
-          } yield assert(v)(equalTo(data))
+            _ <- set(key, value, None, None, None)
+            v <- get(key)
+          } yield assert(v)(equalTo(value))
         }
       )
     ).provideCustomLayerShared(Executor)
