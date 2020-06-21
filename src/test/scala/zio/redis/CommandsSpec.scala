@@ -19,13 +19,22 @@ object CommandsSpec extends BaseSpec {
         testM("get non-existing key") {
           assertM(get("non-existent"))(isNone)
         },
-        testM("handles wront types") {
+        testM("handles wrong types") {
           val set = "test-set"
 
           for {
             _ <- sAdd(set)("1", "2", "3")
             v <- get(set).either
           } yield assert(v)(isLeft)
+        },
+        testM("check whether or not key exists") {
+          val key = "existing"
+
+          for {
+            _  <- set(key, key, None, None, None)
+            k1 <- exists(key, Nil)
+            k2 <- exists("unknown", Nil)
+          } yield assert(k1)(isTrue) && assert(k2)(isFalse)
         }
       )
     ).provideCustomLayerShared(Executor)

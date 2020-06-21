@@ -22,7 +22,13 @@ object Output {
   import RedisError._
 
   case object BoolOutput extends Output[Boolean] {
-    def tryDecode(text: String): Either[RedisError, Boolean] = ???
+    def tryDecode(text: String): Either[RedisError, Boolean] =
+      if (text == ":1\r\n")
+        Right(true)
+      else if (text == ":0\r\n")
+        Right(false)
+      else
+        Left(ProtocolError(s"$text isn't a boolean."))
   }
 
   case object ChunkOutput extends Output[Chunk[String]] {
