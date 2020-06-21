@@ -33,7 +33,7 @@ trait Keys {
   final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
   final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
   final val pTtl      = RedisCommand("PTTL", StringInput, DurationOutput)
-  final val randomKey = RedisCommand("RANDOMKEY", NoInput, StringOutput)
+  final val randomKey = RedisCommand("RANDOMKEY", NoInput, OptionalOutput(StringOutput))
   final val rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   final val renameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
@@ -48,7 +48,7 @@ trait Keys {
       OptionalInput(IdleTimeInput),
       OptionalInput(FreqInput)
     ),
-    StringOutput
+    UnitOutput
   )
 
   final val scan = RedisCommand(

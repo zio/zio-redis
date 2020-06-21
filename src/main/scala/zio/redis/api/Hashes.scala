@@ -7,7 +7,7 @@ import zio.redis.Output._
 trait Hashes {
   final val hDel         = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   final val hExists      = RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
-  final val hGet         = RedisCommand("HGET", Tuple2(StringInput, StringInput), StringOutput)
+  final val hGet         = RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(StringOutput))
   final val hGetAll      = RedisCommand("HGETALL", StringInput, ChunkOutput)
   final val hIncrBy      = RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
   final val hIncrByFloat = RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), StringOutput)

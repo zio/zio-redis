@@ -14,9 +14,12 @@ trait Sets {
   final val sIsMember   = RedisCommand("SISMEMBER", Tuple2(StringInput, StringInput), BoolOutput)
   final val sMembers    = RedisCommand("SMEMBERS", StringInput, ChunkOutput)
   final val sMove       = RedisCommand("SMOVE", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
-  final val sPop        = RedisCommand("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), StringOutput)
+  final val sPop        = RedisCommand("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), OptionalOutput(StringOutput))
+
+  // TODO: can have 2 different outputs depending on whether or not count is provided
   final val sRandMember = RedisCommand("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
-  final val sRem        = RedisCommand("SREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+
+  final val sRem = RedisCommand("SREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 
   final val sScan = RedisCommand(
     "SSCAN",

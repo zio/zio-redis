@@ -28,10 +28,10 @@ trait Strings {
 
   final val decr        = RedisCommand("DECR", StringInput, LongOutput)
   final val decrBy      = RedisCommand("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
-  final val get         = RedisCommand("GET", StringInput, StringOutput)
+  final val get         = RedisCommand("GET", StringInput, OptionalOutput(StringOutput))
   final val getBit      = RedisCommand("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
   final val getRange    = RedisCommand("GETRANGE", Tuple2(StringInput, RangeInput), StringOutput)
-  final val getSet      = RedisCommand("GETSET", Tuple2(StringInput, StringInput), StringOutput)
+  final val getSet      = RedisCommand("GETSET", Tuple2(StringInput, StringInput), OptionalOutput(StringOutput))
   final val incr        = RedisCommand("INCR", StringInput, LongOutput)
   final val incrBy      = RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
   final val incrByFloat = RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), StringOutput)
@@ -52,7 +52,7 @@ trait Strings {
     OptionalOutput(UnitOutput)
   )
 
-  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, StringInput), StringOutput)
+  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, StringInput), LongOutput)
   final val setEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
   final val setNx    = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
   final val setRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
