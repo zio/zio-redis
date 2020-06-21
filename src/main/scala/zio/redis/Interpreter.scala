@@ -31,9 +31,9 @@ trait Interpreter {
     private[this] def connect(host: String, port: Int): Managed[IOException, Connection] = {
       val makeChannel =
         IO {
-          val ch = SocketChannel.open(new InetSocketAddress(host, port))
-          ch.configureBlocking(false)
-          ch
+          val channel = SocketChannel.open(new InetSocketAddress(host, port))
+          channel.configureBlocking(false)
+          channel
         }
 
       val connection =
