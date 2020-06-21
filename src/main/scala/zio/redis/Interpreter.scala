@@ -3,8 +3,9 @@ package zio.redis
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.channels.SocketChannel
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Arrays
 
 import zio._
 
@@ -16,49 +17,73 @@ trait Interpreter {
       def execute(command: Chunk[String]): IO[RedisError, String]
     }
 
-    def live(host: String, port: Int): Layer[IOException, RedisExecutor] = {
-      import internal._
-
-      val connect = IO.effect(unsafeConnect(host, port)).refineToOrDie[IOException]
-
+    def live(host: String, port: Int): Layer[IOException, RedisExecutor] =
       ZLayer.fromManaged {
         for {
-          channel <- ZManaged.fromAutoCloseable(connect)
-          queue   <- Queue.unbounded[Request].toManaged_
-          _       <- dequeue(queue, channel).forever.forkManaged
+          connection <- connect(host, port)
+          _          <- connection.receive.forever.forkManaged
         } yield new Service {
-          def execute(command: Chunk[String]): IO[RedisError, String] = enqueue(command, queue).flatMap(_.await)
+          def execute(command: Chunk[String]): IO[RedisError, String] = connection.send(command).flatMap(_.await)
         }
       }
+
+    private[this] def connect(host: String, port: Int): Managed[IOException, Connection] = {
+      val makeChannel =
+        IO {
+          val ch = SocketChannel.open(new InetSocketAddress(host, port))
+          ch.configureBlocking(false)
+          ch
+        }
+
+      val connection =
+        for {
+          channel <- Managed.fromAutoCloseable(makeChannel)
+          queue   <- Queue.unbounded[Request].toManaged_
+          inbox   <- UIO(ByteBuffer.allocate(1024)).toManaged_
+        } yield new Connection(channel, inbox, queue)
+
+      connection.refineToOrDie[IOException]
     }
 
-    private[this] object internal {
-      type Request = (Chunk[String], Promise[RedisError, String])
+    private[this] final class Connection(
+      channel: SocketChannel,
+      response: ByteBuffer,
+      queue: Queue[Request]
+    ) {
+      val receive: UIO[Any] =
+        queue.take.flatMap { request =>
+          val exchange =
+            IO {
+              unsafeSend(request.command)
+              unsafeReceive()
+            }
 
-      def dequeue(queue: Queue[Request], channel: SocketChannel): UIO[Any] =
-        queue.take.flatMap {
-          case (command, result) =>
-            val exchange =
-              IO.effect {
-                unsafeSend(command, channel)
-                unsafeReceive(channel)
-              }
-
-            result.completeWith(exchange.catchAll(RedisError.make))
+          request.result.completeWith(exchange.catchAll(RedisError.make))
         }
 
-      def enqueue(command: Chunk[String], queue: Queue[Request]): UIO[Promise[RedisError, String]] =
-        Promise.make[RedisError, String].flatMap(p => queue.offer((command, p)).as(p))
+      def send(command: Chunk[String]): UIO[Promise[RedisError, String]] =
+        Promise.make[RedisError, String].flatMap(p => queue.offer(Request(command, p)).as(p))
 
-      def unsafeConnect(host: String, port: Int): SocketChannel = {
-        val channel = SocketChannel.open(new InetSocketAddress(host, port))
+      private def unsafeReceive(): String = {
+        val sb        = new StringBuilder
+        var readBytes = 0
 
-        channel.configureBlocking(false)
+        // TODO: handle -1
+        while (readBytes == 0) {
+          channel.read(response)
+          response.flip()
 
-        channel
+          readBytes = response.limit()
+
+          sb ++= new String(Arrays.copyOf(response.array(), readBytes), UTF_8)
+
+          response.clear()
+        }
+
+        sb.toString.trim()
       }
 
-      def unsafeSend(command: Chunk[String], channel: SocketChannel): Unit = {
+      private def unsafeSend(command: Chunk[String]): Unit = {
         val data     = command.mkString
         val envelope = s"*${command.length}\r\n$data"
         val buffer   = ByteBuffer.wrap(envelope.getBytes(UTF_8))
@@ -66,18 +91,8 @@ trait Interpreter {
         while (buffer.hasRemaining())
           channel.write(buffer)
       }
-
-      def unsafeReceive(channel: SocketChannel): String = {
-        val buffer = ByteBuffer.allocate(1024)
-        val sb     = new StringBuilder
-
-        while (channel.read(buffer) > 0) {
-          sb ++= new String(buffer.array(), UTF_8)
-          buffer.clear()
-        }
-
-        sb.toString
-      }
     }
   }
+
+  private[this] sealed case class Request(command: Chunk[String], result: Promise[RedisError, String])
 }
