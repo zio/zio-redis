@@ -4,51 +4,55 @@ import zio.Chunk
 import zio.duration.Duration
 
 sealed trait Output[+A] {
-  private[redis] def decode(text: String): Either[RedisError, A] = Left(RedisError.WrongType(text))
+  private[redis] final def decode(text: String): Either[RedisError, A] =
+    decodeError(text).fold(tryDecode(text))(Left(_))
+
+  private[this] def decodeError(text: String): Option[RedisError] =
+    if (text.startsWith("-ERR"))
+      Some(RedisError.ProtocolError(text.drop(4).trim()))
+    else if (text.startsWith("-WRONGTYPE"))
+      Some(RedisError.WrongType(text.drop(10).trim()))
+    else
+      None
+
+  protected def tryDecode(text: String): Either[RedisError, A]
 }
 
 object Output {
   import RedisError._
 
   case object BoolOutput extends Output[Boolean] {
-    // def decode(text: String): Either[RedisError, Boolean] = ???
+    def tryDecode(text: String): Either[RedisError, Boolean] = ???
   }
 
   case object ChunkOutput extends Output[Chunk[String]] {
-    // def decode(text: String): Either[RedisError, Chunk[Chunk[Byte]]] = ???
+    def tryDecode(text: String): Either[RedisError, Chunk[String]] = ???
   }
 
   case object DoubleOutput extends Output[Double] {
-    // def decode(text: String): Either[RedisError, Double] = ???
+    def tryDecode(text: String): Either[RedisError, Double] = ???
   }
 
   case object DurationOutput extends Output[Duration] {
-    // def decode(text: String): Either[RedisError, Duration] = ???
+    def tryDecode(text: String): Either[RedisError, Duration] = ???
   }
 
   case object LongOutput extends Output[Long] {
-    // def decode(text: String): Either[RedisError, Long] = ???
+    def tryDecode(text: String): Either[RedisError, Long] = ???
   }
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
-    override def decode(text: String): Either[RedisError, Option[A]] =
-      decodeError(text) match {
-        case Some(error)                    => Left(error)
-        case None if text.startsWith("$-1") => Right(None)
-        case None                           => output.decode(text).map(Some(_))
-      }
+    def tryDecode(text: String): Either[RedisError, Option[A]] =
+      if (text.startsWith("$-1")) Right(None) else output.tryDecode(text).map(Some(_))
   }
 
   case object ScanOutput extends Output[(Long, Chunk[String])] {
-    // def decode(text: String): Either[RedisError, (Long, Chunk[Chunk[Byte]])] = ???
+    def tryDecode(text: String): Either[RedisError, (Long, Chunk[String])] = ???
   }
 
   case object StringOutput extends Output[String] {
-    override def decode(text: String): Either[RedisError, String] =
-      decodeError(text) match {
-        case Some(error) => Left(error)
-        case None        => Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
-      }
+    def tryDecode(text: String): Either[RedisError, String] =
+      Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
 
     private def parse(text: String): String = {
       var pos = 1
@@ -67,15 +71,7 @@ object Output {
   }
 
   case object UnitOutput extends Output[Unit] {
-    override def decode(text: String): Either[RedisError, Unit] =
+    def tryDecode(text: String): Either[RedisError,Unit] =
       Either.cond(text == "+OK\r\n", (), ProtocolError(s"$text isn't unit."))
   }
-
-  private def decodeError(text: String): Option[RedisError] =
-    if (text.startsWith("-ERR"))
-      Some(ProtocolError(text.drop(4).trim()))
-    else if (text.startsWith("-WRONGTYPE"))
-      Some(WrongType(text.drop(10).trim()))
-    else
-      None
 }
