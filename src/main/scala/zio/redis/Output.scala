@@ -43,15 +43,18 @@ object Output {
       Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
 
     private def parse(text: String): String = {
-      var i = 0
-      while (text.charAt(i) != '\n')
-        i += 1
+      var pos = 1
+      var len = 0
 
-      var j = i + 1
-      while (text.charAt(j) != '\r')
-        j += 1
+      while (text.charAt(pos) != '\r') {
+        len = len * 10 + (text.charAt(pos) - '0')
+        pos += 1
+      }
 
-      text.substring(i + 1, j)
+      // skip to first payload char
+      pos += 2
+
+      text.substring(pos, pos + len)
     }
   }
 
