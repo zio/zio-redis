@@ -12,10 +12,6 @@ object Output {
     // def decode(text: String): Either[RedisError, Boolean] = ???
   }
 
-  case object ByteOutput extends Output[Chunk[Byte]] {
-    // def decode(text: String): Either[RedisError, Chunk[Byte]] = ???
-  }
-
   case object ChunkOutput extends Output[Chunk[Chunk[Byte]]] {
     // def decode(text: String): Either[RedisError, Chunk[Chunk[Byte]]] = ???
   }

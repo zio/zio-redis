@@ -61,10 +61,6 @@ object Input {
     }
   }
 
-  case object ByteInput extends Input[Chunk[Byte]] {
-    def encode(data: Chunk[Byte]): Chunk[String] = Chunk.single(wrap(data.mkString))
-  }
-
   case object ChangedInput extends Input[Changed] {
     def encode(data: Changed): Chunk[String] = Chunk.single(wrap(data.stringify))
   }

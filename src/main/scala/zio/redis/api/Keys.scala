@@ -6,7 +6,7 @@ import zio.redis.RedisCommand
 
 trait Keys {
   final val del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
-  final val dump     = RedisCommand("DUMP", StringInput, ByteOutput)
+  final val dump     = RedisCommand("DUMP", StringInput, StringOutput)
   final val exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
   final val expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
   final val expireAt = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
@@ -33,7 +33,7 @@ trait Keys {
   final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
   final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
   final val pTtl      = RedisCommand("PTTL", StringInput, DurationOutput)
-  final val randomKey = RedisCommand("RANDOMKEY", NoInput, ByteOutput)
+  final val randomKey = RedisCommand("RANDOMKEY", NoInput, StringOutput)
   final val rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   final val renameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
@@ -42,7 +42,7 @@ trait Keys {
     Tuple7(
       StringInput,
       LongInput,
-      ByteInput,
+      StringInput,
       OptionalInput(ReplaceInput),
       OptionalInput(AbsTtlInput),
       OptionalInput(IdleTimeInput),

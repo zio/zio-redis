@@ -13,8 +13,8 @@ object CommandsSpec extends BaseSpec {
 
           for {
             _ <- set("key", data, None, None, None).ignore
-            _ <- get("key").ignore
-          } yield assert(1)(equalTo(1))
+            v <- get("key")
+          } yield assert(v)(equalTo(data))
         }
       )
     ).provideCustomLayerShared(Executor)
