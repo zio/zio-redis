@@ -58,7 +58,7 @@ trait Interpreter {
           val ready = readinessFlag.compareAndSet(true, false)
 
           if (ready)
-            executeNext.ensuring(UIO(readinessFlag.set(true)))
+            executeNext
           else
             UIO.unit
         }
@@ -74,7 +74,12 @@ trait Interpreter {
               unsafeReceive()
             }
 
-          request.result.completeWith(exchange.catchAll(RedisError.make))
+          val completer =
+            exchange
+              .catchAll(RedisError.make)
+              .ensuring(UIO(readinessFlag.set(true)))
+
+          request.result.completeWith(completer)
         }
 
       private def unsafeReceive(): String = {
