@@ -14,7 +14,7 @@ object CommandsSpec extends BaseSpec {
           for {
             _ <- set(key, value, None, None, None)
             v <- get(key)
-          } yield assert(v)(equalTo(value))
+          } yield assert(v)(isSome(equalTo(value)))
         }
       )
     ).provideCustomLayerShared(Executor)

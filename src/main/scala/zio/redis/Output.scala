@@ -31,7 +31,8 @@ object Output {
   }
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
-    override def decode(text: String): Either[RedisError, Option[A]] = output.decode(text).map(Some(_))
+    override def decode(text: String): Either[RedisError, Option[A]] =
+      if (text.startsWith("$-1")) Right(None) else output.decode(text).map(Some(_))
   }
 
   case object ScanOutput extends Output[(Long, Chunk[String])] {
