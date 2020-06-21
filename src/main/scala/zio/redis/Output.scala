@@ -32,7 +32,11 @@ object Output {
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
     override def decode(text: String): Either[RedisError, Option[A]] =
-      if (text.startsWith("$-1")) Right(None) else output.decode(text).map(Some(_))
+      decodeError(text) match {
+        case Some(error)                    => Left(error)
+        case None if text.startsWith("$-1") => Right(None)
+        case None                           => output.decode(text).map(Some(_))
+      }
   }
 
   case object ScanOutput extends Output[(Long, Chunk[String])] {
@@ -41,7 +45,10 @@ object Output {
 
   case object StringOutput extends Output[String] {
     override def decode(text: String): Either[RedisError, String] =
-      Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
+      decodeError(text) match {
+        case Some(error) => Left(error)
+        case None        => Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
+      }
 
     private def parse(text: String): String = {
       var pos = 1
@@ -63,4 +70,12 @@ object Output {
     override def decode(text: String): Either[RedisError, Unit] =
       Either.cond(text == "+OK\r\n", (), ProtocolError(s"$text isn't unit."))
   }
+
+  private def decodeError(text: String): Option[RedisError] =
+    if (text.startsWith("-ERR"))
+      Some(ProtocolError(text.drop(4).trim()))
+    else if (text.startsWith("-WRONGTYPE"))
+      Some(WrongType(text.drop(10).trim()))
+    else
+      None
 }
