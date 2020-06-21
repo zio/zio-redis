@@ -15,6 +15,9 @@ object CommandsSpec extends BaseSpec {
             _ <- set(key, value, None, None, None)
             v <- get(key)
           } yield assert(v)(isSome(equalTo(value)))
+        },
+        testM("get non-existing key") {
+          assertM(get("non-existent"))(isNone)
         }
       )
     ).provideCustomLayerShared(Executor)

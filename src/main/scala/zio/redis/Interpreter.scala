@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Arrays
+import java.util.concurrent.atomic.AtomicBoolean
 
 import zio._
 
@@ -37,20 +38,35 @@ trait Interpreter {
 
       val connection =
         for {
-          channel <- Managed.fromAutoCloseable(makeChannel)
-          queue   <- Queue.unbounded[Request].toManaged_
-          inbox   <- UIO(ByteBuffer.allocate(1024)).toManaged_
-        } yield new Connection(channel, inbox, queue)
+          channel       <- Managed.fromAutoCloseable(makeChannel)
+          readinessFlag <- UIO(new AtomicBoolean(true)).toManaged_
+          queue         <- Queue.unbounded[Request].toManaged_
+          inbox         <- UIO(ByteBuffer.allocate(1024)).toManaged_
+        } yield new Connection(channel, readinessFlag, inbox, queue)
 
       connection.refineToOrDie[IOException]
     }
 
     private[this] final class Connection(
       channel: SocketChannel,
+      readinessFlag: AtomicBoolean,
       response: ByteBuffer,
       queue: Queue[Request]
     ) {
       val receive: UIO[Any] =
+        UIO.effectSuspendTotal {
+          val ready = readinessFlag.compareAndSet(true, false)
+
+          if (ready)
+            executeNext.ensuring(UIO(readinessFlag.set(true)))
+          else
+            UIO.unit
+        }
+
+      def send(command: Chunk[String]): UIO[Promise[RedisError, String]] =
+        Promise.make[RedisError, String].flatMap(p => queue.offer(Request(command, p)).as(p))
+
+      private val executeNext: UIO[Any] =
         queue.take.flatMap { request =>
           val exchange =
             IO {
@@ -60,9 +76,6 @@ trait Interpreter {
 
           request.result.completeWith(exchange.catchAll(RedisError.make))
         }
-
-      def send(command: Chunk[String]): UIO[Promise[RedisError, String]] =
-        Promise.make[RedisError, String].flatMap(p => queue.offer(Request(command, p)).as(p))
 
       private def unsafeReceive(): String = {
         val sb        = new StringBuilder
