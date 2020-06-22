@@ -110,12 +110,7 @@ object Output {
         Left(ProtocolError(s"$text isn't a duration."))
 
     private[this] def parse(text: String): Either[RedisError, Duration] = {
-      var pos = 1
-
-      while (text.charAt(pos) != '\r')
-        pos += 1
-
-      val value = text.substring(1, pos).toLong
+      val value = unsafeReadNumber(text)
 
       if (value == -2)
         Left(ProtocolError("Key not found."))
@@ -134,12 +129,7 @@ object Output {
         Left(ProtocolError(s"$text isn't a duration."))
 
     private[this] def parse(text: String): Either[RedisError, Duration] = {
-      var pos = 1
-
-      while (text.charAt(pos) != '\r')
-        pos += 1
-
-      val value = text.substring(1, pos).toLong
+      val value = unsafeReadNumber(text)
 
       if (value == -2)
         Left(ProtocolError("Key not found."))
@@ -152,16 +142,7 @@ object Output {
 
   case object LongOutput extends Output[Long] {
     protected def tryDecode(text: String): Either[RedisError, Long] =
-      Either.cond(text.startsWith(":"), parse(text), ProtocolError(s"$text isn't a number."))
-
-    private[this] def parse(text: String): Long = {
-      var pos = 1
-
-      while (text.charAt(pos) != '\r')
-        pos += 1
-
-      text.substring(1, pos).toLong
-    }
+      Either.cond(text.startsWith(":"), unsafeReadNumber(text), ProtocolError(s"$text isn't a number."))
   }
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
@@ -198,4 +179,12 @@ object Output {
       Either.cond(text == "+OK\r\n", (), ProtocolError(s"$text isn't unit."))
   }
 
+  private[this] def unsafeReadNumber(text: String): Long = {
+    var pos = 1
+
+    while (text.charAt(pos) != '\r')
+      pos += 1
+
+    text.substring(1, pos).toLong
+  }
 }
