@@ -116,8 +116,13 @@ object OutputSpec extends BaseSpec {
         )
       ),
       suite("long")(
-        test("extract numbers") {
+        test("extract positive numbers") {
           val num = 42L
+          val res = LongOutput.decode(s":$num\r\n")
+          assert(res)(isRight(equalTo(num)))
+        },
+        test("extract negative numbers") {
+          val num = -42L
           val res = LongOutput.decode(s":$num\r\n")
           assert(res)(isRight(equalTo(num)))
         },

@@ -155,15 +155,12 @@ object Output {
       Either.cond(text.startsWith(":"), parse(text), ProtocolError(s"$text isn't a number."))
 
     private[this] def parse(text: String): Long = {
-      var pos   = 1
-      var value = 0L
+      var pos = 1
 
-      while (text.charAt(pos) != '\r') {
-        value = value * 10 + text.charAt(pos) - '0'
+      while (text.charAt(pos) != '\r')
         pos += 1
-      }
 
-      value
+      text.substring(1, pos).toLong
     }
   }
 
