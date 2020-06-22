@@ -3,7 +3,7 @@ package zio.redis
 import zio.test._
 import zio.test.Assertion._
 
-object CommandsSpec extends BaseSpec {
+object ApiSpec extends BaseSpec {
   def spec =
     suite("Redis commands")(
       suite("keys")(
