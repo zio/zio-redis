@@ -32,7 +32,7 @@ trait Keys {
   final val persist   = RedisCommand("PERSIST", StringInput, BoolOutput)
   final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
   final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
-  final val pTtl      = RedisCommand("PTTL", StringInput, DurationOutput)
+  final val pTtl      = RedisCommand("PTTL", StringInput, DurationMillisecondsOutput)
   final val randomKey = RedisCommand("RANDOMKEY", NoInput, OptionalOutput(StringOutput))
   final val rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   final val renameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
@@ -58,7 +58,7 @@ trait Keys {
   )
 
   final val touch  = RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
-  final val ttl    = RedisCommand("TTL", StringInput, DurationOutput)
+  final val ttl    = RedisCommand("TTL", StringInput, DurationSecondsOutput)
   final val typeOf = RedisCommand("TYPE", StringInput, StringOutput)
   final val unlink = RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
   final val wait_  = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)

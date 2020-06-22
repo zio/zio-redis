@@ -102,7 +102,11 @@ object Output {
     }
   }
 
-  case object DurationOutput extends Output[Duration] {
+  case object DurationMillisecondsOutput extends Output[Duration] {
+    protected def tryDecode(text: String): Either[RedisError, Duration] = ???
+  }
+
+  case object DurationSecondsOutput extends Output[Duration] {
     protected def tryDecode(text: String): Either[RedisError, Duration] = ???
   }
 
