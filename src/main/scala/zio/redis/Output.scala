@@ -4,16 +4,19 @@ import zio.Chunk
 import zio.duration.Duration
 
 sealed trait Output[+A] {
-  private[redis] final def decode(text: String): Either[RedisError, A] =
-    decodeError(text).fold(tryDecode(text))(Left(_))
+  private[redis] final def decode(text: String): Either[RedisError, A] = {
+    val error = decodeError(text)
 
-  private[this] def decodeError(text: String): Option[RedisError] =
+    if (error eq null) tryDecode(text) else Left(error)
+  }
+
+  private[this] def decodeError(text: String): RedisError =
     if (text.startsWith("-ERR"))
-      Some(RedisError.ProtocolError(text.drop(4).trim()))
+      RedisError.ProtocolError(text.drop(4).trim())
     else if (text.startsWith("-WRONGTYPE"))
-      Some(RedisError.WrongType(text.drop(10).trim()))
+      RedisError.WrongType(text.drop(10).trim())
     else
-      None
+      null
 
   protected def tryDecode(text: String): Either[RedisError, A]
 }
@@ -47,19 +50,19 @@ object Output {
       if (len == 0) Chunk.empty
       else {
         val data = Array.ofDim[String](len)
-        var idx = 0
-  
+        var idx  = 0
+
         while (idx < len) {
           // skip to the first size character
           pos += 3
- 
+
           var itemLen = 0
 
           while (text.charAt(pos) != '\r') {
             itemLen = itemLen * 10 + text.charAt(pos) - '0'
             pos += 1
           }
-  
+
           // skip to the first payload char
           pos += 2
 
@@ -67,7 +70,7 @@ object Output {
           idx += 1
           pos += itemLen
         }
-  
+
         Chunk.fromArray(data)
       }
     }
