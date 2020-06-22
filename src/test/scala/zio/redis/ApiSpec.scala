@@ -1,5 +1,8 @@
 package zio.redis
 
+import java.util.UUID
+
+import zio.UIO
 import zio.test._
 import zio.test.Assertion._
 
@@ -8,36 +11,40 @@ object ApiSpec extends BaseSpec {
     suite("Redis commands")(
       suite("keys")(
         testM("set followed by get") {
-          val key   = "key"
-          val value = "value"
-
           for {
-            _ <- set(key, value, None, None, None)
-            v <- get(key)
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            v     <- get(key)
           } yield assert(v)(isSome(equalTo(value)))
         },
         testM("get non-existing key") {
-          assertM(get("non-existent"))(isNone)
+          for {
+            key <- uuid
+            v   <- get(key)
+          } yield assert(v)(isNone)
         },
         testM("handles wrong types") {
-          val set = "test-set"
-
           for {
-            _ <- sAdd(set)("1", "2", "3")
-            v <- get(set).either
+            key <- uuid
+            _   <- sAdd(key)("1", "2", "3")
+            v   <- get(key).either
           } yield assert(v)(isLeft)
         },
         testM("check whether or not key exists") {
           val key = "existing"
 
           for {
-            _  <- set(key, key, None, None, None)
-            k1 <- exists(key, Nil)
-            k2 <- exists("unknown", Nil)
-          } yield assert(k1)(isTrue) && assert(k2)(isFalse)
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            e1    <- exists(key, Nil)
+            e2    <- exists("unknown", Nil)
+          } yield assert(e1)(isTrue) && assert(e2)(isFalse)
         }
       )
     ).provideCustomLayerShared(Executor)
 
   private val Executor = RedisExecutor.live("127.0.0.1", 6379).orDie
+  private val uuid     = UIO(UUID.randomUUID().toString)
 }
