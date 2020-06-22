@@ -77,7 +77,29 @@ object Output {
   }
 
   case object DoubleOutput extends Output[Double] {
-    protected def tryDecode(text: String): Either[RedisError, Double] = ???
+    protected def tryDecode(text: String): Either[RedisError, Double] =
+      if (text.startsWith("$"))
+        parse(text)
+      else
+        Left(ProtocolError(s"$text isn't a double."))
+
+    private[this] def parse(text: String): Either[RedisError, Double] = {
+      var pos = 1
+      var len = 0
+
+      while (text.charAt(pos) != '\r') {
+        len = len * 10 + text.charAt(pos) - '0'
+        pos += 1
+      }
+
+      // skip to the first payload char
+      pos += 2
+
+      try Right(text.substring(pos, pos + len).toDouble)
+      catch {
+        case _: Throwable => Left(ProtocolError(s"$text isn't a double."))
+      }
+    }
   }
 
   case object DurationOutput extends Output[Duration] {

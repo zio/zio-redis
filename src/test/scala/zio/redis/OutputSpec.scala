@@ -52,8 +52,20 @@ object OutputSpec extends BaseSpec {
         }
       ),
       suite("double")(
-        test("stub") {
-          assert(1)(equalTo(1))
+        test("extract numbers") {
+          val num = 42.3
+          val res = DoubleOutput.decode(s"$$4\r\n$num\r\n")
+          assert(res)(isRight(equalTo(num)))
+        },
+        test("report invalid input as protocol error") {
+          val bad = "random input"
+          val res = DoubleOutput.decode(bad)
+          assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't a double."))))
+        },
+        test("report number format exceptions as protocol errors") {
+          val bad = "$2\r\nok\r\n"
+          val res = DoubleOutput.decode(bad)
+          assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't a double."))))
         }
       ),
       suite("duration")(
