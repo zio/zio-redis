@@ -1,6 +1,7 @@
 package zio.redis
 
 import zio.Chunk
+import zio.duration._
 import zio.redis.Output._
 import zio.redis.RedisError._
 import zio.test._
@@ -68,10 +69,51 @@ object OutputSpec extends BaseSpec {
           assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't a double."))))
         }
       ),
-      suite("duration")(
-        test("stub") {
-          assert(1)(equalTo(1))
-        }
+      suite("durations")(
+        suite("milliseconds")(
+          test("extract milliseconds") {
+            val num = 42
+            val res = DurationMillisecondsOutput.decode(s":$num\r\n")
+            assert(res)(isRight(equalTo(num.millis)))
+          },
+          test("report error for non-existing key") {
+            val bad = ":-2\r\n"
+            val res = DurationMillisecondsOutput.decode(bad)
+            assert(res)(isLeft(equalTo(ProtocolError("Key not found."))))
+          },
+          test("report error for key without TTL") {
+            val bad = ":-1\r\n"
+            val res = DurationMillisecondsOutput.decode(bad)
+            assert(res)(isLeft(equalTo(ProtocolError("Key has no expire."))))
+          },
+          test("report invalid input as protocol error") {
+            val bad = "random input"
+            val res = DurationMillisecondsOutput.decode(bad)
+            assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't a duration."))))
+          }
+        ),
+        suite("seconds")(
+          test("extract seconds") {
+            val num = 42
+            val res = DurationSecondsOutput.decode(s":$num\r\n")
+            assert(res)(isRight(equalTo(num.seconds)))
+          },
+          test("report error for non-existing key") {
+            val bad = ":-2\r\n"
+            val res = DurationSecondsOutput.decode(bad)
+            assert(res)(isLeft(equalTo(ProtocolError("Key not found."))))
+          },
+          test("report error for key without TTL") {
+            val bad = ":-1\r\n"
+            val res = DurationSecondsOutput.decode(bad)
+            assert(res)(isLeft(equalTo(ProtocolError("Key has no expire."))))
+          },
+          test("report invalid input as protocol error") {
+            val bad = "random input"
+            val res = DurationSecondsOutput.decode(bad)
+            assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't a duration."))))
+          }
+        )
       ),
       suite("long")(
         test("extract numbers") {

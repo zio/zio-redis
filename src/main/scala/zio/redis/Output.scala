@@ -1,7 +1,7 @@
 package zio.redis
 
 import zio.Chunk
-import zio.duration.Duration
+import zio.duration._
 
 sealed trait Output[+A] {
   private[redis] final def decode(text: String): Either[RedisError, A] = {
@@ -103,11 +103,51 @@ object Output {
   }
 
   case object DurationMillisecondsOutput extends Output[Duration] {
-    protected def tryDecode(text: String): Either[RedisError, Duration] = ???
+    protected def tryDecode(text: String): Either[RedisError, Duration] =
+      if (text.startsWith(":"))
+        parse(text)
+      else
+        Left(ProtocolError(s"$text isn't a duration."))
+
+    private[this] def parse(text: String): Either[RedisError, Duration] = {
+      var pos = 1
+
+      while (text.charAt(pos) != '\r')
+        pos += 1
+
+      val value = text.substring(1, pos).toLong
+
+      if (value == -2)
+        Left(ProtocolError("Key not found."))
+      else if (value == -1)
+        Left(ProtocolError("Key has no expire."))
+      else
+        Right(value.millis)
+    }
   }
 
   case object DurationSecondsOutput extends Output[Duration] {
-    protected def tryDecode(text: String): Either[RedisError, Duration] = ???
+    protected def tryDecode(text: String): Either[RedisError, Duration] =
+      if (text.startsWith(":"))
+        parse(text)
+      else
+        Left(ProtocolError(s"$text isn't a duration."))
+
+    private[this] def parse(text: String): Either[RedisError, Duration] = {
+      var pos = 1
+
+      while (text.charAt(pos) != '\r')
+        pos += 1
+
+      val value = text.substring(1, pos).toLong
+
+      if (value == -2)
+        Left(ProtocolError("Key not found."))
+      else if (value == -1)
+        Left(ProtocolError("Key has no expire."))
+      else
+        Right(value.seconds)
+    }
   }
 
   case object LongOutput extends Output[Long] {
