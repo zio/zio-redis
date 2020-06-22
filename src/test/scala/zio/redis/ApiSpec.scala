@@ -32,8 +32,6 @@ object ApiSpec extends BaseSpec {
           } yield assert(v)(isLeft)
         },
         testM("check whether or not key exists") {
-          val key = "existing"
-
           for {
             key   <- uuid
             value <- uuid
