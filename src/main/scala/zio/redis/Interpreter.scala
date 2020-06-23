@@ -38,18 +38,18 @@ trait Interpreter {
 
       val connection =
         for {
-          channel      <- Managed.fromAutoCloseable(makeChannel)
-          queue        <- Queue.unbounded[Request].toManaged_
-          readinessFlag = new AtomicBoolean(true)
-          response      = ByteBuffer.allocate(1024)
-        } yield new Connection(channel, queue, readinessFlag, response)
+          channel         <- Managed.fromAutoCloseable(makeChannel)
+          pendingRequests <- Queue.unbounded[Request].toManaged_
+          readinessFlag    = new AtomicBoolean(true)
+          response         = ByteBuffer.allocate(1024)
+        } yield new Connection(channel, pendingRequests, readinessFlag, response)
 
       connection.refineToOrDie[IOException]
     }
 
     private[this] final class Connection(
       channel: SocketChannel,
-      queue: Queue[Request],
+      pendingRequests: Queue[Request],
       readinessFlag: AtomicBoolean,
       response: ByteBuffer
     ) {
@@ -64,10 +64,10 @@ trait Interpreter {
         }
 
       def send(command: Chunk[String]): UIO[Promise[RedisError, String]] =
-        Promise.make[RedisError, String].flatMap(p => queue.offer(Request(command, p)).as(p))
+        Promise.make[RedisError, String].flatMap(p => pendingRequests.offer(Request(command, p)).as(p))
 
       private val executeNext: UIO[Any] =
-        queue.take.flatMap { request =>
+        pendingRequests.take.flatMap { request =>
           val exchange =
             IO {
               unsafeSend(request.command)
