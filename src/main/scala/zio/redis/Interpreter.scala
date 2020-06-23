@@ -54,14 +54,7 @@ trait Interpreter {
       response: ByteBuffer
     ) {
       val receive: UIO[Any] =
-        UIO.effectSuspendTotal {
-          val ready = readinessFlag.compareAndSet(true, false)
-
-          if (ready)
-            executeNext
-          else
-            UIO.unit
-        }
+        UIO.effectSuspendTotal(if (readinessFlag.compareAndSet(true, false)) executeNext else UIO.unit)
 
       def send(command: Chunk[String]): UIO[Promise[RedisError, String]] =
         Promise.make[RedisError, String].flatMap(p => pendingRequests.offer(Request(command, p)).as(p))
