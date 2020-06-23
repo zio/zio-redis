@@ -38,20 +38,20 @@ trait Interpreter {
 
       val connection =
         for {
-          channel       <- Managed.fromAutoCloseable(makeChannel)
-          readinessFlag <- UIO(new AtomicBoolean(true)).toManaged_
-          queue         <- Queue.unbounded[Request].toManaged_
-          inbox         <- UIO(ByteBuffer.allocate(1024)).toManaged_
-        } yield new Connection(channel, readinessFlag, inbox, queue)
+          channel      <- Managed.fromAutoCloseable(makeChannel)
+          queue        <- Queue.unbounded[Request].toManaged_
+          readinessFlag = new AtomicBoolean(true)
+          response      = ByteBuffer.allocate(1024)
+        } yield new Connection(channel, queue, readinessFlag, response)
 
       connection.refineToOrDie[IOException]
     }
 
     private[this] final class Connection(
       channel: SocketChannel,
+      queue: Queue[Request],
       readinessFlag: AtomicBoolean,
-      response: ByteBuffer,
-      queue: Queue[Request]
+      response: ByteBuffer
     ) {
       val receive: UIO[Any] =
         UIO.effectSuspendTotal {
