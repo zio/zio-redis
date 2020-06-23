@@ -95,7 +95,8 @@ test: &test
     - <<: *install_jdk
     - run:
         name: Run Redis
-        command: docker run -d redis:5-alpine
+        command: docker-compose up
+        background: true
     - run:
         name: Run tests
         command: ./sbt ++${SCALA_VERSION}! test
