@@ -6,14 +6,28 @@ trait Geo {
 
   sealed case class LongLat(longitude: Double, latitude: Double)
 
-  sealed trait Order
+  sealed trait Order { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case Order.Ascending  => "ASC"
+        case Order.Descending => "DESC"
+      }
+  }
 
   object Order {
     case object Ascending  extends Order
     case object Descending extends Order
   }
 
-  sealed trait RadiusUnit
+  sealed trait RadiusUnit { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case RadiusUnit.Meters     => "m"
+        case RadiusUnit.Kilometers => "km"
+        case RadiusUnit.Feet       => "ft"
+        case RadiusUnit.Miles      => "mi"
+      }
+  }
 
   object RadiusUnit {
     case object Meters     extends RadiusUnit
@@ -26,13 +40,22 @@ trait Geo {
 
   sealed case class StoreDist(key: String)
 
-  case object WithCoord
+  case object WithCoord {
+    private[redis] def stringify: String = "WITHCOORD"
+  }
+
   type WithCoord = WithCoord.type
 
-  case object WithDist
+  case object WithDist {
+    private[redis] def stringify: String = "WITHDIST"
+  }
+
   type WithDist = WithDist.type
 
-  case object WithHash
+  case object WithHash {
+    private[redis] def stringify: String = "WITHHASH"
+  }
+
   type WithHash = WithHash.type
 
 }

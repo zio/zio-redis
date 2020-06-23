@@ -4,11 +4,18 @@ trait Strings {
 
   sealed case class BitFieldGet(`type`: BitFieldType, offset: Int)
 
-  sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: BigInt)
+  sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: Long)
 
-  sealed case class BitFieldSet(`type`: BitFieldType, offset: Int, value: BigInt)
+  sealed case class BitFieldSet(`type`: BitFieldType, offset: Int, value: Long)
 
-  sealed trait BitFieldOverflow
+  sealed trait BitFieldOverflow { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case BitFieldOverflow.Fail => "FAIL"
+        case BitFieldOverflow.Sat  => "SAT"
+        case BitFieldOverflow.Wrap => "WRAP"
+      }
+  }
 
   object BitFieldOverflow {
     case object Fail extends BitFieldOverflow
@@ -16,14 +23,27 @@ trait Strings {
     case object Wrap extends BitFieldOverflow
   }
 
-  sealed trait BitFieldType
+  sealed trait BitFieldType { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case BitFieldType.UnsignedInt(size) => s"u$size"
+        case BitFieldType.SignedInt(size)   => s"i$size"
+      }
+  }
 
   object BitFieldType {
     sealed case class UnsignedInt(size: Int) extends BitFieldType
     sealed case class SignedInt(size: Int)   extends BitFieldType
   }
 
-  sealed trait BitOperation
+  sealed trait BitOperation { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case BitOperation.AND => "AND"
+        case BitOperation.OR  => "OR"
+        case BitOperation.XOR => "XOR"
+      }
+  }
 
   object BitOperation {
     case object AND extends BitOperation
@@ -33,6 +53,9 @@ trait Strings {
 
   sealed case class BitPosRange(start: Long, end: Option[Long])
 
-  case object KeepTtl
+  case object KeepTtl {
+    private[redis] def stringify: String = "KEEPTTL"
+  }
+
   type KeepTtl = KeepTtl.type
 }

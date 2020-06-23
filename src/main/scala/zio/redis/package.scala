@@ -10,9 +10,9 @@ package object redis
     with api.Sets
     with api.Strings
     with api.SortedSets
-    with api.Transactions
     with options.Geo
     with options.Keys
     with options.Shared
     with options.SortedSets
     with options.Strings
+    with Interpreter
