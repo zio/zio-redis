@@ -148,8 +148,16 @@ object OutputSpec extends BaseSpec {
         }
       ),
       suite("scan")(
-        test("stub") {
-          assert(1)(equalTo(1))
+        test("extract cursor and elements") {
+          val input = "*2\r\n$1\r\n5\r\n*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"
+          val res   = ScanOutput.decode(input)
+          assert(res)(isRight(equalTo("5" -> Chunk("foo", "bar"))))
+        },
+        test("report invalid input as protocol error") {
+          // TODO: expand failure cases
+          val bad = "random input"
+          val res = ScanOutput.decode(bad)
+          assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't scan output."))))
         }
       ),
       suite("string")(

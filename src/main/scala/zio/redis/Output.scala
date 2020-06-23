@@ -36,44 +36,7 @@ object Output {
 
   case object ChunkOutput extends Output[Chunk[String]] {
     protected def tryDecode(text: String): Either[RedisError, Chunk[String]] =
-      Either.cond(text.startsWith("*"), parse(text), ProtocolError(s"$text isn't an array."))
-
-    private[this] def parse(text: String): Chunk[String] = {
-      var pos = 1
-      var len = 0
-
-      while (text.charAt(pos) != '\r') {
-        len = len * 10 + text.charAt(pos) - '0'
-        pos += 1
-      }
-
-      if (len == 0) Chunk.empty
-      else {
-        val data = Array.ofDim[String](len)
-        var idx  = 0
-
-        while (idx < len) {
-          // skip to the first size character
-          pos += 3
-
-          var itemLen = 0
-
-          while (text.charAt(pos) != '\r') {
-            itemLen = itemLen * 10 + text.charAt(pos) - '0'
-            pos += 1
-          }
-
-          // skip to the first payload char
-          pos += 2
-
-          data(idx) = text.substring(pos, pos + itemLen)
-          idx += 1
-          pos += itemLen
-        }
-
-        Chunk.fromArray(data)
-      }
-    }
+      Either.cond(text.startsWith("*"), unsafeReadChunk(text, 0), ProtocolError(s"$text isn't an array."))
   }
 
   case object DoubleOutput extends Output[Double] {
@@ -150,8 +113,26 @@ object Output {
       if (text.startsWith("$-1")) Right(None) else output.tryDecode(text).map(Some(_))
   }
 
-  case object ScanOutput extends Output[(Long, Chunk[String])] {
-    protected def tryDecode(text: String): Either[RedisError, (Long, Chunk[String])] = ???
+  case object ScanOutput extends Output[(String, Chunk[String])] {
+    protected def tryDecode(text: String): Either[RedisError, (String, Chunk[String])] =
+      if (text.startsWith("*2\r\n")) {
+        var pos = 5
+        var len = 0
+
+        while (text.charAt(pos) != '\r') {
+          len = len * 10 + text.charAt(pos) - '0'
+          pos += 1
+        }
+
+        // skip to the first payload char
+        pos += 2
+
+        val cursor = text.substring(pos, pos + len)
+        val items  = unsafeReadChunk(text, pos + len + 2)
+
+        Right(cursor -> items)
+      } else
+        Left(ProtocolError(s"$text isn't scan output."))
   }
 
   case object StringOutput extends Output[String] {
@@ -177,6 +158,43 @@ object Output {
   case object UnitOutput extends Output[Unit] {
     protected def tryDecode(text: String): Either[RedisError, Unit] =
       Either.cond(text == "+OK\r\n", (), ProtocolError(s"$text isn't unit."))
+  }
+
+  private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {
+    var pos = start + 1
+    var len = 0
+
+    while (text.charAt(pos) != '\r') {
+      len = len * 10 + text.charAt(pos) - '0'
+      pos += 1
+    }
+
+    if (len == 0) Chunk.empty
+    else {
+      val data = Array.ofDim[String](len)
+      var idx  = 0
+
+      while (idx < len) {
+        // skip to the first size character
+        pos += 3
+
+        var itemLen = 0
+
+        while (text.charAt(pos) != '\r') {
+          itemLen = itemLen * 10 + text.charAt(pos) - '0'
+          pos += 1
+        }
+
+        // skip to the first payload char
+        pos += 2
+
+        data(idx) = text.substring(pos, pos + itemLen)
+        idx += 1
+        pos += itemLen
+      }
+
+      Chunk.fromArray(data)
+    }
   }
 
   private[this] def unsafeReadNumber(text: String): Long = {
