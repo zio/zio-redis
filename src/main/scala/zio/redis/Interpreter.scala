@@ -38,46 +38,36 @@ trait Interpreter {
 
       val connection =
         for {
-          channel       <- Managed.fromAutoCloseable(makeChannel)
-          readinessFlag <- UIO(new AtomicBoolean(true)).toManaged_
-          queue         <- Queue.unbounded[Request].toManaged_
-          inbox         <- UIO(ByteBuffer.allocate(1024)).toManaged_
-        } yield new Connection(channel, readinessFlag, inbox, queue)
+          channel         <- Managed.fromAutoCloseable(makeChannel)
+          pendingRequests <- Queue.unbounded[Request].toManaged_
+          readinessFlag    = new AtomicBoolean(true)
+          response         = ByteBuffer.allocate(1024)
+        } yield new Connection(channel, pendingRequests, readinessFlag, response)
 
       connection.refineToOrDie[IOException]
     }
 
     private[this] final class Connection(
       channel: SocketChannel,
+      pendingRequests: Queue[Request],
       readinessFlag: AtomicBoolean,
-      response: ByteBuffer,
-      queue: Queue[Request]
+      response: ByteBuffer
     ) {
       val receive: UIO[Any] =
-        UIO.effectSuspendTotal {
-          val ready = readinessFlag.compareAndSet(true, false)
-
-          if (ready)
-            executeNext
-          else
-            UIO.unit
-        }
+        UIO.effectSuspendTotal(if (readinessFlag.compareAndSet(true, false)) executeNext else UIO.unit)
 
       def send(command: Chunk[String]): UIO[Promise[RedisError, String]] =
-        Promise.make[RedisError, String].flatMap(p => queue.offer(Request(command, p)).as(p))
+        Promise.make[RedisError, String].flatMap(p => pendingRequests.offer(Request(command, p)).as(p))
 
       private val executeNext: UIO[Any] =
-        queue.take.flatMap { request =>
+        pendingRequests.take.flatMap { request =>
           val exchange =
             IO {
               unsafeSend(request.command)
               unsafeReceive()
             }
 
-          val completer =
-            exchange
-              .catchAll(RedisError.make)
-              .ensuring(UIO(readinessFlag.set(true)))
+          val completer = exchange.catchAll(RedisError.make).ensuring(UIO(readinessFlag.set(true)))
 
           request.result.completeWith(completer)
         }
