@@ -67,10 +67,7 @@ trait Interpreter {
               unsafeReceive()
             }
 
-          val completer =
-            exchange
-              .catchAll(RedisError.make)
-              .ensuring(UIO(readinessFlag.set(true)))
+          val completer = exchange.catchAll(RedisError.make).ensuring(UIO(readinessFlag.set(true)))
 
           request.result.completeWith(completer)
         }
