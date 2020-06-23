@@ -115,24 +115,25 @@ object Output {
 
   case object ScanOutput extends Output[(String, Chunk[String])] {
     protected def tryDecode(text: String): Either[RedisError, (String, Chunk[String])] =
-      if (text.startsWith("*2\r\n")) {
-        var pos = 5
-        var len = 0
+      Either.cond(text.startsWith("*2\r\n"), parse(text), ProtocolError(s"$text isn't scan output."))
 
-        while (text.charAt(pos) != '\r') {
-          len = len * 10 + text.charAt(pos) - '0'
-          pos += 1
-        }
+    private[this] def parse(text: String): (String, Chunk[String]) = {
+      var pos = 5
+      var len = 0
 
-        // skip to the first payload char
-        pos += 2
+      while (text.charAt(pos) != '\r') {
+        len = len * 10 + text.charAt(pos) - '0'
+        pos += 1
+      }
 
-        val cursor = text.substring(pos, pos + len)
-        val items  = unsafeReadChunk(text, pos + len + 2)
+      // skip to the first payload char
+      pos += 2
 
-        Right(cursor -> items)
-      } else
-        Left(ProtocolError(s"$text isn't scan output."))
+      val cursor = text.substring(pos, pos + len)
+      val items  = unsafeReadChunk(text, pos + len + 2)
+
+      (cursor, items)
+    }
   }
 
   case object StringOutput extends Output[String] {
