@@ -48,6 +48,7 @@ lazy val benchmarks =
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
+      crossScalaVersions -= Scala211,
       skip in publish := true,
       libraryDependencies ++= Seq(
         "dev.profunktor" %% "redis4cats-effects" % "0.10.0",
