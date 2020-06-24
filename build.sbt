@@ -7,8 +7,7 @@ inThisBuild(
     licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
-      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd")),
-      Developer("paulpdaniels", "Paul Daniels", "paulpdaniels@gmail.com", url("https://github.com/paulpdaniels"))
+      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
     pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
@@ -21,10 +20,19 @@ inThisBuild(
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
+addCommandAlias("testJVM211", ";redis/test")
+
+lazy val root =
+  project
+    .in(file("."))
+    .settings(skip in publish := true)
+    .aggregate(redis, benchmarks)
 
 lazy val redis =
   project
-    .in(file("."))
+    .in(file("redis"))
+    .enablePlugins(BuildInfoPlugin)
     .settings(stdSettings("zio-redis"))
     .settings(buildInfoSettings("zio.redis"))
     .settings(
@@ -35,4 +43,17 @@ lazy val redis =
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
-    .enablePlugins(BuildInfoPlugin)
+
+lazy val benchmarks =
+  project
+    .in(file("benchmarks"))
+    .dependsOn(redis)
+    .enablePlugins(JmhPlugin)
+    .settings(
+      crossScalaVersions -= Scala211,
+      skip in publish := true,
+      libraryDependencies ++= Seq(
+        "dev.profunktor" %% "redis4cats-effects" % "0.10.0",
+        "io.laserdisc"   %% "laserdisc-fs2"      % "0.4.0"
+      )
+    )

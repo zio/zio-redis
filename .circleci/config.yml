@@ -88,7 +88,7 @@ lint: &lint
         command: ./sbt ++${SCALA_VERSION}! check
     - <<: *save_cache
 
-test: &test
+testJVM: &testJVM
   steps:
     - checkout
     - <<: *load_cache
@@ -99,7 +99,21 @@ test: &test
         background: true
     - run:
         name: Run tests
-        command: ./sbt ++${SCALA_VERSION}! test
+        command: ./sbt ++${SCALA_VERSION}! testJVM
+    - <<: *save_cache
+
+testJVM211: &testJVM211
+  steps:
+    - checkout
+    - <<: *load_cache
+    - <<: *install_jdk
+    - run:
+        name: Run Redis
+        command: docker-compose up
+        background: true
+    - run:
+        name: Run tests
+        command: ./sbt ++${SCALA_VERSION}! testJVM211
     - <<: *save_cache
 
 release: &release
@@ -131,42 +145,42 @@ jobs:
       - <<: *jdk_8
 
   test_211_jdk8:
-    <<: *test
+    <<: *testJVM211
     <<: *machine_ubuntu
     environment:
       - <<: *scala_211
       - <<: *jdk_8
 
   test_212_jdk8:
-    <<: *test
+    <<: *testJVM
     <<: *machine_ubuntu
     environment:
       - <<: *scala_212
       - <<: *jdk_8
 
   test_213_jdk8:
-    <<: *test
+    <<: *testJVM
     <<: *machine_ubuntu
     environment:
       - <<: *scala_213
       - <<: *jdk_8
 
   test_211_jdk11:
-    <<: *test
+    <<: *testJVM211
     <<: *machine_ubuntu
     environment:
       - <<: *scala_211
       - <<: *jdk_11
 
   test_212_jdk11:
-    <<: *test
+    <<: *testJVM
     <<: *machine_ubuntu
     environment:
       - <<: *scala_212
       - <<: *jdk_11
 
   test_213_jdk11:
-    <<: *test
+    <<: *testJVM
     <<: *machine_ubuntu
     environment:
       - <<: *scala_213
