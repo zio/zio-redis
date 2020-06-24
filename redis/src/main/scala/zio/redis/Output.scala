@@ -4,7 +4,7 @@ import zio.Chunk
 import zio.duration._
 
 sealed trait Output[+A] {
-  private[redis] final def decode(text: String): A = {
+  private[redis] final def unsafeDecode(text: String): A = {
     val error = decodeError(text)
 
     if (error eq null) tryDecode(text) else throw error
