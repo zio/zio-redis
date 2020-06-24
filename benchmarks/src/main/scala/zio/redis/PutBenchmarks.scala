@@ -11,7 +11,7 @@ import zio.ZIO
 @Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
 @Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
 @Fork(3)
-class PutBenchmark {
+class PutBenchmarks {
   import BenchmarkRuntime._
 
   @Param(Array("500"))
