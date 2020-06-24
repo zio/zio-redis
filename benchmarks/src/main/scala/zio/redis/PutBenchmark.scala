@@ -19,18 +19,31 @@ final class PutBenchmark {
   private val items: List[Int] = (0 to count).toList
 
   @Benchmark
-  def laserdisc(): Unit = ???
+  def laserdisc(): Unit = {
+    import _root_.laserdisc._
+    import _root_.laserdisc.{ all => cmd }
+    import _root_.laserdisc.auto._
+    import _root_.laserdisc.fs2._
+    import cats.instances.list._
+    import cats.syntax.foldable._
+
+    RedisClient
+      .to(RedisHost, RedisPort)
+      .use(c => items.traverse_(i => c.send(cmd.set(Key.unsafeFrom(s"$i"), i))))
+      .unsafeRunSync
+  }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.effect.IO
-    import cats.implicits._
+    import cats.instances.list._
+    import cats.syntax.foldable._
     import dev.profunktor.redis4cats.Redis
     import dev.profunktor.redis4cats.effect.Log.Stdout._
 
     Redis[IO]
-      .utf8(Host)
-      .use(cmd => items.traverse(i => cmd.set(s"redis4cats-$i", s"redis4cats-$i")))
+      .utf8(RedisHost)
+      .use(c => items.traverse_(i => c.set(s"$i", s"$i")))
       .unsafeRunSync
   }
 
