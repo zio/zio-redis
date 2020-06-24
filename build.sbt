@@ -20,6 +20,8 @@ inThisBuild(
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
+addCommandAlias("testJVM211", ";redis/test")
 
 lazy val root =
   project
