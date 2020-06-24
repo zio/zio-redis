@@ -18,11 +18,10 @@ class PutBenchmark {
   private var count: Int = _
 
   private var items: List[String] = _
-  
+
   @Setup(Level.Trial)
-  def setup(): Unit = {
+  def setup(): Unit =
     items = (0 to count).toList.map(_.toString)
-  }
 
   @Benchmark
   def laserdisc(): Unit = {
