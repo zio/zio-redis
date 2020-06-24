@@ -87,7 +87,6 @@ object ApiSpec extends BaseSpec {
           } yield assert(exp)(isTrue) && assert(ttl1)(isRight) && assert(persist)(isTrue) && assert(ttl2)(isLeft)
         },
         testM("check value type by key") {
-          //import zio.console._
           for {
             key       <- uuid
             value     <- uuid
