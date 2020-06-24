@@ -17,7 +17,12 @@ class PutBenchmark {
   @Param(Array("500"))
   private var count: Int = _
 
-  private val items: List[Int] = (0 to count).toList
+  private var items: List[String] = _
+  
+  @Setup(Level.Trial)
+  def setup(): Unit = {
+    items = (0 to count).toList.map(_.toString)
+  }
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -30,7 +35,7 @@ class PutBenchmark {
 
     RedisClient
       .to(RedisHost, RedisPort)
-      .use(c => items.traverse_(i => c.send(cmd.set(Key.unsafeFrom(s"$i"), i))))
+      .use(c => items.traverse_(i => c.send(cmd.set(Key.unsafeFrom(i), i))))
       .unsafeRunSync
   }
 
@@ -44,14 +49,14 @@ class PutBenchmark {
 
     Redis[IO]
       .utf8(s"redis://$RedisHost:$RedisPort")
-      .use(c => items.traverse_(i => c.set(s"$i", s"$i")))
+      .use(c => items.traverse_(i => c.set(i, i)))
       .unsafeRunSync
   }
 
   @Benchmark
   def zio(): Unit = {
     val effect = ZIO
-      .foreach_(items)(i => set(s"$i", s"$i", None, None, None))
+      .foreach_(items)(i => set(i, i, None, None, None))
       .provideLayer(RedisExecutor.live(RedisHost, RedisPort).orDie)
 
     unsafeRun(effect)
