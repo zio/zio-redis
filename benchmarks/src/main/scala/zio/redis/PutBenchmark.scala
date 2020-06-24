@@ -3,6 +3,7 @@ package zio.redis
 import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
+import zio.ZIO
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -48,5 +49,11 @@ final class PutBenchmark {
   }
 
   @Benchmark
-  def zio(): Unit = ???
+  def zio(): Unit = {
+    val effect = ZIO
+      .foreach_(items)(i => set(s"$i", s"$i", None, None, None))
+      .provideLayer(RedisExecutor.live(RedisHost, RedisPort).orDie)
+
+    unsafeRun(effect)
+  }
 }
