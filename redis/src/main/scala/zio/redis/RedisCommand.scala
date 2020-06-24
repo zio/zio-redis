@@ -7,7 +7,7 @@ final class RedisCommand[-In, +Out] private (name: String, input: Input[In], out
     ZIO
       .accessM[RedisExecutor](_.get.execute(Input.StringInput.encode(name) ++ input.encode(in)))
       .map(output.decode)
-      .absolve
+      .refineToOrDie[RedisError]
 }
 
 object RedisCommand {
