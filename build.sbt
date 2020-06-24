@@ -7,8 +7,7 @@ inThisBuild(
     licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
-      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd")),
-      Developer("paulpdaniels", "Paul Daniels", "paulpdaniels@gmail.com", url("https://github.com/paulpdaniels"))
+      Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
     pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
@@ -22,9 +21,17 @@ inThisBuild(
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
 
-lazy val redis =
+lazy val root =
   project
     .in(file("."))
+    .settings(
+      skip in publish := true
+    )
+    .aggregate(redis)
+
+lazy val redis =
+  project
+    .in(file("redis"))
     .settings(stdSettings("zio-redis"))
     .settings(buildInfoSettings("zio.redis"))
     .settings(
