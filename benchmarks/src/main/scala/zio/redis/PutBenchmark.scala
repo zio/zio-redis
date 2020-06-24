@@ -40,10 +40,10 @@ class PutBenchmark {
     import cats.instances.list._
     import cats.syntax.foldable._
     import dev.profunktor.redis4cats.Redis
-    import dev.profunktor.redis4cats.effect.Log.Stdout._
+    import dev.profunktor.redis4cats.effect.Log.NoOp._
 
     Redis[IO]
-      .utf8(RedisHost)
+      .utf8(s"redis://$RedisHost:$RedisPort")
       .use(c => items.traverse_(i => c.set(s"$i", s"$i")))
       .unsafeRunSync
   }
