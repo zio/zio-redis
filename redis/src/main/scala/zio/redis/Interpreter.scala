@@ -62,14 +62,18 @@ trait Interpreter {
       private val executeNext: UIO[Any] =
         pendingRequests.take.flatMap { request =>
           val exchange =
-            IO {
-              unsafeSend(request.command)
-              unsafeReceive()
+            IO.effect {
+              try {
+                unsafeSend(request.command)
+                unsafeReceive()
+              } catch {
+                case t: Throwable => throw RedisError.ProtocolError(t.getMessage)
+              } finally {
+                readinessFlag.set(true)
+              }
             }
 
-          val completer = exchange.catchAll(RedisError.make).ensuring(UIO(readinessFlag.set(true)))
-
-          request.result.completeWith(completer)
+          request.result.completeWith(exchange.refineToOrDie[RedisError])
         }
 
       private def unsafeReceive(): String = {
