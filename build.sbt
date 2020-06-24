@@ -25,7 +25,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(skip in publish := true)
-    .aggregate(redis)
+    .aggregate(redis, benchmarks)
 
 lazy val redis =
   project
@@ -49,5 +49,8 @@ lazy val benchmarks =
     .enablePlugins(JmhPlugin)
     .settings(
       skip in publish := true,
-      libraryDependencies ++= Seq()
+      libraryDependencies ++= Seq(
+        "dev.profunktor" %% "redis4cats-effects" % "0.10.0",
+        "io.laserdisc"   %% "laserdisc-fs2"      % "0.4.0"
+      )
     )
