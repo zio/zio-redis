@@ -9,6 +9,7 @@ import java.util.Arrays
 import java.util.concurrent.atomic.AtomicBoolean
 
 import zio._
+import zio.blocking._
 
 trait Interpreter {
   type RedisExecutor = Has[RedisExecutor.Service]
@@ -18,11 +19,11 @@ trait Interpreter {
       def execute(command: Chunk[String]): IO[RedisError, String]
     }
 
-    def live(host: String, port: Int): Layer[IOException, RedisExecutor] =
-      ZLayer.fromManaged {
+    def live(host: String, port: Int): ZLayer[Blocking, IOException, RedisExecutor] =
+      ZLayer.fromServiceManaged { env =>
         for {
           connection <- connect(host, port)
-          _          <- connection.receive.forever.forkManaged
+          _          <- env.blocking(connection.receive.forever).forkManaged
         } yield new Service {
           def execute(command: Chunk[String]): IO[RedisError, String] = connection.send(command).flatMap(_.await)
         }
