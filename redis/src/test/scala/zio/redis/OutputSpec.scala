@@ -179,8 +179,8 @@ object OutputSpec extends BaseSpec {
       ),
       suite("string")(
         testM("extract strings") {
-          for{
-            res  <- Task(StringOutput.unsafeDecode(s"$$${Noise.length}\r\n$Noise\r\n"))
+          for {
+            res <- Task(StringOutput.unsafeDecode(s"$$${Noise.length}\r\n$Noise\r\n"))
           } yield assert(res)(equalTo(Noise))
         },
         testM("report invalid input as protocol error") {
@@ -191,12 +191,12 @@ object OutputSpec extends BaseSpec {
       ),
       suite("unit")(
         testM("extract unit") {
-          for{
+          for {
             res <- Task(UnitOutput.unsafeDecode(s"+OK\r\n"))
           } yield assert(res)(isUnit)
         },
         testM("report invalid input as protocol error") {
-          for{
+          for {
             res <- Task(UnitOutput.unsafeDecode(Noise)).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't unit."))))
         }
