@@ -1,11 +1,10 @@
 package zio.redis
 
-import cats.effect.{ ContextShift, IO => CatsIO }
+import cats.effect.{ ContextShift, IO => CatsIO, Timer }
 import zio.BootstrapRuntime
 import zio.internal.Platform
 
 import scala.concurrent.ExecutionContext
-import cats.effect.Timer
 
 object BenchmarkRuntime extends BootstrapRuntime {
   implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)
