@@ -5,7 +5,6 @@ import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Arrays
 import java.util.concurrent.atomic.AtomicBoolean
 
 import zio._
@@ -74,7 +73,7 @@ trait Interpreter {
         }
 
       private def unsafeReceive(): String = {
-        val sb        = new StringBuilder
+        val cb        = ChunkBuilder.make[Byte]()
         var readBytes = 0
 
         // TODO: handle -1
@@ -82,14 +81,16 @@ trait Interpreter {
           channel.read(response)
           response.flip()
 
-          readBytes = response.limit()
+          readBytes = response.remaining()
 
-          sb ++= new String(Arrays.copyOf(response.array(), readBytes), UTF_8)
+          cb ++= Chunk.fromByteBuffer(response)
 
           response.clear()
         }
 
-        sb.toString
+        val bytes = cb.result().toArray
+
+        new String(bytes, UTF_8)
       }
 
       private def unsafeSend(command: Chunk[String]): Unit = {
