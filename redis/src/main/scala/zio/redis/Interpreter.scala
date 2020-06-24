@@ -60,7 +60,7 @@ trait Interpreter {
         Promise.make[RedisError, String].flatMap(p => pendingRequests.offer(Request(command, p)).as(p))
 
       private val executeNext: UIO[Any] =
-        pendingRequests.take.flatMap { request =>
+        pendingRequests.take.map { request =>
           val exchange =
             IO.effect {
               try {
@@ -68,12 +68,10 @@ trait Interpreter {
                 unsafeReceive()
               } catch {
                 case t: Throwable => throw RedisError.ProtocolError(t.getMessage)
-              } finally {
-                readinessFlag.set(true)
-              }
+              } finally readinessFlag.set(true)
             }
 
-          request.result.completeWith(exchange.refineToOrDie[RedisError])
+          request.result.unsafeDone(exchange.refineToOrDie[RedisError])
         }
 
       private def unsafeReceive(): String = {
