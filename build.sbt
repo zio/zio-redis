@@ -24,14 +24,13 @@ addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck"
 lazy val root =
   project
     .in(file("."))
-    .settings(
-      skip in publish := true
-    )
+    .settings(skip in publish := true)
     .aggregate(redis)
 
 lazy val redis =
   project
     .in(file("redis"))
+    .enablePlugins(BuildInfoPlugin)
     .settings(stdSettings("zio-redis"))
     .settings(buildInfoSettings("zio.redis"))
     .settings(
@@ -42,4 +41,13 @@ lazy val redis =
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
-    .enablePlugins(BuildInfoPlugin)
+
+lazy val benchmarks =
+  project
+    .in(file("benchmarks"))
+    .dependsOn(redis)
+    .enablePlugins(JmhPlugin)
+    .settings(
+      skip in publish := true,
+      libraryDependencies ++= Seq()
+    )
