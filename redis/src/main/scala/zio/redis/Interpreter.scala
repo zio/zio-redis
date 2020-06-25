@@ -1,7 +1,7 @@
 package zio.redis
 
 import java.io.IOException
-import java.net.InetSocketAddress
+import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets.UTF_8
@@ -33,6 +33,8 @@ trait Interpreter {
         IO {
           val channel = SocketChannel.open(new InetSocketAddress(host, port))
           channel.configureBlocking(false)
+          channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+          channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
           channel
         }
 
