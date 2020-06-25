@@ -182,11 +182,15 @@ object ApiSpec extends BaseSpec {
         },
         testM("check value type by key") {
           for {
-            key       <- uuid
-            value     <- uuid
-            _         <- set(key, value, None, None, None)
-            valueType <- typeOf(key).either
-          } yield assert(valueType)(isRight)
+            key1       <- uuid
+            value1     <- uuid
+            _          <- set(key1, value1, None, None, None)
+            key2       <- uuid
+            value2     <- uuid
+            _          <- lPush(key2)(value2)
+            stringType <- typeOf(key1)
+            listType   <- typeOf(key2)
+          } yield assert(stringType)(equalTo("string")) && assert(listType)(equalTo("list"))
         },
         testM("dump followed by restore") {
           for {

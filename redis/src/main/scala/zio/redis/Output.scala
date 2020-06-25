@@ -176,6 +176,14 @@ object Output {
         throw ProtocolError(s"$text isn't unit.")
   }
 
+  case object SimpleStringOutput extends Output[String] {
+    protected def tryDecode(text: String): Either[RedisError, String] =
+      Either.cond(text.startsWith("+"), parse(text), ProtocolError(s"$text isn't a simple string."))
+
+    private[this] def parse(text: String): String =
+      text.substring(1, text.length - 2)
+  }
+
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {
     var pos = start + 1
     var len = 0

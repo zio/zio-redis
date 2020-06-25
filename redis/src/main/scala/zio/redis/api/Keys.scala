@@ -59,7 +59,7 @@ trait Keys {
 
   final val touch  = RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
   final val ttl    = RedisCommand("TTL", StringInput, DurationSecondsOutput)
-  final val typeOf = RedisCommand("TYPE", StringInput, StringOutput)
+  final val typeOf = RedisCommand("TYPE", StringInput, SimpleStringOutput)
   final val unlink = RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
   final val wait_  = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
 }
