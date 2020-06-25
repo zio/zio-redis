@@ -162,6 +162,15 @@ object ApiSpec extends BaseSpec {
             touched <- touch(key1, List(key2))
           } yield assert(touched)(equalTo(2L))
         },
+        testM("set followed by scan") {
+          for {
+            key             <- uuid
+            value           <- uuid
+            _               <- set(key, value, None, None, None)
+            scan            <- scan(0L, None, None, None)
+            (next, elements) = scan
+          } yield assert(next)(isNonEmptyString) && assert(elements)(isNonEmpty)
+        },
         testM("fetch random key") {
           for {
             key       <- uuid
@@ -172,13 +181,11 @@ object ApiSpec extends BaseSpec {
           } yield assert(allKeys)(contains(randomKey.get))
         },
         testM("check value type by key") {
-          import zio.console._
           for {
             key       <- uuid
             value     <- uuid
             _         <- set(key, value, None, None, None)
             valueType <- typeOf(key).either
-            _         <- putStrLn(valueType.toString)
           } yield assert(valueType)(isRight)
         },
         testM("dump followed by restore") {
