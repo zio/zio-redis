@@ -2,7 +2,9 @@ package zio.redis
 
 import zio.IO
 
-sealed trait RedisError
+import scala.util.control.NoStackTrace
+
+sealed trait RedisError extends NoStackTrace
 
 object RedisError {
   final case class ProtocolError(message: String) extends RedisError
