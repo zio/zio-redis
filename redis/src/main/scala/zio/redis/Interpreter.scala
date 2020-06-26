@@ -100,17 +100,17 @@ trait Interpreter {
           response.clear()
         }
 
-        val arrays = builder.result()
-        val bytes  = Array.ofDim[Byte](responseSize)
+        val chunks = builder.result()
+        val data   = Array.ofDim[Byte](responseSize)
         var i      = 0
         var j      = 0
 
-        while (i < arrays.length) {
+        while (i < chunks.length) {
           var k     = 0
-          val array = arrays(i)
+          val chunk = chunks(i)
 
-          while (k < array.length) {
-            bytes(j) = array(k)
+          while (k < chunk.length) {
+            data(j) = chunk(k)
             j += 1
             k += 1
           }
@@ -118,7 +118,7 @@ trait Interpreter {
           i += 1
         }
 
-        new String(bytes, UTF_8)
+        new String(data, UTF_8)
       }
 
       private def unsafeSend(command: Chunk[String]): Unit = {
