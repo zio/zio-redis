@@ -4,10 +4,10 @@ import zio.Chunk
 import zio.duration._
 
 sealed trait Output[+A] {
-  private[redis] final def decode(text: String): Either[RedisError, A] = {
+  private[redis] final def unsafeDecode(text: String): A = {
     val error = decodeError(text)
 
-    if (error eq null) tryDecode(text) else Left(error)
+    if (error eq null) tryDecode(text) else throw error
   }
 
   private[this] def decodeError(text: String): RedisError =
@@ -18,35 +18,38 @@ sealed trait Output[+A] {
     else
       null
 
-  protected def tryDecode(text: String): Either[RedisError, A]
+  protected def tryDecode(text: String): A
 }
 
 object Output {
   import RedisError._
 
   case object BoolOutput extends Output[Boolean] {
-    protected def tryDecode(text: String): Either[RedisError, Boolean] =
+    protected def tryDecode(text: String): Boolean =
       if (text == ":1\r\n")
-        Right(true)
+        true
       else if (text == ":0\r\n")
-        Right(false)
+        false
       else
-        Left(ProtocolError(s"$text isn't a boolean."))
+        throw ProtocolError(s"$text isn't a boolean.")
   }
 
   case object ChunkOutput extends Output[Chunk[String]] {
-    protected def tryDecode(text: String): Either[RedisError, Chunk[String]] =
-      Either.cond(text.startsWith("*"), unsafeReadChunk(text, 0), ProtocolError(s"$text isn't an array."))
+    protected def tryDecode(text: String): Chunk[String] =
+      if (text.startsWith("*"))
+        unsafeReadChunk(text, 0)
+      else
+        throw ProtocolError(s"$text isn't an array.")
   }
 
   case object DoubleOutput extends Output[Double] {
-    protected def tryDecode(text: String): Either[RedisError, Double] =
+    protected def tryDecode(text: String): Double =
       if (text.startsWith("$"))
         parse(text)
       else
-        Left(ProtocolError(s"$text isn't a double."))
+        throw ProtocolError(s"$text isn't a double.")
 
-    private[this] def parse(text: String): Either[RedisError, Double] = {
+    private[this] def parse(text: String): Double = {
       var pos = 1
       var len = 0
 
@@ -58,64 +61,70 @@ object Output {
       // skip to the first payload char
       pos += 2
 
-      try Right(text.substring(pos, pos + len).toDouble)
+      try text.substring(pos, pos + len).toDouble
       catch {
-        case _: Throwable => Left(ProtocolError(s"$text isn't a double."))
+        case _: Throwable => throw ProtocolError(s"$text isn't a double.")
       }
     }
   }
 
   case object DurationMillisecondsOutput extends Output[Duration] {
-    protected def tryDecode(text: String): Either[RedisError, Duration] =
+    protected def tryDecode(text: String): Duration =
       if (text.startsWith(":"))
         parse(text)
       else
-        Left(ProtocolError(s"$text isn't a duration."))
+        throw ProtocolError(s"$text isn't a duration.")
 
-    private[this] def parse(text: String): Either[RedisError, Duration] = {
+    private[this] def parse(text: String): Duration = {
       val value = unsafeReadNumber(text)
 
       if (value == -2)
-        Left(ProtocolError("Key not found."))
+        throw ProtocolError("Key not found.")
       else if (value == -1)
-        Left(ProtocolError("Key has no expire."))
+        throw ProtocolError("Key has no expire.")
       else
-        Right(value.millis)
+        value.millis
     }
   }
 
   case object DurationSecondsOutput extends Output[Duration] {
-    protected def tryDecode(text: String): Either[RedisError, Duration] =
+    protected def tryDecode(text: String): Duration =
       if (text.startsWith(":"))
         parse(text)
       else
-        Left(ProtocolError(s"$text isn't a duration."))
+        throw ProtocolError(s"$text isn't a duration.")
 
-    private[this] def parse(text: String): Either[RedisError, Duration] = {
+    private[this] def parse(text: String): Duration = {
       val value = unsafeReadNumber(text)
 
       if (value == -2)
-        Left(ProtocolError("Key not found."))
+        throw ProtocolError("Key not found.")
       else if (value == -1)
-        Left(ProtocolError("Key has no expire."))
+        throw ProtocolError("Key has no expire.")
       else
-        Right(value.seconds)
+        value.seconds
     }
   }
 
   case object LongOutput extends Output[Long] {
-    protected def tryDecode(text: String): Either[RedisError, Long] =
-      Either.cond(text.startsWith(":"), unsafeReadNumber(text), ProtocolError(s"$text isn't a number."))
+    protected def tryDecode(text: String): Long =
+      if (text.startsWith(":"))
+        unsafeReadNumber(text)
+      else
+        throw ProtocolError(s"$text isn't a number.")
   }
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
-    protected def tryDecode(text: String): Either[RedisError, Option[A]] =
-      if (text.startsWith("$-1")) Right(None) else output.tryDecode(text).map(Some(_))
+    protected def tryDecode(text: String): Option[A] =
+      if (text.startsWith("$-1")) None else Some(output.tryDecode(text))
   }
 
   case object ScanOutput extends Output[(String, Chunk[String])] {
-    protected def tryDecode(text: String): Either[RedisError, (String, Chunk[String])] =
-      Either.cond(text.startsWith("*2\r\n"), parse(text), ProtocolError(s"$text isn't scan output."))
+    protected def tryDecode(text: String): (String, Chunk[String]) =
+      if (text.startsWith("*2\r\n"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't scan output.")
 
     private[this] def parse(text: String): (String, Chunk[String]) = {
       var pos = 5
@@ -137,8 +146,11 @@ object Output {
   }
 
   case object StringOutput extends Output[String] {
-    protected def tryDecode(text: String): Either[RedisError, String] =
-      Either.cond(text.startsWith("$"), parse(text), ProtocolError(s"$text isn't a string."))
+    protected def tryDecode(text: String): String =
+      if (text.startsWith("$"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't a string.")
 
     private[this] def parse(text: String): String = {
       var pos = 1
@@ -157,8 +169,11 @@ object Output {
   }
 
   case object UnitOutput extends Output[Unit] {
-    protected def tryDecode(text: String): Either[RedisError, Unit] =
-      Either.cond(text == "+OK\r\n", (), ProtocolError(s"$text isn't unit."))
+    protected def tryDecode(text: String): Unit =
+      if (text == "+OK\r\n")
+        ()
+      else
+        throw ProtocolError(s"$text isn't unit.")
   }
 
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {
