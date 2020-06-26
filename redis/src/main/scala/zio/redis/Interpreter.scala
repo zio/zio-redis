@@ -106,16 +106,12 @@ trait Interpreter {
         var j      = 0
 
         while (i < chunks.length) {
-          var k     = 0
           val chunk = chunks(i)
 
-          while (k < chunk.length) {
-            data(j) = chunk(k)
-            j += 1
-            k += 1
-          }
+          System.arraycopy(chunk, 0, data, j, chunk.length)
 
           i += 1
+          j += chunk.length
         }
 
         new String(data, UTF_8)
