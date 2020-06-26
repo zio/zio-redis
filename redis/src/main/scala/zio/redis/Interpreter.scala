@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import zio._
 import zio.blocking._
 
+import scala.collection.mutable.ArrayBuilder
+
 trait Interpreter {
   type RedisExecutor = Has[RedisExecutor.Service]
 
@@ -77,8 +79,9 @@ trait Interpreter {
         }
 
       private def unsafeReceive(): String = {
-        val cb        = ChunkBuilder.make[Byte]()
-        var readBytes = 0
+        val builder      = ArrayBuilder.make[Array[Byte]]()
+        var readBytes    = 0
+        var responseSize = 0
 
         // TODO: handle -1
         while (readBytes == 0) {
@@ -86,13 +89,34 @@ trait Interpreter {
           response.flip()
 
           readBytes = response.remaining()
+          responseSize += readBytes
 
-          cb ++= Chunk.fromByteBuffer(response)
+          val chunk = Array.ofDim[Byte](readBytes)
+
+          response.get(chunk)
+
+          builder += chunk
 
           response.clear()
         }
 
-        val bytes = cb.result().toArray
+        val arrays = builder.result()
+        val bytes  = Array.ofDim[Byte](responseSize)
+        var i      = 0
+        var j      = 0
+
+        while (i < arrays.length) {
+          var k     = 0
+          val array = arrays(i)
+
+          while (k < array.length) {
+            bytes(j) = array(k)
+            j += 1
+            k += 1
+          }
+
+          i += 1
+        }
 
         new String(bytes, UTF_8)
       }
