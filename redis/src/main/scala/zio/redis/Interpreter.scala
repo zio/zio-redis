@@ -79,7 +79,7 @@ trait Interpreter {
         }
 
       private def unsafeReceive(): String = {
-        val builder      = ArrayBuilder.make[Array[Byte]]()
+        val builder      = ArrayBuilder.make[Array[Byte]]
         var readBytes    = 0
         var responseSize = 0
 
