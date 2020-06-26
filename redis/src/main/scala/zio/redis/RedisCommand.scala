@@ -40,6 +40,13 @@ object RedisCommand {
     def apply(a: A, b: B, c: C, d: D, e: E): ZIO[RedisExecutor, RedisError, Out] = command.run((a, b, c, d, e))
   }
 
+  implicit final class Arg7[-A, -B, -C, -D, -E, -F, -G, +Out](
+    private val command: RedisCommand[(A, B, C, D, E, F, G), Out]
+  ) extends AnyVal {
+    def apply(a: A, b: B, c: C, d: D, e: E, f: F, g: G): ZIO[RedisExecutor, RedisError, Out] =
+      command.run((a, b, c, d, e, f, g))
+  }
+
   implicit final class Arg11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K, +Out](
     private val command: RedisCommand[(A, B, C, D, E, F, G, H, I, J, K), Out]
   ) extends AnyVal {

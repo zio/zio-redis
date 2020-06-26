@@ -2,16 +2,17 @@ package zio.redis
 
 import java.time.Instant
 import java.util.UUID
-
-import zio.test.testM
 import java.util.concurrent.TimeUnit
 
-import zio.UIO
-import zio.duration.Duration
+import zio.test.testM
+import zio.{ Chunk, UIO }
+import zio.duration._
 import zio.test._
 import zio.test.Assertion._
+import zio.test.TestAspect._
 
 object ApiSpec extends BaseSpec {
+
   def spec =
     suite("Redis commands")(
       suite("keys")(
@@ -56,92 +57,12 @@ object ApiSpec extends BaseSpec {
         testM("find all keys matching pattern") {
           for {
             value    <- uuid
-            _        <- set("custom_key_1", value, None, None, None)
-            _        <- set("custom_key_2", value, None, None, None)
+            key1      = "custom_key_1"
+            key2      = "custom_key_2"
+            _        <- set(key1, value, None, None, None)
+            _        <- set(key2, value, None, None, None)
             response <- keys("*custom*")
-          } yield assert(response.length)(equalTo(2))
-        },
-        testM("pExpire followed by pTtl") {
-          for {
-            key         <- uuid
-            value       <- uuid
-            expireAfter <- durationInMillis(100L)
-            _           <- set(key, value, None, None, None)
-            exp         <- pExpire(key, expireAfter)
-            ttl         <- pTtl(key).either
-          } yield assert(exp)(isTrue) && assert(ttl)(isRight)
-        },
-        testM("pExpireAt followed by get and pTtl") {
-          for {
-            key      <- uuid
-            value    <- uuid
-            timeout  <- instantForNextMillis(100L)
-            _        <- set(key, value, None, None, None)
-            exp      <- pExpireAt(key, timeout)
-            response <- get(key)
-            ttl      <- pTtl(key)
-          } yield assert(exp)(isTrue) &&
-            assert(response)(isSome) &&
-            assert(ttl.toMillis)(isLessThan(timeout.toEpochMilli))
-        },
-        testM("expire followed by ttl and persist") {
-          for {
-            key         <- uuid
-            value       <- uuid
-            expireAfter <- durationInMillis(10000L)
-            _           <- set(key, value, None, None, None)
-            exp         <- expire(key, expireAfter)
-            ttl1        <- ttl(key).either
-            persisted   <- persist(key)
-            ttl2        <- ttl(key).either
-          } yield assert(exp)(isTrue) && assert(ttl1)(isRight) && assert(persisted)(isTrue) && assert(ttl2)(isLeft)
-        },
-        testM("expireAt followed by get and ttl") {
-          for {
-            key      <- uuid
-            value    <- uuid
-            timeout  <- instantForNextMillis(5000L)
-            _        <- set(key, value, None, None, None)
-            exp      <- expireAt(key, timeout)
-            response <- get(key)
-            ttl      <- ttl(key)
-          } yield assert(exp)(isTrue) &&
-            assert(response)(isSome) &&
-            assert(ttl.toMillis)(isLessThan(timeout.toEpochMilli))
-        },
-        testM("rename existing key") {
-          for {
-            key     <- uuid
-            newKey  <- uuid
-            value   <- uuid
-            _       <- set(key, value, None, None, None)
-            renamed <- rename(key, newKey).either
-            v       <- get(newKey)
-          } yield assert(renamed)(isRight) && assert(v)(isSome(equalTo(value)))
-        },
-        testM("try to rename non-existing key") {
-          for {
-            key     <- uuid
-            newKey  <- uuid
-            renamed <- rename(key, newKey).either
-          } yield assert(renamed)(isLeft)
-        },
-        testM("rename key to newkey if newkey does not yet exist") {
-          for {
-            key     <- uuid
-            newKey  <- uuid
-            value   <- uuid
-            _       <- set(key, value, None, None, None)
-            renamed <- renameNx(key, newKey)
-            v       <- get(newKey)
-          } yield assert(renamed)(isTrue) && assert(v)(isSome(equalTo(value)))
-        },
-        testM("try to rename non-existing key with RENAMENX command") {
-          for {
-            key     <- uuid
-            newKey  <- uuid
-            renamed <- renameNx(key, newKey).either
-          } yield assert(renamed)(isLeft)
+          } yield assert(response)(hasSameElements(Chunk(key1, key2)))
         },
         testM("unlink existing key") {
           for {
@@ -162,7 +83,7 @@ object ApiSpec extends BaseSpec {
             touched <- touch(key1, List(key2))
           } yield assert(touched)(equalTo(2L))
         },
-        testM("set followed by scan") {
+        testM("scan entries") {
           for {
             key             <- uuid
             value           <- uuid
@@ -179,7 +100,7 @@ object ApiSpec extends BaseSpec {
             allKeys   <- keys("*")
             randomKey <- randomKey()
           } yield assert(allKeys)(contains(randomKey.get))
-        },
+        } @@ ignore,
         testM("check value type by key") {
           for {
             key1       <- uuid
@@ -199,15 +120,101 @@ object ApiSpec extends BaseSpec {
             _        <- set(key, value, None, None, None)
             dumped   <- dump(key)
             _        <- del(key, Nil)
-            restore  <- restore((key, 0L, dumped, None, None, None, None)).either
+            restore  <- restore(key, 0L, dumped, None, None, None, None).either
             restored <- get(key)
           } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
-        }
+        } @@ ignore,
+        suite("expiration")(
+          testM("pExpire followed by pTtl") {
+            for {
+              key         <- uuid
+              value       <- uuid
+              expireAfter <- durationInMillis(100L)
+              _           <- set(key, value, None, None, None)
+              exp         <- pExpire(key, expireAfter)
+              ttl         <- pTtl(key).either
+            } yield assert(exp)(isTrue) && assert(ttl)(isRight)
+          },
+          testM("pExpireAt followed by get and pTtl") {
+            for {
+              key      <- uuid
+              value    <- uuid
+              timeout  <- instantOf(100L)
+              _        <- set(key, value, None, None, None)
+              exp      <- pExpireAt(key, timeout)
+              response <- get(key)
+              ttl      <- pTtl(key)
+            } yield assert(exp)(isTrue) &&
+              assert(response)(isSome) &&
+              assert(ttl.toMillis)(isLessThan(timeout.toEpochMilli))
+          },
+          testM("expire followed by ttl and persist") {
+            for {
+              key         <- uuid
+              value       <- uuid
+              expireAfter <- durationInMillis(10000L)
+              _           <- set(key, value, None, None, None)
+              exp         <- expire(key, expireAfter)
+              ttl1        <- ttl(key).either
+              persisted   <- persist(key)
+              ttl2        <- ttl(key).either
+            } yield assert(exp)(isTrue) && assert(ttl1)(isRight) && assert(persisted)(isTrue) && assert(ttl2)(isLeft)
+          },
+          testM("expireAt followed by get and ttl") {
+            for {
+              key      <- uuid
+              value    <- uuid
+              timeout  <- instantOf(5000L)
+              _        <- set(key, value, None, None, None)
+              exp      <- expireAt(key, timeout)
+              response <- get(key)
+              ttl      <- ttl(key)
+            } yield assert(exp)(isTrue) &&
+              assert(response)(isSome) &&
+              assert(ttl.toMillis)(isLessThan(timeout.toEpochMilli))
+          }
+        ),
+        suite("renaming")(
+          testM("rename existing key") {
+            for {
+              key     <- uuid
+              newKey  <- uuid
+              value   <- uuid
+              _       <- set(key, value, None, None, None)
+              renamed <- rename(key, newKey).either
+              v       <- get(newKey)
+            } yield assert(renamed)(isRight) && assert(v)(isSome(equalTo(value)))
+          },
+          testM("try to rename non-existing key") {
+            for {
+              key     <- uuid
+              newKey  <- uuid
+              renamed <- rename(key, newKey).either
+            } yield assert(renamed)(isLeft)
+          },
+          testM("rename key to newkey if newkey does not yet exist") {
+            for {
+              key     <- uuid
+              newKey  <- uuid
+              value   <- uuid
+              _       <- set(key, value, None, None, None)
+              renamed <- renameNx(key, newKey)
+              v       <- get(newKey)
+            } yield assert(renamed)(isTrue) && assert(v)(isSome(equalTo(value)))
+          },
+          testM("try to rename non-existing key with RENAMENX command") {
+            for {
+              key     <- uuid
+              newKey  <- uuid
+              renamed <- renameNx(key, newKey).either
+            } yield assert(renamed)(isLeft)
+          }
+        )
       )
     ).provideCustomLayerShared(Executor)
 
-  private val Executor                                          = RedisExecutor.live("127.0.0.1", 6379).orDie
-  private val uuid                                              = UIO(UUID.randomUUID().toString)
-  private def durationInMillis(seconds: Long): UIO[Duration]    = UIO(Duration(seconds, TimeUnit.MILLISECONDS))
-  private def instantForNextMillis(seconds: Long): UIO[Instant] = UIO(Instant.now().plusMillis(seconds))
+  private val Executor                                      = RedisExecutor.live("127.0.0.1", 6379).orDie
+  private val uuid                                          = UIO(UUID.randomUUID().toString)
+  private def durationInMillis(millis: Long): UIO[Duration] = UIO(Duration(millis, TimeUnit.MILLISECONDS))
+  private def instantOf(seconds: Long): UIO[Instant]        = UIO(Instant.now().plusMillis(seconds))
 }
