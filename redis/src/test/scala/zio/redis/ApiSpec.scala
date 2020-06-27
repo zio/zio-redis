@@ -2,12 +2,11 @@ package zio.redis
 
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
-import zio.test.testM
 import zio.{ Chunk, UIO }
 import zio.duration._
 import zio.test._
+import zio.test.testM
 import zio.test.Assertion._
 import zio.test.TestAspect._
 
@@ -127,12 +126,11 @@ object ApiSpec extends BaseSpec {
         suite("expiration")(
           testM("pExpire followed by pTtl") {
             for {
-              key         <- uuid
-              value       <- uuid
-              expireAfter <- durationInMillis(100L)
-              _           <- set(key, value, None, None, None)
-              exp         <- pExpire(key, expireAfter)
-              ttl         <- pTtl(key).either
+              key   <- uuid
+              value <- uuid
+              _     <- set(key, value, None, None, None)
+              exp   <- pExpire(key, 100.millis)
+              ttl   <- pTtl(key).either
             } yield assert(exp)(isTrue) && assert(ttl)(isRight)
           },
           testM("pExpireAt followed by get and pTtl") {
@@ -150,14 +148,13 @@ object ApiSpec extends BaseSpec {
           },
           testM("expire followed by ttl and persist") {
             for {
-              key         <- uuid
-              value       <- uuid
-              expireAfter <- durationInMillis(10000L)
-              _           <- set(key, value, None, None, None)
-              exp         <- expire(key, expireAfter)
-              ttl1        <- ttl(key).either
-              persisted   <- persist(key)
-              ttl2        <- ttl(key).either
+              key       <- uuid
+              value     <- uuid
+              _         <- set(key, value, None, None, None)
+              exp       <- expire(key, 10000.millis)
+              ttl1      <- ttl(key).either
+              persisted <- persist(key)
+              ttl2      <- ttl(key).either
             } yield assert(exp)(isTrue) && assert(ttl1)(isRight) && assert(persisted)(isTrue) && assert(ttl2)(isLeft)
           },
           testM("expireAt followed by get and ttl") {
@@ -213,8 +210,7 @@ object ApiSpec extends BaseSpec {
       )
     ).provideCustomLayerShared(Executor)
 
-  private val Executor                                      = RedisExecutor.live("127.0.0.1", 6379).orDie
-  private val uuid                                          = UIO(UUID.randomUUID().toString)
-  private def durationInMillis(millis: Long): UIO[Duration] = UIO(Duration(millis, TimeUnit.MILLISECONDS))
-  private def instantOf(seconds: Long): UIO[Instant]        = UIO(Instant.now().plusMillis(seconds))
+  private val Executor                               = RedisExecutor.live("127.0.0.1", 6379).orDie
+  private val uuid                                   = UIO(UUID.randomUUID().toString)
+  private def instantOf(seconds: Long): UIO[Instant] = UIO(Instant.now().plusMillis(seconds))
 }

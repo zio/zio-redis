@@ -181,7 +181,7 @@ object Output {
       if (text.startsWith("+"))
         parse(text)
       else
-        throw ProtocolError(s"$text isn't asimple string.")
+        throw ProtocolError(s"$text isn't a simple string.")
 
     private[this] def parse(text: String): String =
       text.substring(1, text.length - 2)
