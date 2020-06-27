@@ -177,8 +177,11 @@ object Output {
   }
 
   case object SimpleStringOutput extends Output[String] {
-    protected def tryDecode(text: String): Either[RedisError, String] =
-      Either.cond(text.startsWith("+"), parse(text), ProtocolError(s"$text isn't a simple string."))
+    protected def tryDecode(text: String): String =
+      if (text.startsWith("+"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't asimple string.")
 
     private[this] def parse(text: String): String =
       text.substring(1, text.length - 2)
