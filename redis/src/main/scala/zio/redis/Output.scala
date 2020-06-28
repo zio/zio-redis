@@ -2,6 +2,7 @@ package zio.redis
 
 import zio.Chunk
 import zio.duration._
+import zio.redis.api.Type
 
 sealed trait Output[+A] {
   private[redis] final def unsafeDecode(text: String): A = {
@@ -147,6 +148,17 @@ object Output {
 
   case object StringOutput extends Output[String] {
     protected def tryDecode(text: String): String =
+      if (text.startsWith("+"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't a simple string.")
+
+    private[this] def parse(text: String): String =
+      text.substring(1, text.length - 2)
+  }
+
+  case object MultiStringOutput extends Output[String] {
+    protected def tryDecode(text: String): String =
       if (text.startsWith("$"))
         parse(text)
       else
@@ -168,23 +180,24 @@ object Output {
     }
   }
 
+  case object TypeOutput extends Output[Type] {
+    override protected def tryDecode(text: String): Type =
+      text match {
+        case "+string\r\n" => Type.String
+        case "+list\r\n"   => Type.List
+        case "+set\r\n"    => Type.Set
+        case "+zset\r\n"   => Type.SortedSet
+        case "+hash\r\n"   => Type.Hash
+        case _             => throw ProtocolError(s"$text isn't redis type.")
+      }
+  }
+
   case object UnitOutput extends Output[Unit] {
     protected def tryDecode(text: String): Unit =
       if (text == "+OK\r\n")
         ()
       else
         throw ProtocolError(s"$text isn't unit.")
-  }
-
-  case object SimpleStringOutput extends Output[String] {
-    protected def tryDecode(text: String): String =
-      if (text.startsWith("+"))
-        parse(text)
-      else
-        throw ProtocolError(s"$text isn't a simple string.")
-
-    private[this] def parse(text: String): String =
-      text.substring(1, text.length - 2)
   }
 
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {

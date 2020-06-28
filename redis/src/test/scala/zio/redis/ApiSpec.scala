@@ -5,6 +5,7 @@ import java.util.UUID
 
 import zio.{ Chunk, UIO }
 import zio.duration._
+import zio.redis.api.Type
 import zio.test._
 import zio.test.testM
 import zio.test.Assertion._
@@ -100,18 +101,6 @@ object ApiSpec extends BaseSpec {
             randomKey <- randomKey()
           } yield assert(allKeys)(contains(randomKey.get))
         } @@ ignore,
-        testM("check value type by key") {
-          for {
-            key1       <- uuid
-            value1     <- uuid
-            _          <- set(key1, value1, None, None, None)
-            key2       <- uuid
-            value2     <- uuid
-            _          <- lPush(key2)(value2)
-            stringType <- typeOf(key1)
-            listType   <- typeOf(key2)
-          } yield assert(stringType)(equalTo("string")) && assert(listType)(equalTo("list"))
-        },
         testM("dump followed by restore") {
           for {
             key      <- uuid
@@ -205,6 +194,49 @@ object ApiSpec extends BaseSpec {
               newKey  <- uuid
               renamed <- renameNx(key, newKey).either
             } yield assert(renamed)(isLeft)
+          }
+        ),
+        suite("types")(
+          testM("string type") {
+            for {
+              key    <- uuid
+              value  <- uuid
+              _      <- set(key, value, None, None, None)
+              string <- typeOf(key)
+            } yield assert(string)(isSubtype[Type.String.type](anything))
+          },
+          testM("list type") {
+            for {
+              key   <- uuid
+              value <- uuid
+              _     <- lPush(key)(value)
+              list  <- typeOf(key)
+            } yield assert(list)(isSubtype[Type.List.type](anything))
+          },
+          testM("set type") {
+            for {
+              key   <- uuid
+              value <- uuid
+              _     <- sAdd(key)(value)
+              set   <- typeOf(key)
+            } yield assert(set)(isSubtype[Type.Set.type](anything))
+          },
+          testM("sorted set type") {
+            for {
+              key   <- uuid
+              value <- uuid
+              _     <- zAdd(key, None, None, None, (MemberScore(1d, value), Nil))
+              zset  <- typeOf(key)
+            } yield assert(zset)(isSubtype[Type.SortedSet.type](anything))
+          },
+          testM("hash type") {
+            for {
+              key   <- uuid
+              field <- uuid
+              value <- uuid
+              _     <- hSet(key)((field, value))
+              hash  <- typeOf(key)
+            } yield assert(hash)(isSubtype[Type.Hash.type](anything))
           }
         )
       )
