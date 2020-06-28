@@ -179,14 +179,14 @@ object Output {
     }
   }
 
-  case object TypeOutput extends Output[Type] {
-    override protected def tryDecode(text: String): Type =
+  case object TypeOutput extends Output[RedisType] {
+    override protected def tryDecode(text: String): RedisType =
       text match {
-        case "+string\r\n" => Type.String
-        case "+list\r\n"   => Type.List
-        case "+set\r\n"    => Type.Set
-        case "+zset\r\n"   => Type.SortedSet
-        case "+hash\r\n"   => Type.Hash
+        case "+string\r\n" => RedisType.String
+        case "+list\r\n"   => RedisType.List
+        case "+set\r\n"    => RedisType.Set
+        case "+zset\r\n"   => RedisType.SortedSet
+        case "+hash\r\n"   => RedisType.Hash
         case _             => throw ProtocolError(s"$text isn't redis type.")
       }
   }

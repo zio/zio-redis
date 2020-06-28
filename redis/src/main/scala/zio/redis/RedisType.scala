@@ -1,13 +1,11 @@
 package zio.redis
 
-trait RedisType {
-  sealed trait Type
+sealed trait RedisType
 
-  object Type {
-    case object String    extends Type
-    case object List      extends Type
-    case object Set       extends Type
-    case object SortedSet extends Type
-    case object Hash      extends Type
-  }
+object RedisType {
+  case object String    extends RedisType
+  case object List      extends RedisType
+  case object Set       extends RedisType
+  case object SortedSet extends RedisType
+  case object Hash      extends RedisType
 }

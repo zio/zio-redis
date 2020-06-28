@@ -3,9 +3,9 @@ package zio.redis
 import java.time.Instant
 import java.util.UUID
 
-import zio.{ Chunk, UIO }
+import zio.clock.Clock
+import zio.{ Chunk, UIO, ZIO }
 import zio.duration._
-import zio.blocking._
 import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
@@ -121,18 +121,18 @@ object ApiSpec extends BaseSpec {
               ttl   <- pTtl(key)
             } yield assert(exp)(isTrue) && assert(ttl.toMillis)(isPositive)
           },
-          testM("pExpireAt followed by get and pTtl") {
+          testM("pExpireAt followed by exists and pTtl") {
             for {
               key       <- uuid
               value     <- uuid
-              expiresAt <- instantOf(200L)
+              expiresAt <- instantOf(100)
               _         <- set(key, value, None, None, None)
               _         <- pExpireAt(key, expiresAt)
-              response1 <- get(key)
+              response1 <- exists(key, Nil)
               ttl       <- pTtl(key)
-              _         <- effectBlocking(Thread.sleep(210L))
-              response2 <- get(key)
-            } yield assert(response1)(isSome) && assert(response2)(isNone) && assert(ttl.toMillis)(isPositive)
+              _         <- ZIO.sleep(110.millis)
+              response2 <- exists(key, Nil)
+            } yield assert(response1)(isTrue) && assert(response2)(isFalse) && assert(ttl.toMillis)(isPositive)
           },
           testM("expire followed by ttl and persist") {
             for {
@@ -149,14 +149,14 @@ object ApiSpec extends BaseSpec {
             for {
               key       <- uuid
               value     <- uuid
-              expiresAt <- instantOf(1500L)
+              expiresAt <- instantOf(2000)
               _         <- set(key, value, None, None, None)
               _         <- expireAt(key, expiresAt)
-              response1 <- get(key)
+              response1 <- exists(key, Nil)
               ttl       <- ttl(key)
-              _         <- effectBlocking(Thread.sleep(1510L))
-              response2 <- get(key)
-            } yield assert(response1)(isSome) && assert(response2)(isNone) && assert(ttl.toMillis)(isPositive)
+              _         <- ZIO.sleep(2010.millis)
+              response2 <- exists(key, Nil)
+            } yield assert(response1)(isTrue) && assert(response2)(isFalse) && assert(ttl.toMillis)(isPositive)
           }
         ),
         suite("renaming")(
@@ -202,7 +202,7 @@ object ApiSpec extends BaseSpec {
               value  <- uuid
               _      <- set(key, value, None, None, None)
               string <- typeOf(key)
-            } yield assert(string)(isSubtype[Type.String.type](anything))
+            } yield assert(string)(isSubtype[RedisType.String.type](anything))
           },
           testM("list type") {
             for {
@@ -210,7 +210,7 @@ object ApiSpec extends BaseSpec {
               value <- uuid
               _     <- lPush(key)(value)
               list  <- typeOf(key)
-            } yield assert(list)(isSubtype[Type.List.type](anything))
+            } yield assert(list)(isSubtype[RedisType.List.type](anything))
           },
           testM("set type") {
             for {
@@ -218,7 +218,7 @@ object ApiSpec extends BaseSpec {
               value <- uuid
               _     <- sAdd(key)(value)
               set   <- typeOf(key)
-            } yield assert(set)(isSubtype[Type.Set.type](anything))
+            } yield assert(set)(isSubtype[RedisType.Set.type](anything))
           },
           testM("sorted set type") {
             for {
@@ -226,7 +226,7 @@ object ApiSpec extends BaseSpec {
               value <- uuid
               _     <- zAdd(key, None, None, None, (MemberScore(1d, value), Nil))
               zset  <- typeOf(key)
-            } yield assert(zset)(isSubtype[Type.SortedSet.type](anything))
+            } yield assert(zset)(isSubtype[RedisType.SortedSet.type](anything))
           },
           testM("hash type") {
             for {
@@ -235,11 +235,11 @@ object ApiSpec extends BaseSpec {
               value <- uuid
               _     <- hSet(key)((field, value))
               hash  <- typeOf(key)
-            } yield assert(hash)(isSubtype[Type.Hash.type](anything))
+            } yield assert(hash)(isSubtype[RedisType.Hash.type](anything))
           }
         )
       )
-    ).provideCustomLayerShared(Executor)
+    ).provideCustomLayerShared(Executor ++ Clock.live)
 
   private val Executor                              = RedisExecutor.live("127.0.0.1", 6379).orDie
   private val uuid                                  = UIO(UUID.randomUUID().toString)

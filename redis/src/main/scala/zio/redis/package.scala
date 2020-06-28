@@ -15,5 +15,4 @@ package object redis
     with options.Shared
     with options.SortedSets
     with options.Strings
-    with RedisType
     with Interpreter
