@@ -147,6 +147,17 @@ object Output {
 
   case object StringOutput extends Output[String] {
     protected def tryDecode(text: String): String =
+      if (text.startsWith("+"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't a simple string.")
+
+    private[this] def parse(text: String): String =
+      text.substring(1, text.length - 2)
+  }
+
+  case object MultiStringOutput extends Output[String] {
+    protected def tryDecode(text: String): String =
       if (text.startsWith("$"))
         parse(text)
       else
@@ -166,6 +177,18 @@ object Output {
 
       text.substring(pos, pos + len)
     }
+  }
+
+  case object TypeOutput extends Output[RedisType] {
+    override protected def tryDecode(text: String): RedisType =
+      text match {
+        case "+string\r\n" => RedisType.String
+        case "+list\r\n"   => RedisType.List
+        case "+set\r\n"    => RedisType.Set
+        case "+zset\r\n"   => RedisType.SortedSet
+        case "+hash\r\n"   => RedisType.Hash
+        case _             => throw ProtocolError(s"$text isn't redis type.")
+      }
   }
 
   case object UnitOutput extends Output[Unit] {

@@ -6,7 +6,7 @@ import zio.redis.RedisCommand
 
 trait Keys {
   final val del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
-  final val dump     = RedisCommand("DUMP", StringInput, StringOutput)
+  final val dump     = RedisCommand("DUMP", StringInput, MultiStringOutput)
   final val exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
   final val expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
   final val expireAt = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
@@ -25,7 +25,7 @@ trait Keys {
       OptionalInput(AuthInput),
       OptionalInput(NonEmptyList(StringInput))
     ),
-    StringOutput
+    MultiStringOutput
   )
 
   final val move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
@@ -33,7 +33,7 @@ trait Keys {
   final val pExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
   final val pExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
   final val pTtl      = RedisCommand("PTTL", StringInput, DurationMillisecondsOutput)
-  final val randomKey = RedisCommand("RANDOMKEY", NoInput, OptionalOutput(StringOutput))
+  final val randomKey = RedisCommand("RANDOMKEY", NoInput, OptionalOutput(MultiStringOutput))
   final val rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
   final val renameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
@@ -59,7 +59,7 @@ trait Keys {
 
   final val touch  = RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
   final val ttl    = RedisCommand("TTL", StringInput, DurationSecondsOutput)
-  final val typeOf = RedisCommand("TYPE", StringInput, StringOutput)
+  final val typeOf = RedisCommand("TYPE", StringInput, TypeOutput)
   final val unlink = RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
   final val wait_  = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
 }
