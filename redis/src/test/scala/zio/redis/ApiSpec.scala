@@ -149,9 +149,9 @@ object ApiSpec extends BaseSpec {
               key       <- uuid
               value     <- uuid
               _         <- set(key, value, None, None, None)
-              exp       <- pExpire(key, 100.millis)
+              exp       <- pExpire(key, 2000.millis)
               response1 <- exists(key, Nil)
-              _         <- ZIO.sleep(110.millis)
+              _         <- ZIO.sleep(2010.millis)
               response2 <- exists(key, Nil)
             } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
           },
