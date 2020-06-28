@@ -5,9 +5,8 @@ import java.util.UUID
 
 import zio.{ Chunk, UIO }
 import zio.duration._
-import zio.redis.api.Type
+import zio.blocking._
 import zio.test._
-import zio.test.testM
 import zio.test.Assertion._
 import zio.test.TestAspect._
 
@@ -119,45 +118,45 @@ object ApiSpec extends BaseSpec {
               value <- uuid
               _     <- set(key, value, None, None, None)
               exp   <- pExpire(key, 100.millis)
-              ttl   <- pTtl(key).either
-            } yield assert(exp)(isTrue) && assert(ttl)(isRight)
+              ttl   <- pTtl(key)
+            } yield assert(exp)(isTrue) && assert(ttl.toMillis)(isPositive)
           },
           testM("pExpireAt followed by get and pTtl") {
             for {
-              key      <- uuid
-              value    <- uuid
-              timeout  <- instantOf(100L)
-              _        <- set(key, value, None, None, None)
-              exp      <- pExpireAt(key, timeout)
-              response <- get(key)
-              ttl      <- pTtl(key)
-            } yield assert(exp)(isTrue) &&
-              assert(response)(isSome) &&
-              assert(ttl.toMillis)(isLessThan(timeout.toEpochMilli))
+              key       <- uuid
+              value     <- uuid
+              expiresAt <- instantOf(200L)
+              _         <- set(key, value, None, None, None)
+              _         <- pExpireAt(key, expiresAt)
+              response1 <- get(key)
+              ttl       <- pTtl(key)
+              _         <- effectBlocking(Thread.sleep(210L))
+              response2 <- get(key)
+            } yield assert(response1)(isSome) && assert(response2)(isNone) && assert(ttl.toMillis)(isPositive)
           },
           testM("expire followed by ttl and persist") {
             for {
               key       <- uuid
               value     <- uuid
               _         <- set(key, value, None, None, None)
-              exp       <- expire(key, 10000.millis)
-              ttl1      <- ttl(key).either
+              _         <- expire(key, 10000.millis)
+              ttl1      <- ttl(key)
               persisted <- persist(key)
               ttl2      <- ttl(key).either
-            } yield assert(exp)(isTrue) && assert(ttl1)(isRight) && assert(persisted)(isTrue) && assert(ttl2)(isLeft)
+            } yield assert(ttl1.toMillis)(isPositive) && assert(persisted)(isTrue) && assert(ttl2)(isLeft)
           },
           testM("expireAt followed by get and ttl") {
             for {
-              key      <- uuid
-              value    <- uuid
-              timeout  <- instantOf(5000L)
-              _        <- set(key, value, None, None, None)
-              exp      <- expireAt(key, timeout)
-              response <- get(key)
-              ttl      <- ttl(key)
-            } yield assert(exp)(isTrue) &&
-              assert(response)(isSome) &&
-              assert(ttl.toMillis)(isLessThan(timeout.toEpochMilli))
+              key       <- uuid
+              value     <- uuid
+              expiresAt <- instantOf(1500L)
+              _         <- set(key, value, None, None, None)
+              _         <- expireAt(key, expiresAt)
+              response1 <- get(key)
+              ttl       <- ttl(key)
+              _         <- effectBlocking(Thread.sleep(1510L))
+              response2 <- get(key)
+            } yield assert(response1)(isSome) && assert(response2)(isNone) && assert(ttl.toMillis)(isPositive)
           }
         ),
         suite("renaming")(
@@ -242,7 +241,7 @@ object ApiSpec extends BaseSpec {
       )
     ).provideCustomLayerShared(Executor)
 
-  private val Executor                               = RedisExecutor.live("127.0.0.1", 6379).orDie
-  private val uuid                                   = UIO(UUID.randomUUID().toString)
-  private def instantOf(seconds: Long): UIO[Instant] = UIO(Instant.now().plusMillis(seconds))
+  private val Executor                              = RedisExecutor.live("127.0.0.1", 6379).orDie
+  private val uuid                                  = UIO(UUID.randomUUID().toString)
+  private def instantOf(millis: Long): UIO[Instant] = UIO(Instant.now().plusMillis(millis))
 }

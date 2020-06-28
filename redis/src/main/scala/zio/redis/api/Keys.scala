@@ -4,16 +4,6 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.RedisCommand
 
-sealed trait Type
-
-object Type {
-  case object String    extends Type
-  case object List      extends Type
-  case object Set       extends Type
-  case object SortedSet extends Type
-  case object Hash      extends Type
-}
-
 trait Keys {
   final val del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
   final val dump     = RedisCommand("DUMP", StringInput, MultiStringOutput)

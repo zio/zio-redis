@@ -2,7 +2,6 @@ package zio.redis
 
 import zio.Chunk
 import zio.duration._
-import zio.redis.api.Type
 
 sealed trait Output[+A] {
   private[redis] final def unsafeDecode(text: String): A = {
