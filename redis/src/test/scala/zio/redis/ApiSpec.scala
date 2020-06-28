@@ -125,12 +125,12 @@ object ApiSpec extends BaseSpec {
             for {
               key       <- uuid
               value     <- uuid
-              expiresAt <- instantOf(100)
+              expiresAt <- instantOf(1000)
               _         <- set(key, value, None, None, None)
               _         <- pExpireAt(key, expiresAt)
               response1 <- exists(key, Nil)
               ttl       <- pTtl(key)
-              _         <- ZIO.sleep(110.millis)
+              _         <- ZIO.sleep(1010.millis)
               response2 <- exists(key, Nil)
             } yield assert(response1)(isTrue) && assert(response2)(isFalse) && assert(ttl.toMillis)(isPositive)
           },
