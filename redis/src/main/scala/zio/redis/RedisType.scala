@@ -1,6 +1,6 @@
 package zio.redis
 
-trait Type {
+trait RedisType {
   sealed trait Type
 
   object Type {
