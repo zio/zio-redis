@@ -16,7 +16,7 @@ trait Geo {
     )
 
   final val geoHash = RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
-  final val geoPos  = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val geoPos  = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
 
   final val geoRadius =
     RedisCommand(

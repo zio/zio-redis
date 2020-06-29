@@ -199,10 +199,46 @@ object Output {
         throw ProtocolError(s"$text isn't unit.")
   }
 
+  case object GeoOutput extends Output[Chunk[LongLat]] {
+    override protected def tryDecode(text: String) =
+      if (text.startsWith("*"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't scan output.")
+
+    private[this] def parse(text: String): Chunk[LongLat] = {
+      var dataIdx   = 0
+      var outputIdx = 0
+      var pos       = 1
+      val parts     = text.split("\r\n")
+      val len       = parts(0).substring(1).toInt
+      val data      = Array.ofDim[Double](2)
+      val output    = Array.ofDim[LongLat](len)
+
+      while (pos < parts.length) {
+        val current = parts(pos)
+
+        if (!current.startsWith("*") && !current.startsWith("$")) {
+          data(dataIdx) = current.toDouble
+          dataIdx += 1
+        }
+
+        if (dataIdx == 2) {
+          output(outputIdx) = LongLat(data(0), data(1))
+          outputIdx += 1
+          dataIdx = 0
+        }
+
+        pos += 1
+      }
+
+      Chunk.fromArray(output)
+    }
+  }
+
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {
     var pos = start + 1
     var len = 0
-
     while (text.charAt(pos) != '\r') {
       len = len * 10 + text.charAt(pos) - '0'
       pos += 1
