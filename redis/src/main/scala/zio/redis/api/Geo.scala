@@ -34,7 +34,7 @@ trait Geo {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      ChunkOutput
+      GeoRadiusOutput
     )
 
   final val geoRadiusByMember =

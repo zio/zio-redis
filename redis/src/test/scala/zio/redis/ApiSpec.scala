@@ -859,21 +859,21 @@ object ApiSpec extends BaseSpec {
         val member2        = "Catania"
         val member2LongLat = LongLat(15.087269, 37.502669)
         for {
-          _ <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
-          _ <- geoRadius(
-                 key,
-                 LongLat(15d, 37d),
-                 100d,
-                 RadiusUnit.Kilometers,
-                 Some(WithCoord),
-                 None,
-                 None,
-                 None,
-                 None,
-                 None,
-                 None
-               )
-        } yield ???
+          _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+          response <- geoRadius(
+                        key,
+                        LongLat(15d, 37d),
+                        200d,
+                        RadiusUnit.Kilometers,
+                        Some(WithCoord),
+                        Some(WithDist),
+                        None, //Some(WithHash),
+                        None,
+                        None,
+                        None,
+                        None
+                      )
+        } yield assert(response)(isNonEmpty)
       }
     )
 

@@ -1,5 +1,6 @@
 package zio.redis
 
+import com.sun.xml.internal.bind.v2.TODO
 import zio.Chunk
 import zio.duration._
 
@@ -22,6 +23,7 @@ sealed trait Output[+A] {
 }
 
 object Output {
+
   import RedisError._
 
   case object BoolOutput extends Output[Boolean] {
@@ -207,33 +209,82 @@ object Output {
         throw ProtocolError(s"$text isn't scan output.")
 
     private[this] def parse(text: String): Chunk[LongLat] = {
-      var dataIdx   = 0
-      var outputIdx = 0
-      var pos       = 1
+      val parts = text.split("\r\n")
+      unsafeReadCoords(parts)
+    }
+  }
+
+  case object GeoRadiusOutput extends Output[Chunk[GeoView]] {
+    override protected def tryDecode(text: String) =
+      if (text.startsWith("*"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't scan output.")
+
+    private[this] def parse(text: String): Chunk[GeoView] = {
       val parts     = text.split("\r\n")
       val len       = parts(0).substring(1).toInt
-      val data      = Array.ofDim[Double](2)
-      val output    = Array.ofDim[LongLat](len)
+      val output    = Array.ofDim[GeoView](len)
+      var outputIdx = 0
+      var pos       = 0
+      if (parts(1).startsWith("*")) {
+        val coords = unsafeReadCoords(parts)
+        pos += 3
 
-      while (pos < parts.length) {
-        val current = parts(pos)
-
-        if (!current.startsWith("*") && !current.startsWith("$")) {
-          data(dataIdx) = current.toDouble
-          dataIdx += 1
-        }
-
-        if (dataIdx == 2) {
-          output(outputIdx) = LongLat(data(0), data(1))
+        while (outputIdx < len) {
+          val member   = parts(pos)
+          val distance = parts(pos + 2).toDouble
+          val hash     = parts(pos + 3).substring(1).toLong // TODO: ceech if starts with : when inner len is <4
+          output(outputIdx) = GeoView(member, Some(distance), Some(hash), Some(coords(outputIdx)))
           outputIdx += 1
-          dataIdx = 0
+          pos += 11
         }
+        Chunk.fromArray(output)
+      } else {
+        pos += 2
+        while (pos < parts.length) {
+          val current = parts(pos)
 
-        pos += 1
+          if (!current.startsWith("*") && !current.startsWith("$")) {
+            output(outputIdx) = GeoView(current, None, None, None)
+            outputIdx += 1
+          }
+
+          pos += 1
+        }
+        Chunk.fromArray(output)
       }
-
-      Chunk.fromArray(output)
     }
+  }
+
+  private[this] def unsafeReadCoords(parts: Array[String]): Chunk[LongLat] = {
+    var pos    = 1
+    var idx    = 0
+    val output = Array.ofDim[LongLat](coordsCount(parts))
+    while (pos < parts.length) {
+      if (parts(pos) == "*2") {
+        pos += 2
+        val longitude = parts(pos).toDouble
+        pos += 2
+        val latitude  = parts(pos).toDouble
+        output(idx) = LongLat(longitude, latitude)
+        idx += 1
+      }
+      pos += 1
+    }
+
+    Chunk.fromArray(output)
+  }
+
+  private[this] def coordsCount(parts: Array[String]): Int = {
+    var cnt = 0
+    var pos = 1
+    while (pos < parts.length) {
+      if (parts(pos) == "*2") cnt += 1
+      pos += 1
+    }
+
+    cnt
   }
 
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {
