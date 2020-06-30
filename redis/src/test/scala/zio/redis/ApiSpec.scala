@@ -2,13 +2,16 @@ package zio.redis
 
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import zio.clock.Clock
-import zio.{ Chunk, UIO, ZIO }
+import zio.clock.currentTime
+import zio.{Chunk, UIO, ZIO}
 import zio.duration._
 import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
+import zio.test.environment.TestClock
 
 object ApiSpec extends BaseSpec {
 
@@ -268,6 +271,354 @@ object ApiSpec extends BaseSpec {
             } yield assert(hash)(equalTo(RedisType.Hash))
           }
         )
+      ),
+      suite("lists")(
+        testM("lIndex first element") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            index <- lIndex(key, 0l)
+          } yield assert(index)(isSome(equalTo("hello")))
+        },
+        testM("lIndex last element") {
+          for {
+            key    <- uuid
+            _      <- lPush(key)("world", "hello")
+            index  <- lIndex(key, -1l)
+          } yield assert(index)(isSome(equalTo("world")))
+        },
+        testM("lIndex no existing element") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            index <- lIndex(key, 3)
+          } yield assert(index)(isNone)
+        },
+        testM("lIndex error when not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            index <- lIndex(key, -1l).either
+          } yield assert(index)(isLeft)
+        },
+        testM("lLen two") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            len   <- lLen(key)
+          } yield assert(len)(equalTo(2l))
+        },
+        testM("lLen 0 when no key") {
+          for {
+            len   <- lLen("unknown")
+          } yield assert(len)(equalTo(0l))
+        },
+        testM("lLen error when not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            index <- lLen(key).either
+          } yield assert(index)(isLeft)
+        },
+        testM("lPop element") {
+          for {
+            key    <- uuid
+            _      <- lPush(key)("world", "hello")
+            popped <- lPop(key)
+          } yield assert(popped)(isSome(equalTo("hello")))
+        },
+        testM("lPop no element") {
+          for {
+            popped <- lPop("unknown")
+          } yield assert(popped)(isNone)
+        },
+        testM("lPop error not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            pop   <- lPop(key).either
+          } yield assert(pop)(isLeft)
+        },
+        testM("lPush element") {
+          for {
+            key   <- uuid
+            push  <- lPush(key)("hello")
+          } yield assert(push)(equalTo(1l))
+        },
+        testM("lPush error when not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            push  <- lPush(key)("hello").either
+          } yield assert(push)(isLeft)
+        },
+        testM("lPushX element") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world")
+            px    <- lPushX(key)("hello")
+          } yield assert(px)(equalTo(2l))
+        },
+        testM("lPushX nothing when key doesn't exist") {
+          for {
+            key   <- uuid
+            px    <- lPushX(key)("world")
+          } yield assert(px)(equalTo(0l))
+        },
+        testM("lPushX error when not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            push  <- lPushX(key)("hello").either
+          } yield assert(push)(isLeft)
+        },
+        testM("lRange two elements") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            range <- lRange(key, Range(0,1))
+          } yield assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        testM("lRange two elements negative indices") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            range <- lRange(key, Range(-2,-1))
+          } yield assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        testM("lRange start invalid") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            range <- lRange(key, Range(2, 3))
+          } yield assert(range)(equalTo(Chunk()))
+        },
+        testM("lRange end invalid") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            range <- lRange(key, Range(1, 2))
+          } yield assert(range)(equalTo(Chunk("world")))
+        },
+        testM("lRange error when not list") {
+          for {
+            key   <- uuid
+            _     <- set(key, "hello", None, None, None)
+            range <- lRange(key, Range(1, 2)).either
+          } yield assert(range)(isLeft)
+        },
+        testM("lRem 2 elements moving from head") {
+          for {
+            key     <- uuid
+            _       <- lPush(key)("world", "hello", "hello", "hello")
+            removed <- lRem(key, 2, "hello")
+            range   <- lRange(key, Range(0,1))
+          } yield assert(removed)(equalTo(2l)) && assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        testM("lRem 2 elements moving from tail") {
+          for {
+            key     <- uuid
+            _       <- lPush(key)("hello", "hello", "world", "hello")
+            removed <- lRem(key, -2, "hello")
+            range   <- lRange(key, Range(0,1))
+          } yield assert(removed)(equalTo(2l)) && assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        testM("lRem all 3 'hello' elements") {
+          for {
+            key     <- uuid
+            _       <- lPush(key)("hello", "hello", "world", "hello")
+            removed <- lRem(key, 0, "hello")
+            range   <- lRange(key, Range(0,1))
+          } yield assert(removed)(equalTo(3l)) && assert(range)(equalTo(Chunk("world")))
+        },
+        testM("lRem nothing when key does not exist") {
+          for {
+            key     <- uuid
+            _       <- lPush(key)("world", "hello")
+            removed <- lRem(key, 0, "goodbye")
+            range   <- lRange(key, Range(0,1))
+          } yield assert(removed)(equalTo(0l)) && assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        testM("lRem error when not list") {
+          for {
+            key     <- uuid
+            _       <- set(key, "hello", None, None, None)
+            removed <- lRem(key, 0, "hello").either
+          } yield assert(removed)(isLeft)
+        },
+        testM("lSet element") {
+          for {
+            key     <- uuid
+            _       <- lPush(key)("world", "hello")
+            _       <- lSet(key, 1, "goodbye")
+            range   <- lRange(key, Range(0,1))
+          } yield assert(range)(equalTo(Chunk("hello", "goodbye")))
+        },
+        testM("lSet error when out of range index") {
+          for {
+            key     <- uuid
+            _       <- lPush(key)("world", "hello")
+            set     <- lSet(key, 2, "goodbye").either
+          } yield assert(set)(isLeft)
+        },
+        testM("lSet error when not list") {
+          for {
+            key   <- uuid
+            _     <- set(key, "hello", None, None, None)
+            set   <- lSet(key, 0, "goodbye").either
+          } yield assert(set)(isLeft)
+        },
+        testM("lTrim element") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            _     <- lTrim(key, Range(0,0))
+            range <- lRange(key, Range(0,1))
+          } yield assert(range)(equalTo(Chunk("hello")))
+        },
+        testM("lTrim start index out of range") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            _     <- lTrim(key, Range(2,5))
+            range <- lRange(key, Range(0,1))
+          } yield assert(range)(equalTo(Chunk()))
+        },
+        testM("lTrim end index out of range") {
+          for {
+            key   <- uuid
+            _     <- lPush(key)("world", "hello")
+            _     <- lTrim(key, Range(0,3))
+            range <- lRange(key, Range(0,1))
+          } yield assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        testM("lTrim error when not list") {
+          for {
+            key   <- uuid
+            _     <- set(key, "hello", None, None, None)
+            trim  <- lTrim(key, Range(0,3)).either
+          } yield assert(trim)(isLeft)
+        },
+        testM("rPop element") {
+          for {
+            key     <- uuid
+            _       <- rPush(key)("world", "hello")
+            pop  <- rPop(key)
+          } yield assert(pop)(isSome(equalTo("hello")))
+        },
+        testM("rPop no element") {
+          for {
+            pop  <- rPop("unknown")
+          } yield assert(pop)(isNone)
+        },
+        testM("rPop error not list") {
+          for {
+            key     <- uuid
+            value   <- uuid
+            _       <- set(key, value, None, None, None)
+            pop     <- rPop(key).either
+          } yield assert(pop)(isLeft)
+        },
+        testM("rPush element") {
+          for {
+            key     <- uuid
+            push    <- rPush(key)("hello")
+          } yield assert(push)(equalTo(1l))
+        },
+        testM("rPush error when not list") {
+          for {
+            key     <- uuid
+            value   <- uuid
+            _       <- set(key, value, None, None, None)
+            push    <- rPush(key)("hello").either
+          } yield assert(push)(isLeft)
+        },
+        testM("rPushX element") {
+          for {
+            key     <- uuid
+            _       <- rPush(key)("world")
+            px      <- rPushX(key)("hello")
+          } yield assert(px)(equalTo(2l))
+        },
+        testM("rPushX nothing when key doesn't exist") {
+          for {
+            key     <- uuid
+            px      <- rPushX(key)("world")
+          } yield assert(px)(equalTo(0l))
+        },
+        testM("rPushX error when not list") {
+          for {
+            key     <- uuid
+            value   <- uuid
+            _       <- set(key, value, None, None, None)
+            push    <- rPushX(key)("hello").either
+          } yield assert(push)(isLeft)
+        },
+        testM("rPopLPush element") {
+          for {
+            key     <- uuid
+            dest    <- uuid
+            _       <- rPush(key)("one", "two", "three")
+            _       <- rPush(dest)("four")
+            _       <- rPopLPush(key, dest)
+            r       <- lRange(key, Range(0, -1))
+            l       <- lRange(dest, Range(0, -1))
+          } yield assert(r)(equalTo(Chunk("one", "two"))) && assert(l)(equalTo(Chunk("three", "four")))
+        },
+        testM("rPopLPush nothing when source does not exist") {
+          for {
+            key     <- uuid
+            dest    <- uuid
+            _       <- rPush(dest)("four")
+            _       <- rPopLPush(key, dest)
+            l       <- lRange(dest, Range(0, -1))
+          } yield assert(l)(equalTo(Chunk("four")))
+        },
+        testM("rPopLPush error when not list") {
+          for {
+            key     <- uuid
+            dest    <- uuid
+            value   <- uuid
+            _       <- set(key, value, None, None, None)
+            rpp     <- rPopLPush(key, dest).either
+          } yield assert(rpp)(isLeft)
+        },
+        testM("brPopLPush element") {
+          for {
+            key     <- uuid
+            dest    <- uuid
+            _       <- rPush(key)("one", "two", "three")
+            _       <- rPush(dest)("four")
+            _       <- brPopLPush(key, dest, Duration(1, TimeUnit.SECONDS))
+            r       <- lRange(key, Range(0, -1))
+            l       <- lRange(dest, Range(0, -1))
+          } yield assert(r)(equalTo(Chunk("one", "two"))) && assert(l)(equalTo(Chunk("three", "four")))
+        },
+        testM("brPopLPush block for 1 second when source does not exist") {
+          for {
+            key     <- uuid
+            dest    <- uuid
+            _       <- rPush(dest)("four")
+            st      <-  currentTime(TimeUnit.SECONDS)
+            s       <- brPopLPush(key, dest, Duration(1, TimeUnit.SECONDS)).either
+            _       <- TestClock.adjust(1.seconds)
+            endTime <- currentTime(TimeUnit.SECONDS)
+          } yield assert(s)(isRight) && assert(endTime - st)(equalTo(1L))
+        },
+        testM("brPopLPush error when not list") {
+          for {
+            key     <- uuid
+            dest    <- uuid
+            value   <- uuid
+            _       <- set(key, value, None, None, None)
+            bpp     <- brPopLPush(key, dest, Duration(1, TimeUnit.SECONDS)).either
+          } yield assert(bpp)(isLeft)
+        },
       )
     ).provideCustomLayerShared(Executor ++ Clock.live)
 
