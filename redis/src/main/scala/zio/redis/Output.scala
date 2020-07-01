@@ -1,6 +1,5 @@
 package zio.redis
 
-import com.sun.xml.internal.bind.v2.TODO
 import zio.Chunk
 import zio.duration._
 
@@ -227,18 +226,51 @@ object Output {
       val output    = Array.ofDim[GeoView](len)
       var outputIdx = 0
       var pos       = 0
-      if (parts(1).startsWith("*")) {
-        val coords = unsafeReadCoords(parts)
-        pos += 3
 
-        while (outputIdx < len) {
-          val member   = parts(pos)
-          val distance = parts(pos + 2).toDouble
-          val hash     = parts(pos + 3).substring(1).toLong // TODO: ceech if starts with : when inner len is <4
-          output(outputIdx) = GeoView(member, Some(distance), Some(hash), Some(coords(outputIdx)))
-          outputIdx += 1
-          pos += 11
-        }
+      if (parts(1).startsWith("*")) {
+        pos += 3
+        val coords = unsafeReadCoords(parts)
+        val isHash = containsHash(parts)
+        if (coords.isEmpty && !isHash)
+          while (outputIdx < len) {
+            val member   = parts(pos)
+            val distance = parts(pos + 2).toDouble
+            output(outputIdx) = GeoView(member, Some(distance), None, None)
+            outputIdx += 1
+            pos += 5
+          }
+        else if (isHash)
+          while (outputIdx < len) {
+            val member      = parts(pos)
+            val hasDistance = if (parts(pos + 1).startsWith(":")) false else true
+            val longLat     = if (coords.isEmpty) None else Some(coords(outputIdx))
+            if (!hasDistance) {
+              pos += 1
+              val hash = parts(pos).substring(1).toLong
+              output(outputIdx) = GeoView(member, None, Some(hash), longLat)
+              outputIdx += 1
+            } else {
+              pos += 2
+              val distance = parts(pos).toDouble
+              pos += 1
+              val hash     = parts(pos).substring(1).toLong
+              output(outputIdx) = GeoView(member, Some(distance), Some(hash), longLat)
+              outputIdx += 1
+            }
+            pos += 3
+          }
+        else
+          while (outputIdx < len) {
+            val member      = parts(pos)
+            val hasDistance = if (parts(pos + 2).charAt(0).isDigit) true else false
+            if (hasDistance) {
+              pos += 2
+              val distance = parts(pos).toDouble
+              output(outputIdx) = GeoView(member, Some(distance), None, Some(coords(outputIdx)))
+            } else output(outputIdx) = GeoView(member, None, None, Some(coords(outputIdx)))
+            outputIdx += 1
+            pos += 8
+          }
         Chunk.fromArray(output)
       } else {
         pos += 2
@@ -258,33 +290,51 @@ object Output {
   }
 
   private[this] def unsafeReadCoords(parts: Array[String]): Chunk[LongLat] = {
-    var pos    = 1
-    var idx    = 0
-    val output = Array.ofDim[LongLat](coordsCount(parts))
-    while (pos < parts.length) {
-      if (parts(pos) == "*2") {
-        pos += 2
-        val longitude = parts(pos).toDouble
-        pos += 2
-        val latitude  = parts(pos).toDouble
-        output(idx) = LongLat(longitude, latitude)
-        idx += 1
-      }
-      pos += 1
-    }
+    var pos = 1
+    var idx = 0
+    val len = coordsCount(parts)
 
-    Chunk.fromArray(output)
+    if (len == 0) Chunk.empty
+    else {
+      val output = Array.ofDim[LongLat](len)
+      while (pos < parts.length) {
+        if (parts(pos) == "*2" && parts(pos + 1).startsWith("$20")) {
+          pos += 2
+          val longitude = parts(pos).toDouble
+          pos += 2
+          val latitude  = parts(pos).toDouble
+          output(idx) = LongLat(longitude, latitude)
+          idx += 1
+        }
+        pos += 1
+      }
+
+      Chunk.fromArray(output)
+    }
   }
 
   private[this] def coordsCount(parts: Array[String]): Int = {
     var cnt = 0
     var pos = 1
+
     while (pos < parts.length) {
-      if (parts(pos) == "*2") cnt += 1
+      if (parts(pos) == "*2" && parts(pos + 1).startsWith("$20")) cnt += 1
       pos += 1
     }
 
     cnt
+  }
+
+  private[this] def containsHash(parts: Array[String]): Boolean = {
+    var pos    = 1
+    var isHash = false
+
+    while (pos < parts.length && !isHash) {
+      if (parts(pos).startsWith(":")) isHash = true
+      pos += 1
+    }
+
+    isHash
   }
 
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {

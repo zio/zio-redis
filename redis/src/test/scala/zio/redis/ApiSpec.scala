@@ -832,7 +832,7 @@ object ApiSpec extends BaseSpec {
           _         <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
           locations <- geoPos(key)(member1, member2)
         } yield assert(locations)(hasSameElements(Chunk(member1LongLat, member2LongLat)))
-      },
+      } @@ ignore,
       testM("calculate distance between geospatial items") {
         val key     = "key"
         val point1  = "point1"
@@ -842,39 +842,103 @@ object ApiSpec extends BaseSpec {
           _        <- geoAdd(key)((longLat, point1), (longLat, point2))
           distance <- geoDist(key, point1, point2, None)
         } yield assert(distance)(isSome(equalTo(0d)))
-      },
+      } @@ ignore,
       testM("get geoHash") {
         val key     = "Sicily"
         val member  = "Palermo"
-        val longLat = LongLat(13.361389, 38.115556)
+        val longLat = LongLat(13.361389338970184, 38.1155563954963)
         for {
           _      <- geoAdd(key)((longLat, member))
           result <- geoHash(key)(member)
         } yield assert(result)(hasSize(equalTo(1)))
-      },
-      testM("geoAdd follwed by geoPos") {
-        val key            = "Sicily"
-        val member1        = "Palermo"
-        val member1LongLat = LongLat(13.361389, 38.115556)
-        val member2        = "Catania"
-        val member2LongLat = LongLat(15.087269, 37.502669)
-        for {
-          _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
-          response <- geoRadius(
-                        key,
-                        LongLat(15d, 37d),
-                        200d,
-                        RadiusUnit.Kilometers,
-                        Some(WithCoord),
-                        Some(WithDist),
-                        None, //Some(WithHash),
-                        None,
-                        None,
-                        None,
-                        None
-                      )
-        } yield assert(response)(isNonEmpty)
-      }
+      } @@ ignore,
+      suite("geoPos")(
+        testM("geoPos without details") {
+          val key            = "Sicily"
+          val member1        = "Palermo"
+          val member1LongLat = LongLat(13.361389338970184, 38.1155563954963)
+          val member2        = "Catania"
+          val member2LongLat = LongLat(15.087267458438873, 37.50266842333162)
+          for {
+            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            response <- geoRadius(
+                          key,
+                          LongLat(15d, 37d),
+                          200d,
+                          RadiusUnit.Kilometers,
+                          None,
+                          None,
+                          None,
+                          None,
+                          None,
+                          None,
+                          None
+                        )
+          } yield assert(response)(
+            hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
+          )
+        } @@ ignore,
+        testM("geoPos with coordinates") {
+          val key            = "Sicily"
+          val member1        = "Palermo"
+          val member1LongLat = LongLat(13.361389338970184, 38.1155563954963)
+          val member2        = "Catania"
+          val member2LongLat = LongLat(15.087267458438873, 37.50266842333162)
+          for {
+            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            response <- geoRadius(
+                          key,
+                          LongLat(15d, 37d),
+                          200d,
+                          RadiusUnit.Kilometers,
+                          Some(WithCoord),
+                          None,
+                          None,
+                          None,
+                          None,
+                          None,
+                          None
+                        )
+          } yield assert(response)(
+            hasSameElements(
+              Chunk(
+                GeoView(member1, None, None, Some(member1LongLat)),
+                GeoView(member2, None, None, Some(member2LongLat))
+              )
+            )
+          )
+        },
+        testM("geoPos with coordinates and dist") {
+          val key            = "Sicily"
+          val member1        = "Palermo"
+          val member1LongLat = LongLat(13.361389338970184, 38.1155563954963)
+          val member2        = "Catania"
+          val member2LongLat = LongLat(15.087267458438873, 37.50266842333162)
+          for {
+            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            response <- geoRadius(
+                          key,
+                          LongLat(15d, 37d),
+                          200d,
+                          RadiusUnit.Kilometers,
+                          Some(WithCoord),
+                          Some(WithDist),
+                          None,
+                          None,
+                          None,
+                          None,
+                          None
+                        )
+          } yield assert(response)(
+            hasSameElements(
+              Chunk(
+                GeoView(member1, Some(190.4424), None, Some(member1LongLat)),
+                GeoView(member2, Some(56.4413), None, Some(member2LongLat))
+              )
+            )
+          )
+        }
+      )
     )
 
   private val Executor                              = RedisExecutor.live("127.0.0.1", 6379).orDie
