@@ -6,7 +6,7 @@ trait Geo {
 
   sealed case class LongLat(longitude: Double, latitude: Double)
 
-  sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], cord: Option[LongLat])
+  sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
 
   sealed trait Order { self =>
     private[redis] final def stringify: String =
