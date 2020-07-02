@@ -11,7 +11,6 @@ import zio.duration._
 import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
-import zio.test.environment.TestClock
 
 object ApiSpec extends BaseSpec {
 
