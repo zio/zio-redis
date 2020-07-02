@@ -221,54 +221,57 @@ object Output {
         throw ProtocolError(s"$text isn't scan output.")
 
     private[this] def parse(text: String): Chunk[GeoView] = {
-      val parts     = text.split("\r\n")
-      val len       = parts(0).substring(1).toInt
-      val output    = Array.ofDim[GeoView](len)
-      var outputIdx = 0
-      var pos       = 0
+      val parts  = text.split("\r\n")
+      val len    = parts(0).substring(1).toInt
+      val output = Array.ofDim[GeoView](len)
+      var idx    = 0
+      var pos    = 0
 
       if (parts(1).startsWith("*")) {
         pos += 3
-        val coords = unsafeReadCoords(parts)
-        val isHash = containsHash(parts)
-        if (coords.isEmpty && !isHash)
-          while (outputIdx < len) {
+        val coords       = unsafeReadCoords(parts)
+        val containsHash = containsGeoHash(parts)
+        if (coords.isEmpty && !containsHash)
+          while (idx < len) {
             val member   = parts(pos)
             val distance = parts(pos + 2).toDouble
-            output(outputIdx) = GeoView(member, Some(distance), None, None)
-            outputIdx += 1
+            output(idx) = GeoView(member, Some(distance), None, None)
+            idx += 1
             pos += 5
           }
-        else if (isHash)
-          while (outputIdx < len) {
-            val member      = parts(pos)
-            val hasDistance = if (parts(pos + 1).startsWith(":")) false else true
-            val longLat     = if (coords.isEmpty) None else Some(coords(outputIdx))
-            if (!hasDistance) {
+        else if (containsHash)
+          while (idx < len) {
+            val member           = parts(pos)
+            val longLat          = if (coords.isEmpty) None else Some(coords(idx))
+            val containsDistance = if (parts(pos + 1).startsWith(":")) false else true
+            if (!containsDistance) {
               pos += 1
               val hash = parts(pos).substring(1).toLong
-              output(outputIdx) = GeoView(member, None, Some(hash), longLat)
-              outputIdx += 1
+              output(idx) = GeoView(member, None, Some(hash), longLat)
             } else {
               pos += 2
               val distance = parts(pos).toDouble
               pos += 1
               val hash     = parts(pos).substring(1).toLong
-              output(outputIdx) = GeoView(member, Some(distance), Some(hash), longLat)
-              outputIdx += 1
+              output(idx) = GeoView(member, Some(distance), Some(hash), longLat)
             }
-            pos += 3
+
+            idx += 1
+            if (longLat.isDefined)
+              pos += 8
+            else
+              pos += 3
           }
         else
-          while (outputIdx < len) {
-            val member      = parts(pos)
-            val hasDistance = if (parts(pos + 2).charAt(0).isDigit) true else false
-            if (hasDistance) {
+          while (idx < len) {
+            val member           = parts(pos)
+            val containsDistance = if (parts(pos + 2).charAt(0).isDigit) true else false
+            if (containsDistance) {
               pos += 2
               val distance = parts(pos).toDouble
-              output(outputIdx) = GeoView(member, Some(distance), None, Some(coords(outputIdx)))
-            } else output(outputIdx) = GeoView(member, None, None, Some(coords(outputIdx)))
-            outputIdx += 1
+              output(idx) = GeoView(member, Some(distance), None, Some(coords(idx)))
+            } else output(idx) = GeoView(member, None, None, Some(coords(idx)))
+            idx += 1
             pos += 8
           }
         Chunk.fromArray(output)
@@ -278,8 +281,8 @@ object Output {
           val current = parts(pos)
 
           if (!current.startsWith("*") && !current.startsWith("$")) {
-            output(outputIdx) = GeoView(current, None, None, None)
-            outputIdx += 1
+            output(idx) = GeoView(current, None, None, None)
+            idx += 1
           }
 
           pos += 1
@@ -325,7 +328,7 @@ object Output {
     cnt
   }
 
-  private[this] def containsHash(parts: Array[String]): Boolean = {
+  private[this] def containsGeoHash(parts: Array[String]): Boolean = {
     var pos    = 1
     var isHash = false
 
