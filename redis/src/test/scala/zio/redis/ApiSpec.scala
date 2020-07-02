@@ -435,7 +435,7 @@ object ApiSpec extends BaseSpec {
               st      <- currentTime(TimeUnit.SECONDS)
               s       <- brPopLPush(key, dest, 1.seconds).either
               endTime <- currentTime(TimeUnit.SECONDS)
-            } yield assert(s)(isLeft) && assert(endTime - st)(equalTo(1L))
+            } yield assert(s)(isLeft) && assert(endTime - st)(isGreaterThanEqualTo(1L))
           },
           testM("brPopLPush error when not list") {
             for {
