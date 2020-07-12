@@ -87,7 +87,7 @@ trait Interpreter {
         var responseSize = 0
 
         // TODO: handle -1
-        while (readBytes == 0) {
+        while (readBytes == 0 || readBytes == ResponseBufferSize) {
           channel.read(response)
           response.flip()
 
