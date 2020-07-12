@@ -99,7 +99,7 @@ object ApiSpec extends BaseSpec {
             allKeys   <- keys("*")
             randomKey <- randomKey()
           } yield assert(allKeys)(contains(randomKey.get))
-        } @@ ignore,
+        },
         testM("dump followed by restore") {
           for {
             key      <- uuid
