@@ -16,6 +16,9 @@ trait Interpreter {
   type RedisExecutor = Has[RedisExecutor.Service]
 
   object RedisExecutor {
+
+    val ResponseBufferSize = 1024
+
     trait Service {
       def execute(command: Chunk[String]): IO[RedisError, String]
     }
@@ -45,7 +48,7 @@ trait Interpreter {
           channel         <- Managed.fromAutoCloseable(makeChannel)
           pendingRequests <- Queue.unbounded[Request].toManaged_
           readinessFlag    = new AtomicBoolean(true)
-          response         = ByteBuffer.allocate(1024)
+          response         = ByteBuffer.allocate(ResponseBufferSize)
         } yield new Connection(channel, pendingRequests, readinessFlag, response)
 
       connection.refineToOrDie[IOException]
