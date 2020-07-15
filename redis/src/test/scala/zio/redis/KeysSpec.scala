@@ -194,7 +194,7 @@ trait KeysSpec extends BaseSpec {
             _         <- ZIO.sleep(2010.millis)
             response2 <- exists(key, Nil)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
-        }
+        } @@ ignore
       ),
       suite("renaming")(
         testM("rename existing key") {
