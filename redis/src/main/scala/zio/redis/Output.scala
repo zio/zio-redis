@@ -219,74 +219,148 @@ object Output {
         throw ProtocolError(s"$text isn't scan output.")
 
     private[this] def parse(text: String): Chunk[GeoView] = {
-      val parts  = text.split("\r\n")
       val len    = unsafeReadLength(text)
-      val output = Array.ofDim[GeoView](len)
-      var idx    = 0
-      var pos    = 0
+      var output = Array.ofDim[GeoView](len)
 
       if (containsInnerArray(text)) {
-        pos += 3
+        val pos          = skipToNext(text, 0)
         val coordinates  = unsafeReadCoordinates(text)
         val containsHash = containsGeoHash(text)
+
         if (coordinates.isEmpty && !containsHash)
-          while (idx < len) {
-            val member   = parts(pos)
-            val distance = parts(pos + 2).toDouble
-            output(idx) = GeoView(member, Some(distance), None, None)
-            idx += 1
-            pos += 5
-          }
+          output = geoViewWithDistance(text, pos, len)
         else if (containsHash)
-          while (idx < len) {
-            val member           = parts(pos)
-            val longLat          = if (coordinates.isEmpty) None else Some(coordinates(idx))
-            val containsDistance = !parts(pos + 1).startsWith(":")
-            if (!containsDistance) {
-              pos += 1
-              val hash = parts(pos).substring(1).toLong
-              output(idx) = GeoView(member, None, Some(hash), longLat)
-            } else {
-              pos += 2
-              val distance = parts(pos).toDouble
-              pos += 1
-              val hash = parts(pos).substring(1).toLong
-              output(idx) = GeoView(member, Some(distance), Some(hash), longLat)
-            }
-
-            idx += 1
-            if (longLat.isDefined)
-              pos += 8
-            else
-              pos += 3
-          }
+          output = geoViewWithHash(text, pos, len, coordinates)
         else
-          while (idx < len) {
-            val member           = parts(pos)
-            val containsDistance = parts(pos + 2).charAt(0).isDigit
-            if (containsDistance) {
-              pos += 2
-              val distance = parts(pos).toDouble
-              output(idx) = GeoView(member, Some(distance), None, Some(coordinates(idx)))
-            } else output(idx) = GeoView(member, None, None, Some(coordinates(idx)))
-            idx += 1
-            pos += 8
-          }
-        Chunk.fromArray(output)
-      } else {
-        pos += 2
-        while (pos < parts.length) {
-          val current = parts(pos)
+          output = geoViewWithoutHash(text, pos, len, coordinates)
 
-          if (!current.startsWith("*") && !current.startsWith("$")) {
-            output(idx) = GeoView(current, None, None, None)
-            idx += 1
-          }
-
-          pos += 1
-        }
         Chunk.fromArray(output)
+      } else unsafeReadMembers(text, len)
+    }
+
+    private[this] def geoViewWithDistance(text: String, start: Int, len: Int): Array[GeoView] = {
+      var idx    = 0
+      var pos    = start
+      val output = Array.ofDim[GeoView](len)
+
+      while (idx < len) {
+        val member = unsafeReadString(text, pos)
+
+        pos = skipToNext(text, pos)
+
+        output(idx) = GeoView(member, Some(unsafeReadString(text, pos).toDouble), None, None)
+        idx += 1
+
+        if (idx < len) pos = skipToNext(text, pos)
       }
+
+      output
+    }
+
+    private[this] def geoViewWithHash(
+        text: String,
+        start: Int,
+        len: Int,
+        coordinates: Chunk[LongLat]
+    ): Array[GeoView] = {
+      var idx    = 0
+      var pos    = start
+      val output = Array.ofDim[GeoView](len)
+
+      while (idx < len) {
+        val member = unsafeReadString(text, pos)
+
+        while (text.charAt(pos) != '\n') pos += 1
+        pos += 1
+
+        val containsDistance = text.charAt(pos) != ':'
+        val longLat          = if (coordinates.isEmpty) None else Some(coordinates(idx))
+
+        if (!containsDistance) {
+          pos += 1
+          output(idx) = GeoView(member, None, Some(unsafeReadString(text, pos).toLong), longLat)
+        } else {
+          while (text.charAt(pos) != '\n') pos += 1
+          pos += 1
+
+          val distance = unsafeReadString(text, pos).toDouble
+
+          while (text.charAt(pos) != ':') pos += 1
+          pos += 1
+
+          output(idx) = GeoView(member, Some(distance), Some(unsafeReadString(text, pos).toLong), longLat)
+        }
+
+        idx += 1
+        if (idx < len) while (!text.charAt(pos).isLetter) pos += 1
+      }
+
+      output
+    }
+
+    private[this] def geoViewWithoutHash(
+        text: String,
+        start: Int,
+        len: Int,
+        coordinates: Chunk[LongLat]
+    ): Array[GeoView] = {
+      var idx    = 0
+      var pos    = start
+      val output = Array.ofDim[GeoView](len)
+
+      while (idx < len) {
+        val member = unsafeReadString(text, pos)
+        while (text.charAt(pos) != '\n') pos += 1
+        pos += 1
+        val containsDistance = text.charAt(pos) == '$'
+        if (containsDistance) {
+          while (text.charAt(pos) != '\n') pos += 1
+          pos += 1
+          output(idx) = GeoView(member, Some(unsafeReadString(text, pos).toDouble), None, Some(coordinates(idx)))
+        } else output(idx) = GeoView(member, None, None, Some(coordinates(idx)))
+
+        idx += 1
+        if (idx < len) while (!text.charAt(pos).isLetter) pos += 1
+      }
+
+      output
+    }
+
+    private[this] def unsafeReadMembers(text: String, len: Int): Chunk[GeoView] = {
+      var idx    = 0
+      var pos    = 0
+      val output = Array.ofDim[GeoView](len)
+
+      while (idx < len) {
+        if (text.charAt(pos) == '$') {
+          while (text.charAt(pos) != '\n') pos += 1
+          pos += 1
+
+          output(idx) = GeoView(unsafeReadString(text, pos), None, None, None)
+          idx += 1
+        }
+        pos += 1
+      }
+
+      Chunk.fromArray(output)
+    }
+
+    private[this] def unsafeReadString(text: String, start: Int): String = {
+      var pos = start + 1
+
+      while (text.charAt(pos) != '\r') pos += 1
+
+      text.substring(start, pos)
+    }
+
+    private[this] def skipToNext(text: String, start: Int): Int = {
+      var pos = start
+
+      while (text.charAt(pos) != '$') pos += 1
+      while (text.charAt(pos) != '\n') pos += 1
+      pos += 1
+
+      pos
     }
   }
 
@@ -309,7 +383,9 @@ object Output {
       val output = Array.ofDim[LongLat](outputLen)
       while (pos < len) {
         if (coordinatesArrayStarts(text, pos)) {
+          // skip to payload
           pos += 9
+
           output(idx) = unsafeReadLongLat(text, pos)
           idx += 1
         }
@@ -324,12 +400,10 @@ object Output {
     var cnt = 0
     var pos = 1
 
-    while (pos < len) {
-      if (!coordinatesArrayStarts(text, pos)) pos += 1
-      else {
-        cnt += 1
-        pos += 9
-      }
+    while (pos < len) if (!coordinatesArrayStarts(text, pos)) pos += 1
+    else {
+      cnt += 1
+      pos += 9
     }
 
     cnt
@@ -371,16 +445,16 @@ object Output {
   }
 
   private[this] def containsInnerArray(text: String): Boolean = {
-    // skip first length
-    var pos     = 1
-    var lengths = 0
+    // skip outer array length
+    var pos      = 1
+    var innerLen = 0
 
     while (text.charAt(pos) != '$') {
-      if (text.charAt(pos) == '*') lengths += 1
+      if (text.charAt(pos) == '*') innerLen += 1
       pos += 1
     }
 
-    lengths == 1
+    innerLen == 1
   }
 
   private[this] def unsafeReadChunk(text: String, start: Int): Chunk[String] = {
