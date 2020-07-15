@@ -209,7 +209,7 @@ object Output {
 
     private[this] def parse(text: String): Chunk[LongLat] = {
       val parts = text.split("\r\n")
-      unsafeReadCoords(parts)
+      unsafeReadCoordinates(parts)
     }
   }
 
@@ -229,7 +229,7 @@ object Output {
 
       if (parts(1).startsWith("*")) {
         pos += 3
-        val coords       = unsafeReadCoords(parts)
+        val coords       = unsafeReadCoordinates(parts)
         val containsHash = containsGeoHash(parts)
         if (coords.isEmpty && !containsHash)
           while (idx < len) {
@@ -243,7 +243,7 @@ object Output {
           while (idx < len) {
             val member           = parts(pos)
             val longLat          = if (coords.isEmpty) None else Some(coords(idx))
-            val containsDistance = if (parts(pos + 1).startsWith(":")) false else true
+            val containsDistance = !parts(pos + 1).startsWith(":")
             if (!containsDistance) {
               pos += 1
               val hash = parts(pos).substring(1).toLong
@@ -252,7 +252,7 @@ object Output {
               pos += 2
               val distance = parts(pos).toDouble
               pos += 1
-              val hash     = parts(pos).substring(1).toLong
+              val hash = parts(pos).substring(1).toLong
               output(idx) = GeoView(member, Some(distance), Some(hash), longLat)
             }
 
@@ -265,7 +265,7 @@ object Output {
         else
           while (idx < len) {
             val member           = parts(pos)
-            val containsDistance = if (parts(pos + 2).charAt(0).isDigit) true else false
+            val containsDistance = parts(pos + 2).charAt(0).isDigit
             if (containsDistance) {
               pos += 2
               val distance = parts(pos).toDouble
@@ -292,10 +292,10 @@ object Output {
     }
   }
 
-  private[this] def unsafeReadCoords(parts: Array[String]): Chunk[LongLat] = {
+  private[this] def unsafeReadCoordinates(parts: Array[String]): Chunk[LongLat] = {
     var pos = 1
     var idx = 0
-    val len = coordsCount(parts)
+    val len = countCoordinates(parts)
 
     if (len == 0) Chunk.empty
     else {
@@ -305,7 +305,7 @@ object Output {
           pos += 2
           val longitude = parts(pos).toDouble
           pos += 2
-          val latitude  = parts(pos).toDouble
+          val latitude = parts(pos).toDouble
           output(idx) = LongLat(longitude, latitude)
           idx += 1
         }
@@ -316,7 +316,7 @@ object Output {
     }
   }
 
-  private[this] def coordsCount(parts: Array[String]): Int = {
+  private[this] def countCoordinates(parts: Array[String]): Int = {
     var cnt = 0
     var pos = 1
 
@@ -333,7 +333,7 @@ object Output {
     var isHash = false
 
     while (pos < parts.length && !isHash) {
-      if (parts(pos).startsWith(":")) isHash = true
+      isHash = parts(pos).startsWith(":")
       pos += 1
     }
 
@@ -379,8 +379,7 @@ object Output {
   private[this] def unsafeReadNumber(text: String): Long = {
     var pos = 1
 
-    while (text.charAt(pos) != '\r')
-      pos += 1
+    while (text.charAt(pos) != '\r') pos += 1
 
     text.substring(1, pos).toLong
   }
