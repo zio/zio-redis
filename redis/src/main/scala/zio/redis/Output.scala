@@ -258,10 +258,10 @@ object Output {
     }
 
     private[this] def geoViewWithHash(
-        text: String,
-        start: Int,
-        len: Int,
-        coordinates: Chunk[LongLat]
+      text: String,
+      start: Int,
+      len: Int,
+      coordinates: Chunk[LongLat]
     ): Array[GeoView] = {
       var idx    = 0
       var pos    = start
@@ -299,17 +299,17 @@ object Output {
     }
 
     private[this] def geoViewWithoutHash(
-        text: String,
-        start: Int,
-        len: Int,
-        coordinates: Chunk[LongLat]
+      text: String,
+      start: Int,
+      len: Int,
+      coordinates: Chunk[LongLat]
     ): Array[GeoView] = {
       var idx    = 0
       var pos    = start
       val output = Array.ofDim[GeoView](len)
 
       while (idx < len) {
-        val member = unsafeReadString(text, pos)
+        val member           = unsafeReadString(text, pos)
         while (text.charAt(pos) != '\n') pos += 1
         pos += 1
         val containsDistance = text.charAt(pos) == '$'
@@ -400,11 +400,12 @@ object Output {
     var cnt = 0
     var pos = 1
 
-    while (pos < len) if (!coordinatesArrayStarts(text, pos)) pos += 1
-    else {
-      cnt += 1
-      pos += 9
-    }
+    while (pos < len)
+      if (!coordinatesArrayStarts(text, pos)) pos += 1
+      else {
+        cnt += 1
+        pos += 9
+      }
 
     cnt
   }
@@ -421,7 +422,7 @@ object Output {
 
     val latStart = pos
     while (text.charAt(pos) != '\r') pos += 1
-    val lat = text.substring(latStart, pos).toDouble
+    val lat      = text.substring(latStart, pos).toDouble
 
     LongLat(long, lat)
   }
