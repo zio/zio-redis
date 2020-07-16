@@ -228,8 +228,8 @@ object Output {
         val containsHash = containsGeoHash(text)
 
         output =
-          if (coordinates.isEmpty && !containsHash) viewWithDistance(text, pos, len)
-          else if (containsHash) viewWithDetails(text, pos, len, coordinates)
+          if (containsHash) viewWithDetails(text, pos, len, coordinates)
+          else if (coordinates.isEmpty) viewWithDistance(text, pos, len)
           else view(text, pos, len, coordinates)
 
         Chunk.fromArray(output)
@@ -256,10 +256,10 @@ object Output {
     }
 
     private[this] def viewWithDetails(
-      text: String,
-      start: Int,
-      len: Int,
-      coordinates: Chunk[LongLat]
+        text: String,
+        start: Int,
+        len: Int,
+        coordinates: Chunk[LongLat]
     ): Array[GeoView] = {
       var idx    = 0
       var pos    = start
@@ -296,10 +296,10 @@ object Output {
     }
 
     private[this] def view(
-      text: String,
-      start: Int,
-      len: Int,
-      coordinates: Chunk[LongLat]
+        text: String,
+        start: Int,
+        len: Int,
+        coordinates: Chunk[LongLat]
     ): Array[GeoView] = {
       var idx    = 0
       var pos    = start
@@ -393,12 +393,11 @@ object Output {
     var cnt = 0
     var pos = 1
 
-    while (pos < len)
-      if (!coordinatesArrayStarts(text, pos)) pos += 1
-      else {
-        cnt += 1
-        pos += 9
-      }
+    while (pos < len) if (!coordinatesArrayStarts(text, pos)) pos += 1
+    else {
+      cnt += 1
+      pos += 9
+    }
 
     cnt
   }
