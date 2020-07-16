@@ -10,6 +10,7 @@ import zio.test._
 trait BaseSpec extends DefaultRunnableSpec {
   override def aspects = List(TestAspect.timeout(60.seconds))
 
-  val uuid                                  = UIO(UUID.randomUUID().toString)
   def instantOf(millis: Long): UIO[Instant] = UIO(Instant.now().plusMillis(millis))
+
+  val uuid = UIO(UUID.randomUUID().toString)
 }

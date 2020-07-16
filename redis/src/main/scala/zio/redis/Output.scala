@@ -495,12 +495,12 @@ object Output {
   }
 
   private[this] def unsafeReadNumber(text: String): Long = {
-    var pos      = 1
-    var res      = 0L
-    var negative = false
+    var pos  = 1
+    var res  = 0L
+    var sign = 1
 
     if (text.charAt(pos) == '-') {
-      negative = true
+      sign = -1
       pos += 1
     }
 
@@ -509,6 +509,6 @@ object Output {
       pos += 1
     }
 
-    if (negative) -res else res
+    sign * res
   }
 }
