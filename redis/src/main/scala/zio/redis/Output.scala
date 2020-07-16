@@ -228,9 +228,12 @@ object Output {
         val containsHash = containsGeoHash(text)
 
         output =
-          if (containsHash) viewWithDetails(text, pos, len, coordinates)
-          else if (coordinates.isEmpty) viewWithDistance(text, pos, len)
-          else view(text, pos, len, coordinates)
+          if (containsHash)
+            viewWithDetails(text, pos, len, coordinates)
+          else if (coordinates.isEmpty)
+            viewWithDistance(text, pos, len)
+          else
+            view(text, pos, len, coordinates)
 
         Chunk.fromArray(output)
       } else unsafeReadMembers(text, len)
@@ -249,17 +252,18 @@ object Output {
         output(idx) = GeoView(member, Some(unsafeReadString(text, pos).toDouble), None, None)
         idx += 1
 
-        if (idx < len) pos = skipToNext(text, pos)
+        if (idx < len)
+          pos = skipToNext(text, pos)
       }
 
       output
     }
 
     private[this] def viewWithDetails(
-        text: String,
-        start: Int,
-        len: Int,
-        coordinates: Chunk[LongLat]
+      text: String,
+      start: Int,
+      len: Int,
+      coordinates: Chunk[LongLat]
     ): Array[GeoView] = {
       var idx    = 0
       var pos    = start
@@ -289,17 +293,18 @@ object Output {
         }
 
         idx += 1
-        if (idx < len) while (!text.charAt(pos).isLetter) pos += 1
+        if (idx < len)
+          while (!text.charAt(pos).isLetter) pos += 1
       }
 
       output
     }
 
     private[this] def view(
-        text: String,
-        start: Int,
-        len: Int,
-        coordinates: Chunk[LongLat]
+      text: String,
+      start: Int,
+      len: Int,
+      coordinates: Chunk[LongLat]
     ): Array[GeoView] = {
       var idx    = 0
       var pos    = start
@@ -321,7 +326,8 @@ object Output {
           }
 
         idx += 1
-        if (idx < len) while (!text.charAt(pos).isLetter) pos += 1
+        if (idx < len)
+          while (!text.charAt(pos).isLetter) pos += 1
       }
 
       output
@@ -393,11 +399,13 @@ object Output {
     var cnt = 0
     var pos = 1
 
-    while (pos < len) if (!coordinatesArrayStarts(text, pos)) pos += 1
-    else {
-      cnt += 1
-      pos += 9
-    }
+    while (pos < len)
+      if (!coordinatesArrayStarts(text, pos))
+        pos += 1
+      else {
+        cnt += 1
+        pos += 9
+      }
 
     cnt
   }
