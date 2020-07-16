@@ -1,8 +1,8 @@
 package zio.redis
 
 import zio.Chunk
-import zio.test.Assertion.{ equalTo, hasSameElements, hasSize, isSome }
-import zio.test.{ assert, suite, testM }
+import zio.test._
+import zio.test.Assertion._
 
 trait GeoSpec extends BaseSpec {
 

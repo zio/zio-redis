@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit
 import zio.Chunk
 import zio.clock.currentTime
 import zio.duration._
-import zio.test.Assertion.{ equalTo, isGreaterThanEqualTo, isLeft, isNone, isSome }
-import zio.test.{ assert, suite, testM }
+import zio.test._
+import zio.test.Assertion._
 
 trait ListSpec extends BaseSpec {
 

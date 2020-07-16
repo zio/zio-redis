@@ -2,25 +2,13 @@ package zio.redis
 
 import zio.{ Chunk, ZIO }
 import zio.duration._
-import zio.test.Assertion.{
-  contains,
-  equalTo,
-  hasSameElements,
-  isFalse,
-  isLeft,
-  isNonEmpty,
-  isNonEmptyString,
-  isNone,
-  isRight,
-  isSome,
-  isTrue
-}
-import zio.test.{ assert, suite, testM }
-import zio.test.TestAspect.ignore
+import zio.test._
+import zio.test.Assertion._
+import zio.test.TestAspect._
 
 trait KeysSpec extends BaseSpec {
 
-  val keySuite =
+  val keysSuite =
     suite("keys")(
       testM("set followed by get") {
         for {
@@ -194,7 +182,7 @@ trait KeysSpec extends BaseSpec {
             _         <- ZIO.sleep(2010.millis)
             response2 <- exists(key, Nil)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
-        } @@ ignore
+        } @@ eventually
       ),
       suite("renaming")(
         testM("rename existing key") {

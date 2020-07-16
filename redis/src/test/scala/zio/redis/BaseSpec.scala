@@ -5,7 +5,7 @@ import java.util.UUID
 
 import zio.UIO
 import zio.duration._
-import zio.test.{ DefaultRunnableSpec, TestAspect }
+import zio.test._
 
 trait BaseSpec extends DefaultRunnableSpec {
   override def aspects = List(TestAspect.timeout(60.seconds))

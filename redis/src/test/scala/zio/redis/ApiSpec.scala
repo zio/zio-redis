@@ -7,7 +7,7 @@ object ApiSpec extends KeysSpec with ListSpec with GeoSpec {
 
   def spec =
     suite("Redis commands")(
-      keySuite,
+      keysSuite,
       listSuite,
       geoSuite
     ).provideCustomLayerShared(Executor ++ Clock.live)
