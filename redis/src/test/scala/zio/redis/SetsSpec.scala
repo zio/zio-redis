@@ -63,6 +63,69 @@ trait SetsSpec extends BaseSpec {
             card <- sCard(key).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("difference")(
+        testM("sDiff two non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("a", "c")
+            diff <- sDiff(first, List(second))
+          } yield assert(diff)(hasSameElements(Chunk("b", "d")))
+        },
+        testM("sDiff non-empty set and empty set") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b")
+            diff <- sDiff(first, List(second))
+          } yield assert(diff)(hasSameElements(Chunk("a", "b")))
+        },
+        testM("sDiff empty set and non-empty set") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(second)("a", "b")
+            diff <- sDiff(first, List(second))
+          } yield assert(diff)(isEmpty)
+        },
+        testM("sDiff empty when both sets are empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            diff <- sDiff(first, List(second))
+          } yield assert(diff)(isEmpty)
+        },
+        testM("sDiff non-empty set with multiple non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            third <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("b", "d")
+            _ <- sAdd(third)("b", "c")
+            diff <- sDiff(first, List(second, third))
+          } yield assert(diff)(hasSameElements(Chunk("a")))
+        },
+        testM("sDiff error when first parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(first, value, None, None, None)
+            diff <- sDiff(first, List(second)).either
+          } yield assert(diff)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sDiff error when second parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(second, value, None, None, None)
+            diff <- sDiff(first, List(second)).either
+          } yield assert(diff)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
