@@ -666,6 +666,62 @@ trait SetsSpec extends BaseSpec {
             removed <- sRem(key)("a", "b").either
           } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("union")(
+        testM("sUnion two non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("a", "c", "e")
+            union <- sUnion(first, List(second))
+          } yield assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
+        },
+        testM("sUnion equal to the non-empty set when the other one is empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b")
+            union <- sUnion(first, List(second))
+          } yield assert(union)(hasSameElements(Chunk("a", "b")))
+        },
+        testM("sUnion empty when both sets are empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            union <- sUnion(first, List(second))
+          } yield assert(union)(isEmpty)
+        },
+        testM("sUnion non-empty set with multiple non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            third <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("b", "d")
+            _ <- sAdd(third)("b", "c", "e")
+            union <- sUnion(first, List(second, third))
+          } yield assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
+        },
+        testM("sUnion error when first parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(first, value, None, None, None)
+            union <- sUnion(first, List(second)).either
+          } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sUnion error when the first parameter is set and the second parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- sAdd(first)("a")
+            _ <- set(second, value, None, None, None)
+            union <- sUnion(first, List(second)).either
+          } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
