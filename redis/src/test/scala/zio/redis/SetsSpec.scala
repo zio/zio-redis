@@ -722,6 +722,78 @@ trait SetsSpec extends BaseSpec {
             union <- sUnion(first, List(second)).either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("store union")(
+        testM("sUnionStore two non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            dest <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("a", "c", "e")
+            card <- sUnionStore(dest)(first, second)
+            union <- sMembers(dest)
+          } yield assert(card)(equalTo(5L)) &&
+              assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
+        },
+        testM("sUnionStore equal to the non-empty set when the other one is empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            dest <- uuid
+            _ <- sAdd(first)("a", "b")
+            card <- sUnionStore(dest)(first, second)
+            union <- sMembers(dest)
+          } yield assert(card)(equalTo(2L)) &&
+              assert(union)(hasSameElements(Chunk("a", "b")))
+        },
+        testM("sUnionStore empty when both sets are empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            dest <- uuid
+            card <- sUnionStore(dest)(first, second)
+            union <- sMembers(dest)
+          } yield assert(card)(equalTo(0L)) &&
+              assert(union)(isEmpty)
+        },
+        testM("sUnionStore non-empty set with multiple non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            third <- uuid
+            dest <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("b", "d")
+            _ <- sAdd(third)("b", "c", "e")
+            card <- sUnionStore(dest)(first, second, third)
+            union <- sMembers(dest)
+          } yield assert(card)(equalTo(5L)) &&
+              assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
+        },
+        testM("sUnionStore error when the first parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            dest <- uuid
+            value <- uuid
+            _ <- set(first, value, None, None, None)
+            card <- sUnionStore(dest)(first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sUnionStore error when the first parameter is set and the second parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            dest <- uuid
+            value <- uuid
+            _ <- sAdd(first)("a")
+            _ <- set(second, value, None, None, None)
+            card <- sUnionStore(dest)(first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
+      // TODO: add sScan tests after it has been fixed (it should have
+      //  key added as the first argument)
     )
 }
