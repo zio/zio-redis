@@ -406,6 +406,100 @@ trait SetsSpec extends BaseSpec {
             members <- sMembers(key).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("move")(
+        testM("sMove from non-empty source to non-empty destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            _ <- sAdd(src)("a", "b", "c")
+            _ <- sAdd(dest)("d", "e", "f")
+            moved <- sMove(src, dest, "a")
+            srcMembers <- sMembers(src)
+            destMembers <- sMembers(dest)
+          } yield assert(moved)(isTrue) &&
+              assert(srcMembers)(hasSameElements(Chunk("b", "c"))) &&
+              assert(destMembers)(hasSameElements(Chunk("a", "d", "e", "f")))
+        },
+        testM("sMove from non-empty source to empty destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            _ <- sAdd(src)("a", "b", "c")
+            moved <- sMove(src, dest, "a")
+            srcMembers <- sMembers(src)
+            destMembers <- sMembers(dest)
+          } yield assert(moved)(isTrue) &&
+            assert(srcMembers)(hasSameElements(Chunk("b", "c"))) &&
+            assert(destMembers)(hasSameElements(Chunk("a")))
+        },
+        testM("sMove element already present in the destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            _ <- sAdd(src)("a", "b", "c")
+            _ <- sAdd(dest)("a", "d", "e")
+            moved <- sMove(src, dest, "a")
+            srcMembers <- sMembers(src)
+            destMembers <- sMembers(dest)
+          } yield assert(moved)(isTrue) &&
+              assert(srcMembers)(hasSameElements(Chunk("b", "c"))) &&
+              assert(destMembers)(hasSameElements(Chunk("a", "d", "e")))
+        },
+        testM("sMove from empty source to non-empty destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            _ <- sAdd(dest)("b", "c")
+            moved <- sMove(src, dest, "a")
+            srcMembers <- sMembers(src)
+            destMembers <- sMembers(dest)
+          } yield assert(moved)(isFalse) &&
+            assert(srcMembers)(isEmpty) &&
+            assert(destMembers)(hasSameElements(Chunk("b", "c")))
+        },
+        testM("sMove non-existent element") {
+          for {
+            src <- uuid
+            dest <- uuid
+            _ <- sAdd(src)("a", "b")
+            _ <- sAdd(dest)("c", "d")
+            moved <- sMove(src, dest, "unknown")
+            srcMembers <- sMembers(src)
+            destMembers <- sMembers(dest)
+          } yield assert(moved)(isFalse) &&
+              assert(srcMembers)(hasSameElements(Chunk("a", "b"))) &&
+              assert(destMembers)(hasSameElements(Chunk("c", "d")))
+        },
+        testM("sMove from empty source to not set destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            value <- uuid
+            _ <- set(dest, value, None, None, None)
+            moved <- sMove(src, dest, "unknown")
+          } yield assert(moved)(isFalse)
+        },
+        testM("sMove error when non-empty source and not set destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            value <- uuid
+            _ <- sAdd(src)("a", "b", "c")
+            _ <- set(dest, value, None, None, None)
+            moved <- sMove(src, dest, "a").either
+          } yield assert(moved)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sMove error when not set source to non-empty destination") {
+          for {
+            src <- uuid
+            dest <- uuid
+            value <- uuid
+            _ <- set(src, value, None, None, None)
+            _ <- sAdd(dest)("a", "b", "c")
+            moved <- sMove(src, dest, "a").either
+          } yield assert(moved)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
