@@ -206,6 +206,71 @@ trait SetsSpec extends BaseSpec {
             card <- sDiffStore(key)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("intersection")(
+        testM("sInter two non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("a", "c", "e")
+            inter <- sInter(first, List(second))
+          } yield assert(inter)(hasSameElements(Chunk("a", "c")))
+        },
+        testM("sInter empty when one of the sets is empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b")
+            inter <- sInter(first, List(second))
+          } yield assert(inter)(isEmpty)
+        },
+        testM("sInter empty when both sets are empty") {
+          for {
+            first <- uuid
+            second <- uuid
+            inter <- sInter(first, List(second))
+          } yield assert(inter)(isEmpty)
+        },
+        testM("sInter non-empty set with multiple non-empty sets") {
+          for {
+            first <- uuid
+            second <- uuid
+            third <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("b", "d")
+            _ <- sAdd(third)("b", "c")
+            inter <- sInter(first, List(second, third))
+          } yield assert(inter)(hasSameElements(Chunk("b")))
+        },
+        testM("sInter error when first parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(first, value, None, None, None)
+            inter <- sInter(first, List(second)).either
+          } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sInter empty with empty first set and second parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(second, value, None, None, None)
+            inter <- sInter(first, List(second))
+          } yield assert(inter)(isEmpty)
+        },
+        testM("sInter error with non-empty first set and second parameter is not set") {
+          for {
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- sAdd(first)("a")
+            _ <- set(second, value, None, None, None)
+            inter <- sInter(first, List(second)).either
+          } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
