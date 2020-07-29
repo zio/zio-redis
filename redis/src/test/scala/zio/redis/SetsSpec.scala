@@ -271,6 +271,88 @@ trait SetsSpec extends BaseSpec {
             inter <- sInter(first, List(second)).either
           } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("store intersection")(
+        testM("sInterStore two non-empty sets") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("a", "c", "e")
+            card <- sInterStore(key)(first, second)
+            inter <- sMembers(key)
+          } yield assert(card)(equalTo(2L)) &&
+              assert(inter)(hasSameElements(Chunk("a", "c")))
+        },
+        testM("sInterStore empty when one of the sets is empty") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b")
+            card <- sInterStore(key)(first, second)
+            inter <- sMembers(key)
+          } yield assert(card)(equalTo(0L)) &&
+              assert(inter)(isEmpty)
+        },
+        testM("sInterStore empty when both sets are empty") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            card <- sInterStore(key)(first, second)
+            inter <- sMembers(key)
+          } yield assert(card)(equalTo(0L)) &&
+              assert(inter)(isEmpty)
+        },
+        testM("sInterStore non-empty set with multiple non-empty sets") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            third <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("b", "d")
+            _ <- sAdd(third)("b", "c")
+            card <- sInterStore(key)(first, second, third)
+            inter <- sMembers(key)
+          } yield assert(card)(equalTo(1L)) &&
+              assert(inter)(hasSameElements(Chunk("b")))
+        },
+        testM("sInterStore error when first parameter is not set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(first, value, None, None, None)
+            card <- sInterStore(key)(first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sInterStore empty with empty first set and second parameter is not set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(second, value, None, None, None)
+            card <- sInterStore(key)(first, second)
+            inter <- sMembers(key)
+          } yield assert(card)(equalTo(0L)) &&
+              assert(inter)(isEmpty)
+        },
+        testM("sInterStore error with non-empty first set and second parameter is not set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- sAdd(first)("a")
+            _ <- set(second, value, None, None, None)
+            card <- sInterStore(key)(first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
