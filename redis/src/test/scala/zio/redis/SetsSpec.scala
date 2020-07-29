@@ -126,6 +126,86 @@ trait SetsSpec extends BaseSpec {
             diff <- sDiff(first, List(second)).either
           } yield assert(diff)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("store difference")(
+        testM("sDiffStore two non-empty sets") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("a", "c")
+            card <- sDiffStore(key)(first, second)
+            diff <- sMembers(key)
+          } yield assert(card)(equalTo(2L)) &&
+              assert(diff)(hasSameElements(Chunk("b", "d")))
+        },
+        testM("sDiffStore non-empty set and empty set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(first)("a", "b")
+            card <- sDiffStore(key)(first, second)
+            diff <- sMembers(key)
+          } yield assert(card)(equalTo(2L)) &&
+              assert(diff)(hasSameElements(Chunk("a", "b")))
+        },
+        testM("sDiffStore empty set and non-empty set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            _ <- sAdd(second)("a", "b")
+            card <- sDiffStore(key)(first, second)
+            diff <- sMembers(key)
+          } yield assert(card)(equalTo(0L)) &&
+              assert(diff)(isEmpty)
+        },
+        testM("sDiffStore empty when both sets are empty") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            card <- sDiffStore(key)(first, second)
+            diff <- sMembers(key)
+          } yield assert(card)(equalTo(0L)) &&
+              assert(diff)(isEmpty)
+        },
+        testM("sDiffStore non-empty set with multiple non-empty sets") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            third <- uuid
+            _ <- sAdd(first)("a", "b", "c", "d")
+            _ <- sAdd(second)("b", "d")
+            _ <- sAdd(third)("b", "c")
+            card <- sDiffStore(key)(first, second, third)
+            diff <- sMembers(key)
+          } yield assert(card)(equalTo(1L)) &&
+              assert(diff)(hasSameElements(Chunk("a")))
+        },
+        testM("sDiffStore error when first parameter is not set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(first, value, None, None, None)
+            card <- sDiffStore(key)(first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sDiffStore error when second parameter is not set") {
+          for {
+            key <- uuid
+            first <- uuid
+            second <- uuid
+            value <- uuid
+            _ <- set(second, value, None, None, None)
+            card <- sDiffStore(key)(first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
