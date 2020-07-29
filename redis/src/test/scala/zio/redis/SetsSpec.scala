@@ -43,6 +43,26 @@ trait SetsSpec extends BaseSpec {
             added <- sAdd(key)("hello").either
           } yield assert(added)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("cardinality")(
+        testM("sCard non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("hello")
+            card <- sCard(key)
+          } yield assert(card)(equalTo(1L))
+        },
+        testM("sCard 0 when key doesn't exist") {
+          assertM(sCard("unknown"))(equalTo(0L))
+        },
+        testM("sCard error when not set") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            card <- sCard(key).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
