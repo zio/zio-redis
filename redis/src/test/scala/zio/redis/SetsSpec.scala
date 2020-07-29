@@ -559,6 +559,70 @@ trait SetsSpec extends BaseSpec {
             poped <- sPop(key, Some(3)).either
           } yield assert(poped)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("random member")(
+        testM("sRandMember one element from non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            member <- sRandMember(key, None).either
+          } yield assert(member)(isRight(hasSize(equalTo(1))))
+        },
+        testM("sRandMember one element from an empty set") {
+          for {
+            key <- uuid
+            member <- sRandMember(key, None).either
+          } yield assert(member)(isRight(isEmpty))
+        },
+        testM("sRandMember one element from not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            member <- sRandMember(key, None).either
+          } yield assert(member)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sRandMember multiple elements from non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            members <- sRandMember(key, Some(2L))
+          } yield assert(members)(hasSize(equalTo(2)))
+        },
+        testM("sRandMember more elements than there is present in the non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            members <- sRandMember(key, Some(5L))
+          } yield assert(members)(hasSize(equalTo(3)))
+        },
+        testM("sRandMember multiple elements from an empty set") {
+          for {
+            key <- uuid
+            members <- sRandMember(key, Some(3L))
+          } yield assert(members)(isEmpty)
+        },
+        testM("sRandMember repeated elements from non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            members <- sRandMember(key, Some(-5L))
+          } yield assert(members)(hasSize(equalTo(5)))
+        },
+        testM("sRandMember repeated elements from an empty set") {
+          for {
+            key <- uuid
+            members <- sRandMember(key, Some(-3L))
+          } yield assert(members)(isEmpty)
+        },
+        testM("sRandMember error multiple elements from not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            members <- sRandMember(key, Some(3L)).either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
