@@ -623,6 +623,49 @@ trait SetsSpec extends BaseSpec {
             members <- sRandMember(key, Some(3L)).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("remove")(
+        testM("sRem existing elements from non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            removed <- sRem(key)("b", "c")
+            members <- sMembers(key)
+          } yield assert(removed)(equalTo(2L)) &&
+              assert(members)(hasSameElements(Chunk("a")))
+        },
+        testM("sRem when just part of elements are present in the non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            removed <- sRem(key)("b", "d")
+            members <- sMembers(key)
+          } yield assert(removed)(equalTo(1L)) &&
+              assert(members)(hasSameElements(Chunk("a", "c")))
+        },
+        testM("sRem when none of the elements are present in the non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            removed <- sRem(key)("d", "e")
+            members <- sMembers(key)
+          } yield assert(removed)(equalTo(0L)) &&
+              assert(members)(hasSameElements(Chunk("a", "b", "c")))
+        },
+        testM("sRem elements from an empty set") {
+          for {
+            key <- uuid
+            removed <- sRem(key)("a", "b")
+          } yield assert(removed)(equalTo(0L))
+        },
+        testM("sRem elements from not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            removed <- sRem(key)("a", "b").either
+          } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
