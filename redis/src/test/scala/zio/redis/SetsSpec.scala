@@ -353,6 +353,36 @@ trait SetsSpec extends BaseSpec {
             card <- sInterStore(key)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("is member")(
+        testM("sIsMember actual element of the non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            isMember <- sIsMember(key, "b")
+          } yield assert(isMember)(isTrue)
+        },
+        testM("sIsMember element that is not present in the set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            isMember <- sIsMember(key, "unknown")
+          } yield assert(isMember)(isFalse)
+        },
+        testM("sIsMember of an empty set") {
+          for {
+            key <- uuid
+            isMember <- sIsMember(key, "a")
+          } yield assert(isMember)(isFalse)
+        },
+        testM("sIsMember when not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            isMember <- sIsMember(key, "a").either
+          } yield assert(isMember)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
