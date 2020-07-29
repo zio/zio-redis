@@ -500,6 +500,65 @@ trait SetsSpec extends BaseSpec {
             moved <- sMove(src, dest, "a").either
           } yield assert(moved)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("pop")(
+        testM("sPop one element from non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            poped <- sPop(key, None)
+            members <- sMembers(key)
+          } yield assert(poped)(isSome) &&
+              assert(members)(hasSize(equalTo(2)))
+        },
+        testM("sPop one element from an empty set") {
+          for {
+            key <- uuid
+            poped <- sPop(key, None)
+          } yield assert(poped)(isNone)
+        },
+        testM("sPop error when poping one element from not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            poped <- sPop(key, None).either
+          } yield assert(poped)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("sPop multiple elements from non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            poped <- sPop(key, Some(2)).either
+            members <- sMembers(key)
+          } yield assert(poped)(isRight(isSome)) &&
+              assert(members)(hasSize(equalTo(1)))
+        },
+        testM("sPop more elements then there is in non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            poped <- sPop(key, Some(5)).either
+            members <- sMembers(key)
+          } yield assert(poped)(isRight(isSome)) &&
+              assert(members)(isEmpty)
+        },
+        testM("sPop multiple elements from empty set") {
+          for {
+            key <- uuid
+            poped <- sPop(key, Some(3)).either
+            members <- sMembers(key)
+          } yield assert(poped)(isRight(isNone)) &&
+              assert(members)(isEmpty)
+        },
+        testM("sPop error when poping multiple elements from not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            poped <- sPop(key, Some(3)).either
+          } yield assert(poped)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
