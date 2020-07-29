@@ -383,6 +383,29 @@ trait SetsSpec extends BaseSpec {
             isMember <- sIsMember(key, "a").either
           } yield assert(isMember)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("members")(
+        testM("sMembers non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            members <- sMembers(key)
+          } yield assert(members)(hasSameElements(Chunk("a", "b", "c")))
+        },
+        testM("sMembers empty set") {
+          for {
+            key <- uuid
+            members <- sMembers(key)
+          } yield assert(members)(isEmpty)
+        },
+        testM("sMembers when not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            members <- sMembers(key).either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
