@@ -146,10 +146,10 @@ trait KeysSpec extends BaseSpec {
             _         <- set(key, value, None, None, None)
             exp       <- pExpire(key, 2000.millis)
             response1 <- exists(key, Nil)
-            _         <- ZIO.sleep(2010.millis)
+            _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key, Nil)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
-        },
+        } @@ eventually,
         testM("set key expiration with pExpireAt command") {
           for {
             key       <- uuid
@@ -158,10 +158,10 @@ trait KeysSpec extends BaseSpec {
             _         <- set(key, value, None, None, None)
             exp       <- pExpireAt(key, expiresAt)
             response1 <- exists(key, Nil)
-            _         <- ZIO.sleep(2010.millis)
+            _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key, Nil)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
-        },
+        } @@ eventually,
         testM("expire followed by persist") {
           for {
             key       <- uuid
@@ -179,7 +179,7 @@ trait KeysSpec extends BaseSpec {
             _         <- set(key, value, None, None, None)
             exp       <- expireAt(key, expiresAt)
             response1 <- exists(key, Nil)
-            _         <- ZIO.sleep(2010.millis)
+            _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key, Nil)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
         } @@ eventually
