@@ -11,22 +11,22 @@ trait SetsSpec extends BaseSpec {
       suite("sAdd")(
         testM("to empty set") {
           for {
-            key     <- uuid
-            added   <- sAdd(key)("hello")
+            key   <- uuid
+            added <- sAdd(key)("hello")
           } yield assert(added)(equalTo(1L))
         },
         testM("to the non-empty set") {
           for {
-            key     <- uuid
-            _       <- sAdd(key)("hello")
-            added   <- sAdd(key)("world")
+            key   <- uuid
+            _     <- sAdd(key)("hello")
+            added <- sAdd(key)("world")
           } yield assert(added)(equalTo(1L))
         },
         testM("existing element to set") {
           for {
-            key     <- uuid
-            _       <- sAdd(key)("hello")
-            added   <- sAdd(key)("hello")
+            key   <- uuid
+            _     <- sAdd(key)("hello")
+            added <- sAdd(key)("hello")
           } yield assert(added)(equalTo(0L))
         },
         testM("error when not set") {
@@ -384,45 +384,45 @@ trait SetsSpec extends BaseSpec {
       suite("sMove")(
         testM("from non-empty source to non-empty destination") {
           for {
-            src         <- uuid
-            dest        <- uuid
-            _           <- sAdd(src)("a", "b", "c")
-            _           <- sAdd(dest)("d", "e", "f")
-            moved       <- sMove(src, dest, "a")
+            src   <- uuid
+            dest  <- uuid
+            _     <- sAdd(src)("a", "b", "c")
+            _     <- sAdd(dest)("d", "e", "f")
+            moved <- sMove(src, dest, "a")
           } yield assert(moved)(isTrue)
         },
         testM("from non-empty source to empty destination") {
           for {
-            src         <- uuid
-            dest        <- uuid
-            _           <- sAdd(src)("a", "b", "c")
-            moved       <- sMove(src, dest, "a")
+            src   <- uuid
+            dest  <- uuid
+            _     <- sAdd(src)("a", "b", "c")
+            moved <- sMove(src, dest, "a")
           } yield assert(moved)(isTrue)
         },
         testM("element already present in the destination") {
           for {
-            src         <- uuid
-            dest        <- uuid
-            _           <- sAdd(src)("a", "b", "c")
-            _           <- sAdd(dest)("a", "d", "e")
-            moved       <- sMove(src, dest, "a")
+            src   <- uuid
+            dest  <- uuid
+            _     <- sAdd(src)("a", "b", "c")
+            _     <- sAdd(dest)("a", "d", "e")
+            moved <- sMove(src, dest, "a")
           } yield assert(moved)(isTrue)
         },
         testM("from empty source to non-empty destination") {
           for {
-            src         <- uuid
-            dest        <- uuid
-            _           <- sAdd(dest)("b", "c")
-            moved       <- sMove(src, dest, "a")
+            src   <- uuid
+            dest  <- uuid
+            _     <- sAdd(dest)("b", "c")
+            moved <- sMove(src, dest, "a")
           } yield assert(moved)(isFalse)
         },
         testM("non-existent element") {
           for {
-            src         <- uuid
-            dest        <- uuid
-            _           <- sAdd(src)("a", "b")
-            _           <- sAdd(dest)("c", "d")
-            moved       <- sMove(src, dest, "unknown")
+            src   <- uuid
+            dest  <- uuid
+            _     <- sAdd(src)("a", "b")
+            _     <- sAdd(dest)("c", "d")
+            moved <- sMove(src, dest, "unknown")
           } yield assert(moved)(isFalse)
         },
         testM("from empty source to not set destination") {
@@ -458,9 +458,9 @@ trait SetsSpec extends BaseSpec {
       suite("sPop")(
         testM("one element from non-empty set") {
           for {
-            key     <- uuid
-            _       <- sAdd(key)("a", "b", "c")
-            poped   <- sPop(key, None)
+            key   <- uuid
+            _     <- sAdd(key)("a", "b", "c")
+            poped <- sPop(key, None)
           } yield assert(poped)(isNonEmpty)
         },
         testM("one element from an empty set") {
@@ -479,22 +479,22 @@ trait SetsSpec extends BaseSpec {
         },
         testM("multiple elements from non-empty set") {
           for {
-            key     <- uuid
-            _       <- sAdd(key)("a", "b", "c")
-            poped   <- sPop(key, Some(2L))
+            key   <- uuid
+            _     <- sAdd(key)("a", "b", "c")
+            poped <- sPop(key, Some(2L))
           } yield assert(poped)(hasSize(equalTo(2)))
         },
         testM("more elements then there is in non-empty set") {
           for {
-            key     <- uuid
-            _       <- sAdd(key)("a", "b", "c")
-            poped   <- sPop(key, Some(5L))
+            key   <- uuid
+            _     <- sAdd(key)("a", "b", "c")
+            poped <- sPop(key, Some(5L))
           } yield assert(poped)(hasSize(equalTo(3)))
         },
         testM("multiple elements from empty set") {
           for {
-            key     <- uuid
-            poped   <- sPop(key, Some(3))
+            key   <- uuid
+            poped <- sPop(key, Some(3))
           } yield assert(poped)(isEmpty)
         },
         testM("error when poping multiple elements from not set") {
@@ -728,45 +728,45 @@ trait SetsSpec extends BaseSpec {
       suite("sScan")(
         testM("non-empty set") {
           for {
-            key <- uuid
-            _ <- sAdd(key)("a", "b", "c")
-            scan <- sScan(key, 0L, None, None)
+            key              <- uuid
+            _                <- sAdd(key)("a", "b", "c")
+            scan             <- sScan(key, 0L, None, None)
             (cursor, members) = scan
           } yield assert(cursor)(isNonEmptyString) &&
             assert(members)(isNonEmpty)
         },
         testM("empty set") {
           for {
-            key <- uuid
-            scan <- sScan(key, 0L, None, None)
+            key              <- uuid
+            scan             <- sScan(key, 0L, None, None)
             (cursor, members) = scan
           } yield assert(cursor)(equalTo("0")) &&
             assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
           for {
-            key <- uuid
-            _ <- sAdd(key)("one", "two", "three")
-            scan <- sScan(key, 0L, Some("t[a-z]*".r), None)
+            key              <- uuid
+            _                <- sAdd(key)("one", "two", "three")
+            scan             <- sScan(key, 0L, Some("t[a-z]*".r), None)
             (cursor, members) = scan
           } yield assert(cursor)(isNonEmptyString) &&
             assert(members)(isNonEmpty)
         },
         testM("with count over non-empty set") {
           for {
-            key <- uuid
-            _ <- sAdd(key)("a", "b", "c", "d", "e")
-            scan <- sScan(key, 0L, None, Some(Count(3L)))
+            key              <- uuid
+            _                <- sAdd(key)("a", "b", "c", "d", "e")
+            scan             <- sScan(key, 0L, None, Some(Count(3L)))
             (cursor, members) = scan
           } yield assert(cursor)(isNonEmptyString) &&
             assert(members)(isNonEmpty)
         },
         testM("error when not set") {
           for {
-            key <- uuid
+            key   <- uuid
             value <- uuid
-            _ <- set(key, value, None, None, None)
-            scan <- sScan(key, 0L, None, None).either
+            _     <- set(key, value, None, None, None)
+            scan  <- sScan(key, 0L, None, None).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
       )
