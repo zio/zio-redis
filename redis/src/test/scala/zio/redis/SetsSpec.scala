@@ -4,6 +4,7 @@ import zio.Chunk
 import zio.redis.RedisError.WrongType
 import zio.test._
 import zio.test.Assertion._
+import zio.test.TestAspect.ignore
 
 trait SetsSpec extends BaseSpec {
   val setsSuite =
@@ -724,8 +725,51 @@ trait SetsSpec extends BaseSpec {
             card   <- sUnionStore(dest)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("sScan")(
+        testM("non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c")
+            scan <- sScan(key, 0L, None, None)
+            (cursor, members) = scan
+          } yield assert(cursor)(isNonEmptyString) &&
+            assert(members)(isNonEmpty)
+        },
+        testM("empty set") {
+          for {
+            key <- uuid
+            scan <- sScan(key, 0L, None, None)
+            (cursor, members) = scan
+          } yield assert(cursor)(equalTo("0")) &&
+            assert(members)(isEmpty)
+        },
+        testM("with match over non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("one", "two", "three")
+            scan <- sScan(key, 0L, Some("t\\w*".r), None)
+            (cursor, members) = scan
+          } yield assert(cursor)(isNonEmptyString) &&
+            assert(members)(isNonEmpty)
+        },
+        testM("with count over non-empty set") {
+          for {
+            key <- uuid
+            _ <- sAdd(key)("a", "b", "c", "d", "e")
+            scan <- sScan(key, 0L, None, Some(3L))
+            (cursor, members) = scan
+          } yield assert(cursor)(isNonEmptyString) &&
+            assert(members)(isNonEmpty)
+        },
+        testM("error when not set") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            scan <- sScan(key, 0L, None, None).either
+          } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
-      // TODO: add sScan tests after it has been fixed (it should have
-      //  key added as the first argument)
     )
 }
