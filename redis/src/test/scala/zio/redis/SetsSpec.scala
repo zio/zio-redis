@@ -462,13 +462,13 @@ trait SetsSpec extends BaseSpec {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             poped   <- sPop(key, None)
-          } yield assert(poped)(isSome)
+          } yield assert(poped)(isNonEmpty)
         },
         testM("one element from an empty set") {
           for {
             key   <- uuid
             poped <- sPop(key, None)
-          } yield assert(poped)(isNone)
+          } yield assert(poped)(isEmpty)
         },
         testM("error when poping one element from not set") {
           for {
@@ -482,21 +482,21 @@ trait SetsSpec extends BaseSpec {
           for {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
-            poped   <- sPop(key, Some(2)).either
-          } yield assert(poped)(isRight(isSome))
+            poped   <- sPop(key, Some(2L))
+          } yield assert(poped)(hasSize(equalTo(2)))
         },
         testM("more elements then there is in non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
-            poped   <- sPop(key, Some(5)).either
-          } yield assert(poped)(isRight(isSome))
+            poped   <- sPop(key, Some(5L))
+          } yield assert(poped)(hasSize(equalTo(3)))
         },
         testM("multiple elements from empty set") {
           for {
             key     <- uuid
-            poped   <- sPop(key, Some(3)).either
-          } yield assert(poped)(isRight(isNone))
+            poped   <- sPop(key, Some(3))
+          } yield assert(poped)(isEmpty)
         },
         testM("error when poping multiple elements from not set") {
           for {
@@ -512,16 +512,16 @@ trait SetsSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- sAdd(key)("a", "b", "c")
-            member <- sRandMember(key, None).either
-          } yield assert(member)(isRight(hasSize(equalTo(1))))
+            member <- sRandMember(key, None)
+          } yield assert(member)(hasSize(equalTo(1)))
         },
         testM("one element from an empty set") {
           for {
             key    <- uuid
-            member <- sRandMember(key, None).either
-          } yield assert(member)(isRight(isEmpty))
+            member <- sRandMember(key, None)
+          } yield assert(member)(isEmpty)
         },
-        testM("one element from not set") {
+        testM("error when one element from not set") {
           for {
             key    <- uuid
             value  <- uuid
