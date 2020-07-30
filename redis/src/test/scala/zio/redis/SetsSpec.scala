@@ -13,27 +13,21 @@ trait SetsSpec extends BaseSpec {
           for {
             key     <- uuid
             added   <- sAdd(key)("hello")
-            members <- sMembers(key)
-          } yield assert(added)(equalTo(1L)) &&
-            assert(members)(hasSameElements(Chunk("hello")))
+          } yield assert(added)(equalTo(1L))
         },
         testM("to the non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key)("hello")
             added   <- sAdd(key)("world")
-            members <- sMembers(key)
-          } yield assert(added)(equalTo(1L)) &&
-            assert(members)(hasSameElements(Chunk("hello", "world")))
+          } yield assert(added)(equalTo(1L))
         },
         testM("existing element to set") {
           for {
             key     <- uuid
             _       <- sAdd(key)("hello")
             added   <- sAdd(key)("hello")
-            members <- sMembers(key)
-          } yield assert(added)(equalTo(0L)) &&
-            assert(members)(hasSameElements(Chunk("hello")))
+          } yield assert(added)(equalTo(0L))
         },
         testM("error when not set") {
           for {
@@ -136,9 +130,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("a", "c")
             card   <- sDiffStore(key)(first, second)
-            diff   <- sMembers(key)
-          } yield assert(card)(equalTo(2L)) &&
-            assert(diff)(hasSameElements(Chunk("b", "d")))
+          } yield assert(card)(equalTo(2L))
         },
         testM("non-empty set and empty set") {
           for {
@@ -147,9 +139,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             _      <- sAdd(first)("a", "b")
             card   <- sDiffStore(key)(first, second)
-            diff   <- sMembers(key)
-          } yield assert(card)(equalTo(2L)) &&
-            assert(diff)(hasSameElements(Chunk("a", "b")))
+          } yield assert(card)(equalTo(2L))
         },
         testM("empty set and non-empty set") {
           for {
@@ -158,9 +148,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             _      <- sAdd(second)("a", "b")
             card   <- sDiffStore(key)(first, second)
-            diff   <- sMembers(key)
-          } yield assert(card)(equalTo(0L)) &&
-            assert(diff)(isEmpty)
+          } yield assert(card)(equalTo(0L))
         },
         testM("empty when both sets are empty") {
           for {
@@ -168,9 +156,7 @@ trait SetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             card   <- sDiffStore(key)(first, second)
-            diff   <- sMembers(key)
-          } yield assert(card)(equalTo(0L)) &&
-            assert(diff)(isEmpty)
+          } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
           for {
@@ -182,9 +168,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(second)("b", "d")
             _      <- sAdd(third)("b", "c")
             card   <- sDiffStore(key)(first, second, third)
-            diff   <- sMembers(key)
-          } yield assert(card)(equalTo(1L)) &&
-            assert(diff)(hasSameElements(Chunk("a")))
+          } yield assert(card)(equalTo(1L))
         },
         testM("error when first parameter is not set") {
           for {
@@ -281,9 +265,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("a", "c", "e")
             card   <- sInterStore(key)(first, second)
-            inter  <- sMembers(key)
-          } yield assert(card)(equalTo(2L)) &&
-            assert(inter)(hasSameElements(Chunk("a", "c")))
+          } yield assert(card)(equalTo(2L))
         },
         testM("empty when one of the sets is empty") {
           for {
@@ -292,9 +274,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             _      <- sAdd(first)("a", "b")
             card   <- sInterStore(key)(first, second)
-            inter  <- sMembers(key)
-          } yield assert(card)(equalTo(0L)) &&
-            assert(inter)(isEmpty)
+          } yield assert(card)(equalTo(0L))
         },
         testM("empty when both sets are empty") {
           for {
@@ -302,9 +282,7 @@ trait SetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             card   <- sInterStore(key)(first, second)
-            inter  <- sMembers(key)
-          } yield assert(card)(equalTo(0L)) &&
-            assert(inter)(isEmpty)
+          } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
           for {
@@ -316,9 +294,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(second)("b", "d")
             _      <- sAdd(third)("b", "c")
             card   <- sInterStore(key)(first, second, third)
-            inter  <- sMembers(key)
-          } yield assert(card)(equalTo(1L)) &&
-            assert(inter)(hasSameElements(Chunk("b")))
+          } yield assert(card)(equalTo(1L))
         },
         testM("error when first parameter is not set") {
           for {
@@ -338,9 +314,7 @@ trait SetsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(second, value, None, None, None)
             card   <- sInterStore(key)(first, second)
-            inter  <- sMembers(key)
-          } yield assert(card)(equalTo(0L)) &&
-            assert(inter)(isEmpty)
+          } yield assert(card)(equalTo(0L))
         },
         testM("error with non-empty first set and second parameter is not set") {
           for {
@@ -415,11 +389,7 @@ trait SetsSpec extends BaseSpec {
             _           <- sAdd(src)("a", "b", "c")
             _           <- sAdd(dest)("d", "e", "f")
             moved       <- sMove(src, dest, "a")
-            srcMembers  <- sMembers(src)
-            destMembers <- sMembers(dest)
-          } yield assert(moved)(isTrue) &&
-            assert(srcMembers)(hasSameElements(Chunk("b", "c"))) &&
-            assert(destMembers)(hasSameElements(Chunk("a", "d", "e", "f")))
+          } yield assert(moved)(isTrue)
         },
         testM("from non-empty source to empty destination") {
           for {
@@ -427,11 +397,7 @@ trait SetsSpec extends BaseSpec {
             dest        <- uuid
             _           <- sAdd(src)("a", "b", "c")
             moved       <- sMove(src, dest, "a")
-            srcMembers  <- sMembers(src)
-            destMembers <- sMembers(dest)
-          } yield assert(moved)(isTrue) &&
-            assert(srcMembers)(hasSameElements(Chunk("b", "c"))) &&
-            assert(destMembers)(hasSameElements(Chunk("a")))
+          } yield assert(moved)(isTrue)
         },
         testM("element already present in the destination") {
           for {
@@ -440,11 +406,7 @@ trait SetsSpec extends BaseSpec {
             _           <- sAdd(src)("a", "b", "c")
             _           <- sAdd(dest)("a", "d", "e")
             moved       <- sMove(src, dest, "a")
-            srcMembers  <- sMembers(src)
-            destMembers <- sMembers(dest)
-          } yield assert(moved)(isTrue) &&
-            assert(srcMembers)(hasSameElements(Chunk("b", "c"))) &&
-            assert(destMembers)(hasSameElements(Chunk("a", "d", "e")))
+          } yield assert(moved)(isTrue)
         },
         testM("from empty source to non-empty destination") {
           for {
@@ -452,11 +414,7 @@ trait SetsSpec extends BaseSpec {
             dest        <- uuid
             _           <- sAdd(dest)("b", "c")
             moved       <- sMove(src, dest, "a")
-            srcMembers  <- sMembers(src)
-            destMembers <- sMembers(dest)
-          } yield assert(moved)(isFalse) &&
-            assert(srcMembers)(isEmpty) &&
-            assert(destMembers)(hasSameElements(Chunk("b", "c")))
+          } yield assert(moved)(isFalse)
         },
         testM("non-existent element") {
           for {
@@ -465,11 +423,7 @@ trait SetsSpec extends BaseSpec {
             _           <- sAdd(src)("a", "b")
             _           <- sAdd(dest)("c", "d")
             moved       <- sMove(src, dest, "unknown")
-            srcMembers  <- sMembers(src)
-            destMembers <- sMembers(dest)
-          } yield assert(moved)(isFalse) &&
-            assert(srcMembers)(hasSameElements(Chunk("a", "b"))) &&
-            assert(destMembers)(hasSameElements(Chunk("c", "d")))
+          } yield assert(moved)(isFalse)
         },
         testM("from empty source to not set destination") {
           for {
@@ -507,9 +461,7 @@ trait SetsSpec extends BaseSpec {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             poped   <- sPop(key, None)
-            members <- sMembers(key)
-          } yield assert(poped)(isSome) &&
-            assert(members)(hasSize(equalTo(2)))
+          } yield assert(poped)(isSome)
         },
         testM("one element from an empty set") {
           for {
@@ -530,26 +482,20 @@ trait SetsSpec extends BaseSpec {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             poped   <- sPop(key, Some(2)).either
-            members <- sMembers(key)
-          } yield assert(poped)(isRight(isSome)) &&
-            assert(members)(hasSize(equalTo(1)))
+          } yield assert(poped)(isRight(isSome))
         },
         testM("more elements then there is in non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             poped   <- sPop(key, Some(5)).either
-            members <- sMembers(key)
-          } yield assert(poped)(isRight(isSome)) &&
-            assert(members)(isEmpty)
+          } yield assert(poped)(isRight(isSome))
         },
         testM("multiple elements from empty set") {
           for {
             key     <- uuid
             poped   <- sPop(key, Some(3)).either
-            members <- sMembers(key)
-          } yield assert(poped)(isRight(isNone)) &&
-            assert(members)(isEmpty)
+          } yield assert(poped)(isRight(isNone))
         },
         testM("error when poping multiple elements from not set") {
           for {
@@ -630,27 +576,21 @@ trait SetsSpec extends BaseSpec {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             removed <- sRem(key)("b", "c")
-            members <- sMembers(key)
-          } yield assert(removed)(equalTo(2L)) &&
-            assert(members)(hasSameElements(Chunk("a")))
+          } yield assert(removed)(equalTo(2L))
         },
         testM("when just part of elements are present in the non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             removed <- sRem(key)("b", "d")
-            members <- sMembers(key)
-          } yield assert(removed)(equalTo(1L)) &&
-            assert(members)(hasSameElements(Chunk("a", "c")))
+          } yield assert(removed)(equalTo(1L))
         },
         testM("when none of the elements are present in the non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key)("a", "b", "c")
             removed <- sRem(key)("d", "e")
-            members <- sMembers(key)
-          } yield assert(removed)(equalTo(0L)) &&
-            assert(members)(hasSameElements(Chunk("a", "b", "c")))
+          } yield assert(removed)(equalTo(0L))
         },
         testM("elements from an empty set") {
           for {
@@ -732,9 +672,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("a", "c", "e")
             card   <- sUnionStore(dest)(first, second)
-            union  <- sMembers(dest)
-          } yield assert(card)(equalTo(5L)) &&
-            assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
+          } yield assert(card)(equalTo(5L))
         },
         testM("equal to the non-empty set when the other one is empty") {
           for {
@@ -743,9 +681,7 @@ trait SetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- sAdd(first)("a", "b")
             card   <- sUnionStore(dest)(first, second)
-            union  <- sMembers(dest)
-          } yield assert(card)(equalTo(2L)) &&
-            assert(union)(hasSameElements(Chunk("a", "b")))
+          } yield assert(card)(equalTo(2L))
         },
         testM("empty when both sets are empty") {
           for {
@@ -753,9 +689,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             dest   <- uuid
             card   <- sUnionStore(dest)(first, second)
-            union  <- sMembers(dest)
-          } yield assert(card)(equalTo(0L)) &&
-            assert(union)(isEmpty)
+          } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
           for {
@@ -767,9 +701,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(second)("b", "d")
             _      <- sAdd(third)("b", "c", "e")
             card   <- sUnionStore(dest)(first, second, third)
-            union  <- sMembers(dest)
-          } yield assert(card)(equalTo(5L)) &&
-            assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
+          } yield assert(card)(equalTo(5L))
         },
         testM("error when the first parameter is not set") {
           for {
