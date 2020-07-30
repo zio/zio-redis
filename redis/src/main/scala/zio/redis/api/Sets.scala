@@ -24,7 +24,7 @@ trait Sets {
 
   final val sScan = RedisCommand(
     "SSCAN",
-    Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(LongInput)),
+    Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
     ScanOutput
   )
 

@@ -4,7 +4,6 @@ import zio.Chunk
 import zio.redis.RedisError.WrongType
 import zio.test._
 import zio.test.Assertion._
-import zio.test.TestAspect.ignore
 
 trait SetsSpec extends BaseSpec {
   val setsSuite =
@@ -748,7 +747,7 @@ trait SetsSpec extends BaseSpec {
           for {
             key <- uuid
             _ <- sAdd(key)("one", "two", "three")
-            scan <- sScan(key, 0L, Some("t\\w*".r), None)
+            scan <- sScan(key, 0L, Some("t[a-z]*".r), None)
             (cursor, members) = scan
           } yield assert(cursor)(isNonEmptyString) &&
             assert(members)(isNonEmpty)
@@ -757,7 +756,7 @@ trait SetsSpec extends BaseSpec {
           for {
             key <- uuid
             _ <- sAdd(key)("a", "b", "c", "d", "e")
-            scan <- sScan(key, 0L, None, Some(3L))
+            scan <- sScan(key, 0L, None, Some(Count(3L)))
             (cursor, members) = scan
           } yield assert(cursor)(isNonEmptyString) &&
             assert(members)(isNonEmpty)
