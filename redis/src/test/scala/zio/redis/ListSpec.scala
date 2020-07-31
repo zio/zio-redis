@@ -418,6 +418,50 @@ trait ListSpec extends BaseSpec {
             poped <- blPop(key)(1.seconds).either
           } yield assert(poped)(isLeft)
         }
+      ),
+      suite("brPop")(
+        testM("from single list") {
+          for {
+            key <- uuid
+            _ <- lPush(key)("a", "b", "c")
+            oPoped <- brPop(key)(1.seconds)
+            poped <- ZIO.fromOption(oPoped)
+            (src, elem) = poped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("a"))
+        },
+        testM("from one empty and one non-empty list") {
+          for {
+            empty <- uuid
+            nonEmpty <- uuid
+            _ <- lPush(nonEmpty)("a", "b", "c")
+            oPoped <- brPop(empty, nonEmpty)(1.seconds)
+            poped <- ZIO.fromOption(oPoped)
+            (src, elem) = poped
+          } yield assert(src)(equalTo(nonEmpty)) &&
+            assert(elem)(equalTo("a"))
+        },
+        testM("from one empty list") {
+          for {
+            key <- uuid
+            poped <- brPop(key)(1.seconds)
+          } yield assert(poped)(isNone)
+        },
+        testM("from multiple empty lists") {
+          for {
+            first <- uuid
+            second <- uuid
+            poped <- brPop(first, second)(1.seconds)
+          } yield assert(poped)(isNone)
+        },
+        testM("from not list") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            poped <- brPop(key)(1.seconds).either
+          } yield assert(poped)(isLeft)
+        }
       )
     )
 }

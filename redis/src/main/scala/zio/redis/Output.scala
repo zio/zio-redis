@@ -146,7 +146,7 @@ object Output {
     }
   }
 
-  case object BLPopOutput extends Output[Option[(String, String)]] {
+  case object KeyElemOutput extends Output[Option[(String, String)]] {
     protected def tryDecode(text: String): Option[(String, String)] =
       if (text.startsWith("*-1\r\n"))
         None
