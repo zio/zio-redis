@@ -213,8 +213,32 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(isSome(equalTo(("key", "a"))))
         },
         testM("report invalid input as protocol error") {
+          val input = "*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
           for {
-            res <- Task(KeyElemOutput.unsafeDecode("*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n")).either
+            res <- Task(KeyElemOutput.unsafeDecode(input)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
+      suite("multiStringChunk")(
+        testM("extract one empty value") {
+          for {
+            res <- Task(MultiStringChunkOutput.unsafeDecode("$-1\r\n"))
+          } yield assert(res)(isEmpty)
+        },
+        testM("extract one multi-string value") {
+          for {
+            res <- Task(MultiStringChunkOutput.unsafeDecode("$2\r\nab\r\n"))
+          } yield assert(res)(hasSameElements(Chunk("ab")))
+        },
+        testM("extract one array value") {
+          val input = "*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
+          for {
+            res <- Task(MultiStringChunkOutput.unsafeDecode(input))
+          } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
+        },
+        testM("error when extracting from an invalid value") {
+          for {
+            res <- Task(MultiStringChunkOutput.unsafeDecode("invalid")).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )
