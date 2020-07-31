@@ -200,6 +200,23 @@ object OutputSpec extends BaseSpec {
             res <- Task(UnitOutput.unsafeDecode(Noise)).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't unit."))))
         }
+      ),
+      suite("keyElem")(
+        testM("extract none") {
+          for {
+            res <- Task(KeyElemOutput.unsafeDecode(s"*-1\r\n"))
+          } yield assert(res)(isNone)
+        },
+        testM("extract key and element") {
+          for {
+            res <- Task(KeyElemOutput.unsafeDecode("*2\r\n$3\r\nkey\r\n$1\r\na\r\n"))
+          } yield assert(res)(isSome(equalTo(("key", "a"))))
+        },
+        testM("report invalid input as protocol error") {
+          for {
+            res <- Task(KeyElemOutput.unsafeDecode("*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n")).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 
