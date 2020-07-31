@@ -146,16 +146,19 @@ object Output {
     }
   }
 
-  case class BLPopOutput extends Output[(String, String)] {
-    protected def tryDecode(text: String): (String, String) =
-      if (text.startsWith("*2"))
-        parse(text)
+  case object BLPopOutput extends Output[Option[(String, String)]] {
+    protected def tryDecode(text: String): Option[(String, String)] =
+      if (text.startsWith("*-1\r\n"))
+        None
+      else if (text.startsWith("*2\r\n"))
+        Some(parse(text))
       else
         throw ProtocolError(s"$text isn't blPop output.")
 
     private[this] def parse(text: String): (String, String) = {
       val items = unsafeReadChunk(text, 0)
       (items(0), items(1))
+    }
   }
 
   case object StringOutput extends Output[String] {

@@ -2,7 +2,7 @@ package zio.redis
 
 import java.util.concurrent.TimeUnit
 
-import zio.Chunk
+import zio.{Chunk, ZIO}
 import zio.clock.currentTime
 import zio.duration._
 import zio.test._
@@ -373,6 +373,50 @@ trait ListSpec extends BaseSpec {
             _    <- set(key, "hello", None, None, None)
             trim <- lTrim(key, 0 to 3).either
           } yield assert(trim)(isLeft)
+        }
+      ),
+      suite("blPop")(
+        testM("from single list") {
+          for {
+            key <- uuid
+            _ <- lPush(key)("a", "b", "c")
+            oPoped <- blPop(key)(1.seconds)
+            poped <- ZIO.fromOption(oPoped)
+            (src, elem) = poped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("c"))
+        },
+        testM("from one empty and one non-empty list") {
+          for {
+            empty <- uuid
+            nonEmpty <- uuid
+            _ <- lPush(nonEmpty)("a", "b", "c")
+            oPoped <- blPop(empty, nonEmpty)(1.seconds)
+            poped <- ZIO.fromOption(oPoped)
+            (src, elem) = poped
+          } yield assert(src)(equalTo(nonEmpty)) &&
+            assert(elem)(equalTo("c"))
+        },
+        testM("from one empty list") {
+          for {
+            key <- uuid
+            poped <- blPop(key)(1.seconds)
+          } yield assert(poped)(isNone)
+        },
+        testM("from multiple empty lists") {
+          for {
+            first <- uuid
+            second <- uuid
+            poped <- blPop(first, second)(1.seconds)
+          } yield assert(poped)(isNone)
+        },
+        testM("from not list") {
+          for {
+            key <- uuid
+            value <- uuid
+            _ <- set(key, value, None, None, None)
+            poped <- blPop(key)(1.seconds).either
+          } yield assert(poped)(isLeft)
         }
       )
     )
