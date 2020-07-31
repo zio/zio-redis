@@ -160,24 +160,21 @@ object Output {
   case object MultiStringOutput extends Output[String] {
     protected def tryDecode(text: String): String =
       if (text.startsWith("$"))
-        parse(text)
+        unsafeReadMultiString(text)
       else
         throw ProtocolError(s"$text isn't a string.")
+  }
 
-    private[this] def parse(text: String): String = {
-      var pos = 1
-      var len = 0
-
-      while (text.charAt(pos) != '\r') {
-        len = len * 10 + text.charAt(pos) - '0'
-        pos += 1
-      }
-
-      // skip to the first payload char
-      pos += 2
-
-      text.substring(pos, pos + len)
-    }
+  case object MultiStringChunkOutput extends Output[Chunk[String]] {
+    override protected def tryDecode(text: String): Chunk[String] =
+      if (text.startsWith("$-1"))
+        Chunk.empty
+      else if (text.startsWith("$"))
+        Chunk(unsafeReadMultiString(text))
+      else if (text.startsWith("*"))
+        unsafeReadChunk(text, 0)
+      else
+        throw ProtocolError(s"$text isn't a string nor an array.")
   }
 
   case object TypeOutput extends Output[RedisType] {
@@ -510,5 +507,20 @@ object Output {
     }
 
     sign * res
+  }
+
+  private[this] def unsafeReadMultiString(text: String): String = {
+    var pos = 1
+    var len = 0
+
+    while (text.charAt(pos) != '\r') {
+      len = len * 10 + text.charAt(pos) - '0'
+      pos += 1
+    }
+
+    // skip to the first payload char
+    pos += 2
+
+    text.substring(pos, pos + len)
   }
 }
