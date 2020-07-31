@@ -2,11 +2,11 @@ package zio.redis
 
 import java.util.concurrent.TimeUnit
 
-import zio.{Chunk, ZIO}
+import zio.Chunk
 import zio.clock.currentTime
 import zio.duration._
-import zio.test._
 import zio.test.Assertion._
+import zio.test._
 
 trait ListSpec extends BaseSpec {
 
@@ -380,8 +380,7 @@ trait ListSpec extends BaseSpec {
           for {
             key <- uuid
             _ <- lPush(key)("a", "b", "c")
-            oPoped <- blPop(key)(1.seconds)
-            poped <- ZIO.fromOption(oPoped)
+            poped <- blPop(key)(1.second).some
             (src, elem) = poped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("c"))
@@ -391,8 +390,7 @@ trait ListSpec extends BaseSpec {
             empty <- uuid
             nonEmpty <- uuid
             _ <- lPush(nonEmpty)("a", "b", "c")
-            oPoped <- blPop(empty, nonEmpty)(1.seconds)
-            poped <- ZIO.fromOption(oPoped)
+            poped <- blPop(empty, nonEmpty)(1.second).some
             (src, elem) = poped
           } yield assert(src)(equalTo(nonEmpty)) &&
             assert(elem)(equalTo("c"))
@@ -400,22 +398,31 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key <- uuid
-            poped <- blPop(key)(1.seconds)
+            poped <- blPop(key)(1.second)
           } yield assert(poped)(isNone)
         },
         testM("from multiple empty lists") {
           for {
             first <- uuid
             second <- uuid
-            poped <- blPop(first, second)(1.seconds)
+            poped <- blPop(first, second)(1.second)
           } yield assert(poped)(isNone)
+        },
+        testM("from non-empty list with timeout 0s") {
+          for {
+            key <- uuid
+            _ <- lPush(key)("a", "b", "c")
+            poped <- blPop(key)(0.seconds).some
+            (src, elem) = poped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("c"))
         },
         testM("from not list") {
           for {
             key <- uuid
             value <- uuid
             _ <- set(key, value, None, None, None)
-            poped <- blPop(key)(1.seconds).either
+            poped <- blPop(key)(1.second).either
           } yield assert(poped)(isLeft)
         }
       ),
@@ -424,8 +431,7 @@ trait ListSpec extends BaseSpec {
           for {
             key <- uuid
             _ <- lPush(key)("a", "b", "c")
-            oPoped <- brPop(key)(1.seconds)
-            poped <- ZIO.fromOption(oPoped)
+            poped <- brPop(key)(1.second).some
             (src, elem) = poped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("a"))
@@ -435,8 +441,7 @@ trait ListSpec extends BaseSpec {
             empty <- uuid
             nonEmpty <- uuid
             _ <- lPush(nonEmpty)("a", "b", "c")
-            oPoped <- brPop(empty, nonEmpty)(1.seconds)
-            poped <- ZIO.fromOption(oPoped)
+            poped <- brPop(empty, nonEmpty)(1.second).some
             (src, elem) = poped
           } yield assert(src)(equalTo(nonEmpty)) &&
             assert(elem)(equalTo("a"))
@@ -444,22 +449,31 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key <- uuid
-            poped <- brPop(key)(1.seconds)
+            poped <- brPop(key)(1.second)
           } yield assert(poped)(isNone)
         },
         testM("from multiple empty lists") {
           for {
             first <- uuid
             second <- uuid
-            poped <- brPop(first, second)(1.seconds)
+            poped <- brPop(first, second)(1.second)
           } yield assert(poped)(isNone)
+        },
+        testM("from non-empty list with timeout 0s") {
+          for {
+            key <- uuid
+            _ <- lPush(key)("a", "b", "c")
+            poped <- brPop(key)(0.seconds).some
+            (src, elem) = poped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("a"))
         },
         testM("from not list") {
           for {
             key <- uuid
             value <- uuid
             _ <- set(key, value, None, None, None)
-            poped <- brPop(key)(1.seconds).either
+            poped <- brPop(key)(1.second).either
           } yield assert(poped)(isLeft)
         }
       )
