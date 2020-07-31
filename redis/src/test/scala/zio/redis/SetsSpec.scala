@@ -29,6 +29,12 @@ trait SetsSpec extends BaseSpec {
             added <- sAdd(key)("hello")
           } yield assert(added)(equalTo(0L))
         },
+        testM("multiple elements to set") {
+          for {
+            key   <- uuid
+            added <- sAdd(key)("a", "b", "c")
+          } yield assert(added)(equalTo(3L))
+        },
         testM("error when not set") {
           for {
             key   <- uuid
@@ -70,18 +76,18 @@ trait SetsSpec extends BaseSpec {
         },
         testM("non-empty set and empty set") {
           for {
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(first)("a", "b")
-            diff   <- sDiff(first, List(second))
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            diff     <- sDiff(nonEmpty, List(empty))
           } yield assert(diff)(hasSameElements(Chunk("a", "b")))
         },
         testM("empty set and non-empty set") {
           for {
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(second)("a", "b")
-            diff   <- sDiff(first, List(second))
+            empty    <- uuid
+            nonEmpty <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            diff     <- sDiff(empty, List(nonEmpty))
           } yield assert(diff)(isEmpty)
         },
         testM("empty when both sets are empty") {
@@ -124,70 +130,70 @@ trait SetsSpec extends BaseSpec {
       suite("sDiffStore")(
         testM("two non-empty sets") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("a", "c")
-            card   <- sDiffStore(key)(first, second)
+            card   <- sDiffStore(dest)(first, second)
           } yield assert(card)(equalTo(2L))
         },
         testM("non-empty set and empty set") {
           for {
-            key    <- uuid
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(first)("a", "b")
-            card   <- sDiffStore(key)(first, second)
+            dest     <- uuid
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            card     <- sDiffStore(dest)(nonEmpty, empty)
           } yield assert(card)(equalTo(2L))
         },
         testM("empty set and non-empty set") {
           for {
-            key    <- uuid
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(second)("a", "b")
-            card   <- sDiffStore(key)(first, second)
+            dest     <- uuid
+            empty    <- uuid
+            nonEmpty <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            card     <- sDiffStore(dest)(empty, nonEmpty)
           } yield assert(card)(equalTo(0L))
         },
         testM("empty when both sets are empty") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
-            card   <- sDiffStore(key)(first, second)
+            card   <- sDiffStore(dest)(first, second)
           } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             third  <- uuid
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("b", "d")
             _      <- sAdd(third)("b", "c")
-            card   <- sDiffStore(key)(first, second, third)
+            card   <- sDiffStore(dest)(first, second, third)
           } yield assert(card)(equalTo(1L))
         },
         testM("error when first parameter is not set") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- set(first, value, None, None, None)
-            card   <- sDiffStore(key)(first, second).either
+            card   <- sDiffStore(dest)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when second parameter is not set") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- set(second, value, None, None, None)
-            card   <- sDiffStore(key)(first, second).either
+            card   <- sDiffStore(dest)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -203,10 +209,10 @@ trait SetsSpec extends BaseSpec {
         },
         testM("empty when one of the sets is empty") {
           for {
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(first)("a", "b")
-            inter  <- sInter(first, List(second))
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            inter    <- sInter(nonEmpty, List(empty))
           } yield assert(inter)(isEmpty)
         },
         testM("empty when both sets are empty") {
@@ -259,72 +265,72 @@ trait SetsSpec extends BaseSpec {
       suite("sInterStore")(
         testM("two non-empty sets") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("a", "c", "e")
-            card   <- sInterStore(key)(first, second)
+            card   <- sInterStore(dest)(first, second)
           } yield assert(card)(equalTo(2L))
         },
         testM("empty when one of the sets is empty") {
           for {
-            key    <- uuid
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(first)("a", "b")
-            card   <- sInterStore(key)(first, second)
+            dest     <- uuid
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            card     <- sInterStore(dest)(nonEmpty, empty)
           } yield assert(card)(equalTo(0L))
         },
         testM("empty when both sets are empty") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
-            card   <- sInterStore(key)(first, second)
+            card   <- sInterStore(dest)(first, second)
           } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             third  <- uuid
             _      <- sAdd(first)("a", "b", "c", "d")
             _      <- sAdd(second)("b", "d")
             _      <- sAdd(third)("b", "c")
-            card   <- sInterStore(key)(first, second, third)
+            card   <- sInterStore(dest)(first, second, third)
           } yield assert(card)(equalTo(1L))
         },
         testM("error when first parameter is not set") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- set(first, value, None, None, None)
-            card   <- sInterStore(key)(first, second).either
+            card   <- sInterStore(dest)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("empty with empty first set and second parameter is not set") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- set(second, value, None, None, None)
-            card   <- sInterStore(key)(first, second)
+            card   <- sInterStore(dest)(first, second)
           } yield assert(card)(equalTo(0L))
         },
         testM("error with non-empty first set and second parameter is not set") {
           for {
-            key    <- uuid
+            dest   <- uuid
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- sAdd(first)("a")
             _      <- set(second, value, None, None, None)
-            card   <- sInterStore(key)(first, second).either
+            card   <- sInterStore(dest)(first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -619,10 +625,10 @@ trait SetsSpec extends BaseSpec {
         },
         testM("equal to the non-empty set when the other one is empty") {
           for {
-            first  <- uuid
-            second <- uuid
-            _      <- sAdd(first)("a", "b")
-            union  <- sUnion(first, List(second))
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            union    <- sUnion(nonEmpty, List(empty))
           } yield assert(union)(hasSameElements(Chunk("a", "b")))
         },
         testM("empty when both sets are empty") {
@@ -676,11 +682,11 @@ trait SetsSpec extends BaseSpec {
         },
         testM("equal to the non-empty set when the other one is empty") {
           for {
-            first  <- uuid
-            second <- uuid
-            dest   <- uuid
-            _      <- sAdd(first)("a", "b")
-            card   <- sUnionStore(dest)(first, second)
+            nonEmpty <- uuid
+            empty    <- uuid
+            dest     <- uuid
+            _        <- sAdd(nonEmpty)("a", "b")
+            card     <- sUnionStore(dest)(nonEmpty, empty)
           } yield assert(card)(equalTo(2L))
         },
         testM("empty when both sets are empty") {
