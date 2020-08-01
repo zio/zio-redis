@@ -10,7 +10,7 @@ trait Lists {
   }
 
   object Position {
-    final case object Before extends Position
-    final case object After  extends Position
+    case object Before extends Position
+    case object After  extends Position
   }
 }

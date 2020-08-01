@@ -464,52 +464,52 @@ trait SetsSpec extends BaseSpec {
       suite("sPop")(
         testM("one element from non-empty set") {
           for {
-            key   <- uuid
-            _     <- sAdd(key)("a", "b", "c")
-            poped <- sPop(key, None)
-          } yield assert(poped)(isNonEmpty)
+            key    <- uuid
+            _      <- sAdd(key)("a", "b", "c")
+            popped <- sPop(key, None)
+          } yield assert(popped)(isNonEmpty)
         },
         testM("one element from an empty set") {
           for {
-            key   <- uuid
-            poped <- sPop(key, None)
-          } yield assert(poped)(isEmpty)
+            key    <- uuid
+            popped <- sPop(key, None)
+          } yield assert(popped)(isEmpty)
         },
         testM("error when poping one element from not set") {
           for {
-            key   <- uuid
-            value <- uuid
-            _     <- set(key, value, None, None, None)
-            poped <- sPop(key, None).either
-          } yield assert(poped)(isLeft(isSubtype[WrongType](anything)))
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value, None, None, None)
+            popped <- sPop(key, None).either
+          } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("multiple elements from non-empty set") {
           for {
-            key   <- uuid
-            _     <- sAdd(key)("a", "b", "c")
-            poped <- sPop(key, Some(2L))
-          } yield assert(poped)(hasSize(equalTo(2)))
+            key    <- uuid
+            _      <- sAdd(key)("a", "b", "c")
+            popped <- sPop(key, Some(2L))
+          } yield assert(popped)(hasSize(equalTo(2)))
         },
         testM("more elements then there is in non-empty set") {
           for {
-            key   <- uuid
-            _     <- sAdd(key)("a", "b", "c")
-            poped <- sPop(key, Some(5L))
-          } yield assert(poped)(hasSize(equalTo(3)))
+            key    <- uuid
+            _      <- sAdd(key)("a", "b", "c")
+            popped <- sPop(key, Some(5L))
+          } yield assert(popped)(hasSize(equalTo(3)))
         },
         testM("multiple elements from empty set") {
           for {
-            key   <- uuid
-            poped <- sPop(key, Some(3))
-          } yield assert(poped)(isEmpty)
+            key    <- uuid
+            popped <- sPop(key, Some(3))
+          } yield assert(popped)(isEmpty)
         },
         testM("error when poping multiple elements from not set") {
           for {
-            key   <- uuid
-            value <- uuid
-            _     <- set(key, value, None, None, None)
-            poped <- sPop(key, Some(3)).either
-          } yield assert(poped)(isLeft(isSubtype[WrongType](anything)))
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value, None, None, None)
+            popped <- sPop(key, Some(3)).either
+          } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
       suite("sRandMember")(
