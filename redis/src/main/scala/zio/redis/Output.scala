@@ -146,6 +146,21 @@ object Output {
     }
   }
 
+  case object KeyElemOutput extends Output[Option[(String, String)]] {
+    protected def tryDecode(text: String): Option[(String, String)] =
+      if (text.startsWith("*-1\r\n"))
+        None
+      else if (text.startsWith("*2\r\n"))
+        Some(parse(text))
+      else
+        throw ProtocolError(s"$text isn't blPop output.")
+
+    private[this] def parse(text: String): (String, String) = {
+      val items = unsafeReadChunk(text, 0)
+      (items(0), items(1))
+    }
+  }
+
   case object StringOutput extends Output[String] {
     protected def tryDecode(text: String): String =
       if (text.startsWith("+"))

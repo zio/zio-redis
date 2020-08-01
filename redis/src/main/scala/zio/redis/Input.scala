@@ -73,6 +73,10 @@ object Input {
     def encode(data: Count): Chunk[String] = Chunk(wrap("COUNT"), wrap(data.count.toString))
   }
 
+  case object PositionInput extends Input[Position] {
+    def encode(data: Position): Chunk[String] = Chunk.single(wrap(data.stringify))
+  }
+
   case object DoubleInput extends Input[Double] {
     def encode(data: Double): Chunk[String] = Chunk.single(wrap(data.toString))
   }

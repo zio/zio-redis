@@ -5,8 +5,9 @@ import java.util.concurrent.TimeUnit
 import zio.Chunk
 import zio.clock.currentTime
 import zio.duration._
-import zio.test._
+import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
+import zio.test._
 
 trait ListSpec extends BaseSpec {
 
@@ -373,6 +374,166 @@ trait ListSpec extends BaseSpec {
             _    <- set(key, "hello", None, None, None)
             trim <- lTrim(key, 0 to 3).either
           } yield assert(trim)(isLeft)
+        }
+      ),
+      suite("blPop")(
+        testM("from single list") {
+          for {
+            key        <- uuid
+            _          <- lPush(key)("a", "b", "c")
+            popped     <- blPop(key)(1.second).some
+            (src, elem) = popped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("c"))
+        },
+        testM("from one empty and one non-empty list") {
+          for {
+            empty      <- uuid
+            nonEmpty   <- uuid
+            _          <- lPush(nonEmpty)("a", "b", "c")
+            popped     <- blPop(empty, nonEmpty)(1.second).some
+            (src, elem) = popped
+          } yield assert(src)(equalTo(nonEmpty)) &&
+            assert(elem)(equalTo("c"))
+        },
+        testM("from one empty list") {
+          for {
+            key    <- uuid
+            popped <- blPop(key)(1.second)
+          } yield assert(popped)(isNone)
+        },
+        testM("from multiple empty lists") {
+          for {
+            first  <- uuid
+            second <- uuid
+            popped <- blPop(first, second)(1.second)
+          } yield assert(popped)(isNone)
+        },
+        testM("from non-empty list with timeout 0s") {
+          for {
+            key        <- uuid
+            _          <- lPush(key)("a", "b", "c")
+            popped     <- blPop(key)(0.seconds).some
+            (src, elem) = popped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("c"))
+        },
+        testM("from not list") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value, None, None, None)
+            popped <- blPop(key)(1.second).either
+          } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("brPop")(
+        testM("from single list") {
+          for {
+            key        <- uuid
+            _          <- lPush(key)("a", "b", "c")
+            popped     <- brPop(key)(1.second).some
+            (src, elem) = popped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("a"))
+        },
+        testM("from one empty and one non-empty list") {
+          for {
+            empty      <- uuid
+            nonEmpty   <- uuid
+            _          <- lPush(nonEmpty)("a", "b", "c")
+            popped     <- brPop(empty, nonEmpty)(1.second).some
+            (src, elem) = popped
+          } yield assert(src)(equalTo(nonEmpty)) &&
+            assert(elem)(equalTo("a"))
+        },
+        testM("from one empty list") {
+          for {
+            key    <- uuid
+            popped <- brPop(key)(1.second)
+          } yield assert(popped)(isNone)
+        },
+        testM("from multiple empty lists") {
+          for {
+            first  <- uuid
+            second <- uuid
+            popped <- brPop(first, second)(1.second)
+          } yield assert(popped)(isNone)
+        },
+        testM("from non-empty list with timeout 0s") {
+          for {
+            key        <- uuid
+            _          <- lPush(key)("a", "b", "c")
+            popped     <- brPop(key)(0.seconds).some
+            (src, elem) = popped
+          } yield assert(src)(equalTo(key)) &&
+            assert(elem)(equalTo("a"))
+        },
+        testM("from not list") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value, None, None, None)
+            popped <- brPop(key)(1.second).either
+          } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("lInsert")(
+        testM("before pivot into non-empty list") {
+          for {
+            key <- uuid
+            _   <- lPush(key)("a", "b", "c")
+            len <- lInsert(key, Position.Before, "b", "d")
+          } yield assert(len)(equalTo(4L))
+        },
+        testM("after pivot into non-empty list") {
+          for {
+            key <- uuid
+            _   <- lPush(key)("a", "b", "c")
+            len <- lInsert(key, Position.After, "b", "d")
+          } yield assert(len)(equalTo(4L))
+        },
+        testM("before pivot into empty list") {
+          for {
+            key <- uuid
+            len <- lInsert(key, Position.Before, "a", "b")
+          } yield assert(len)(equalTo(0L))
+        },
+        testM("after pivot into empty list") {
+          for {
+            key <- uuid
+            len <- lInsert(key, Position.After, "a", "b")
+          } yield assert(len)(equalTo(0L))
+        },
+        testM("before pivot that doesn't exist") {
+          for {
+            key <- uuid
+            _   <- lPush(key)("a", "b", "c")
+            len <- lInsert(key, Position.Before, "unknown", "d")
+          } yield assert(len)(equalTo(-1L))
+        },
+        testM("after pivot that doesn't exist") {
+          for {
+            key <- uuid
+            _   <- lPush(key)("a", "b", "c")
+            len <- lInsert(key, Position.After, "unknown", "d")
+          } yield assert(len)(equalTo(-1L))
+        },
+        testM("error before pivot into not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            len   <- lInsert(key, Position.Before, "a", "b").either
+          } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error after pivot into not list") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value, None, None, None)
+            len   <- lInsert(key, Position.After, "a", "b").either
+          } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }
       )
     )

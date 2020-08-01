@@ -70,4 +70,9 @@ object RedisCommand {
     def apply(a: A, b: B)(c: C, cs: C*)(d: D, e: E): ZIO[RedisExecutor, RedisError, Out] =
       command.run((a, b, (c, cs.toList), d, e))
   }
+
+  implicit final class VarargsArg1[-A, -B, +Out](private val command: RedisCommand[((A, List[A]), B), Out])
+      extends AnyVal {
+    def apply(a: A, as: A*)(b: B): ZIO[RedisExecutor, RedisError, Out] = command.run(((a, as.toList), b))
+  }
 }
