@@ -39,6 +39,26 @@ class PutBenchmarks {
   }
 
   @Benchmark
+  def rediculous(): Unit = {
+    import java.net.InetSocketAddress
+    import cats.effect._
+    import cats.implicits._
+    import fs2.io.tcp._
+    import io.chrisdavenport.rediculous._
+
+    val connection =
+      for {
+        blocker <- Blocker[IO]
+        sg      <- SocketGroup[IO](blocker)
+        c       <- RedisConnection.queued[IO](sg, new InetSocketAddress(RedisHost, RedisPort), maxQueued = 10000, workers = 2)
+      } yield c
+
+    connection
+      .use(c => items.traverse_(i => RedisCommands.set[IO](i, i).run(c)))
+      .unsafeRunSync
+  }
+
+  @Benchmark
   def redis4cats(): Unit = {
     import cats.effect.IO
     import cats.instances.list._
