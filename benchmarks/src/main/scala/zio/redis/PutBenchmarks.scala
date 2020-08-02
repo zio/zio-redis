@@ -50,7 +50,7 @@ class PutBenchmarks {
       for {
         blocker <- Blocker[IO]
         sg      <- SocketGroup[IO](blocker)
-        c       <- RedisConnection.queued[IO](sg, new InetSocketAddress("localhost", 6379), maxQueued = 10000, workers = 2)
+        c       <- RedisConnection.queued[IO](sg, new InetSocketAddress(RedisHost, RedisPort), maxQueued = 10000, workers = 2)
       } yield c
 
     connection
