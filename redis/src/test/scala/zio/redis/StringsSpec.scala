@@ -1,8 +1,8 @@
 package zio.redis
 
-import zio.redis.RedisError.WrongType
-import zio.test._
+import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
+import zio.test._
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite =
@@ -103,6 +103,223 @@ trait StringsSpec extends BaseSpec {
             _     <- sAdd(key)("a")
             count <- bitCount(key, Some(1 to 3)).either
           } yield assert(count)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("bitOp")(
+        testM("AND over multiple non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _      <- set(first, "a", None, None, None)
+            _      <- set(second, "ab", None, None, None)
+            _      <- set(third, "abc", None, None, None)
+            result <- bitOp(BitOperation.AND, dest)(first, second, third)
+          } yield assert(result)(equalTo(3L))
+        },
+        testM("AND over two non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- set(first, "first", None, None, None)
+            _      <- set(second, "second", None, None, None)
+            result <- bitOp(BitOperation.AND, dest)(first, second)
+          } yield assert(result)(equalTo(6L))
+        },
+        testM("AND over one empty and one non-empty string") {
+          for {
+            dest     <- uuid
+            empty    <- uuid
+            nonEmpty <- uuid
+            _        <- set(nonEmpty, "value", None, None, None)
+            result   <- bitOp(BitOperation.AND, dest)(empty, nonEmpty)
+          } yield assert(result)(equalTo(5L))
+        },
+        testM("AND over two empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            result <- bitOp(BitOperation.AND, dest)(first, second)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("error when AND over one empty and one not string") {
+          for {
+            dest      <- uuid
+            empty     <- uuid
+            notString <- uuid
+            _         <- sAdd(notString)("a")
+            result    <- bitOp(BitOperation.AND, dest)(empty, notString).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error when AND over non-empty and one not string") {
+          for {
+            dest      <- uuid
+            nonEmpty  <- uuid
+            notString <- uuid
+            _         <- sAdd(notString)("a")
+            result    <- bitOp(BitOperation.AND, dest)(nonEmpty, notString).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("OR over multiple non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _      <- set(first, "a", None, None, None)
+            _      <- set(second, "ab", None, None, None)
+            _      <- set(third, "abc", None, None, None)
+            result <- bitOp(BitOperation.OR, dest)(first, second, third)
+          } yield assert(result)(equalTo(3L))
+        },
+        testM("OR over two non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- set(first, "first", None, None, None)
+            _      <- set(second, "second", None, None, None)
+            result <- bitOp(BitOperation.OR, dest)(first, second)
+          } yield assert(result)(equalTo(6L))
+        },
+        testM("OR over one empty and one non-empty string") {
+          for {
+            dest     <- uuid
+            empty    <- uuid
+            nonEmpty <- uuid
+            _        <- set(nonEmpty, "value", None, None, None)
+            result   <- bitOp(BitOperation.OR, dest)(empty, nonEmpty)
+          } yield assert(result)(equalTo(5L))
+        },
+        testM("OR over two empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            result <- bitOp(BitOperation.OR, dest)(first, second)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("error when OR over one empty and one not string") {
+          for {
+            dest      <- uuid
+            empty     <- uuid
+            notString <- uuid
+            _         <- sAdd(notString)("a")
+            result    <- bitOp(BitOperation.OR, dest)(empty, notString).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error when OR over non-empty and one not string") {
+          for {
+            dest      <- uuid
+            nonEmpty  <- uuid
+            notString <- uuid
+            _         <- sAdd(notString)("a")
+            result    <- bitOp(BitOperation.OR, dest)(nonEmpty, notString).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("XOR over multiple non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _      <- set(first, "a", None, None, None)
+            _      <- set(second, "ab", None, None, None)
+            _      <- set(third, "abc", None, None, None)
+            result <- bitOp(BitOperation.XOR, dest)(first, second, third)
+          } yield assert(result)(equalTo(3L))
+        },
+        testM("XOR over two non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- set(first, "first", None, None, None)
+            _      <- set(second, "second", None, None, None)
+            result <- bitOp(BitOperation.XOR, dest)(first, second)
+          } yield assert(result)(equalTo(6L))
+        },
+        testM("XOR over one empty and one non-empty string") {
+          for {
+            dest     <- uuid
+            empty    <- uuid
+            nonEmpty <- uuid
+            _        <- set(nonEmpty, "value", None, None, None)
+            result   <- bitOp(BitOperation.XOR, dest)(empty, nonEmpty)
+          } yield assert(result)(equalTo(5L))
+        },
+        testM("XOR over two empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            result <- bitOp(BitOperation.XOR, dest)(first, second)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("error when XOR over one empty and one not string") {
+          for {
+            dest      <- uuid
+            empty     <- uuid
+            notString <- uuid
+            _         <- sAdd(notString)("a")
+            result    <- bitOp(BitOperation.XOR, dest)(empty, notString).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error when XOR over non-empty and one not string") {
+          for {
+            dest      <- uuid
+            nonEmpty  <- uuid
+            notString <- uuid
+            _         <- sAdd(notString)("a")
+            result    <- bitOp(BitOperation.XOR, dest)(nonEmpty, notString).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error when NOT over multiple non-empty strings") {
+          for {
+            dest   <- uuid
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _      <- set(first, "a", None, None, None)
+            _      <- set(second, "ab", None, None, None)
+            _      <- set(third, "abc", None, None, None)
+            result <- bitOp(BitOperation.NOT, dest)(first, second, third).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when NOT over one non-empty and one empty string") {
+          for {
+            dest     <- uuid
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- set(nonEmpty, "a", None, None, None)
+            result   <- bitOp(BitOperation.NOT, dest)(nonEmpty, empty).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("NOT over non-empty string") {
+          for {
+            dest   <- uuid
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitOp(BitOperation.NOT, dest)(key)
+          } yield assert(result)(equalTo(5L))
+        },
+        testM("NOT over empty string") {
+          for {
+            dest   <- uuid
+            key    <- uuid
+            result <- bitOp(BitOperation.NOT, dest)(key)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("error when NOT over not string") {
+          for {
+            dest   <- uuid
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            result <- bitOp(BitOperation.NOT, dest)(key).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       )
     )
