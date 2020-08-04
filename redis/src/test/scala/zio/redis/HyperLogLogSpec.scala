@@ -33,14 +33,14 @@ trait HyperLogLogSpec extends BaseSpec {
       suite("count elements")(
         testM("pfCount zero at undefined key") {
           for {
-            count <- pfCount("noKey", Nil)
+            count <- pfCount("noKey")
           } yield assert(count)(equalTo(0L))
         },
         testM("pfCount values at key") {
           for {
             key   <- uuid
             add   <- pfAdd(key)("one", "two", "three")
-            count <- pfCount(key, Nil)
+            count <- pfCount(key)
           } yield assert(add)(equalTo(true)) && assert(count)(equalTo(3L))
         },
         testM("pfCount union key with key2") {
@@ -49,7 +49,7 @@ trait HyperLogLogSpec extends BaseSpec {
             key2  <- uuid
             add   <- pfAdd(key)("one", "two", "three")
             add2  <- pfAdd(key2)("four", "five", "six")
-            count <- pfCount(key, List(key2))
+            count <- pfCount(key, key2)
           } yield assert(add)(equalTo(true)) && assert(add2)(equalTo(true)) && assert(count)(equalTo(6L))
         },
         testM("error when not hyperloglog") {
@@ -57,7 +57,7 @@ trait HyperLogLogSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value, None, None, None)
-            count <- pfCount(key, Nil).either
+            count <- pfCount(key).either
           } yield assert(count)(isLeft)
         }
       ),
@@ -70,7 +70,7 @@ trait HyperLogLogSpec extends BaseSpec {
             _     <- pfAdd(key)("one", "two", "three", "four")
             _     <- pfAdd(key2)("five", "six", "seven")
             _     <- pfMerge(key3)(key2, key)
-            count <- pfCount(key3, Nil)
+            count <- pfCount(key3)
           } yield assert(count)(equalTo(7L))
         },
         testM("pfMerge two hyperloglogs with already existing destination values") {
@@ -82,7 +82,7 @@ trait HyperLogLogSpec extends BaseSpec {
             _     <- pfAdd(key2)("five", "six", "seven")
             _     <- pfAdd(key3)("eight", "nine", "ten")
             _     <- pfMerge(key3)(key2, key)
-            count <- pfCount(key3, Nil)
+            count <- pfCount(key3)
           } yield assert(count)(equalTo(10L))
         },
         testM("pfMerge error when source not hyperloglog") {

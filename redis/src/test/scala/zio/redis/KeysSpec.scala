@@ -36,8 +36,8 @@ trait KeysSpec extends BaseSpec {
           key   <- uuid
           value <- uuid
           _     <- set(key, value, None, None, None)
-          e1    <- exists(key, Nil)
-          e2    <- exists("unknown", Nil)
+          e1    <- exists(key)
+          e2    <- exists("unknown")
         } yield assert(e1)(isTrue) && assert(e2)(isFalse)
       },
       testM("delete existing key") {
@@ -45,7 +45,7 @@ trait KeysSpec extends BaseSpec {
           key     <- uuid
           value   <- uuid
           _       <- set(key, value, None, None, None)
-          deleted <- del(key, Nil)
+          deleted <- del(key)
         } yield assert(deleted)(equalTo(1L))
       },
       testM("find all keys matching pattern") {
@@ -63,7 +63,7 @@ trait KeysSpec extends BaseSpec {
           key     <- uuid
           value   <- uuid
           _       <- set(key, value, None, None, None)
-          removed <- unlink(key, Nil)
+          removed <- unlink(key)
         } yield assert(removed)(equalTo(1L))
       },
       testM("touch two existing keys") {
@@ -74,7 +74,7 @@ trait KeysSpec extends BaseSpec {
           key2    <- uuid
           value2  <- uuid
           _       <- set(key2, value2, None, None, None)
-          touched <- touch(key1, List(key2))
+          touched <- touch(key1, key2)
         } yield assert(touched)(equalTo(2L))
       },
       testM("scan entries") {
@@ -101,7 +101,7 @@ trait KeysSpec extends BaseSpec {
           value    <- uuid
           _        <- set(key, value, None, None, None)
           dumped   <- dump(key)
-          _        <- del(key, Nil)
+          _        <- del(key)
           restore  <- restore(key, 0L, dumped, None, None, None, None).either
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
@@ -145,9 +145,9 @@ trait KeysSpec extends BaseSpec {
             value     <- uuid
             _         <- set(key, value, None, None, None)
             exp       <- pExpire(key, 2000.millis)
-            response1 <- exists(key, Nil)
+            response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
-            response2 <- exists(key, Nil)
+            response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
         } @@ eventually,
         testM("set key expiration with pExpireAt command") {
@@ -157,9 +157,9 @@ trait KeysSpec extends BaseSpec {
             expiresAt <- instantOf(2000)
             _         <- set(key, value, None, None, None)
             exp       <- pExpireAt(key, expiresAt)
-            response1 <- exists(key, Nil)
+            response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
-            response2 <- exists(key, Nil)
+            response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
         } @@ eventually,
         testM("expire followed by persist") {
@@ -178,9 +178,9 @@ trait KeysSpec extends BaseSpec {
             expiresAt <- instantOf(2000)
             _         <- set(key, value, None, None, None)
             exp       <- expireAt(key, expiresAt)
-            response1 <- exists(key, Nil)
+            response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
-            response2 <- exists(key, Nil)
+            response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
         } @@ eventually
       ),
