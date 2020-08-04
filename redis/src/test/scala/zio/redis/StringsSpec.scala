@@ -726,6 +726,42 @@ trait StringsSpec extends BaseSpec {
             result <- incr(key).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("incrBy")(
+        testM("3 when non-empty integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "10", None, None, None)
+            result <- incrBy(key, 3L)
+          } yield assert(result)(equalTo(13L))
+        },
+        testM("3 when empty integer") {
+          for {
+            key    <- uuid
+            result <- incrBy(key, 3L)
+          } yield assert(result)(equalTo(3L))
+        },
+        testM("-3 when non-empty integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "10", None, None, None)
+            result <- incrBy(key, -3L)
+          } yield assert(result)(equalTo(7L))
+        },
+        testM("error when out of range integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            result <- incrBy(key, 3).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "not-integer", None, None, None)
+            result <- incrBy(key, 3).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 }
