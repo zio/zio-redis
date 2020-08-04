@@ -527,6 +527,13 @@ trait StringsSpec extends BaseSpec {
             result <- decrBy(key, 3L)
           } yield assert(result)(equalTo(-3L))
         },
+        testM("-3 when non-empty integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "10", None, None, None)
+            result <- decrBy(key, -3L)
+          } yield assert(result)(equalTo(13L))
+        },
         testM("error when out of range integer") {
           for {
             key    <- uuid
