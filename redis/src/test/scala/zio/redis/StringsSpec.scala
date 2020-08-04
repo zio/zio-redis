@@ -655,6 +655,41 @@ trait StringsSpec extends BaseSpec {
             substr <- getRange(key, 1 to 3).either
           } yield assert(substr)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("getSet")(
+        testM("non-empty value to the existing string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            oldVal <- getSet(key, "abc")
+          } yield assert(oldVal)(isSome(equalTo("value")))
+        },
+        testM("empty value to the existing string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            oldVal <- getSet(key, "")
+          } yield assert(oldVal)(isSome(equalTo("value")))
+        },
+        testM("non-empty value to the empty string") {
+          for {
+            key    <- uuid
+            oldVal <- getSet(key, "value")
+          } yield assert(oldVal)(isNone)
+        },
+        testM("empty value to the empty string") {
+          for {
+            key    <- uuid
+            oldVal <- getSet(key, "")
+          } yield assert(oldVal)(isNone)
+        },
+        testM("error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            oldVal <- getSet(key, "value").either
+          } yield assert(oldVal)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
