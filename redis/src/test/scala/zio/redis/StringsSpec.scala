@@ -762,6 +762,42 @@ trait StringsSpec extends BaseSpec {
             result <- incrBy(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("incrByFloat")(
+        testM("3.4 when non-empty float") {
+          for {
+            key    <- uuid
+            _      <- set(key, "5.1", None, None, None)
+            result <- incrByFloat(key, 3.4d)
+          } yield assert(result)(equalTo("8.5"))
+        },
+        testM("3.4 when empty float") {
+          for {
+            key    <- uuid
+            result <- incrByFloat(key, 3.4d)
+          } yield assert(result)(equalTo("3.4"))
+        },
+        testM("-3.4 when non-empty float") {
+          for {
+            key    <- uuid
+            _      <- set(key, "5", None, None, None)
+            result <- incrByFloat(key, -3.4d)
+          } yield assert(result)(equalTo("1.6"))
+        },
+        testM("error when out of range value") {
+          for {
+            key    <- uuid
+            _      <- set(key, s"${Double.MaxValue.toString}1234", None, None, None)
+            result <- incrByFloat(key, 3d).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "not-integer", None, None, None)
+            result <- incrByFloat(key, 3).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 }
