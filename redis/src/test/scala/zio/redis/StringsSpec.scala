@@ -321,6 +321,168 @@ trait StringsSpec extends BaseSpec {
             result <- bitOp(BitOperation.NOT, dest)(key).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("bitPos")(
+        testM("of 1 when non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, None)
+          } yield assert(pos)(equalTo(1L))
+        },
+        testM("of 0 when non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, None)
+          } yield assert(pos)(equalTo(0L))
+        },
+        testM("of 1 when empty string") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, true, None)
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when empty string") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, false, None)
+          } yield assert(pos)(equalTo(0L))
+        },
+        testM("of 1 when non-empty string with start") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, Some(BitPosRange(2L, None)))
+          } yield assert(pos)(equalTo(17L))
+        },
+        testM("of 0 when non-empty string with start") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, Some(BitPosRange(2L, None)))
+          } yield assert(pos)(equalTo(16L))
+        },
+        testM("of 1 when start is greater then non-empty string length") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, Some(BitPosRange(10L, None)))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when start is greater then non-empty string length") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, Some(BitPosRange(10L, None)))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 1 when empty string with start") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, true, Some(BitPosRange(1L, None)))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when empty string with start") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, false, Some(BitPosRange(10L, None)))
+          } yield assert(pos)(equalTo(0L))
+        },
+        testM("of 1 when non-empty string with start and end") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, Some(BitPosRange(2L, Some(4L))))
+          } yield assert(pos)(equalTo(17L))
+        },
+        testM("of 0 when non-empty string with start and end") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
+          } yield assert(pos)(equalTo(16L))
+        },
+        testM("of 1 when start is greater then end with non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when start is greater then end with non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L))))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 1 when range is out of non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, Some(BitPosRange(10L, Some(15L))))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when range is out of non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, Some(BitPosRange(10L, Some(15L))))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 1 when start is equal to end with non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, true, Some(BitPosRange(1L, Some(1L))))
+          } yield assert(pos)(equalTo(9L))
+        },
+        testM("of 0 when start is equal to end with non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            pos <- bitPos(key, false, Some(BitPosRange(1L, Some(1L))))
+          } yield assert(pos)(equalTo(8L))
+        },
+        testM("of 1 when empty string with start and end") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, true, Some(BitPosRange(2L, Some(4L))))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when empty string with start and end") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
+          } yield assert(pos)(equalTo(0L))
+        },
+        testM("of 1 when start is greater then end with empty string") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
+          } yield assert(pos)(equalTo(-1L))
+        },
+        testM("of 0 when start is greater then end with empty string") {
+          for {
+            key <- uuid
+            pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L))))
+          } yield assert(pos)(equalTo(0L))
+        },
+        testM("error when not string") {
+          for {
+            key <- uuid
+            _   <- sAdd(key)("a")
+            pos <- bitPos(key, true, None).either
+          } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error when not string and start is greater then end") {
+          for {
+            key <- uuid
+            _   <- sAdd(key)("a")
+            pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L)))).either
+          } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
