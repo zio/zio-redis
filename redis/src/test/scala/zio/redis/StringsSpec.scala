@@ -598,6 +598,63 @@ trait StringsSpec extends BaseSpec {
             bit <- getBit(key, 10L).either
           } yield assert(bit)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("getRange")(
+        testM("from non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            substr <- getRange(key, 1 to 3)
+          } yield assert(substr)(equalTo("alu"))
+        },
+        testM("with range that exceeds non-empty string length") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            substr <- getRange(key, 1 to 10)
+          } yield assert(substr)(equalTo("alue"))
+        },
+        testM("with range that is outside of non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            substr <- getRange(key, 10 to 15)
+          } yield assert(substr)(equalTo(""))
+        },
+        testM("with inverse range of non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            substr <- getRange(key, 15 to 3)
+          } yield assert(substr)(equalTo(""))
+        },
+        testM("with negative range end from non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            substr <- getRange(key, 1 to -1)
+          } yield assert(substr)(equalTo("alue"))
+        },
+        testM("with start and end equal from non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            substr <- getRange(key, 1 to 1)
+          } yield assert(substr)(equalTo("a"))
+        },
+        testM("from empty string") {
+          for {
+            key    <- uuid
+            substr <- getRange(key, 1 to 3)
+          } yield assert(substr)(equalTo(""))
+        },
+        testM("error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            substr <- getRange(key, 1 to 3).either
+          } yield assert(substr)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
