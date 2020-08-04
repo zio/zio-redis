@@ -697,6 +697,35 @@ trait StringsSpec extends BaseSpec {
             oldVal <- getSet(key, "value").either
           } yield assert(oldVal)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("incr")(
+        testM("non-empty integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "5", None, None, None)
+            result <- incr(key)
+          } yield assert(result)(equalTo(6L))
+        },
+        testM("empty integer") {
+          for {
+            key    <- uuid
+            result <- incr(key)
+          } yield assert(result)(equalTo(1L))
+        },
+        testM("error when out of range integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            result <- incr(key).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "not-integer", None, None, None)
+            result <- incr(key).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 }
