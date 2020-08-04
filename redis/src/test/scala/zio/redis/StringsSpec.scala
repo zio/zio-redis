@@ -563,6 +563,41 @@ trait StringsSpec extends BaseSpec {
             result <- get(key).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("getBit")(
+        testM("from non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            bit <- getBit(key, 17L)
+          } yield assert(bit)(equalTo(1L))
+        },
+        testM("with offset larger then string length") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            bit <- getBit(key, 100L)
+          } yield assert(bit)(equalTo(0L))
+        },
+        testM("with empty string") {
+          for {
+            key <- uuid
+            bit <- getBit(key, 10L)
+          } yield assert(bit)(equalTo(0L))
+        },
+        testM("error when negative offset") {
+          for {
+            key <- uuid
+            bit <- getBit(key, -1L).either
+          } yield assert(bit)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not string") {
+          for {
+            key <- uuid
+            _   <- sAdd(key)("a")
+            bit <- getBit(key, 10L).either
+          } yield assert(bit)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
