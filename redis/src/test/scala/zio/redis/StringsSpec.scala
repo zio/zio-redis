@@ -84,7 +84,7 @@ trait StringsSpec extends BaseSpec {
             count <- bitCount(key, Some(1 to -1))
           } yield assert(count)(equalTo(16L))
         },
-        testM("over non-empty string with range whose start is bigger then end") {
+        testM("over non-empty string with range whose start is bigger than end") {
           for {
             key   <- uuid
             _     <- set(key, "value", None, None, None)
@@ -363,14 +363,14 @@ trait StringsSpec extends BaseSpec {
             pos <- bitPos(key, false, Some(BitPosRange(2L, None)))
           } yield assert(pos)(equalTo(16L))
         },
-        testM("of 1 when start is greater then non-empty string length") {
+        testM("of 1 when start is greater than non-empty string length") {
           for {
             key <- uuid
             _   <- set(key, "value", None, None, None)
             pos <- bitPos(key, true, Some(BitPosRange(10L, None)))
           } yield assert(pos)(equalTo(-1L))
         },
-        testM("of 0 when start is greater then non-empty string length") {
+        testM("of 0 when start is greater than non-empty string length") {
           for {
             key <- uuid
             _   <- set(key, "value", None, None, None)
@@ -403,14 +403,14 @@ trait StringsSpec extends BaseSpec {
             pos <- bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(16L))
         },
-        testM("of 1 when start is greater then end with non-empty string") {
+        testM("of 1 when start is greater than end with non-empty string") {
           for {
             key <- uuid
             _   <- set(key, "value", None, None, None)
             pos <- bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
-        testM("of 0 when start is greater then end with non-empty string") {
+        testM("of 0 when start is greater than end with non-empty string") {
           for {
             key <- uuid
             _   <- set(key, "value", None, None, None)
@@ -457,13 +457,13 @@ trait StringsSpec extends BaseSpec {
             pos <- bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(0L))
         },
-        testM("of 1 when start is greater then end with empty string") {
+        testM("of 1 when start is greater than end with empty string") {
           for {
             key <- uuid
             pos <- bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
-        testM("of 0 when start is greater then end with empty string") {
+        testM("of 0 when start is greater than end with empty string") {
           for {
             key <- uuid
             pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L))))
@@ -476,12 +476,41 @@ trait StringsSpec extends BaseSpec {
             pos <- bitPos(key, true, None).either
           } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
         },
-        testM("error when not string and start is greater then end") {
+        testM("error when not string and start is greater than end") {
           for {
             key <- uuid
             _   <- sAdd(key)("a")
             pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L)))).either
           } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("decr")(
+        testM("non-empty integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "5", None, None, None)
+            result <- decr(key)
+          } yield assert(result)(equalTo(4L))
+        },
+        testM("empty integer") {
+          for {
+            key    <- uuid
+            result <- decr(key)
+          } yield assert(result)(equalTo(-1L))
+        },
+        testM("error when out of range integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            result <- decr(key).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not integer") {
+          for {
+            key    <- uuid
+            _      <- set(key, "not-integer", None, None, None)
+            result <- decr(key).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )
     )
