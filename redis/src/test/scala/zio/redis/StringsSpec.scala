@@ -541,6 +541,28 @@ trait StringsSpec extends BaseSpec {
             result <- decrBy(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("get")(
+        testM("non-emtpy string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- get(key)
+          } yield assert(result)(isSome(equalTo("value")))
+        },
+        testM("emtpy string") {
+          for {
+            key    <- uuid
+            result <- get(key)
+          } yield assert(result)(isNone)
+        },
+        testM("error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            result <- get(key).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
