@@ -841,6 +841,55 @@ trait StringsSpec extends BaseSpec {
             result <- mGet(key)
           } yield assert(result)(equalTo(Chunk(None)))
         }
+      ),
+      suite("mSet")(
+        testM("one new value") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- mSet((key, value))
+            result <- get(key)
+          } yield assert(result)(isSome(equalTo(value)))
+        },
+        testM("multiple new values") {
+          for {
+            first     <- uuid
+            second    <- uuid
+            firstVal  <- uuid
+            secondVal <- uuid
+            _         <- mSet((first, firstVal), (second, secondVal))
+            result    <- mGet(first, second)
+          } yield assert(result)(equalTo(Chunk(Some(firstVal), Some(secondVal))))
+        },
+        testM("replace existing values") {
+          for {
+            first          <- uuid
+            second         <- uuid
+            firstVal       <- uuid
+            secondVal      <- uuid
+            replacementVal <- uuid
+            _              <- mSet((first, firstVal), (second, secondVal))
+            _              <- mSet((first, replacementVal), (second, replacementVal))
+            result         <- mGet(first, second)
+          } yield assert(result)(equalTo(Chunk(Some(replacementVal), Some(replacementVal))))
+        },
+        testM("one value multiple times at once") {
+          for {
+            key       <- uuid
+            firstVal  <- uuid
+            secondVal <- uuid
+            _         <- mSet((key, firstVal), (key, secondVal))
+            result    <- get(key)
+          } yield assert(result)(isSome(equalTo(secondVal)))
+        },
+        testM("not string value") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- sAdd(key)("a")
+            result <- mSet((key, value)).either
+          } yield assert(result)(isRight)
+        }
       )
     )
 }
