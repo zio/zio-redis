@@ -863,15 +863,15 @@ trait StringsSpec extends BaseSpec {
         },
         testM("replace existing values") {
           for {
-            first          <- uuid
-            second         <- uuid
-            firstVal       <- uuid
-            secondVal      <- uuid
-            replacementVal <- uuid
-            _              <- mSet((first, firstVal), (second, secondVal))
-            _              <- mSet((first, replacementVal), (second, replacementVal))
-            result         <- mGet(first, second)
-          } yield assert(result)(equalTo(Chunk(Some(replacementVal), Some(replacementVal))))
+            first       <- uuid
+            second      <- uuid
+            firstVal    <- uuid
+            secondVal   <- uuid
+            replacement <- uuid
+            _           <- mSet((first, firstVal), (second, secondVal))
+            _           <- mSet((first, replacement), (second, replacement))
+            result      <- mGet(first, second)
+          } yield assert(result)(equalTo(Chunk(Some(replacement), Some(replacement))))
         },
         testM("one value multiple times at once") {
           for {
@@ -882,13 +882,58 @@ trait StringsSpec extends BaseSpec {
             result    <- get(key)
           } yield assert(result)(isSome(equalTo(secondVal)))
         },
-        testM("not string value") {
+        testM("replace not string value") {
           for {
             key    <- uuid
             value  <- uuid
             _      <- sAdd(key)("a")
             result <- mSet((key, value)).either
           } yield assert(result)(isRight)
+        }
+      ),
+      suite("mSetNx")(
+        testM("one new value") {
+          for {
+            key   <- uuid
+            value <- uuid
+            set   <- mSetNx((key, value))
+          } yield assert(set)(isTrue)
+        },
+        testM("multiple new values") {
+          for {
+            first     <- uuid
+            second    <- uuid
+            firstVal  <- uuid
+            secondVal <- uuid
+            set       <- mSetNx((first, firstVal), (second, secondVal))
+          } yield assert(set)(isTrue)
+        },
+        testM("replace existing values") {
+          for {
+            first       <- uuid
+            second      <- uuid
+            firstVal    <- uuid
+            secondVal   <- uuid
+            replacement <- uuid
+            _           <- mSetNx((first, firstVal), (second, secondVal))
+            set         <- mSetNx((first, replacement), (second, replacement))
+          } yield assert(set)(isFalse)
+        },
+        testM("one value multiple times at once") {
+          for {
+            key       <- uuid
+            firstVal  <- uuid
+            secondVal <- uuid
+            set       <- mSetNx((key, firstVal), (key, secondVal))
+          } yield assert(set)(isTrue)
+        },
+        testM("replace not string value") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- sAdd(key)("a")
+            set   <- mSetNx((key, value))
+          } yield assert(set)(isFalse)
         }
       )
     )
