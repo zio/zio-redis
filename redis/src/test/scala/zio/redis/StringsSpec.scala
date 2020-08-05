@@ -1,5 +1,6 @@
 package zio.redis
 
+import zio.Chunk
 import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test._
@@ -797,6 +798,48 @@ trait StringsSpec extends BaseSpec {
             _      <- set(key, "not-integer", None, None, None)
             result <- incrByFloat(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
+      suite("mGet")(
+        testM("from multiple non-empty strings") {
+          for {
+            first  <- uuid
+            second <- uuid
+            _      <- set(first, "1", None, None, None)
+            _      <- set(second, "2", None, None, None)
+            result <- mGet(first, second)
+          } yield assert(result)(equalTo(Chunk(Some("1"), Some("2"))))
+        },
+        testM("from one non-empty and one empty string") {
+          for {
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- set(nonEmpty, "value", None, None, None)
+            result   <- mGet(nonEmpty, empty)
+          } yield assert(result)(equalTo(Chunk(Some("value"), None)))
+        },
+        testM("from two empty strings") {
+          for {
+            first  <- uuid
+            second <- uuid
+            result <- mGet(first, second)
+          } yield assert(result)(equalTo(Chunk(None, None)))
+        },
+        testM("from one string and one not string") {
+          for {
+            str    <- uuid
+            notStr <- uuid
+            _      <- set(str, "value", None, None, None)
+            _      <- sAdd(notStr)("a")
+            result <- mGet(str, notStr)
+          } yield assert(result)(equalTo(Chunk(Some("value"), None)))
+        },
+        testM("from one not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            result <- mGet(key)
+          } yield assert(result)(equalTo(Chunk(None)))
         }
       )
     )

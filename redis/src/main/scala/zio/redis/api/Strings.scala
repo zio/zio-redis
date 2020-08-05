@@ -35,7 +35,7 @@ trait Strings {
   final val incr        = RedisCommand("INCR", StringInput, LongOutput)
   final val incrBy      = RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
   final val incrByFloat = RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), MultiStringOutput)
-  final val mGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOutput)
+  final val mGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOptionalMultiStringOutput)
   final val mSet        = RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, StringInput)), UnitOutput)
   final val mSetNx      = RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, StringInput)), BoolOutput)
   final val pSetEx      = RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, StringInput), UnitOutput)
