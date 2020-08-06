@@ -1198,6 +1198,41 @@ trait StringsSpec extends BaseSpec {
             result <- setNx(key, value)
           } yield assert(result)(isFalse)
         }
+      ),
+      suite("setRange")(
+        testM("in existing string") {
+          for {
+            key <- uuid
+            _   <- set(key, "val", None, None, None)
+            len <- setRange(key, 3L, "ue")
+          } yield assert(len)(equalTo(5L))
+        },
+        testM("in non-existent string") {
+          for {
+            key <- uuid
+            len <- setRange(key, 2L, "value")
+          } yield assert(len)(equalTo(7L))
+        },
+        testM("when offset is larger then string length") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            len <- setRange(key, 7L, "value")
+          } yield assert(len)(equalTo(12L))
+        },
+        testM("error when negative offset") {
+          for {
+            key <- uuid
+            len <- setRange(key, -1L, "value").either
+          } yield assert(len)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not string") {
+          for {
+            key <- uuid
+            _   <- sAdd(key)("a")
+            len <- setRange(key, 1L, "value").either
+          } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
