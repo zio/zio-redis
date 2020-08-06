@@ -5,7 +5,7 @@ import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test._
 import zio.duration._
-import zio.test.TestAspect._
+import zio.test.TestAspect.{ eventually, ignore }
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite =
@@ -1231,6 +1231,28 @@ trait StringsSpec extends BaseSpec {
             key <- uuid
             _   <- sAdd(key)("a")
             len <- setRange(key, 1L, "value").either
+          } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("strLen")(
+        testM("for non-empty string") {
+          for {
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
+            len <- strLen(key)
+          } yield assert(len)(equalTo(5L))
+        },
+        testM("for empty string") {
+          for {
+            key <- uuid
+            len <- strLen(key)
+          } yield assert(len)(equalTo(0L))
+        },
+        testM("error when not string") {
+          for {
+            key <- uuid
+            _   <- sAdd(key)("a")
+            len <- strLen(key).either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }
       )
