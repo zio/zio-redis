@@ -52,7 +52,7 @@ trait Strings {
     OptionalOutput(UnitOutput)
   )
 
-  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
   final val setEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
   final val setNx    = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
   final val setRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)

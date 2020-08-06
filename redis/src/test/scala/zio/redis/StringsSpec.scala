@@ -1089,6 +1089,42 @@ trait StringsSpec extends BaseSpec {
             result <- set(key, value, Some(1.second), None, Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore
+      ),
+      suite("setBit")(
+        testM("for existing key") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            oldBit <- setBit(key, 16L, true)
+          } yield assert(oldBit)(isFalse)
+        },
+        testM("for non-existent key") {
+          for {
+            key    <- uuid
+            oldBit <- setBit(key, 16L, true)
+          } yield assert(oldBit)(isFalse)
+        },
+        testM("for offset that is out of string range") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            oldBit <- setBit(key, 100L, true)
+          } yield assert(oldBit)(isFalse)
+        },
+        testM("error when negative offset") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            oldBit <- setBit(key, -1L, false).either
+          } yield assert(oldBit)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            oldBit <- setBit(key, 10L, true).either
+          } yield assert(oldBit)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
