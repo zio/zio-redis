@@ -5,7 +5,7 @@ import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test._
 import zio.duration._
-import zio.test.TestAspect.ignore
+import zio.test.TestAspect._
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite =
@@ -945,10 +945,10 @@ trait StringsSpec extends BaseSpec {
             value        <- uuid
             _            <- pSetEx(key, 1000.millis, value)
             existsBefore <- exists(key)
-            _            <- ZIO.sleep(1001.millis)
+            _            <- ZIO.sleep(1010.millis)
             existsAfter  <- exists(key)
           } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
-        },
+        } @@ eventually,
         testM("override existing string") {
           for {
             key        <- uuid
@@ -1124,6 +1124,54 @@ trait StringsSpec extends BaseSpec {
             _      <- sAdd(key)("a")
             oldBit <- setBit(key, 10L, true).either
           } yield assert(oldBit)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("setEx")(
+        testM("new value with 1 second ttl") {
+          for {
+            key          <- uuid
+            value        <- uuid
+            _            <- setEx(key, 1.second, value)
+            existsBefore <- exists(key)
+            _            <- ZIO.sleep(1010.millis)
+            existsAfter  <- exists(key)
+          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+        } @@ eventually,
+        testM("existing value with 1 second ttl") {
+          for {
+            key          <- uuid
+            value        <- uuid
+            _            <- set(key, "value", None, None, None)
+            _            <- setEx(key, 1.second, value)
+            existsBefore <- exists(key)
+            _            <- ZIO.sleep(1010.millis)
+            existsAfter  <- exists(key)
+          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+        } @@ eventually,
+        testM("override when not string") {
+          for {
+            key          <- uuid
+            value        <- uuid
+            _            <- sAdd(key)("a")
+            _            <- setEx(key, 1.second, value)
+            existsBefore <- exists(key)
+            _            <- ZIO.sleep(1010.millis)
+            existsAfter  <- exists(key)
+          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+        },
+        testM("error when 0 seconds ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- setEx(key, 0.seconds, value).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when negative ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- setEx(key, (-1).second, value).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )
     )
