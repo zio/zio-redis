@@ -1173,6 +1173,31 @@ trait StringsSpec extends BaseSpec {
             result <- setEx(key, (-1).second, value).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("setNx")(
+        testM("new value") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- setNx(key, value)
+          } yield assert(result)(isTrue)
+        },
+        testM("existing value") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- setNx(key, value)
+          } yield assert(result)(isFalse)
+        },
+        testM("not string") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- sAdd(key)("a")
+            result <- setNx(key, value)
+          } yield assert(result)(isFalse)
+        }
       )
     )
 }
