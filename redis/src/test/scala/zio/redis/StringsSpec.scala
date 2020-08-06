@@ -1,9 +1,10 @@
 package zio.redis
 
-import zio.Chunk
+import zio.{ Chunk, ZIO }
 import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test._
+import zio.duration._
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite =
@@ -934,6 +935,50 @@ trait StringsSpec extends BaseSpec {
             _     <- sAdd(key)("a")
             set   <- mSetNx((key, value))
           } yield assert(set)(isFalse)
+        }
+      ),
+      suite("pSetEx")(
+        testM("new value with 1000 milliseconds") {
+          for {
+            key          <- uuid
+            value        <- uuid
+            _            <- pSetEx(key, 1000.millis, value)
+            existsBefore <- exists(key)
+            _            <- ZIO.sleep(1001.millis)
+            existsAfter  <- exists(key)
+          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+        },
+        testM("override existing string") {
+          for {
+            key        <- uuid
+            value      <- uuid
+            _          <- set(key, "value", None, None, None)
+            _          <- pSetEx(key, 1000.millis, value)
+            currentVal <- get(key)
+          } yield assert(currentVal)(isSome(equalTo(value)))
+        },
+        testM("override not string") {
+          for {
+            key        <- uuid
+            value      <- uuid
+            _          <- sAdd(key)("a")
+            _          <- pSetEx(key, 1000.millis, value)
+            currentVal <- get(key)
+          } yield assert(currentVal)(isSome(equalTo(value)))
+        },
+        testM("error when 0 milliseconds") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- pSetEx(key, 0.millis, value).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when negative milliseconds") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- pSetEx(key, (-1).millis, value).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )
     )
