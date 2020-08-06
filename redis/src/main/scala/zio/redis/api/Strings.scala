@@ -45,7 +45,7 @@ trait Strings {
     Tuple5(
       StringInput,
       StringInput,
-      OptionalInput(DurationSecondsInput),
+      OptionalInput(DurationTTLInput),
       OptionalInput(UpdateInput),
       OptionalInput(KeepTtlInput)
     ),

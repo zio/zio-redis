@@ -5,6 +5,7 @@ import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test._
 import zio.duration._
+import zio.test.TestAspect.ignore
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite =
@@ -980,6 +981,114 @@ trait StringsSpec extends BaseSpec {
             result <- pSetEx(key, (-1).millis, value).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("set")(
+        testM("new value") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, None, None, None)
+          } yield assert(result)(isSome)
+        },
+        testM("override existing string") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- set(key, value, None, None, None)
+          } yield assert(result)(isSome)
+        },
+        testM("override not string") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- sAdd(key)("a")
+            result <- set(key, value, None, None, None)
+          } yield assert(result)(isSome)
+        },
+        testM("new value with ttl 1 second") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, Some(1.second), None, None)
+          } yield assert(result)(isSome)
+        },
+        testM("new value with ttl 100 milliseconds") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, Some(100.milliseconds), None, None)
+          } yield assert(result)(isSome)
+        },
+        testM("error when negative ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, Some((-1).millisecond), None, None).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("new value with SetNew parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, None, Some(Update.SetNew), None)
+          } yield assert(result)(isSome)
+        },
+        testM("existing value with SetNew parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- set(key, value, None, Some(Update.SetNew), None)
+          } yield assert(result)(isNone)
+        },
+        testM("new value with SetExisting parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, None, Some(Update.SetExisting), None)
+          } yield assert(result)(isNone)
+        },
+        testM("existing value with SetExisting parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- set(key, value, None, Some(Update.SetExisting), None)
+          } yield assert(result)(isSome)
+        },
+        testM("existing not string value with SetExisting parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- sAdd(key)("a")
+            result <- set(key, value, None, Some(Update.SetExisting), None)
+          } yield assert(result)(isSome)
+        },
+        // next three tests include KEEPTTL parameter that is valid for Redis version >= 6
+        testM("new value with KeepTtl parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            result <- set(key, value, None, None, Some(KeepTtl))
+          } yield assert(result)(isSome)
+        } @@ ignore,
+        testM("existing value with KeepTtl parameter") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, "value", Some(1.second), None, None)
+            result <- set(key, value, None, None, Some(KeepTtl))
+          } yield assert(result)(isSome)
+        } @@ ignore,
+        testM("existing value with both ttl and KeepTtl parameters") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, "value", Some(1.second), None, None)
+            result <- set(key, value, Some(1.second), None, Some(KeepTtl))
+          } yield assert(result)(isSome)
+        } @@ ignore
       )
     )
 }
