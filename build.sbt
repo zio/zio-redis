@@ -9,7 +9,7 @@ inThisBuild(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
-    pgpPassphrase := sys.env.get("PGP_PASSWORD").map(_.toArray),
+    pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
     pgpSecretRing := file("/tmp/secret.asc"),
     scmInfo := Some(
