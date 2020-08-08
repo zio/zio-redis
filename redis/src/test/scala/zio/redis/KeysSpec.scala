@@ -111,11 +111,10 @@ trait KeysSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
-            _     <- pExpire(key, 1000.millis)
+            _     <- pSetEx(key, 1000.millis, value)
             ttl   <- ttl(key).either
           } yield assert(ttl)(isRight)
-        },
+        } @@ eventually,
         testM("check ttl for non-existing key") {
           for {
             key <- uuid
@@ -126,11 +125,10 @@ trait KeysSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
-            _     <- pExpire(key, 1000.millis)
+            _     <- pSetEx(key, 1000.millis, value)
             pTtl  <- pTtl(key).either
           } yield assert(pTtl)(isRight)
-        },
+        } @@ eventually,
         testM("check pTtl for non-existing key") {
           for {
             key  <- uuid
