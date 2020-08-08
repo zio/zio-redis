@@ -42,6 +42,7 @@ trait Strings {
         case BitOperation.AND => "AND"
         case BitOperation.OR  => "OR"
         case BitOperation.XOR => "XOR"
+        case BitOperation.NOT => "NOT"
       }
   }
 
@@ -49,6 +50,7 @@ trait Strings {
     case object AND extends BitOperation
     case object OR  extends BitOperation
     case object XOR extends BitOperation
+    case object NOT extends BitOperation
   }
 
   sealed case class BitPosRange(start: Long, end: Option[Long])
