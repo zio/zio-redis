@@ -238,7 +238,36 @@ object OutputSpec extends BaseSpec {
         },
         testM("error when extracting from an invalid value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode("invalid")).either
+            res <- Task(MultiStringChunkOutput.unsafeDecode(Noise)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
+      suite("chunkOptionalMultiString")(
+        testM("extract one empty value") {
+          for {
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode("*-1\r\n"))
+          } yield assert(res)(isEmpty)
+        },
+        testM("extract array with one non-empty element") {
+          for {
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode("*1\r\n$2\r\nab\r\n"))
+          } yield assert(res)(equalTo(Chunk(Some("ab"))))
+        },
+        testM("extract array with multiple non-empty elements") {
+          val input = "*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
+          for {
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
+        },
+        testM("extract array with empty and non-empty elements") {
+          val input = "*3\r\n$1\r\n1\r\n$-1\r\n$1\r\n3\r\n"
+          for {
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
+        },
+        testM("error when extracting from an invalid value") {
+          for {
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(Noise)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )

@@ -92,6 +92,13 @@ object Input {
     }
   }
 
+  case object DurationTTLInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[String] = {
+      val milliseconds = data.toMillis
+      Chunk(wrap("PX"), wrap(milliseconds.toString))
+    }
+  }
+
   case object FreqInput extends Input[Freq] {
     def encode(data: Freq): Chunk[String] = Chunk(wrap("FREQ"), wrap(data.frequency))
   }

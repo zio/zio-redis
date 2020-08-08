@@ -192,6 +192,16 @@ object Output {
         throw ProtocolError(s"$text isn't a string nor an array.")
   }
 
+  case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
+    override protected def tryDecode(text: String): Chunk[Option[String]] =
+      if (text.startsWith("*-1\r\n"))
+        Chunk.empty
+      else if (text.startsWith("*"))
+        unsafeReadChunkOptional(text, 0)
+      else
+        throw ProtocolError(s"$text isn't a string nor an array.")
+  }
+
   case object TypeOutput extends Output[RedisType] {
     override protected def tryDecode(text: String): RedisType =
       text match {
@@ -500,6 +510,49 @@ object Output {
         data(idx) = text.substring(pos, pos + itemLen)
         idx += 1
         pos += itemLen
+      }
+
+      Chunk.fromArray(data)
+    }
+  }
+
+  private[this] def unsafeReadChunkOptional(text: String, start: Int): Chunk[Option[String]] = {
+    var pos = start + 1
+    var len = 0
+
+    while (text.charAt(pos) != '\r') {
+      len = len * 10 + text.charAt(pos) - '0'
+      pos += 1
+    }
+
+    pos += 3
+
+    if (len == 0) Chunk.empty
+    else {
+      val data = Array.ofDim[Option[String]](len)
+      var idx  = 0
+
+      while (idx < len) {
+        var itemLen = 0
+
+        // if first char is '-', then it's NULL value
+        if (text.charAt(pos) == '-') {
+          data(idx) = None
+          itemLen = 2
+        } else {
+          while (text.charAt(pos) != '\r') {
+            itemLen = itemLen * 10 + text.charAt(pos) - '0'
+            pos += 1
+          }
+
+          // skip to the first payload char
+          pos += 2
+
+          data(idx) = Some(text.substring(pos, pos + itemLen))
+        }
+
+        pos += itemLen + 3
+        idx += 1
       }
 
       Chunk.fromArray(data)
