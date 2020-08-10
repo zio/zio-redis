@@ -108,6 +108,212 @@ trait StringsSpec extends BaseSpec {
           } yield assert(count)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
+      suite("bitField")(
+        testM("get second byte with signed 8 type from existing value") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldGet(BitFieldType.SignedInt(8), 8)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(97L))))
+        },
+        testM("get second byte with unsigned 8 type from existing value") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(8), 8)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(97L))))
+        },
+        testM("get bit with offset out of range from existing value") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 100)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(0L))))
+        },
+        testM("get bit when empty string") {
+          for {
+            key    <- uuid
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 10)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(0L))))
+        },
+        testM("get error when negative offset") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), -10)
+                      ).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("get error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 10)
+                      ).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("set second byte when non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "vblue", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 97)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(98L))))
+        },
+        testM("set bit when offset out of range") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 100, 97)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(0L))))
+        },
+        testM("set negative value when unsigned type and existing string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(4), 10, -10)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(8L))))
+        },
+        testM("set too big value when unsigned type and existing string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(2), 10, 100)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(2L))))
+        },
+        testM("set error when negative offset") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(1), -10, 10)
+                      ).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("set error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 97)
+                      ).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("increment byte when non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 3)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(100L))))
+        },
+        testM("increment byte by negative value when non-empty string") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, -2)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(95L))))
+        },
+        testM("increment bit when offset out of range") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), 100, 1)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(1L))))
+        },
+        testM("increment bit when value will overflow") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(41L))))
+        },
+        testM("increment error when negative offset") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), -10, 1)
+                      ).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("increment error when not string") {
+          for {
+            key    <- uuid
+            _      <- sAdd(key)("a")
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), 10, 1)
+                      ).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("increment with overflow saturation") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldOverflow.Sat,
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(255L))))
+        },
+        testM("increment with overflow fail") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldOverflow.Fail,
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200)
+                      )
+          } yield assert(result)(equalTo(Chunk(None)))
+        },
+        testM("increment first with overflow wrap and then overflow fail") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldOverflow.Wrap,
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200),
+                        BitFieldCommand.BitFieldOverflow.Fail,
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 250)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(41L), None)))
+        },
+        testM("first set, then increment and then get same bits") {
+          for {
+            key    <- uuid
+            _      <- set(key, "value", None, None, None)
+            result <- bitField(key)(
+                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 98L),
+                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 2L),
+                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(8), 8)
+                      )
+          } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
+        }
+      ),
       suite("bitOp")(
         testM("AND over multiple non-empty strings") {
           for {

@@ -270,6 +270,30 @@ object OutputSpec extends BaseSpec {
             res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(Noise)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("chunkOptionalLong")(
+        testM("extract one empty value") {
+          for {
+            res <- Task(ChunkOptionalLongOutput.unsafeDecode("*0\r\n"))
+          } yield assert(res)(isEmpty)
+        },
+        testM("extract array with empty and non-empty elements") {
+          val input = "*4\r\n:1\r\n$-1\r\n:2\r\n:3\r\n"
+          for {
+            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
+        },
+        testM("extract array with non-empty elements") {
+          val input = "*4\r\n:1\r\n:1\r\n:2\r\n:3\r\n"
+          for {
+            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
+        },
+        testM("error when extracting from an invalid value") {
+          for {
+            res <- Task(ChunkOptionalLongOutput.unsafeDecode(Noise)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 
