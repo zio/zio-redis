@@ -10,14 +10,11 @@ trait Strings {
 
   final val bitField = RedisCommand(
     "BITFIELD",
-    Tuple5(
+    Tuple2(
       StringInput,
-      OptionalInput(NonEmptyList(BitFieldGetInput)),
-      OptionalInput(NonEmptyList(BitFieldSetInput)),
-      OptionalInput(NonEmptyList(BitFieldIncrInput)),
-      OptionalInput(NonEmptyList(BitFieldOverflowInput))
+      NonEmptyList(BitFieldCommandInput)
     ),
-    ChunkOutput
+    ChunkOptionalLongOutput
   )
 
   final val bitOp =

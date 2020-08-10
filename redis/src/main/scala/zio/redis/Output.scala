@@ -197,9 +197,17 @@ object Output {
       if (text.startsWith("*-1\r\n"))
         Chunk.empty
       else if (text.startsWith("*"))
-        unsafeReadChunkOptional(text, 0)
+        unsafeReadChunkOptionalString(text, 0)
       else
-        throw ProtocolError(s"$text isn't a string nor an array.")
+        throw ProtocolError(s"$text isn't an array.")
+  }
+
+  case object ChunkOptionalLongOutput extends Output[Chunk[Option[Long]]] {
+    override protected def tryDecode(text: String): Chunk[Option[Long]] =
+      if (text.startsWith("*"))
+        unsafeReadChunkOptionalLong(text, 0)
+      else
+        throw ProtocolError("$text isn't an array")
   }
 
   case object TypeOutput extends Output[RedisType] {
@@ -516,7 +524,7 @@ object Output {
     }
   }
 
-  private[this] def unsafeReadChunkOptional(text: String, start: Int): Chunk[Option[String]] = {
+  private[this] def unsafeReadChunkOptionalString(text: String, start: Int): Chunk[Option[String]] = {
     var pos = start + 1
     var len = 0
 
@@ -552,6 +560,50 @@ object Output {
         }
 
         pos += itemLen + 3
+        idx += 1
+      }
+
+      Chunk.fromArray(data)
+    }
+  }
+
+  private[this] def unsafeReadChunkOptionalLong(text: String, start: Int): Chunk[Option[Long]] = {
+    var pos = start + 1
+    var len = 0
+
+    while (text.charAt(pos) != '\r') {
+      len = len * 10 + text.charAt(pos) - '0'
+      pos += 1
+    }
+
+    pos += 2
+
+    if (len == 0) Chunk.empty
+    else {
+      val data = Array.ofDim[Option[Long]](len)
+      var idx  = 0
+
+      while (idx < len) {
+        var itemLen = 0
+
+        // if element is multistring, it is null value
+        if (text.charAt(pos) == '$') {
+          data(idx) = None
+          itemLen = 3
+        } else {
+          // skip ':' char
+          pos += 1
+
+          var value = 0L
+          while (text.charAt(pos) != '\r') {
+            value = value * 10 + text.charAt(pos) - '0'
+            pos += 1
+          }
+
+          data(idx) = Some(value)
+        }
+
+        pos += itemLen + 2
         idx += 1
       }
 

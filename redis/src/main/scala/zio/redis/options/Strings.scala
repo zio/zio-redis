@@ -2,25 +2,29 @@ package zio.redis.options
 
 trait Strings {
 
-  sealed case class BitFieldGet(`type`: BitFieldType, offset: Int)
+  sealed trait BitFieldCommand
 
-  sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: Long)
+  object BitFieldCommand {
+    sealed case class BitFieldGet(`type`: BitFieldType, offset: Int) extends BitFieldCommand
 
-  sealed case class BitFieldSet(`type`: BitFieldType, offset: Int, value: Long)
+    sealed case class BitFieldSet(`type`: BitFieldType, offset: Int, value: Long) extends BitFieldCommand
 
-  sealed trait BitFieldOverflow { self =>
-    private[redis] final def stringify: String =
-      self match {
-        case BitFieldOverflow.Fail => "FAIL"
-        case BitFieldOverflow.Sat  => "SAT"
-        case BitFieldOverflow.Wrap => "WRAP"
-      }
-  }
+    sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: Long) extends BitFieldCommand
 
-  object BitFieldOverflow {
-    case object Fail extends BitFieldOverflow
-    case object Sat  extends BitFieldOverflow
-    case object Wrap extends BitFieldOverflow
+    sealed trait BitFieldOverflow extends BitFieldCommand { self =>
+      private[redis] final def stringify: String =
+        self match {
+          case BitFieldOverflow.Fail => "FAIL"
+          case BitFieldOverflow.Sat  => "SAT"
+          case BitFieldOverflow.Wrap => "WRAP"
+        }
+    }
+
+    object BitFieldOverflow {
+      case object Fail extends BitFieldOverflow
+      case object Sat  extends BitFieldOverflow
+      case object Wrap extends BitFieldOverflow
+    }
   }
 
   sealed trait BitFieldType { self =>
