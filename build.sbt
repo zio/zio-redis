@@ -54,7 +54,7 @@ lazy val benchmarks =
       skip in publish := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.10.2",
-        "io.chrisdavenport" %% "rediculous"         % "0.0.3",
+        "io.chrisdavenport" %% "rediculous"         % "0.0.4",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.0"
       )
     )
