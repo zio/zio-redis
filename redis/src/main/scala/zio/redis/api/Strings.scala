@@ -10,14 +10,11 @@ trait Strings {
 
   final val bitField = RedisCommand(
     "BITFIELD",
-    Tuple5(
+    Tuple2(
       StringInput,
-      OptionalInput(NonEmptyList(BitFieldGetInput)),
-      OptionalInput(NonEmptyList(BitFieldSetInput)),
-      OptionalInput(NonEmptyList(BitFieldIncrInput)),
-      OptionalInput(NonEmptyList(BitFieldOverflowInput))
+      NonEmptyList(BitFieldCommandInput)
     ),
-    ChunkOutput
+    ChunkOptionalLongOutput
   )
 
   final val bitOp =
@@ -35,7 +32,7 @@ trait Strings {
   final val incr        = RedisCommand("INCR", StringInput, LongOutput)
   final val incrBy      = RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
   final val incrByFloat = RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), MultiStringOutput)
-  final val mGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOutput)
+  final val mGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOptionalMultiStringOutput)
   final val mSet        = RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, StringInput)), UnitOutput)
   final val mSetNx      = RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, StringInput)), BoolOutput)
   final val pSetEx      = RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, StringInput), UnitOutput)
@@ -45,14 +42,14 @@ trait Strings {
     Tuple5(
       StringInput,
       StringInput,
-      OptionalInput(DurationSecondsInput),
+      OptionalInput(DurationTTLInput),
       OptionalInput(UpdateInput),
       OptionalInput(KeepTtlInput)
     ),
     OptionalOutput(UnitOutput)
   )
 
-  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+  final val setBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
   final val setEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
   final val setNx    = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
   final val setRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
