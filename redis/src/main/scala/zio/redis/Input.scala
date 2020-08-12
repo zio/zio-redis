@@ -31,23 +31,17 @@ object Input {
     def encode(data: Boolean): Chunk[String] = Chunk.single(wrap(if (data) "1" else "0"))
   }
 
-  case object BitFieldGetInput extends Input[BitFieldGet] {
-    def encode(data: BitFieldGet): Chunk[String] =
-      Chunk(wrap("GET"), wrap(data.`type`.stringify), wrap(data.offset.toString))
-  }
+  case object BitFieldCommandInput extends Input[BitFieldCommand] {
+    def encode(data: BitFieldCommand): Chunk[String] = {
+      import BitFieldCommand._
 
-  case object BitFieldSetInput extends Input[BitFieldSet] {
-    def encode(data: BitFieldSet): Chunk[String] =
-      Chunk(wrap("SET"), wrap(data.`type`.stringify), wrap(data.offset.toString), wrap(data.value.toString))
-  }
-
-  case object BitFieldIncrInput extends Input[BitFieldIncr] {
-    def encode(data: BitFieldIncr): Chunk[String] =
-      Chunk(wrap("INCRBY"), wrap(data.`type`.stringify), wrap(data.offset.toString), wrap(data.increment.toString))
-  }
-
-  case object BitFieldOverflowInput extends Input[BitFieldOverflow] {
-    def encode(data: BitFieldOverflow): Chunk[String] = Chunk(wrap("OVERFLOW"), wrap(data.stringify))
+      data match {
+        case BitFieldGet(t, o)     => Chunk(wrap("GET"), wrap(t.stringify), wrap(o.toString))
+        case BitFieldSet(t, o, v)  => Chunk(wrap("SET"), wrap(t.stringify), wrap(o.toString), wrap(v.toString))
+        case BitFieldIncr(t, o, i) => Chunk(wrap("INCRBY"), wrap(t.stringify), wrap(o.toString), wrap(i.toString))
+        case bfo: BitFieldOverflow => Chunk(wrap("OVERFLOW"), wrap(bfo.stringify))
+      }
+    }
   }
 
   case object BitOperationInput extends Input[BitOperation] {
