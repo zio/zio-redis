@@ -32,15 +32,16 @@ object Input {
   }
 
   case object BitFieldCommandInput extends Input[BitFieldCommand] {
-    def encode(data: BitFieldCommand): Chunk[String] =
+    def encode(data: BitFieldCommand): Chunk[String] = {
+      import BitFieldCommand._
+
       data match {
-        case BitFieldCommand.BitFieldGet(t, o)     => Chunk(wrap("GET"), wrap(t.stringify), wrap(o.toString))
-        case BitFieldCommand.BitFieldSet(t, o, v)  =>
-          Chunk(wrap("SET"), wrap(t.stringify), wrap(o.toString), wrap(v.toString))
-        case BitFieldCommand.BitFieldIncr(t, o, i) =>
-          Chunk(wrap("INCRBY"), wrap(t.stringify), wrap(o.toString), wrap(i.toString))
-        case bfo: BitFieldCommand.BitFieldOverflow => Chunk(wrap("OVERFLOW"), wrap(bfo.stringify))
+        case BitFieldGet(t, o)     => Chunk(wrap("GET"), wrap(t.stringify), wrap(o.toString))
+        case BitFieldSet(t, o, v)  => Chunk(wrap("SET"), wrap(t.stringify), wrap(o.toString), wrap(v.toString))
+        case BitFieldIncr(t, o, i) => Chunk(wrap("INCRBY"), wrap(t.stringify), wrap(o.toString), wrap(i.toString))
+        case bfo: BitFieldOverflow => Chunk(wrap("OVERFLOW"), wrap(bfo.stringify))
       }
+    }
   }
 
   case object BitOperationInput extends Input[BitOperation] {
