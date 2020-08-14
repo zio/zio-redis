@@ -650,6 +650,13 @@ object InputSpec extends BaseSpec {
             result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(-3L)))
           } yield assert(result)(equalTo(Chunk("$5\r\n-3000\r\n")))
         }
+      ),
+      suite("Tuple2")(
+        testM("valid value") {
+          for {
+            result <- Task(Tuple2(StringInput, LongInput).encode(("one", 2L)))
+          } yield assert(result)(equalTo(Chunk("$3\r\none\r\n", "$1\r\n2\r\n")))
+        }
       )
     )
 }
