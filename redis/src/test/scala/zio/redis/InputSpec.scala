@@ -633,6 +633,23 @@ object InputSpec extends BaseSpec {
             result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(-3L)))
           } yield assert(result)(equalTo(Chunk("$2\r\n-3\r\n")))
         }
+      ),
+      suite("TimeMilliseconds")(
+        testM("positiv value") {
+          for {
+            result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(3L)))
+          } yield assert(result)(equalTo(Chunk("$4\r\n3000\r\n")))
+        },
+        testM("zero value") {
+          for {
+            result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(0L)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n0\r\n")))
+        },
+        testM("negative value") {
+          for {
+            result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(-3L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\n-3000\r\n")))
+        }
       )
     )
 }
