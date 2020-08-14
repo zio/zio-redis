@@ -162,6 +162,13 @@ object InputSpec extends BaseSpec {
             result <- Task(ChangedInput.encode(Changed))
           } yield assert(result)(equalTo(Chunk("$2\r\nCH\r\n")))
         }
+      ),
+      suite("Copy")(
+        testM("valid value") {
+          for {
+            result <- Task(CopyInput.encode(Copy))
+          } yield assert(result)(equalTo(Chunk("$4\r\nCOPY\r\n")))
+        }
       )
     )
 }
