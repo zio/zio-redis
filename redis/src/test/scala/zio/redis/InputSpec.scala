@@ -186,6 +186,18 @@ object InputSpec extends BaseSpec {
             result <- Task(CountInput.encode(Count(0L)))
           } yield assert(result)(equalTo(Chunk("$5\r\nCOUNT\r\n", "$1\r\n0\r\n")))
         }
+      ),
+      suite("Position")(
+        testM("before") {
+          for {
+            result <- Task(PositionInput.encode(Position.Before))
+          } yield assert(result)(equalTo(Chunk.single("$6\r\nBEFORE\r\n")))
+        },
+        testM("after") {
+          for {
+            result <- Task(PositionInput.encode(Position.After))
+          } yield assert(result)(equalTo(Chunk.single("$5\r\nAFTER\r\n")))
+        }
       )
     )
 }
