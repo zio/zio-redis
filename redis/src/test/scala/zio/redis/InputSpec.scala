@@ -31,6 +31,18 @@ object InputSpec extends BaseSpec {
             result <- Task(AggregateInput.encode(Aggregate.Sum))
           } yield assert(result)(equalTo(Chunk.single("$3\r\nSUM\r\n")))
         }
+      ),
+      suite("auth")(
+        testM("with empty password") {
+          for {
+            result <- Task(AuthInput.encode(Auth("")))
+          } yield assert(result)(equalTo(Chunk("$4\r\nAUTH\r\n", "$0\r\n\r\n")))
+        },
+        testM("with non-empty password") {
+          for {
+            result <- Task(AuthInput.encode(Auth("pass")))
+          } yield assert(result)(equalTo(Chunk("$4\r\nAUTH\r\n", "$4\r\npass\r\n")))
+        }
       )
     )
 }
