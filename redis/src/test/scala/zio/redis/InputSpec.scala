@@ -776,6 +776,18 @@ object InputSpec extends BaseSpec {
             )
           )
         }
+      ),
+      suite("Update")(
+        testM("set existing") {
+          for {
+            result <- Task(UpdateInput.encode(Update.SetExisting))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\nXX\r\n")))
+        },
+        testM("set new") {
+          for {
+            result <- Task(UpdateInput.encode(Update.SetNew))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\nNX\r\n")))
+        }
       )
     )
 }
