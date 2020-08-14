@@ -672,6 +672,18 @@ object InputSpec extends BaseSpec {
             result <- Task(Tuple4(StringInput, LongInput, StringInput, LongInput).encode(("one", 2, "three", 4)))
           } yield assert(result)(equalTo(Chunk("$3\r\none\r\n", "$1\r\n2\r\n", "$5\r\nthree\r\n", "$1\r\n4\r\n")))
         }
+      ),
+      suite("Tuple5")(
+        testM("valid value") {
+          for {
+            result <- Task(
+                        Tuple5(StringInput, LongInput, StringInput, LongInput, StringInput)
+                          .encode(("one", 2, "three", 4, "five"))
+                      )
+          } yield assert(result)(
+            equalTo(Chunk("$3\r\none\r\n", "$1\r\n2\r\n", "$5\r\nthree\r\n", "$1\r\n4\r\n", "$4\r\nfive\r\n"))
+          )
+        }
       )
     )
 }
