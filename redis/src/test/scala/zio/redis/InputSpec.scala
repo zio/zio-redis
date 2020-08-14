@@ -268,6 +268,18 @@ object InputSpec extends BaseSpec {
             result <- Task(FreqInput.encode(Freq("frequency")))
           } yield assert(result)(equalTo(Chunk("$4\r\nFREQ\r\n", "$9\r\nfrequency\r\n")))
         }
+      ),
+      suite("IdleTime")(
+        testM("0 seconds") {
+          for {
+            result <- Task(IdleTimeInput.encode(IdleTime(0)))
+          } yield assert(result)(equalTo(Chunk("$8\r\nIDLETIME\r\n", "$1\r\n0\r\n")))
+        },
+        testM("5 seconds") {
+          for {
+            result <- Task(IdleTimeInput.encode(IdleTime(5)))
+          } yield assert(result)(equalTo(Chunk("$8\r\nIDLETIME\r\n", "$1\r\n5\r\n")))
+        }
       )
     )
 }
