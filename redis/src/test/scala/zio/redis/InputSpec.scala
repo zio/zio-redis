@@ -532,6 +532,18 @@ object InputSpec extends BaseSpec {
             result <- Task(StoreDistInput.encode(StoreDist("")))
           } yield assert(result)(equalTo(Chunk("$9\r\nSTOREDIST\r\n", "$0\r\n\r\n")))
         }
+      ),
+      suite("Store")(
+        testM("with non-empty string") {
+          for {
+            result <- Task(StoreInput.encode(Store("key")))
+          } yield assert(result)(equalTo(Chunk("$5\r\nSTORE\r\n", "$3\r\nkey\r\n")))
+        },
+        testM("with empty string") {
+          for {
+            result <- Task(StoreInput.encode(Store("")))
+          } yield assert(result)(equalTo(Chunk("$5\r\nSTORE\r\n", "$0\r\n\r\n")))
+        }
       )
     )
 }
