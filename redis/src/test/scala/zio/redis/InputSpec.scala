@@ -392,6 +392,38 @@ object InputSpec extends BaseSpec {
             result <- Task(LongLatInput.encode(LongLat(0d, 0d)))
           } yield assert(result)(equalTo(Chunk("$3\r\n0.0\r\n", "$3\r\n0.0\r\n")))
         }
+      ),
+      suite("MemberScore")(
+        testM("with positive score and empty member") {
+          for {
+            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n4.2\r\n", "$0\r\n\r\n")))
+        },
+        testM("with negative score and empty member") {
+          for {
+            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "")))
+          } yield assert(result)(equalTo(Chunk("$4\r\n-4.2\r\n", "$0\r\n\r\n")))
+        },
+        testM("with zero score and empty member") {
+          for {
+            result <- Task(MemberScoreInput.encode(MemberScore(0d, "")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n0.0\r\n", "$0\r\n\r\n")))
+        },
+        testM("with positive score and non-empty member") {
+          for {
+            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "member")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n4.2\r\n", "$6\r\nmember\r\n")))
+        },
+        testM("with negative score and non-empty member") {
+          for {
+            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "member")))
+          } yield assert(result)(equalTo(Chunk("$4\r\n-4.2\r\n", "$6\r\nmember\r\n")))
+        },
+        testM("with zero score and non-empty member") {
+          for {
+            result <- Task(MemberScoreInput.encode(MemberScore(0d, "member")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n0.0\r\n", "$6\r\nmember\r\n")))
+        }
       )
     )
 }
