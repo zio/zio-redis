@@ -8,6 +8,8 @@ import BitFieldCommand._
 import BitFieldType._
 import BitOperation._
 import zio.duration._
+import Order._
+import RadiusUnit._
 
 object InputSpec extends BaseSpec {
   def spec: ZSpec[environment.TestEnvironment, Any] =
@@ -447,13 +449,35 @@ object InputSpec extends BaseSpec {
       suite("Order")(
         testM("ascending") {
           for {
-            result <- Task(OrderInput.encode(Order.Ascending))
+            result <- Task(OrderInput.encode(Ascending))
           } yield assert(result)(equalTo(Chunk.single("$3\r\nASC\r\n")))
         },
         testM("descending") {
           for {
-            result <- Task(OrderInput.encode(Order.Descending))
+            result <- Task(OrderInput.encode(Descending))
           } yield assert(result)(equalTo(Chunk.single("$4\r\nDESC\r\n")))
+        }
+      ),
+      suite("RadiusUnit")(
+        testM("meters") {
+          for {
+            result <- Task(RadiusUnitInput.encode(Meters))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\nm\r\n")))
+        },
+        testM("kilometers") {
+          for {
+            result <- Task(RadiusUnitInput.encode(Kilometers))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\nkm\r\n")))
+        },
+        testM("feet") {
+          for {
+            result <- Task(RadiusUnitInput.encode(Feet))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\nft\r\n")))
+        },
+        testM("miles") {
+          for {
+            result <- Task(RadiusUnitInput.encode(Miles))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\nmi\r\n")))
         }
       )
     )
