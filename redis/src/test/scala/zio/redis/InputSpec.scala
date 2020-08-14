@@ -603,6 +603,18 @@ object InputSpec extends BaseSpec {
             result <- Task(StringInput.encode(""))
           } yield assert(result)(equalTo(Chunk.single("$0\r\n\r\n")))
         }
+      ),
+      suite("Optional")(
+        testM("none") {
+          for {
+            result <- Task(OptionalInput(LongInput).encode(None))
+          } yield assert(result)(isEmpty)
+        },
+        testM("some") {
+          for {
+            result <- Task(OptionalInput(LongInput).encode(Some(2L)))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n2\r\n")))
+        }
       )
     )
 }
