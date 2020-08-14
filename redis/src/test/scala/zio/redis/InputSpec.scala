@@ -424,6 +424,13 @@ object InputSpec extends BaseSpec {
             result <- Task(MemberScoreInput.encode(MemberScore(0d, "member")))
           } yield assert(result)(equalTo(Chunk("$3\r\n0.0\r\n", "$6\r\nmember\r\n")))
         }
+      ),
+      suite("NoInput")(
+        testM("valid value") {
+          for {
+            result <- Task(NoInput.encode(()))
+          } yield assert(result)(isEmpty)
+        }
       )
     )
 }
