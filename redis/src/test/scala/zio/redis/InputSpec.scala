@@ -431,6 +431,18 @@ object InputSpec extends BaseSpec {
             result <- Task(NoInput.encode(()))
           } yield assert(result)(isEmpty)
         }
+      ),
+      suite("NonEmptyList")(
+        testM("with multiple elements") {
+          for {
+            result <- Task(NonEmptyList(StringInput).encode(("a", List("b", "c"))))
+          } yield assert(result)(equalTo(Chunk("$1\r\na\r\n", "$1\r\nb\r\n", "$1\r\nc\r\n")))
+        },
+        testM("with one element") {
+          for {
+            result <- Task(NonEmptyList(StringInput).encode(("a", List.empty)))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\na\r\n")))
+        }
       )
     )
 }
