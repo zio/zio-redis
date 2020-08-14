@@ -6,6 +6,7 @@ import zio.test._
 import zio.test.Assertion._
 import BitFieldCommand._
 import BitFieldType._
+import BitOperation._
 
 object InputSpec extends BaseSpec {
   def spec: ZSpec[environment.TestEnvironment, Any] =
@@ -118,6 +119,28 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(BitFieldCommandInput.encode(BitFieldOverflow.Wrap))
           } yield assert(result)(equalTo(Chunk("$8\r\nOVERFLOW\r\n", "$4\r\nWRAP\r\n")))
+        }
+      ),
+      suite("bit operation")(
+        testM("and") {
+          for {
+            result <- Task(BitOperationInput.encode(AND))
+          } yield assert(result)(equalTo(Chunk.single("$3\r\nAND\r\n")))
+        },
+        testM("or") {
+          for {
+            result <- Task(BitOperationInput.encode(OR))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\nOR\r\n")))
+        },
+        testM("xor") {
+          for {
+            result <- Task(BitOperationInput.encode(XOR))
+          } yield assert(result)(equalTo(Chunk.single("$3\r\nXOR\r\n")))
+        },
+        testM("not") {
+          for {
+            result <- Task(BitOperationInput.encode(NOT))
+          } yield assert(result)(equalTo(Chunk.single("$3\r\nNOT\r\n")))
         }
       )
     )
