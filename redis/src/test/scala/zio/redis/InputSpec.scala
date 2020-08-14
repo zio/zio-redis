@@ -443,6 +443,18 @@ object InputSpec extends BaseSpec {
             result <- Task(NonEmptyList(StringInput).encode(("a", List.empty)))
           } yield assert(result)(equalTo(Chunk.single("$1\r\na\r\n")))
         }
+      ),
+      suite("Order")(
+        testM("ascending") {
+          for {
+            result <- Task(OrderInput.encode(Order.Ascending))
+          } yield assert(result)(equalTo(Chunk.single("$3\r\nASC\r\n")))
+        },
+        testM("descending") {
+          for {
+            result <- Task(OrderInput.encode(Order.Descending))
+          } yield assert(result)(equalTo(Chunk.single("$4\r\nDESC\r\n")))
+        }
       )
     )
 }
