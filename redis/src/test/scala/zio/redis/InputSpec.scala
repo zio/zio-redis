@@ -10,6 +10,7 @@ import BitOperation._
 import zio.duration._
 import Order._
 import RadiusUnit._
+import java.time.Instant
 
 object InputSpec extends BaseSpec {
   def spec: ZSpec[environment.TestEnvironment, Any] =
@@ -614,6 +615,23 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(OptionalInput(LongInput).encode(Some(2L)))
           } yield assert(result)(equalTo(Chunk.single("$1\r\n2\r\n")))
+        }
+      ),
+      suite("TimeSeconds")(
+        testM("positiv value") {
+          for {
+            result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(3L)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n3\r\n")))
+        },
+        testM("zero value") {
+          for {
+            result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(0L)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n0\r\n")))
+        },
+        testM("negative value") {
+          for {
+            result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(-3L)))
+          } yield assert(result)(equalTo(Chunk("$2\r\n-3\r\n")))
         }
       )
     )
