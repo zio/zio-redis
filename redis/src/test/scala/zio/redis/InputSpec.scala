@@ -479,6 +479,28 @@ object InputSpec extends BaseSpec {
             result <- Task(RadiusUnitInput.encode(Miles))
           } yield assert(result)(equalTo(Chunk.single("$2\r\nmi\r\n")))
         }
+      ),
+      suite("Range")(
+        testM("with positive start and positive end") {
+          for {
+            result <- Task(RangeInput.encode(Range(1, 5)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n1\r\n", "$1\r\n5\r\n")))
+        },
+        testM("with negative start and positive end") {
+          for {
+            result <- Task(RangeInput.encode(Range(-1, 5)))
+          } yield assert(result)(equalTo(Chunk("$2\r\n-1\r\n", "$1\r\n5\r\n")))
+        },
+        testM("with positive start and negative end") {
+          for {
+            result <- Task(RangeInput.encode(Range(1, -5)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n1\r\n", "$2\r\n-5\r\n")))
+        },
+        testM("with negative start and negative end") {
+          for {
+            result <- Task(RangeInput.encode(Range(-1, -5)))
+          } yield assert(result)(equalTo(Chunk("$2\r\n-1\r\n", "$2\r\n-5\r\n")))
+        }
       )
     )
 }
