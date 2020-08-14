@@ -513,6 +513,13 @@ object InputSpec extends BaseSpec {
             result <- Task(RegexInput.encode("".r))
           } yield assert(result)(equalTo(Chunk("$5\r\nMATCH\r\n", "$0\r\n\r\n")))
         }
+      ),
+      suite("Replace")(
+        testM("valid value") {
+          for {
+            result <- Task(ReplaceInput.encode(Replace))
+          } yield assert(result)(equalTo(Chunk.single("$7\r\nREPLACE\r\n")))
+        }
       )
     )
 }
