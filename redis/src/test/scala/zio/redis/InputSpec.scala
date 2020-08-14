@@ -227,6 +227,23 @@ object InputSpec extends BaseSpec {
             result <- Task(DurationMillisecondsInput.encode(100.millis))
           } yield assert(result)(equalTo(Chunk("$3\r\n100\r\n")))
         }
+      ),
+      suite("DurationSeconds")(
+        testM("1 minute") {
+          for {
+            result <- Task(DurationSecondsInput.encode(1.minute))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\n60\r\n")))
+        },
+        testM("1 second") {
+          for {
+            result <- Task(DurationSecondsInput.encode(1.second))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n1\r\n")))
+        },
+        testM("100 milliseconds") {
+          for {
+            result <- Task(DurationSecondsInput.encode(100.millis))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n0\r\n")))
+        }
       )
     )
 }
