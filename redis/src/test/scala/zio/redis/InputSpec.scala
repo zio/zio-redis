@@ -800,6 +800,13 @@ object InputSpec extends BaseSpec {
             result <- Task(Varargs(LongInput).encode(List.empty))
           } yield assert(result)(isEmpty)
         }
+      ),
+      suite("WithScores")(
+        testM("valid value") {
+          for {
+            result <- Task(WithScoresInput.encode(WithScores))
+          } yield assert(result)(equalTo(Chunk("$10\r\nWITHSCORES\r\n")))
+        }
       )
     )
 }
