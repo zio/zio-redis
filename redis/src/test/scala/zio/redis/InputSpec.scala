@@ -256,6 +256,18 @@ object InputSpec extends BaseSpec {
             result <- Task(DurationTtlInput.encode(100.millis))
           } yield assert(result)(equalTo(Chunk("$2\r\nPX\r\n", "$3\r\n100\r\n")))
         }
+      ),
+      suite("Freq")(
+        testM("empty string") {
+          for {
+            result <- Task(FreqInput.encode(Freq("")))
+          } yield assert(result)(equalTo(Chunk("$4\r\nFREQ\r\n", "$0\r\n\r\n")))
+        },
+        testM("non-empty string") {
+          for {
+            result <- Task(FreqInput.encode(Freq("frequency")))
+          } yield assert(result)(equalTo(Chunk("$4\r\nFREQ\r\n", "$9\r\nfrequency\r\n")))
+        }
       )
     )
 }
