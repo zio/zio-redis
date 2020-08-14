@@ -217,8 +217,8 @@ object Input {
     _7: Input[G]
   ) extends Input[(A, B, C, D, E, F, G)] {
     def encode(data: (A, B, C, D, E, F, G)): Chunk[String] =
-      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++ _6
-        .encode(data._6) ++ _7.encode(data._7)
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
+        _6.encode(data._6) ++ _7.encode(data._7)
   }
 
   final case class Tuple9[-A, -B, -C, -D, -E, -F, -G, -H, -I](
@@ -233,8 +233,8 @@ object Input {
     _9: Input[I]
   ) extends Input[(A, B, C, D, E, F, G, H, I)] {
     def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[String] =
-      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++
-        _5.encode(data._5) ++ _6.encode(data._6) ++ _7.encode(data._7)
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
+        _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8) ++ _9.encode(data._9)
   }
 
   final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
