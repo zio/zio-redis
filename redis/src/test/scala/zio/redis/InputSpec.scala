@@ -43,6 +43,18 @@ object InputSpec extends BaseSpec {
             result <- Task(AuthInput.encode(Auth("pass")))
           } yield assert(result)(equalTo(Chunk("$4\r\nAUTH\r\n", "$4\r\npass\r\n")))
         }
+      ),
+      suite("bool")(
+        testM("true") {
+          for {
+            result <- Task(BoolInput.encode(true))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n1\r\n")))
+        },
+        testM("false") {
+          for {
+            result <- Task(BoolInput.encode(false))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n0\r\n")))
+        }
       )
     )
 }
