@@ -788,6 +788,18 @@ object InputSpec extends BaseSpec {
             result <- Task(UpdateInput.encode(Update.SetNew))
           } yield assert(result)(equalTo(Chunk.single("$2\r\nNX\r\n")))
         }
+      ),
+      suite("Varargs")(
+        testM("with multiple elements") {
+          for {
+            result <- Task(Varargs(LongInput).encode(List(1, 2, 3)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n1\r\n", "$1\r\n2\r\n", "$1\r\n3\r\n")))
+        },
+        testM("with no elements") {
+          for {
+            result <- Task(Varargs(LongInput).encode(List.empty))
+          } yield assert(result)(isEmpty)
+        }
       )
     )
 }
