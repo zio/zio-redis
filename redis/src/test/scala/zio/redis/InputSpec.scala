@@ -155,6 +155,13 @@ object InputSpec extends BaseSpec {
             result <- Task(BitPosRangeInput.encode(BitPosRange(0.second.toMillis, Some(1.second.toMillis))))
           } yield assert(result)(equalTo(Chunk("$1\r\n0\r\n", "$4\r\n1000\r\n")))
         }
+      ),
+      suite("Changed")(
+        testM("valid value") {
+          for {
+            result <- Task(ChangedInput.encode(Changed))
+          } yield assert(result)(equalTo(Chunk("$2\r\nCH\r\n")))
+        }
       )
     )
 }
