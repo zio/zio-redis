@@ -345,13 +345,13 @@ object InputSpec extends BaseSpec {
       suite("Limit")(
         testM("with positive offset and positive count") {
           for {
-            result <- Task(LimitInput.encode(Limit(5L, 5L)))
-          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$1\r\n5\r\n", "$1\r\n5\r\n")))
+            result <- Task(LimitInput.encode(Limit(4L, 5L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$1\r\n4\r\n", "$1\r\n5\r\n")))
         },
         testM("with negative offset and negative count") {
           for {
-            result <- Task(LimitInput.encode(Limit(-5L, -5L)))
-          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$2\r\n-5\r\n", "$2\r\n-5\r\n")))
+            result <- Task(LimitInput.encode(Limit(-4L, -5L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$2\r\n-4\r\n", "$2\r\n-5\r\n")))
         },
         testM("with zero offset and zero count") {
           for {
@@ -374,6 +374,23 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(LongInput.encode(0L))
           } yield assert(result)(equalTo(Chunk.single("$1\r\n0\r\n")))
+        }
+      ),
+      suite("LongLat")(
+        testM("positive longitude and latitude") {
+          for {
+            result <- Task(LongLatInput.encode(LongLat(4.2d, 5.2d)))
+          } yield assert(result)(equalTo(Chunk("$3\r\n4.2\r\n", "$3\r\n5.2\r\n")))
+        },
+        testM("negative longitude and latitude") {
+          for {
+            result <- Task(LongLatInput.encode(LongLat(-4.2d, -5.2d)))
+          } yield assert(result)(equalTo(Chunk("$4\r\n-4.2\r\n", "$4\r\n-5.2\r\n")))
+        },
+        testM("zero longitude and latitude") {
+          for {
+            result <- Task(LongLatInput.encode(LongLat(0d, 0d)))
+          } yield assert(result)(equalTo(Chunk("$3\r\n0.0\r\n", "$3\r\n0.0\r\n")))
         }
       )
     )
