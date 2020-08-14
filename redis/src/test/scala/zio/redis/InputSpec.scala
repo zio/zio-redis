@@ -7,18 +7,19 @@ import zio.test.Assertion._
 import BitFieldCommand._
 import BitFieldType._
 import BitOperation._
+import zio.duration._
 
 object InputSpec extends BaseSpec {
   def spec: ZSpec[environment.TestEnvironment, Any] =
     suite("Input encoders")(
-      suite("abs ttl")(
+      suite("AbsTtl")(
         testM("valid value") {
           for {
             result <- Task(AbsTtlInput.encode(AbsTtl))
           } yield assert(result)(equalTo(Chunk.single("$6\r\nABSTTL\r\n")))
         }
       ),
-      suite("aggregate")(
+      suite("Aggregate")(
         testM("max") {
           for {
             result <- Task(AggregateInput.encode(Aggregate.Max))
@@ -35,7 +36,7 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk.single("$3\r\nSUM\r\n")))
         }
       ),
-      suite("auth")(
+      suite("Auth")(
         testM("with empty password") {
           for {
             result <- Task(AuthInput.encode(Auth("")))
@@ -47,7 +48,7 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk("$4\r\nAUTH\r\n", "$4\r\npass\r\n")))
         }
       ),
-      suite("bool")(
+      suite("Bool")(
         testM("true") {
           for {
             result <- Task(BoolInput.encode(true))
@@ -59,7 +60,7 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk.single("$1\r\n0\r\n")))
         }
       ),
-      suite("bit field command")(
+      suite("BitFieldCommand")(
         testM("get with unsigned type and positive offset") {
           for {
             result <- Task(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 2)))
@@ -121,7 +122,7 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk("$8\r\nOVERFLOW\r\n", "$4\r\nWRAP\r\n")))
         }
       ),
-      suite("bit operation")(
+      suite("BitOperation")(
         testM("and") {
           for {
             result <- Task(BitOperationInput.encode(AND))
@@ -141,6 +142,18 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(BitOperationInput.encode(NOT))
           } yield assert(result)(equalTo(Chunk.single("$3\r\nNOT\r\n")))
+        }
+      ),
+      suite("BitPosRange")(
+        testM("with only start") {
+          for {
+            result <- Task(BitPosRangeInput.encode(BitPosRange(1.second.toMillis, None)))
+          } yield assert(result)(equalTo(Chunk.single("$4\r\n1000\r\n")))
+        },
+        testM("with start and the end") {
+          for {
+            result <- Task(BitPosRangeInput.encode(BitPosRange(0.second.toMillis, Some(1.second.toMillis))))
+          } yield assert(result)(equalTo(Chunk("$1\r\n0\r\n", "$4\r\n1000\r\n")))
         }
       )
     )
