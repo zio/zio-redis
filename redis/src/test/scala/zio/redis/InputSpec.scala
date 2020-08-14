@@ -358,6 +358,23 @@ object InputSpec extends BaseSpec {
             result <- Task(LimitInput.encode(Limit(0L, 0L)))
           } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$1\r\n0\r\n", "$1\r\n0\r\n")))
         }
+      ),
+      suite("Long")(
+        testM("positive value") {
+          for {
+            result <- Task(LongInput.encode(4L))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n4\r\n")))
+        },
+        testM("negative value") {
+          for {
+            result <- Task(LongInput.encode(-4L))
+          } yield assert(result)(equalTo(Chunk.single("$2\r\n-4\r\n")))
+        },
+        testM("zero value") {
+          for {
+            result <- Task(LongInput.encode(0L))
+          } yield assert(result)(equalTo(Chunk.single("$1\r\n0\r\n")))
+        }
       )
     )
 }
