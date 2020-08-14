@@ -1,16 +1,17 @@
 package zio.redis
 
-import zio.{ Chunk, Task }
-import zio.redis.Input._
-import zio.test._
-import zio.test.Assertion._
+import java.time.Instant
+
 import BitFieldCommand._
 import BitFieldType._
 import BitOperation._
-import zio.duration._
 import Order._
 import RadiusUnit._
-import java.time.Instant
+import zio.duration._
+import zio.redis.Input._
+import zio.test.Assertion._
+import zio.test._
+import zio.{ Chunk, Task }
 
 object InputSpec extends BaseSpec {
   def spec: ZSpec[environment.TestEnvironment, Any] =
@@ -663,6 +664,13 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(Tuple3(StringInput, LongInput, StringInput).encode(("one", 2, "three")))
           } yield assert(result)(equalTo(Chunk("$3\r\none\r\n", "$1\r\n2\r\n", "$5\r\nthree\r\n")))
+        }
+      ),
+      suite("Tuple4")(
+        testM("valid value") {
+          for {
+            result <- Task(Tuple4(StringInput, LongInput, StringInput, LongInput).encode(("one", 2, "three", 4)))
+          } yield assert(result)(equalTo(Chunk("$3\r\none\r\n", "$1\r\n2\r\n", "$5\r\nthree\r\n", "$1\r\n4\r\n")))
         }
       )
     )
