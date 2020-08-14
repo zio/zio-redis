@@ -86,7 +86,7 @@ object Input {
     }
   }
 
-  case object DurationTTLInput extends Input[Duration] {
+  case object DurationTtlInput extends Input[Duration] {
     def encode(data: Duration): Chunk[String] = {
       val milliseconds = data.toMillis
       Chunk(wrap("PX"), wrap(milliseconds.toString))
