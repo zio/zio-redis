@@ -501,6 +501,18 @@ object InputSpec extends BaseSpec {
             result <- Task(RangeInput.encode(Range(-1, -5)))
           } yield assert(result)(equalTo(Chunk("$2\r\n-1\r\n", "$2\r\n-5\r\n")))
         }
+      ),
+      suite("Regex")(
+        testM("with valid pattern") {
+          for {
+            result <- Task(RegexInput.encode("\\d{3}".r))
+          } yield assert(result)(equalTo(Chunk("$5\r\nMATCH\r\n", "$5\r\n\\d{3}\r\n")))
+        },
+        testM("with empty pattern") {
+          for {
+            result <- Task(RegexInput.encode("".r))
+          } yield assert(result)(equalTo(Chunk("$5\r\nMATCH\r\n", "$0\r\n\r\n")))
+        }
       )
     )
 }
