@@ -591,6 +591,18 @@ object InputSpec extends BaseSpec {
             result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Closed(5.2d))))
           } yield assert(result)(equalTo(Chunk("$4\r\n[4.2\r\n", "$4\r\n[5.2\r\n")))
         }
+      ),
+      suite("String")(
+        testM("non-empty value") {
+          for {
+            result <- Task(StringInput.encode("non-empty"))
+          } yield assert(result)(equalTo(Chunk.single("$9\r\nnon-empty\r\n")))
+        },
+        testM("empty value") {
+          for {
+            result <- Task(StringInput.encode(""))
+          } yield assert(result)(equalTo(Chunk.single("$0\r\n\r\n")))
+        }
       )
     )
 }
