@@ -814,6 +814,13 @@ object InputSpec extends BaseSpec {
             result <- Task(WithCoordInput.encode(WithCoord))
           } yield assert(result)(equalTo(Chunk.single("$9\r\nWITHCOORD\r\n")))
         }
+      ),
+      suite("WithDist")(
+        testM("valid value") {
+          for {
+            result <- Task(WithDistInput.encode(WithDist))
+          } yield assert(result)(equalTo(Chunk.single("$8\r\nWITHDIST\r\n")))
+        }
       )
     )
 }
