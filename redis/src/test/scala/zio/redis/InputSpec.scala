@@ -821,6 +821,13 @@ object InputSpec extends BaseSpec {
             result <- Task(WithDistInput.encode(WithDist))
           } yield assert(result)(equalTo(Chunk.single("$8\r\nWITHDIST\r\n")))
         }
+      ),
+      suite("WithHash")(
+        testM("valid value") {
+          for {
+            result <- Task(WithHashInput.encode(WithHash))
+          } yield assert(result)(equalTo(Chunk.single("$8\r\nWITHHASH\r\n")))
+        }
       )
     )
 }
