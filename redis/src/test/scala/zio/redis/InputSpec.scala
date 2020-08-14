@@ -805,7 +805,14 @@ object InputSpec extends BaseSpec {
         testM("valid value") {
           for {
             result <- Task(WithScoresInput.encode(WithScores))
-          } yield assert(result)(equalTo(Chunk("$10\r\nWITHSCORES\r\n")))
+          } yield assert(result)(equalTo(Chunk.single("$10\r\nWITHSCORES\r\n")))
+        }
+      ),
+      suite("WithCoord")(
+        testM("valid value") {
+          for {
+            result <- Task(WithCoordInput.encode(WithCoord))
+          } yield assert(result)(equalTo(Chunk.single("$9\r\nWITHCOORD\r\n")))
         }
       )
     )
