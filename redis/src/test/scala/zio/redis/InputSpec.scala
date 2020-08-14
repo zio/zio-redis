@@ -341,6 +341,23 @@ object InputSpec extends BaseSpec {
             result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Closed("z"))))
           } yield assert(result)(equalTo(Chunk("$2\r\n[a\r\n", "$2\r\n[z\r\n")))
         }
+      ),
+      suite("Limit")(
+        testM("with positive offset and positive count") {
+          for {
+            result <- Task(LimitInput.encode(Limit(5L, 5L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$1\r\n5\r\n", "$1\r\n5\r\n")))
+        },
+        testM("with negative offset and negative count") {
+          for {
+            result <- Task(LimitInput.encode(Limit(-5L, -5L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$2\r\n-5\r\n", "$2\r\n-5\r\n")))
+        },
+        testM("with zero offset and zero count") {
+          for {
+            result <- Task(LimitInput.encode(Limit(0L, 0L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nLIMIT\r\n", "$1\r\n0\r\n", "$1\r\n0\r\n")))
+        }
       )
     )
 }
