@@ -285,7 +285,14 @@ object InputSpec extends BaseSpec {
         testM("valid value") {
           for {
             result <- Task(IncrementInput.encode(Increment))
-          } yield assert(result)(equalTo(Chunk("$4\r\nINCR\r\n")))
+          } yield assert(result)(equalTo(Chunk.single("$4\r\nINCR\r\n")))
+        }
+      ),
+      suite("KeepTtl")(
+        testM("valid value") {
+          for {
+            result <- Task(KeepTtlInput.encode(KeepTtl))
+          } yield assert(result)(equalTo(Chunk.single("$7\r\nKEEPTTL\r\n")))
         }
       )
     )
