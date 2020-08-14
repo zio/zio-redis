@@ -198,6 +198,23 @@ object InputSpec extends BaseSpec {
             result <- Task(PositionInput.encode(Position.After))
           } yield assert(result)(equalTo(Chunk.single("$5\r\nAFTER\r\n")))
         }
+      ),
+      suite("Double")(
+        testM("positive value") {
+          for {
+            result <- Task(DoubleInput.encode(4.2d))
+          } yield assert(result)(equalTo(Chunk.single("$3\r\n4.2\r\n")))
+        },
+        testM("negative value") {
+          for {
+            result <- Task(DoubleInput.encode(-4.2d))
+          } yield assert(result)(equalTo(Chunk.single("$4\r\n-4.2\r\n")))
+        },
+        testM("zero value") {
+          for {
+            result <- Task(DoubleInput.encode(0d))
+          } yield assert(result)(equalTo(Chunk.single("$3\r\n0.0\r\n")))
+        }
       )
     )
 }
