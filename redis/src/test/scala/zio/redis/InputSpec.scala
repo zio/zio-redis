@@ -294,6 +294,53 @@ object InputSpec extends BaseSpec {
             result <- Task(KeepTtlInput.encode(KeepTtl))
           } yield assert(result)(equalTo(Chunk.single("$7\r\nKEEPTTL\r\n")))
         }
+      ),
+      suite("LexRange")(
+        testM("with unbound min and unbound max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Unbounded)))
+          } yield assert(result)(equalTo(Chunk("$1\r\n-\r\n", "$1\r\n+\r\n")))
+        },
+        testM("with open min and unbound max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Unbounded)))
+          } yield assert(result)(equalTo(Chunk("$2\r\n(a\r\n", "$1\r\n+\r\n")))
+        },
+        testM("with closed min and unbound max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Unbounded)))
+          } yield assert(result)(equalTo(Chunk("$2\r\n[a\r\n", "$1\r\n+\r\n")))
+        },
+        testM("with unbound min and open max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Open("z"))))
+          } yield assert(result)(equalTo(Chunk("$1\r\n-\r\n", "$2\r\n(z\r\n")))
+        },
+        testM("with open min and open max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Open("z"))))
+          } yield assert(result)(equalTo(Chunk("$2\r\n(a\r\n", "$2\r\n(z\r\n")))
+        },
+        testM("with closed min and open max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Open("z"))))
+          } yield assert(result)(equalTo(Chunk("$2\r\n[a\r\n", "$2\r\n(z\r\n")))
+        },
+        testM("with unbound min and closed max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Closed("z"))))
+          } yield assert(result)(equalTo(Chunk("$1\r\n-\r\n", "$2\r\n[z\r\n")))
+        },
+        testM("with open min and closed max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Closed("z"))))
+          } yield assert(result)(equalTo(Chunk("$2\r\n(a\r\n", "$2\r\n[z\r\n")))
+        },
+        testM("with closed min and closed max") {
+          for {
+            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Closed("z"))))
+          } yield assert(result)(equalTo(Chunk("$2\r\n[a\r\n", "$2\r\n[z\r\n")))
+        }
       )
     )
 }
