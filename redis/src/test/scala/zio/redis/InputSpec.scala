@@ -169,6 +169,23 @@ object InputSpec extends BaseSpec {
             result <- Task(CopyInput.encode(Copy))
           } yield assert(result)(equalTo(Chunk("$4\r\nCOPY\r\n")))
         }
+      ),
+      suite("Count")(
+        testM("positive value") {
+          for {
+            result <- Task(CountInput.encode(Count(3L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nCOUNT\r\n", "$1\r\n3\r\n")))
+        },
+        testM("negative value") {
+          for {
+            result <- Task(CountInput.encode(Count(-3L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nCOUNT\r\n", "$2\r\n-3\r\n")))
+        },
+        testM("zero value") {
+          for {
+            result <- Task(CountInput.encode(Count(0L)))
+          } yield assert(result)(equalTo(Chunk("$5\r\nCOUNT\r\n", "$1\r\n0\r\n")))
+        }
       )
     )
 }
