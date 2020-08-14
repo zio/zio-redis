@@ -280,6 +280,13 @@ object InputSpec extends BaseSpec {
             result <- Task(IdleTimeInput.encode(IdleTime(5)))
           } yield assert(result)(equalTo(Chunk("$8\r\nIDLETIME\r\n", "$1\r\n5\r\n")))
         }
+      ),
+      suite("Increment")(
+        testM("valid value") {
+          for {
+            result <- Task(IncrementInput.encode(Increment))
+          } yield assert(result)(equalTo(Chunk("$4\r\nINCR\r\n")))
+        }
       )
     )
 }
