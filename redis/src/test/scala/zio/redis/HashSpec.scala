@@ -3,7 +3,6 @@ package zio.redis
 import zio.Chunk
 import zio.test._
 import zio.test.Assertion._
-import zio.test.TestAspect._
 
 trait HashSpec extends BaseSpec {
 
@@ -58,7 +57,7 @@ trait HashSpec extends BaseSpec {
             deleted <- hDel(hash)(field1, field2)
           } yield assert(deleted)(equalTo(2L))
         }
-      ) @@ ignore,
+      ),
       suite("hExists")(
         testM("field should exist") {
           for {
@@ -76,7 +75,7 @@ trait HashSpec extends BaseSpec {
             result <- hExists(hash, field)
           } yield assert(result)(isFalse)
         }
-      ) @@ ignore,
+      ),
       suite("hIncrBy and hIncrByFloat")(
         testM("existing field should be incremented by 1") {
           for {
@@ -115,7 +114,7 @@ trait HashSpec extends BaseSpec {
             result <- hIncrByFloat(hash, field, -1.5)
           } yield assert(result)(equalTo(-1.5))
         }
-      ) @@ ignore,
+      ),
       suite("hKeys and hLen")(
         testM("get field names for existing hash") {
           for {
@@ -147,29 +146,6 @@ trait HashSpec extends BaseSpec {
             result <- hLen(hash)
           } yield assert(result)(equalTo(0L))
         }
-      ) @@ ignore,
-      suite("hmGet")(
-        testM("get values for a given hash and fields") {
-          for {
-            hash <- uuid
-            field1 <- uuid
-            value1 <- uuid
-            field2 <- uuid
-            value2 <- uuid
-            _ <- hSet(hash)((field1, value1), (field2, value2))
-            result <- hmGet(hash)(field1, field2)
-          } yield assert(result)(hasSameElements(Chunk(value1, value2)))
-        } @@ ignore,
-        testM("get values for a given hash and fields") {
-          for {
-            hash <- uuid
-            field1 <- uuid
-            value1 <- uuid
-            field2 <- uuid
-            _ <- hSet(hash)((field1, value1))
-            result <- hmGet(hash)(field2, field1)
-          } yield assert(result)(hasSameElements(Chunk(value1, Nil)))
-        } @@ ignore
       ),
       suite("hSetNx")(
         testM("set value for non-existing field") {
@@ -207,7 +183,7 @@ trait HashSpec extends BaseSpec {
             result <- hStrLen(hash, field)
           } yield assert(result)(equalTo(0L))
         }
-      ) @@ ignore,
+      ),
       suite("hVals")(
         testM("get all values from existing hash") {
           for {
