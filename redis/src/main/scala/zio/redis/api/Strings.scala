@@ -42,7 +42,7 @@ trait Strings {
     Tuple5(
       StringInput,
       StringInput,
-      OptionalInput(DurationTTLInput),
+      OptionalInput(DurationTtlInput),
       OptionalInput(UpdateInput),
       OptionalInput(KeepTtlInput)
     ),

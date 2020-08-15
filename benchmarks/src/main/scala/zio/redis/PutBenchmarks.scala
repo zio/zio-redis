@@ -54,7 +54,7 @@ class PutBenchmarks {
       } yield c
 
     connection
-      .use(c => items.traverse_(i => RedisCommands.set[IO](i, i).run(c)))
+      .use(c => items.traverse_(i => RedisCommands.set[RedisIO](i, i).run(c)))
       .unsafeRunSync
   }
 
