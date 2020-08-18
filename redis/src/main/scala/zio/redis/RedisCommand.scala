@@ -2,18 +2,30 @@ package zio.redis
 
 import zio.ZIO
 
-final class RedisCommand[-In, +Out] private (name: String, input: Input[In], output: Output[Out]) {
+final class RedisCommand[-In, +Out] private (
+  name: String,
+  input: Input[In],
+  output: Output[Out],
+  connectionType: ConnectionType
+) {
   private[redis] def run(in: In): ZIO[RedisExecutor, RedisError, Out] =
     ZIO
-      .accessM[RedisExecutor](_.get.execute(Input.StringInput.encode(name) ++ input.encode(in)))
+      .accessM[RedisExecutor](
+        _.get.execute(Input.StringInput.encode(name) ++ input.encode(in), connectionType)
+      )
       .flatMap(out => ZIO.effect(output.unsafeDecode(out)))
       .refineToOrDie[RedisError]
 }
 
 object RedisCommand {
 
-  private[redis] def apply[In, Out](name: String, input: Input[In], output: Output[Out]): RedisCommand[In, Out] =
-    new RedisCommand(name, input, output)
+  private[redis] def apply[In, Out](
+    name: String,
+    input: Input[In],
+    output: Output[Out],
+    connectionType: ConnectionType
+  ): RedisCommand[In, Out] =
+    new RedisCommand(name, input, output, connectionType)
 
   implicit final class Arg0[+Out](private val command: RedisCommand[Unit, Out]) extends AnyVal {
     def apply(): ZIO[RedisExecutor, RedisError, Out] = command.run(())

@@ -1,22 +1,24 @@
 package zio.redis.api
 
+import zio.redis.ConnectionType._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.RedisCommand
 
 trait Geo {
   final val geoAdd =
-    RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
+    RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput, Base)
 
   final val geoDist =
     RedisCommand(
       "GEODIST",
       Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
-      OptionalOutput(DoubleOutput)
+      OptionalOutput(DoubleOutput),
+      Base
     )
 
-  final val geoHash = RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
-  final val geoPos  = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
+  final val geoHash = RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput, Base)
+  final val geoPos  = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput, Base)
 
   final val geoRadius =
     RedisCommand(
@@ -34,7 +36,8 @@ trait Geo {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      GeoRadiusOutput
+      GeoRadiusOutput,
+      Base
     )
 
   final val geoRadiusByMember =
@@ -53,6 +56,7 @@ trait Geo {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      GeoRadiusOutput
+      GeoRadiusOutput,
+      Base
     )
 }

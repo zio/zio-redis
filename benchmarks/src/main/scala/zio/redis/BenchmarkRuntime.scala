@@ -7,6 +7,7 @@ import io.chrisdavenport.rediculous.Redis
 
 import zio.BootstrapRuntime
 import zio.internal.Platform
+import zio.duration._
 
 object BenchmarkRuntime extends BootstrapRuntime {
   implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)
@@ -16,6 +17,8 @@ object BenchmarkRuntime extends BootstrapRuntime {
 
   type RedisIO[A] = Redis[CatsIO, A]
 
-  final val RedisHost = "127.0.0.1"
-  final val RedisPort = 6379
+  final val RedisHost                    = "127.0.0.1"
+  final val RedisPort                    = 6379
+  final val ConnectionPoolMaxSize        = 1
+  final val ConnectionPoolMaxIdleTimeout = 10.seconds
 }
