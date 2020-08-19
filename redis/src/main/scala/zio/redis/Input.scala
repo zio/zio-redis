@@ -3,10 +3,10 @@ package zio.redis
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+import scala.util.matching.Regex
+
 import zio.Chunk
 import zio.duration.Duration
-
-import scala.util.matching.Regex
 
 sealed trait Input[-A] {
   private[redis] def encode(data: A): Chunk[String]
