@@ -66,6 +66,6 @@ lazy val benchmarks =
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.0"
       ),
       scalacOptions in Compile := Seq(
-        "-Ywarn-unused-import"
+        "-Xlint:unused"
       )
     )
