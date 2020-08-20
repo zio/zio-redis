@@ -3,6 +3,7 @@ package zio.redis
 import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
+
 import zio.ZIO
 
 @State(Scope.Thread)
@@ -26,9 +27,9 @@ class PutBenchmarks {
   @Benchmark
   def laserdisc(): Unit = {
     import _root_.laserdisc._
-    import _root_.laserdisc.{ all => cmd }
     import _root_.laserdisc.auto._
     import _root_.laserdisc.fs2._
+    import _root_.laserdisc.{ all => cmd }
     import cats.instances.list._
     import cats.syntax.foldable._
 
@@ -41,6 +42,7 @@ class PutBenchmarks {
   @Benchmark
   def rediculous(): Unit = {
     import java.net.InetSocketAddress
+
     import cats.effect._
     import cats.implicits._
     import fs2.io.tcp._

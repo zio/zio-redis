@@ -1,8 +1,8 @@
 package zio.redis.api
 
-import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
+import zio.redis.RedisCommand
 
 trait Lists {
   final val brPopLPush =

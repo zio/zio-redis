@@ -2,6 +2,7 @@ import sbt._
 import sbt.Keys._
 import sbtbuildinfo._
 import BuildInfoKeys._
+import scalafix.sbt.ScalafixPlugin.autoImport.scalafixSemanticdb
 
 object BuildHelper {
   def buildInfoSettings(packageName: String) =
@@ -20,7 +21,8 @@ object BuildHelper {
       libraryDependencies ++=
         Seq(
           "com.github.ghik" % "silencer-lib" % SilencerVersion % Provided cross CrossVersion.full,
-          compilerPlugin("com.github.ghik" % "silencer-plugin" % SilencerVersion cross CrossVersion.full)
+          compilerPlugin("com.github.ghik" % "silencer-plugin" % SilencerVersion cross CrossVersion.full),
+          compilerPlugin(scalafixSemanticdb)
         ),
       incOptions ~= (_.withLogRecompileOnMacro(false))
     )

@@ -1,11 +1,12 @@
 package zio.redis
 
+import scala.concurrent.ExecutionContext
+
 import cats.effect.{ ContextShift, Timer, IO => CatsIO }
 import io.chrisdavenport.rediculous.Redis
+
 import zio.BootstrapRuntime
 import zio.internal.Platform
-
-import scala.concurrent.ExecutionContext
 
 object BenchmarkRuntime extends BootstrapRuntime {
   implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)

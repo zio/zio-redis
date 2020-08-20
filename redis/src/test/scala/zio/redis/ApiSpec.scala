@@ -1,7 +1,7 @@
 package zio.redis
 
-import zio.test._
 import zio.clock.Clock
+import zio.test._
 
 object ApiSpec extends KeysSpec with ListSpec with SetsSpec with StringsSpec with GeoSpec with HyperLogLogSpec {
 

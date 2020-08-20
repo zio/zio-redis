@@ -2,8 +2,8 @@ package zio.redis
 
 import zio.Chunk
 import zio.redis.RedisError.WrongType
-import zio.test._
 import zio.test.Assertion._
+import zio.test._
 
 trait SetsSpec extends BaseSpec {
   val setsSuite =

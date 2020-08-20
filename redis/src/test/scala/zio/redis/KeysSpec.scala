@@ -1,10 +1,10 @@
 package zio.redis
 
-import zio.{ Chunk, ZIO }
 import zio.duration._
-import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
+import zio.test._
+import zio.{ Chunk, ZIO }
 
 trait KeysSpec extends BaseSpec {
 

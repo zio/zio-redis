@@ -1,11 +1,11 @@
 package zio.redis
 
-import zio.{ Chunk, ZIO }
+import zio.duration._
 import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
-import zio.test._
-import zio.duration._
 import zio.test.TestAspect.{ eventually, ignore }
+import zio.test._
+import zio.{ Chunk, ZIO }
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite =

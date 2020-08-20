@@ -1,8 +1,8 @@
 package zio.redis.api
 
-import zio.redis.RedisCommand
 import zio.redis.Input._
 import zio.redis.Output._
+import zio.redis.RedisCommand
 
 trait Hashes {
   final val hDel         = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
