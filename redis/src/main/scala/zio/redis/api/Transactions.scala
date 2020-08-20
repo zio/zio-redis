@@ -1,8 +1,8 @@
 package zio.redis.api
 
-import zio.redis.RedisCommand
 import zio.redis.Input.{ NoInput, NonEmptyList, StringInput }
 import zio.redis.Output.{ ChunkOutput, UnitOutput }
+import zio.redis.RedisCommand
 
 trait Transactions {
   final val discard = RedisCommand("DISCARD", NoInput, UnitOutput)

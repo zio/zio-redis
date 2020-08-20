@@ -14,14 +14,23 @@ inThisBuild(
     pgpSecretRing := file("/tmp/secret.asc"),
     scmInfo := Some(
       ScmInfo(url("https://github.com/zio/zio-redis/"), "scm:git:git@github.com:zio/zio-redis.git")
-    )
+    ),
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
+    scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.5.0"
   )
 )
 
+addCommandAlias("prepare", "fix; fmt")
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
 addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
 addCommandAlias("testJVM211", ";redis/test")
+addCommandAlias("fix", "all compile:scalafix test:scalafix")
+addCommandAlias(
+  "fixCheck",
+  "; compile:scalafix --check ; test:scalafix --check"
+)
 
 lazy val root =
   project
@@ -56,5 +65,8 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects" % "0.10.2",
         "io.chrisdavenport" %% "rediculous"         % "0.0.5",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.0"
+      ),
+      scalacOptions in Compile := Seq(
+        "-Xlint:unused"
       )
     )

@@ -7,10 +7,10 @@ import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.collection.mutable.ArrayBuilder
+
 import zio._
 import zio.blocking._
-
-import scala.collection.mutable.ArrayBuilder
 
 trait Interpreter {
   type RedisExecutor = Has[RedisExecutor.Service]

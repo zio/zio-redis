@@ -1,11 +1,11 @@
 package zio.redis
 
-import zio.{ Chunk, Task }
 import zio.duration._
 import zio.redis.Output._
 import zio.redis.RedisError._
-import zio.test._
 import zio.test.Assertion._
+import zio.test._
+import zio.{ Chunk, Task }
 
 object OutputSpec extends BaseSpec {
   def spec =

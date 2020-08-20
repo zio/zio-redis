@@ -7,6 +7,7 @@ import BitFieldType._
 import BitOperation._
 import Order._
 import RadiusUnit._
+
 import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
