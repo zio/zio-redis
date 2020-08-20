@@ -181,7 +181,7 @@ object Output {
   }
 
   case object MultiStringChunkOutput extends Output[Chunk[String]] {
-    override protected def tryDecode(text: String): Chunk[String] =
+    protected def tryDecode(text: String): Chunk[String] =
       if (text.startsWith("$-1"))
         Chunk.empty
       else if (text.startsWith("$"))
@@ -193,7 +193,7 @@ object Output {
   }
 
   case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
-    override protected def tryDecode(text: String): Chunk[Option[String]] =
+    protected def tryDecode(text: String): Chunk[Option[String]] =
       if (text.startsWith("*-1\r\n"))
         Chunk.empty
       else if (text.startsWith("*"))
@@ -203,7 +203,7 @@ object Output {
   }
 
   case object ChunkOptionalLongOutput extends Output[Chunk[Option[Long]]] {
-    override protected def tryDecode(text: String): Chunk[Option[Long]] =
+    protected def tryDecode(text: String): Chunk[Option[Long]] =
       if (text.startsWith("*"))
         unsafeReadChunkOptionalLong(text, 0)
       else
@@ -410,7 +410,7 @@ object Output {
 
     private[this] def parse(text: String): Map[String, String] = {
       val data   = unsafeReadChunk(text, 0)
-      var output = Map.empty[String, String]
+      val output = collection.mutable.Map.empty[String, String]
       val len    = data.length
       var pos    = 0
 
@@ -419,7 +419,7 @@ object Output {
         pos += 2
       }
 
-      output
+      output.toMap
     }
   }
 

@@ -11,7 +11,7 @@ trait GeoSpec extends BaseSpec {
       testM("geoAdd followed by geoPos") {
         import GeoSpec.Serbia._
         for {
-          _         <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+          _         <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
           locations <- geoPos(key)(member1, member2)
         } yield assert(locations)(hasSameElements(Chunk(member1LongLat, member2LongLat)))
       },
@@ -21,14 +21,14 @@ trait GeoSpec extends BaseSpec {
         val member2 = "point2"
         val longLat = LongLat(100d, 50d)
         for {
-          _        <- geoAdd(key)((longLat, member1), (longLat, member2))
+          _        <- geoAdd(key)(longLat -> member1, longLat -> member2)
           distance <- geoDist(key, member1, member2, None)
         } yield assert(distance)(isSome(equalTo(0d)))
       },
       testM("get geoHash") {
         import GeoSpec.Sicily._
         for {
-          _      <- geoAdd(key)((member1LongLat, member1))
+          _      <- geoAdd(key)(member1LongLat -> member1)
           result <- geoHash(key)(member1)
         } yield assert(result)(hasSize(equalTo(1)))
       },
@@ -36,7 +36,7 @@ trait GeoSpec extends BaseSpec {
         testM("without details") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -57,7 +57,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -83,7 +83,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates and distance") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -109,7 +109,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates, distance and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -135,7 +135,7 @@ trait GeoSpec extends BaseSpec {
         testM("with hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -161,7 +161,7 @@ trait GeoSpec extends BaseSpec {
         testM("with distance and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -187,7 +187,7 @@ trait GeoSpec extends BaseSpec {
         testM("with distance") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -213,7 +213,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -241,7 +241,7 @@ trait GeoSpec extends BaseSpec {
         testM("without details") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -262,7 +262,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -290,7 +290,7 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -318,7 +318,7 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -344,7 +344,7 @@ trait GeoSpec extends BaseSpec {
         testM("with hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -372,7 +372,7 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -400,7 +400,7 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -426,7 +426,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key)((member1LongLat, member1), (member2LongLat, member2))
+            _        <- geoAdd(key)(member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
