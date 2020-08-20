@@ -21,6 +21,7 @@ inThisBuild(
   )
 )
 
+addCommandAlias("prepare", "fix; fmt")
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
 addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
