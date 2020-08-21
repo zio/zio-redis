@@ -41,8 +41,6 @@ class PutBenchmarks {
 
   @Benchmark
   def rediculous(): Unit = {
-    import java.net.InetSocketAddress
-
     import cats.effect._
     import cats.implicits._
     import fs2.io.tcp._
@@ -52,7 +50,7 @@ class PutBenchmarks {
       for {
         blocker <- Blocker[IO]
         sg      <- SocketGroup[IO](blocker)
-        c       <- RedisConnection.queued[IO](sg, new InetSocketAddress(RedisHost, RedisPort), maxQueued = 10000, workers = 2)
+        c       <- RedisConnection.queued[IO](sg, RedisHost, RedisPort, maxQueued = 10000, workers = 2)
       } yield c
 
     connection
