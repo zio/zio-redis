@@ -8,10 +8,10 @@ trait Hashes {
   final val hDel         = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   final val hExists      = RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
   final val hGet         = RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
-  final val hGetAll      = RedisCommand("HGETALL", StringInput, ChunkOutput)
+  final val hGetAll      = RedisCommand("HGETALL", StringInput, KeyValueOutput)
   final val hIncrBy      = RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
   final val hIncrByFloat =
-    RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), MultiStringOutput)
+    RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), IncrementOutput)
   final val hKeys        = RedisCommand("HKEYS", StringInput, ChunkOutput)
   final val hLen         = RedisCommand("HLEN", StringInput, LongOutput)
   final val hmGet        = RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)

@@ -181,7 +181,7 @@ object Output {
   }
 
   case object MultiStringChunkOutput extends Output[Chunk[String]] {
-    override protected def tryDecode(text: String): Chunk[String] =
+    protected def tryDecode(text: String): Chunk[String] =
       if (text.startsWith("$-1"))
         Chunk.empty
       else if (text.startsWith("$"))
@@ -193,7 +193,7 @@ object Output {
   }
 
   case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
-    override protected def tryDecode(text: String): Chunk[Option[String]] =
+    protected def tryDecode(text: String): Chunk[Option[String]] =
       if (text.startsWith("*-1\r\n"))
         Chunk.empty
       else if (text.startsWith("*"))
@@ -203,7 +203,7 @@ object Output {
   }
 
   case object ChunkOptionalLongOutput extends Output[Chunk[Option[Long]]] {
-    override protected def tryDecode(text: String): Chunk[Option[Long]] =
+    protected def tryDecode(text: String): Chunk[Option[Long]] =
       if (text.startsWith("*"))
         unsafeReadChunkOptionalLong(text, 0)
       else
@@ -211,7 +211,7 @@ object Output {
   }
 
   case object TypeOutput extends Output[RedisType] {
-    override protected def tryDecode(text: String): RedisType =
+    protected def tryDecode(text: String): RedisType =
       text match {
         case "+string\r\n" => RedisType.String
         case "+list\r\n"   => RedisType.List
@@ -231,7 +231,7 @@ object Output {
   }
 
   case object GeoOutput extends Output[Chunk[LongLat]] {
-    override protected def tryDecode(text: String) =
+    protected def tryDecode(text: String) =
       if (text.startsWith("*"))
         parse(text)
       else
@@ -242,7 +242,7 @@ object Output {
   }
 
   case object GeoRadiusOutput extends Output[Chunk[GeoView]] {
-    override protected def tryDecode(text: String) =
+    protected def tryDecode(text: String) =
       if (text.startsWith("*"))
         parse(text)
       else
@@ -398,6 +398,48 @@ object Output {
       pos += 1
 
       pos
+    }
+  }
+
+  case object KeyValueOutput extends Output[Map[String, String]] {
+    protected def tryDecode(text: String) =
+      if (text.startsWith("*"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't a string.")
+
+    private[this] def parse(text: String): Map[String, String] = {
+      val data   = unsafeReadChunk(text, 0)
+      val output = collection.mutable.Map.empty[String, String]
+      val len    = data.length
+      var pos    = 0
+
+      while (pos < len) {
+        output += data(pos) -> data(pos + 1)
+        pos += 2
+      }
+
+      output.toMap
+    }
+  }
+
+  case object IncrementOutput extends Output[Double] {
+    protected def tryDecode(text: String) =
+      if (text.startsWith("$"))
+        parse(text)
+      else
+        throw ProtocolError(s"$text isn't a string.")
+
+    private[this] def parse(text: String): Double = {
+      var pos = 1
+
+      while (text.charAt(pos) != '\n') pos += 1
+      pos += 1
+
+      var end = pos + 1
+      while (text.charAt(end) != '\r') end += 1
+
+      text.substring(pos, end).toDouble
     }
   }
 
