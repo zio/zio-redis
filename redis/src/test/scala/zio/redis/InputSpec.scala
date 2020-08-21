@@ -28,17 +28,17 @@ object InputSpec extends BaseSpec {
         testM("max") {
           for {
             result <- Task(AggregateInput.encode(Aggregate.Max))
-          } yield assert(result)(equalTo(Chunk.single("$3\r\nMAX\r\n")))
+          } yield assert(result)(equalTo(Chunk("$9\r\nAGGREGATE\r\n", "$3\r\nMAX\r\n")))
         },
         testM("min") {
           for {
             result <- Task(AggregateInput.encode(Aggregate.Min))
-          } yield assert(result)(equalTo(Chunk.single("$3\r\nMIN\r\n")))
+          } yield assert(result)(equalTo(Chunk("$9\r\nAGGREGATE\r\n", "$3\r\nMIN\r\n")))
         },
         testM("sum") {
           for {
             result <- Task(AggregateInput.encode(Aggregate.Sum))
-          } yield assert(result)(equalTo(Chunk.single("$3\r\nSUM\r\n")))
+          } yield assert(result)(equalTo(Chunk("$9\r\nAGGREGATE\r\n", "$3\r\nSUM\r\n")))
         }
       ),
       suite("Auth")(
@@ -562,7 +562,7 @@ object InputSpec extends BaseSpec {
         testM("with closed min and infinite max") {
           for {
             result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Infinity)))
-          } yield assert(result)(equalTo(Chunk("$4\r\n[4.2\r\n", "$4\r\n+inf\r\n")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n4.2\r\n", "$4\r\n+inf\r\n")))
         },
         testM("with infinite min and open max") {
           for {
@@ -577,22 +577,22 @@ object InputSpec extends BaseSpec {
         testM("with closed min and open max") {
           for {
             result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Open(5.2d))))
-          } yield assert(result)(equalTo(Chunk("$4\r\n[4.2\r\n", "$4\r\n(5.2\r\n")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n4.2\r\n", "$4\r\n(5.2\r\n")))
         },
         testM("with infinite min and closed max") {
           for {
             result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Closed(5.2d))))
-          } yield assert(result)(equalTo(Chunk("$4\r\n-inf\r\n", "$4\r\n[5.2\r\n")))
+          } yield assert(result)(equalTo(Chunk("$4\r\n-inf\r\n", "$3\r\n5.2\r\n")))
         },
         testM("with open min and closed max") {
           for {
             result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Closed(5.2d))))
-          } yield assert(result)(equalTo(Chunk("$4\r\n(4.2\r\n", "$4\r\n[5.2\r\n")))
+          } yield assert(result)(equalTo(Chunk("$4\r\n(4.2\r\n", "$3\r\n5.2\r\n")))
         },
         testM("with closed min and closed max") {
           for {
             result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Closed(5.2d))))
-          } yield assert(result)(equalTo(Chunk("$4\r\n[4.2\r\n", "$4\r\n[5.2\r\n")))
+          } yield assert(result)(equalTo(Chunk("$3\r\n4.2\r\n", "$3\r\n5.2\r\n")))
         }
       ),
       suite("String")(

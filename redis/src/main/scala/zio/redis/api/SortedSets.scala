@@ -29,9 +29,9 @@ trait SortedSets {
     "ZINTERSTORE",
     Tuple4(
       StringInput,
-      NonEmptyList(StringInput),
-      OptionalInput(NonEmptyList(DoubleInput)),
-      OptionalInput(AggregateInput)
+      NonEmptyListPrecededByCount(StringInput),
+      OptionalInput(AggregateInput),
+      OptionalInput(WeightsInput)
     ),
     LongOutput
   )
@@ -74,19 +74,19 @@ trait SortedSets {
 
   final val zScan = RedisCommand(
     "ZSCAN",
-    Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+    Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
     ScanOutput
   )
 
-  final val zScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
+  final val zScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(StringOutput))
 
   final val zUnionStore = RedisCommand(
     "ZUNIONSTORE",
     Tuple4(
       StringInput,
-      NonEmptyList(StringInput),
-      OptionalInput(NonEmptyList(DoubleInput)),
-      OptionalInput(AggregateInput)
+      NonEmptyListPrecededByCount(StringInput),
+      OptionalInput(AggregateInput),
+      OptionalInput(WeightsInput)
     ),
     LongOutput
   )

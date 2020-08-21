@@ -20,7 +20,7 @@ object Input {
   }
 
   case object AggregateInput extends Input[Aggregate] {
-    def encode(data: Aggregate): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Aggregate): Chunk[String] = Chunk(wrap("AGGREGATE"), wrap(data.stringify))
   }
 
   case object AuthInput extends Input[Auth] {
@@ -139,6 +139,13 @@ object Input {
       (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ input.encode(a))
   }
 
+  final case class NonEmptyListPrecededByCount[-A](input: Input[A]) extends Input[(A, List[A])] {
+    def encode(data: (A, List[A])): Chunk[String] =
+      (data._1 :: data._2).foldLeft(Chunk.single(wrap((1 + data._2.length).toString)): Chunk[String])((acc, a) =>
+        acc ++ input.encode(a)
+      )
+  }
+
   case object OrderInput extends Input[Order] {
     def encode(data: Order): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
@@ -185,6 +192,13 @@ object Input {
 
   case object TimeMillisecondsInput extends Input[Instant] {
     def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.toEpochMilli.toString))
+  }
+
+  case object WeightsInput extends Input[Weights] {
+    def encode(data: Weights): Chunk[String] =
+      data.weights.foldLeft(Chunk.single(wrap("WEIGHTS")): Chunk[String])((acc, a) =>
+        acc ++ Chunk.single(wrap(a.toString))
+      )
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
