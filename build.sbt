@@ -17,7 +17,7 @@ inThisBuild(
     ),
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
-    scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.5.0"
+    scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.5.4"
   )
 )
 
