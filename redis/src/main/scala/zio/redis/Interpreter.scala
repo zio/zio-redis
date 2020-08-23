@@ -4,11 +4,10 @@ import java.io.IOException
 import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
-import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.charset.StandardCharsets.ISO_8859_1
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.mutable.ArrayBuilder
-
 import zio._
 import zio.blocking._
 
@@ -117,13 +116,13 @@ trait Interpreter {
           j += chunk.length
         }
 
-        new String(data, UTF_8)
+        new String(data, ISO_8859_1)
       }
 
       private def unsafeSend(command: Chunk[String]): Unit = {
         val data     = command.mkString
         val envelope = s"*${command.length}\r\n$data"
-        val buffer   = ByteBuffer.wrap(envelope.getBytes(UTF_8))
+        val buffer   = ByteBuffer.wrap(envelope.getBytes(ISO_8859_1))
 
         while (buffer.hasRemaining())
           channel.write(buffer)

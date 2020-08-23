@@ -105,7 +105,7 @@ trait KeysSpec extends BaseSpec {
           restore  <- restore(key, 0L, dumped, None, None, None, None).either
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
-      } @@ ignore,
+      },
       suite("ttl")(
         testM("check ttl for existing key") {
           for {
