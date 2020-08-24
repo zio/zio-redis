@@ -8,7 +8,7 @@ trait SortedSetsSpec extends BaseSpec {
   val sortedSetsSuite =
     suite("sorted sets")(
       suite("zAdd")(
-        testM("to empty set") {
+        /*testM("to empty set") {
           for {
             key   <- uuid
             value <- uuid
@@ -82,7 +82,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRange(key, Range(0, -1), None)
           } yield assert(added)(equalTo(2L)) &&
             assert(result.toList)(equalTo(List("v2", "v3", "v1")))
-        },
+        },*/
         testM("INCR - increment by score") {
           for {
             key      <- uuid
@@ -1328,7 +1328,7 @@ trait SortedSetsSpec extends BaseSpec {
                       )
           } yield assert(result)(isNone)
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zUnionStore")(
         testM("two non-empty sets") {
           for {

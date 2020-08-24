@@ -163,13 +163,13 @@ object Output {
 
   case object StringOutput extends Output[String] {
     protected def tryDecode(text: String): String =
-      if (text.startsWith("+"))
+      if (text.startsWith("$2"))
         parse(text)
       else
         throw ProtocolError(s"$text isn't a simple string.")
 
     private[this] def parse(text: String): String =
-      text.substring(1, text.length - 2)
+      text.substring(2, text.length).filter(_ >= ' ')
   }
 
   case object MultiStringOutput extends Output[String] {
