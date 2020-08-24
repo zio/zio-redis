@@ -163,7 +163,7 @@ object Output {
 
   case object StringOutput extends Output[String] {
     protected def tryDecode(text: String): String =
-      if (text.startsWith("$2"))
+      if (text.startsWith("$"))
         parse(text)
       else
         throw ProtocolError(s"$text isn't a simple string.")

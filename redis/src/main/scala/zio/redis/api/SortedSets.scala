@@ -2,24 +2,25 @@ package zio.redis.api
 
 import zio.redis.Input._
 import zio.redis.Output._
-import zio.redis.RedisCommand
+import zio.redis.{ Output, RedisCommand }
 
 trait SortedSets {
   final val bzPopMax = RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val bzPopMin = RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
 
   // TODO: represent two possible outputs as per the documentation
-  final val zAdd = RedisCommand(
-    "ZADD",
-    Tuple5(
-      StringInput,
-      OptionalInput(UpdateInput),
-      OptionalInput(ChangedInput),
-      OptionalInput(IncrementInput),
-      NonEmptyList(MemberScoreInput)
-    ),
-    LongOutput
-  )
+  final def zAdd[T](output: Output[T] = LongOutput) =
+    RedisCommand(
+      "ZADD",
+      Tuple5(
+        StringInput,
+        OptionalInput(UpdateInput),
+        OptionalInput(ChangedInput),
+        OptionalInput(IncrementInput),
+        NonEmptyList(MemberScoreInput)
+      ),
+      output
+    )
 
   final val zCard   = RedisCommand("ZCARD", StringInput, LongOutput)
   final val zCount  = RedisCommand("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
