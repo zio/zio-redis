@@ -194,11 +194,9 @@ object Input {
     def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.toEpochMilli.toString))
   }
 
-  case object WeightsInput extends Input[Weights] {
-    def encode(data: Weights): Chunk[String] =
-      data.weights.foldLeft(Chunk.single(wrap("WEIGHTS")): Chunk[String])((acc, a) =>
-        acc ++ Chunk.single(wrap(a.toString))
-      )
+  case object WeightsInput extends Input[Seq[Double]] {
+    def encode(data: Seq[Double]): Chunk[String] =
+      data.foldLeft(Chunk.single(wrap("WEIGHTS")): Chunk[String])((acc, a) => acc ++ Chunk.single(wrap(a.toString)))
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {

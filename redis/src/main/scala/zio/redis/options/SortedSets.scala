@@ -102,6 +102,4 @@ trait SortedSets {
 
   type WithScores = WithScores.type
 
-  sealed case class Weights(weights: Seq[Long])
-
 }
