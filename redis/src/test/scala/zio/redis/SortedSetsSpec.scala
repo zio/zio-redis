@@ -1,7 +1,6 @@
 package zio.redis
 
 import zio.redis.RedisError.{ ProtocolError, WrongType }
-import zio.redis.Output.StringOutput
 import zio.test.Assertion._
 import zio.test._
 
@@ -13,32 +12,31 @@ trait SortedSetsSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            added <- zAdd()(key, None, None, None, (MemberScore(1d, value), Nil))
+            added <- zAdd(key, None, None, (MemberScore(1d, value), Nil))
           } yield assert(added)(equalTo(1L))
         },
         testM("to the non-empty set") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- zAdd()(key, None, None, None, (MemberScore(1d, value), Nil))
+            _      <- zAdd(key, None, None, (MemberScore(1d, value), Nil))
             value2 <- uuid
-            added  <- zAdd()(key, None, None, None, (MemberScore(2d, value2), Nil))
+            added  <- zAdd(key, None, None, (MemberScore(2d, value2), Nil))
           } yield assert(added)(equalTo(1L))
         },
         testM("existing element to set") {
           for {
             key   <- uuid
             value <- uuid
-            _     <- zAdd()(key, None, None, None, (MemberScore(1d, value), Nil))
-            added <- zAdd()(key, None, None, None, (MemberScore(2d, value), Nil))
+            _     <- zAdd(key, None, None, (MemberScore(1d, value), Nil))
+            added <- zAdd(key, None, None, (MemberScore(2d, value), Nil))
           } yield assert(added)(equalTo(0L))
         },
         testM("multiple elements to set") {
           for {
             key   <- uuid
-            added <- zAdd()(
+            added <- zAdd(
                        key,
-                       None,
                        None,
                        None,
                        (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
@@ -50,15 +48,15 @@ trait SortedSetsSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value, None, None, None)
-            added <- zAdd()(key, None, None, None, (MemberScore(1d, value), Nil)).either
+            added <- zAdd(key, None, None, (MemberScore(1d, value), Nil)).either
           } yield assert(added)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("NX - do not to update existing members, only add new") {
           for {
             key    <- uuid
-            _      <- zAdd()(key, None, None, None, (MemberScore(1d, "v1"), Nil))
-            _      <- zAdd()(key, None, None, None, (MemberScore(2d, "v2"), Nil))
-            added  <- zAdd()(key, Some(Update.SetNew), None, None, (MemberScore(3d, "v3"), List(MemberScore(22d, "v2"))))
+            _      <- zAdd(key, None, None, (MemberScore(1d, "v1"), Nil))
+            _      <- zAdd(key, None, None, (MemberScore(2d, "v2"), Nil))
+            added  <- zAdd(key, Some(Update.SetNew), None, (MemberScore(3d, "v3"), List(MemberScore(22d, "v2"))))
             result <- zRange(key, Range(0, -1), None)
           } yield assert(added)(equalTo(1L)) &&
             assert(result.toList)(equalTo(List("v1", "v2", "v3")))
@@ -66,10 +64,9 @@ trait SortedSetsSpec extends BaseSpec {
         testM("XX - update existing members, not add new") {
           for {
             key    <- uuid
-            _      <- zAdd()(key, None, None, None, (MemberScore(1d, "v1"), Nil))
-            _      <- zAdd()(key, None, None, None, (MemberScore(2d, "v2"), Nil))
-            added  <-
-              zAdd()(key, Some(Update.SetExisting), None, None, (MemberScore(3d, "v3"), List(MemberScore(11d, "v1"))))
+            _      <- zAdd(key, None, None, (MemberScore(1d, "v1"), Nil))
+            _      <- zAdd(key, None, None, (MemberScore(2d, "v2"), Nil))
+            added  <- zAdd(key, Some(Update.SetExisting), None, (MemberScore(3d, "v3"), List(MemberScore(11d, "v1"))))
             result <- zRange(key, Range(0, -1), None)
           } yield assert(added)(equalTo(0L)) &&
             assert(result.toList)(equalTo(List("v2", "v1")))
@@ -77,9 +74,9 @@ trait SortedSetsSpec extends BaseSpec {
         testM("CH - return number of new and updated members") {
           for {
             key    <- uuid
-            _      <- zAdd()(key, None, None, None, (MemberScore(1d, "v1"), Nil))
-            _      <- zAdd()(key, None, None, None, (MemberScore(2d, "v2"), Nil))
-            added  <- zAdd()(key, None, Some(Changed), None, (MemberScore(3d, "v3"), List(MemberScore(11d, "v1"))))
+            _      <- zAdd(key, None, None, (MemberScore(1d, "v1"), Nil))
+            _      <- zAdd(key, None, None, (MemberScore(2d, "v2"), Nil))
+            added  <- zAdd(key, None, Some(Changed), (MemberScore(3d, "v3"), List(MemberScore(11d, "v1"))))
             result <- zRange(key, Range(0, -1), None)
           } yield assert(added)(equalTo(2L)) &&
             assert(result.toList)(equalTo(List("v2", "v3", "v1")))
@@ -87,9 +84,9 @@ trait SortedSetsSpec extends BaseSpec {
         testM("INCR - increment by score") {
           for {
             key      <- uuid
-            _        <- zAdd()(key, None, None, None, (MemberScore(1d, "v1"), Nil))
-            _        <- zAdd()(key, None, None, None, (MemberScore(2d, "v2"), Nil))
-            newScore <- zAdd(StringOutput)(key, None, None, Some(Increment), (MemberScore(3d, "v1"), Nil))
+            _        <- zAdd(key, None, None, (MemberScore(1d, "v1"), Nil))
+            _        <- zAdd(key, None, None, (MemberScore(2d, "v2"), Nil))
+            newScore <- zAddWithIncr(key, None, None, Increment, (MemberScore(3d, "v1"), Nil))
             result   <- zRange(key, Range(0, -1), None)
           } yield assert(newScore)(equalTo("4")) &&
             assert(result.toList)(equalTo(List("v2", "v1")))
@@ -99,7 +96,7 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key  <- uuid
-            _    <- zAdd()(key, None, None, None, (MemberScore(1d, "hello"), List(MemberScore(2d, "world"))))
+            _    <- zAdd(key, None, None, (MemberScore(1d, "hello"), List(MemberScore(2d, "world"))))
             card <- zCard(key)
           } yield assert(card)(equalTo(2L))
         },
@@ -119,9 +116,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key   <- uuid
-            _     <- zAdd()(
+            _     <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -148,9 +144,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key     <- uuid
-            _       <- zAdd()(
+            _       <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -181,15 +176,13 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d")))
                  )
-            _      <-
-              zAdd()(second, None, None, None, (MemberScore(1d, "a"), List(MemberScore(3d, "c"), MemberScore(5d, "e"))))
+            _      <- zAdd(second, None, None, (MemberScore(1d, "a"), List(MemberScore(3d, "c"), MemberScore(5d, "e"))))
             card   <- zInterStore(s"out_$dest", (first, List(second)), None, None)
           } yield assert(card)(equalTo(2L))
         },
@@ -198,9 +191,8 @@ trait SortedSetsSpec extends BaseSpec {
             dest     <- uuid
             nonEmpty <- uuid
             empty    <- uuid
-            _        <- zAdd()(
+            _        <- zAdd(
                    nonEmpty,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b")))
@@ -222,23 +214,20 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             third  <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(2d, "b"), List(MemberScore(2d, "b"), MemberScore(4d, "d")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    third,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
@@ -272,9 +261,8 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             value  <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), Nil)
@@ -288,16 +276,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -310,16 +296,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -332,16 +316,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -354,16 +336,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -376,16 +356,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -398,9 +376,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key   <- uuid
-            _     <- zAdd()(
+            _     <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -427,9 +404,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set")(
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -448,9 +424,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with count param")(
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -475,9 +450,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set")(
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -496,9 +470,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with count param")(
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -523,9 +496,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -544,9 +516,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set, with scores") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -575,9 +546,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -600,9 +570,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with limit") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -635,9 +604,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -664,9 +632,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set, with scores") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -693,9 +660,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set, with limit") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -735,9 +701,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("existing elements from non-empty set") {
           for {
             key  <- uuid
-            _    <- zAdd()(
+            _    <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
@@ -756,9 +721,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("existing elements from non-empty set") {
           for {
             key     <- uuid
-            _       <- zAdd()(
+            _       <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
@@ -769,9 +733,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("when just part of elements are present in the non-empty set") {
           for {
             key     <- uuid
-            _       <- zAdd()(
+            _       <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
@@ -782,9 +745,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("when none of the elements are present in the non-empty set") {
           for {
             key     <- uuid
-            _       <- zAdd()(
+            _       <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
@@ -811,9 +773,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -849,9 +810,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -887,9 +847,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -926,9 +885,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key       <- uuid
-            _         <- zAdd()(
+            _         <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -953,9 +911,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with scores") {
           for {
             key       <- uuid
-            _         <- zAdd()(
+            _         <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -992,9 +949,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1020,9 +976,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with limit") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1060,9 +1015,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1093,9 +1047,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with scores") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1126,9 +1079,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set with limit") {
           for {
             key         <- uuid
-            _           <- zAdd()(
+            _           <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1148,7 +1100,7 @@ trait SortedSetsSpec extends BaseSpec {
                              ScoreRange(
                                min = ScoreMinimum.Open(2500),
                                max = ScoreMaximum.Closed(2000)
-                             ), //TODO min <-> max
+                             ),
                              None,
                              Some(Limit(1, 2))
                            )
@@ -1175,9 +1127,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1210,9 +1161,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key              <- uuid
-            _                <- zAdd()(
+            _                <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "atest"), List(MemberScore(2d, "btest"), MemberScore(3d, "ctest")))
@@ -1233,9 +1183,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("with match over non-empty set") {
           for {
             key              <- uuid
-            _                <- zAdd()(
+            _                <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "one"), List(MemberScore(2d, "two"), MemberScore(3d, "three")))
@@ -1248,9 +1197,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("with count over non-empty set") {
           for {
             key              <- uuid
-            _                <- zAdd()(
+            _                <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1266,9 +1214,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("match with count over non-empty set") {
           for {
             key              <- uuid
-            _                <- zAdd()(
+            _                <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1299,9 +1246,8 @@ trait SortedSetsSpec extends BaseSpec {
         testM("non-empty set") {
           for {
             key    <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    key,
-                   None,
                    None,
                    None,
                    (
@@ -1336,16 +1282,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(3d, "c"), MemberScore(5d, "e")))
@@ -1358,9 +1302,8 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             dest     <- uuid
-            _        <- zAdd()(
+            _        <- zAdd(
                    nonEmpty,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b")))
@@ -1382,23 +1325,20 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             third  <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(2, "b"), List(MemberScore(4d, "d")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    third,
-                   None,
                    None,
                    None,
                    (MemberScore(2, "b"), List(MemberScore(3d, "c"), MemberScore(5d, "e")))
@@ -1422,9 +1362,8 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             dest   <- uuid
             value  <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(1, "a"), Nil)
@@ -1438,16 +1377,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -1460,16 +1397,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -1482,16 +1417,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -1504,16 +1437,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -1526,16 +1457,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
@@ -1548,16 +1477,14 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- zAdd()(
+            _      <- zAdd(
                    first,
-                   None,
                    None,
                    None,
                    (MemberScore(5d, "M"), List(MemberScore(6d, "N"), MemberScore(7d, "O")))
                  )
-            _      <- zAdd()(
+            _      <- zAdd(
                    second,
-                   None,
                    None,
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))

@@ -247,7 +247,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- zAdd()(key, None, None, None, (MemberScore(1d, value), Nil))
+            _     <- zAdd(key, None, None, (MemberScore(1d, value), Nil))
             zset  <- typeOf(key)
           } yield assert(zset)(equalTo(RedisType.SortedSet))
         },
