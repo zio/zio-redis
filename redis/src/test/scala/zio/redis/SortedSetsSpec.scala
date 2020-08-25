@@ -183,7 +183,7 @@ trait SortedSetsSpec extends BaseSpec {
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d")))
                  )
             _      <- zAdd(second, None, None, (MemberScore(1d, "a"), List(MemberScore(3d, "c"), MemberScore(5d, "e"))))
-            card   <- zInterStore.apply(s"out_$dest", 2, (first, List(second)), None, None)
+            card   <- zInterStore(s"out_$dest", 2, (first, List(second)), None, None)
           } yield assert(card)(equalTo(2L))
         },
         testM("empty when one of the sets is empty") {

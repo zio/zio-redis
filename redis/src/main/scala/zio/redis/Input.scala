@@ -139,13 +139,6 @@ object Input {
       (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ input.encode(a))
   }
 
-  final case class NonEmptyListPrecededByCount[-A](input: Input[A]) extends Input[(A, List[A])] {
-    def encode(data: (A, List[A])): Chunk[String] =
-      (data._1 :: data._2).foldLeft(Chunk.single(wrap((1 + data._2.length).toString)): Chunk[String])((acc, a) =>
-        acc ++ input.encode(a)
-      )
-  }
-
   case object OrderInput extends Input[Order] {
     def encode(data: Order): Chunk[String] = Chunk.single(wrap(data.stringify))
   }
