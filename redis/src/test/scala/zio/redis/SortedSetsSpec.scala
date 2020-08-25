@@ -183,7 +183,7 @@ trait SortedSetsSpec extends BaseSpec {
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d")))
                  )
             _      <- zAdd(second, None, None, (MemberScore(1d, "a"), List(MemberScore(3d, "c"), MemberScore(5d, "e"))))
-            card   <- zInterStore(s"out_$dest", (first, List(second)), None, None)
+            card   <- zInterStore.apply(s"out_$dest", 2, (first, List(second)), None, None)
           } yield assert(card)(equalTo(2L))
         },
         testM("empty when one of the sets is empty") {
@@ -197,7 +197,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b")))
                  )
-            card     <- zInterStore(dest, (nonEmpty, List(empty)), None, None)
+            card     <- zInterStore(dest, 2, (nonEmpty, List(empty)), None, None)
           } yield assert(card)(equalTo(0L))
         },
         testM("empty when both sets are empty") {
@@ -205,7 +205,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            card   <- zInterStore(dest, (first, List(second)), None, None)
+            card   <- zInterStore(dest, 2, (first, List(second)), None, None)
           } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
@@ -232,7 +232,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b"), MemberScore(3d, "c")))
                  )
-            card   <- zInterStore(dest, (first, List(second, third)), None, None)
+            card   <- zInterStore(dest, 3, (first, List(second, third)), None, None)
           } yield assert(card)(equalTo(1L))
         },
         testM("error when first parameter is not set") {
@@ -242,7 +242,7 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(first, value, None, None, None)
-            card   <- zInterStore(dest, (first, List(second)), None, None).either
+            card   <- zInterStore(dest, 2, (first, List(second)), None, None).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error with empty first set and second parameter is not set") {
@@ -252,7 +252,7 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(second, value, None, None, None)
-            card   <- zInterStore(dest, (first, List(second)), None, None).either
+            card   <- zInterStore(dest, 2, (first, List(second)), None, None).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error with non-empty first set and second parameter is not set") {
@@ -268,7 +268,7 @@ trait SortedSetsSpec extends BaseSpec {
                    (MemberScore(1d, "a"), Nil)
                  )
             _      <- set(second, value, None, None, None)
-            card   <- zInterStore(dest, (first, List(second)), None, None).either
+            card   <- zInterStore(dest, 2, (first, List(second)), None, None).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("parameter weights provided") {
@@ -288,7 +288,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), None, Some(List(2, 3)))
+            card   <- zInterStore(dest, 2, (first, List(second)), None, Some(List(2, 3)))
           } yield assert(card)(equalTo(2L))
         },
         testM("error when invalid weights provided ( less than sets number )") {
@@ -308,7 +308,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), None, Some(List(2))).either
+            card   <- zInterStore(dest, 2, (first, List(second)), None, Some(List(2))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid weights provided ( more than sets number )") {
@@ -328,7 +328,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), None, Some(List(2, 3, 5))).either
+            card   <- zInterStore(dest, 2, (first, List(second)), None, Some(List(2, 3, 5))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set aggregate parameter MAX") {
@@ -348,7 +348,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), Some(Aggregate.Max), None)
+            card   <- zInterStore(dest, 2, (first, List(second)), Some(Aggregate.Max), None)
           } yield assert(card)(equalTo(2L))
         },
         testM("set aggregate parameter MIN") {
@@ -368,7 +368,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), Some(Aggregate.Min), None)
+            card   <- zInterStore(dest, 2, (first, List(second)), Some(Aggregate.Min), None)
           } yield assert(card)(equalTo(2L))
         }
       ),
@@ -1294,7 +1294,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(3d, "c"), MemberScore(5d, "e")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), None, None)
+            card   <- zUnionStore(dest, 2, (first, List(second)), None, None)
           } yield assert(card)(equalTo(5L))
         },
         testM("equal to the non-empty set when the other one is empty") {
@@ -1308,7 +1308,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(1d, "a"), List(MemberScore(2d, "b")))
                  )
-            card     <- zUnionStore(dest, (nonEmpty, List(empty)), None, None)
+            card     <- zUnionStore(dest, 2, (nonEmpty, List(empty)), None, None)
           } yield assert(card)(equalTo(2L))
         },
         testM("empty when both sets are empty") {
@@ -1316,7 +1316,7 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            card   <- zUnionStore(dest, (first, List(second)), None, None)
+            card   <- zUnionStore(dest, 2, (first, List(second)), None, None)
           } yield assert(card)(equalTo(0L))
         },
         testM("non-empty set with multiple non-empty sets") {
@@ -1343,7 +1343,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(2, "b"), List(MemberScore(3d, "c"), MemberScore(5d, "e")))
                  )
-            card   <- zUnionStore(dest, (first, List(second, third)), None, None)
+            card   <- zUnionStore(dest, 3, (first, List(second, third)), None, None)
           } yield assert(card)(equalTo(5L))
         },
         testM("error when the first parameter is not set") {
@@ -1353,7 +1353,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             value  <- uuid
             _      <- set(first, value, None, None, None)
-            card   <- zUnionStore(dest, (first, List(second)), None, None).either
+            card   <- zUnionStore(dest, 2, (first, List(second)), None, None).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when the first parameter is set and the second parameter is not set") {
@@ -1369,7 +1369,7 @@ trait SortedSetsSpec extends BaseSpec {
                    (MemberScore(1, "a"), Nil)
                  )
             _      <- set(second, value, None, None, None)
-            card   <- zUnionStore(dest, (first, List(second)), None, None).either
+            card   <- zUnionStore(dest, 2, (first, List(second)), None, None).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("parameter weights provided") {
@@ -1389,7 +1389,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(List(2, 3)), None)
+            card   <- zUnionStore(dest, 2, (first, List(second)), Some(List(2, 3)), None)
           } yield assert(card)(equalTo(4L))
         },
         testM("error when invalid weights provided ( less than sets number )") {
@@ -1409,7 +1409,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(List(2)), None).either
+            card   <- zUnionStore(dest, 2, (first, List(second)), Some(List(2)), None).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid weights provided ( more than sets number )") {
@@ -1429,7 +1429,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(List(2, 3, 5)), None).either
+            card   <- zUnionStore(dest, 2, (first, List(second)), Some(List(2, 3, 5)), None).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set aggregate parameter MAX") {
@@ -1449,7 +1449,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), None, Some(Aggregate.Max))
+            card   <- zUnionStore(dest, 2, (first, List(second)), None, Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         },
         testM("set aggregate parameter MIN") {
@@ -1469,7 +1469,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), None, Some(Aggregate.Min))
+            card   <- zUnionStore(dest, 2, (first, List(second)), None, Some(Aggregate.Min))
           } yield assert(card)(equalTo(4L))
         },
         testM("parameter weights provided along with aggregate") {
@@ -1489,7 +1489,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(List(2, 3)), Some(Aggregate.Max))
+            card   <- zUnionStore(dest, 2, (first, List(second)), Some(List(2, 3)), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
       )

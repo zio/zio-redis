@@ -39,9 +39,10 @@ trait SortedSets {
 
   final val zInterStore = RedisCommand(
     "ZINTERSTORE",
-    Tuple4(
+    Tuple5(
       StringInput,
-      NonEmptyListPrecededByCount(StringInput),
+      LongInput,
+      NonEmptyList(StringInput),
       OptionalInput(AggregateInput),
       OptionalInput(WeightsInput)
     ),
@@ -94,9 +95,10 @@ trait SortedSets {
 
   final val zUnionStore = RedisCommand(
     "ZUNIONSTORE",
-    Tuple4(
+    Tuple5(
       StringInput,
-      NonEmptyListPrecededByCount(StringInput),
+      LongInput,
+      NonEmptyList(StringInput),
       OptionalInput(WeightsInput),
       OptionalInput(AggregateInput)
     ),
