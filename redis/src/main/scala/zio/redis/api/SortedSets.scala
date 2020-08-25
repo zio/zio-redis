@@ -30,7 +30,7 @@ trait SortedSets {
         IncrementInput,
         NonEmptyList(MemberScoreInput)
       ),
-      DoubleOutput
+      OptionalOutput(DoubleOutput)
     )
 
   final val zCard   = RedisCommand("ZCARD", StringInput, LongOutput)

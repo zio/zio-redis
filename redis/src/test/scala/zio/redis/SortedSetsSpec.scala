@@ -88,7 +88,7 @@ trait SortedSetsSpec extends BaseSpec {
             _        <- zAdd(key, None, None, (MemberScore(2d, "v2"), Nil))
             newScore <- zAddWithIncr(key, None, None, Increment, (MemberScore(3d, "v1"), Nil))
             result   <- zRange(key, Range(0, -1), None)
-          } yield assert(newScore)(equalTo(4.0)) &&
+          } yield assert(newScore)(equalTo(Some(4.0))) &&
             assert(result.toList)(equalTo(List("v2", "v1")))
         }
       ),
