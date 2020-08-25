@@ -8,7 +8,6 @@ trait SortedSets {
   final val bzPopMax = RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val bzPopMin = RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
 
-  // TODO: represent two possible outputs as per the documentation
   final def zAdd[T](output: Output[T] = LongOutput) =
     RedisCommand(
       "ZADD",
@@ -86,8 +85,8 @@ trait SortedSets {
     Tuple4(
       StringInput,
       NonEmptyListPrecededByCount(StringInput),
-      OptionalInput(AggregateInput),
-      OptionalInput(WeightsInput)
+      OptionalInput(WeightsInput),
+      OptionalInput(AggregateInput)
     ),
     LongOutput
   )
