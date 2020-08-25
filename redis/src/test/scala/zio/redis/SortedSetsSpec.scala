@@ -302,7 +302,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), None, Some(Seq(2, 3)))
+            card   <- zInterStore(dest, (first, List(second)), None, Some(List(2, 3)))
           } yield assert(card)(equalTo(2L))
         },
         testM("error when invalid weights provided ( less than sets number )") {
@@ -324,7 +324,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), None, Some(Seq(2))).either
+            card   <- zInterStore(dest, (first, List(second)), None, Some(List(2))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid weights provided ( more than sets number )") {
@@ -346,7 +346,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zInterStore(dest, (first, List(second)), None, Some(Seq(2, 3, 5))).either
+            card   <- zInterStore(dest, (first, List(second)), None, Some(List(2, 3, 5))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set aggregate parameter MAX") {
@@ -1452,7 +1452,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(Seq(2, 3)), None)
+            card   <- zUnionStore(dest, (first, List(second)), Some(List(2, 3)), None)
           } yield assert(card)(equalTo(4L))
         },
         testM("error when invalid weights provided ( less than sets number )") {
@@ -1474,7 +1474,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(Seq(2)), None).either
+            card   <- zUnionStore(dest, (first, List(second)), Some(List(2)), None).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid weights provided ( more than sets number )") {
@@ -1496,7 +1496,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(Seq(2, 3, 5)), None).either
+            card   <- zUnionStore(dest, (first, List(second)), Some(List(2, 3, 5)), None).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set aggregate parameter MAX") {
@@ -1562,7 +1562,7 @@ trait SortedSetsSpec extends BaseSpec {
                    None,
                    (MemberScore(3d, "N"), List(MemberScore(2d, "O"), MemberScore(4d, "P")))
                  )
-            card   <- zUnionStore(dest, (first, List(second)), Some(Seq(2, 3)), Some(Aggregate.Max))
+            card   <- zUnionStore(dest, (first, List(second)), Some(List(2, 3)), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
       )
