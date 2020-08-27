@@ -1264,7 +1264,7 @@ trait SortedSetsSpec extends BaseSpec {
                         key,
                         "Delhi"
                       )
-          } yield assert(result)(equalTo(Some("10")))
+          } yield assert(result)(equalTo(Some(10.0)))
         },
         testM("empty set") {
           for {

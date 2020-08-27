@@ -91,7 +91,7 @@ trait SortedSets {
     ScanOutput
   )
 
-  final val zScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(StringOutput))
+  final val zScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(DoubleOutput))
 
   final val zUnionStore = RedisCommand(
     "ZUNIONSTORE",
