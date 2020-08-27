@@ -8,18 +8,30 @@ trait SortedSets {
   final val bzPopMax = RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val bzPopMin = RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
 
-  // TODO: represent two possible outputs as per the documentation
-  final val zAdd = RedisCommand(
-    "ZADD",
-    Tuple5(
-      StringInput,
-      OptionalInput(UpdateInput),
-      OptionalInput(ChangedInput),
-      OptionalInput(IncrementInput),
-      NonEmptyList(MemberScoreInput)
-    ),
-    LongOutput
-  )
+  final def zAdd =
+    RedisCommand(
+      "ZADD",
+      Tuple4(
+        StringInput,
+        OptionalInput(UpdateInput),
+        OptionalInput(ChangedInput),
+        NonEmptyList(MemberScoreInput)
+      ),
+      LongOutput
+    )
+
+  final def zAddWithIncr =
+    RedisCommand(
+      "ZADD",
+      Tuple5(
+        StringInput,
+        OptionalInput(UpdateInput),
+        OptionalInput(ChangedInput),
+        IncrementInput,
+        NonEmptyList(MemberScoreInput)
+      ),
+      OptionalOutput(DoubleOutput)
+    )
 
   final val zCard   = RedisCommand("ZCARD", StringInput, LongOutput)
   final val zCount  = RedisCommand("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
@@ -27,11 +39,12 @@ trait SortedSets {
 
   final val zInterStore = RedisCommand(
     "ZINTERSTORE",
-    Tuple4(
+    Tuple5(
       StringInput,
+      LongInput,
       NonEmptyList(StringInput),
-      OptionalInput(NonEmptyList(DoubleInput)),
-      OptionalInput(AggregateInput)
+      OptionalInput(AggregateInput),
+      OptionalInput(WeightsInput)
     ),
     LongOutput
   )
@@ -74,18 +87,19 @@ trait SortedSets {
 
   final val zScan = RedisCommand(
     "ZSCAN",
-    Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+    Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
     ScanOutput
   )
 
-  final val zScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
+  final val zScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(DoubleOutput))
 
   final val zUnionStore = RedisCommand(
     "ZUNIONSTORE",
-    Tuple4(
+    Tuple5(
       StringInput,
+      LongInput,
       NonEmptyList(StringInput),
-      OptionalInput(NonEmptyList(DoubleInput)),
+      OptionalInput(WeightsInput),
       OptionalInput(AggregateInput)
     ),
     LongOutput

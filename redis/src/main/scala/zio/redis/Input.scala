@@ -20,7 +20,7 @@ object Input {
   }
 
   case object AggregateInput extends Input[Aggregate] {
-    def encode(data: Aggregate): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Aggregate): Chunk[String] = Chunk(wrap("AGGREGATE"), wrap(data.stringify))
   }
 
   case object AuthInput extends Input[Auth] {
@@ -185,6 +185,11 @@ object Input {
 
   case object TimeMillisecondsInput extends Input[Instant] {
     def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.toEpochMilli.toString))
+  }
+
+  case object WeightsInput extends Input[List[Double]] {
+    def encode(data: List[Double]): Chunk[String] =
+      data.foldLeft(Chunk.single(wrap("WEIGHTS")): Chunk[String])((acc, a) => acc ++ Chunk.single(wrap(a.toString)))
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
