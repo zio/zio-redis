@@ -7,13 +7,13 @@ import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.TimeUnit
 
-import scala.collection.mutable.ArrayBuilder
-
 import zio._
 import zio.clock.{ currentTime, sleep, Clock }
 import zio.duration.{ durationInt, Duration }
 import zio.redis.ConnectionType._
 import zio.stm.{ STM, TQueue, TRef }
+
+import scala.collection.mutable.ArrayBuilder
 
 trait Interpreter {
   type RedisExecutor = Has[RedisExecutor.Service]
@@ -26,7 +26,7 @@ trait Interpreter {
       def execute(command: Chunk[String], connectionType: ConnectionType): Task[String]
     }
 
-    // TODO: parametrize time interval in which connections should be clean
+    // TODO: parametrize time interval in which connections should be cleaned
     def live(config: PoolConfig): URLayer[Clock, RedisExecutor] =
       ZLayer.fromManaged {
         for {
@@ -111,9 +111,9 @@ trait Interpreter {
     }
 
     private[this] final class ConnectionPools private (
-      basePool: ConnectionPool,
-      streamsPool: ConnectionPool,
-      transactionsPool: ConnectionPool
+      basePool: QueuePool,
+      streamsPool: QueuePool,
+      transactionsPool: QueuePool
     ) {
       def get(connectionType: ConnectionType): RManaged[Clock, Connection] =
         connectionType match {
@@ -133,15 +133,13 @@ trait Interpreter {
     private[this] object ConnectionPools {
       def apply(cfg: PoolConfig): UManaged[ConnectionPools] =
         for {
-          basePool         <- ConnectionPool(cfg.host, cfg.port, cfg.baseMaxSize, cfg.baseMaxIdleTimeout)
-          streamsPool      <- ConnectionPool(cfg.host, cfg.port, cfg.streamsMaxSize, cfg.streamsMaxIdleTimeout)
-          transactionsPool <-
-            ConnectionPool(cfg.host, cfg.port, cfg.transactionsMaxSize, cfg.transactionsMaxIdleTimeout)
+          basePool         <- QueuePool(cfg.host, cfg.port, cfg.baseMaxSize, cfg.baseMaxIdleTimeout)
+          streamsPool      <- QueuePool(cfg.host, cfg.port, cfg.streamsMaxSize, cfg.streamsMaxIdleTimeout)
+          transactionsPool <- QueuePool(cfg.host, cfg.port, cfg.transactionsMaxSize, cfg.transactionsMaxIdleTimeout)
         } yield new ConnectionPools(basePool, streamsPool, transactionsPool)
     }
 
-    // Add timeout and then create ConnectionPools
-    private[this] final class ConnectionPool(
+    private[this] final class QueuePool(
       host: String,
       port: Int,
       conns: TQueue[Connection],
@@ -171,6 +169,7 @@ trait Interpreter {
           for {
             createConn <- STM.atomically {
                             for {
+                              _          <- conns.size
                               connsEmpty <- conns.isEmpty
                               numOfConns <- size.get
                               create      = connsEmpty && numOfConns < maxSize
@@ -217,13 +216,13 @@ trait Interpreter {
         } yield ()
     }
 
-    private[this] object ConnectionPool {
-      def apply(host: String, port: Int, maxSize: Int, maxIdleTimeout: Duration): UManaged[ConnectionPool] = {
+    private[this] object QueuePool {
+      def apply(host: String, port: Int, maxSize: Int, maxIdleTimeout: Duration): UManaged[QueuePool] = {
         val makeCP = for {
           queue  <- TQueue.bounded[Connection](maxSize).commit
           size   <- TRef.makeCommit(0)
           closed <- TRef.makeCommit(false)
-        } yield new ConnectionPool(host, port, queue, closed, maxSize, size, maxIdleTimeout.toMillis)
+        } yield new QueuePool(host, port, queue, closed, maxSize, size, maxIdleTimeout.toMillis)
 
         Managed.make(makeCP)(_.close)
       }
