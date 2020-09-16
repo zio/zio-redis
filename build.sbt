@@ -62,7 +62,7 @@ lazy val benchmarks =
       crossScalaVersions -= Scala211,
       skip in publish := true,
       libraryDependencies ++= Seq(
-        "dev.profunktor"    %% "redis4cats-effects" % "0.10.2",
+        "dev.profunktor"    %% "redis4cats-effects" % "0.10.3",
         "io.chrisdavenport" %% "rediculous"         % "0.0.8",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.0"
       ),
