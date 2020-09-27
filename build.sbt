@@ -64,7 +64,7 @@ lazy val benchmarks =
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.10.3",
         "io.chrisdavenport" %% "rediculous"         % "0.0.8",
-        "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.0"
+        "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
       scalacOptions in Compile := Seq(
         "-Xlint:unused"
