@@ -17,7 +17,7 @@ trait ListSpec extends BaseSpec {
         testM("lPop non-empty list") {
           for {
             key    <- uuid
-            _      <- lPush(key)("world", "hello")
+            _      <- lPush(key, "world", "hello")
             popped <- lPop(key)
           } yield assert(popped)(isSome(equalTo("hello")))
         },
@@ -30,14 +30,14 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             pop   <- lPop(key).either
           } yield assert(pop)(isLeft)
         },
         testM("rPop non-empty list") {
           for {
             key <- uuid
-            _   <- rPush(key)("world", "hello")
+            _   <- rPush(key, "world", "hello")
             pop <- rPop(key)
           } yield assert(pop)(isSome(equalTo("hello")))
         },
@@ -50,7 +50,7 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             pop   <- rPop(key).either
           } yield assert(pop)(isLeft)
         }
@@ -59,71 +59,71 @@ trait ListSpec extends BaseSpec {
         testM("lPush onto empty list") {
           for {
             key  <- uuid
-            push <- lPush(key)("hello")
+            push <- lPush(key, "hello")
           } yield assert(push)(equalTo(1L))
         },
         testM("lPush error when not list") {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
-            push  <- lPush(key)("hello").either
+            _     <- set(key, value)
+            push  <- lPush(key, "hello").either
           } yield assert(push)(isLeft)
         },
         testM("lPushX onto non-empty list") {
           for {
             key <- uuid
-            _   <- lPush(key)("world")
-            px  <- lPushX(key)("hello")
+            _   <- lPush(key, "world")
+            px  <- lPushX(key, "hello")
           } yield assert(px)(equalTo(2L))
         },
         testM("lPushX nothing when key doesn't exist") {
           for {
             key <- uuid
-            px  <- lPushX(key)("world")
+            px  <- lPushX(key, "world")
           } yield assert(px)(equalTo(0L))
         },
         testM("lPushX error when not list") {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
-            push  <- lPushX(key)("hello").either
+            _     <- set(key, value)
+            push  <- lPushX(key, "hello").either
           } yield assert(push)(isLeft)
         },
         testM("rPush onto empty list") {
           for {
             key  <- uuid
-            push <- rPush(key)("hello")
+            push <- rPush(key, "hello")
           } yield assert(push)(equalTo(1L))
         },
         testM("rPush error when not list") {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
-            push  <- rPush(key)("hello").either
+            _     <- set(key, value)
+            push  <- rPush(key, "hello").either
           } yield assert(push)(isLeft)
         },
         testM("rPushX onto non-empty list") {
           for {
             key <- uuid
-            _   <- rPush(key)("world")
-            px  <- rPushX(key)("hello")
+            _   <- rPush(key, "world")
+            px  <- rPushX(key, "hello")
           } yield assert(px)(equalTo(2L))
         },
         testM("rPushX nothing when key doesn't exist") {
           for {
             key <- uuid
-            px  <- rPushX(key)("world")
+            px  <- rPushX(key, "world")
           } yield assert(px)(equalTo(0L))
         },
         testM("rPushX error when not list") {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
-            push  <- rPushX(key)("hello").either
+            _     <- set(key, value)
+            push  <- rPushX(key, "hello").either
           } yield assert(push)(isLeft)
         }
       ),
@@ -132,8 +132,8 @@ trait ListSpec extends BaseSpec {
           for {
             key  <- uuid
             dest <- uuid
-            _    <- rPush(key)("one", "two", "three")
-            _    <- rPush(dest)("four")
+            _    <- rPush(key, "one", "two", "three")
+            _    <- rPush(dest, "four")
             _    <- rPopLPush(key, dest)
             r    <- lRange(key, 0 to -1)
             l    <- lRange(dest, 0 to -1)
@@ -143,7 +143,7 @@ trait ListSpec extends BaseSpec {
           for {
             key  <- uuid
             dest <- uuid
-            _    <- rPush(dest)("four")
+            _    <- rPush(dest, "four")
             _    <- rPopLPush(key, dest)
             l    <- lRange(dest, 0 to -1)
           } yield assert(l)(equalTo(Chunk("four")))
@@ -153,7 +153,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             dest  <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             rpp   <- rPopLPush(key, dest).either
           } yield assert(rpp)(isLeft)
         },
@@ -161,8 +161,8 @@ trait ListSpec extends BaseSpec {
           for {
             key  <- uuid
             dest <- uuid
-            _    <- rPush(key)("one", "two", "three")
-            _    <- rPush(dest)("four")
+            _    <- rPush(key, "one", "two", "three")
+            _    <- rPush(dest, "four")
             _    <- brPopLPush(key, dest, 1.seconds)
             r    <- lRange(key, 0 to -1)
             l    <- lRange(dest, 0 to -1)
@@ -172,7 +172,7 @@ trait ListSpec extends BaseSpec {
           for {
             key     <- uuid
             dest    <- uuid
-            _       <- rPush(dest)("four")
+            _       <- rPush(dest, "four")
             st      <- currentTime(TimeUnit.SECONDS)
             s       <- brPopLPush(key, dest, 1.seconds).either
             endTime <- currentTime(TimeUnit.SECONDS)
@@ -183,7 +183,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             dest  <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             bpp   <- brPopLPush(key, dest, 1.seconds).either
           } yield assert(bpp)(isLeft)
         }
@@ -192,7 +192,7 @@ trait ListSpec extends BaseSpec {
         testM("lRem 2 elements moving from head") {
           for {
             key     <- uuid
-            _       <- lPush(key)("world", "hello", "hello", "hello")
+            _       <- lPush(key, "world", "hello", "hello", "hello")
             removed <- lRem(key, 2, "hello")
             range   <- lRange(key, 0 to 1)
           } yield assert(removed)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
@@ -200,7 +200,7 @@ trait ListSpec extends BaseSpec {
         testM("lRem 2 elements moving from tail") {
           for {
             key     <- uuid
-            _       <- lPush(key)("hello", "hello", "world", "hello")
+            _       <- lPush(key, "hello", "hello", "world", "hello")
             removed <- lRem(key, -2, "hello")
             range   <- lRange(key, 0 to 1)
           } yield assert(removed)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
@@ -208,7 +208,7 @@ trait ListSpec extends BaseSpec {
         testM("lRem all 3 'hello' elements") {
           for {
             key     <- uuid
-            _       <- lPush(key)("hello", "hello", "world", "hello")
+            _       <- lPush(key, "hello", "hello", "world", "hello")
             removed <- lRem(key, 0, "hello")
             range   <- lRange(key, 0 to 1)
           } yield assert(removed)(equalTo(3L)) && assert(range)(equalTo(Chunk("world")))
@@ -216,7 +216,7 @@ trait ListSpec extends BaseSpec {
         testM("lRem nothing when key does not exist") {
           for {
             key     <- uuid
-            _       <- lPush(key)("world", "hello")
+            _       <- lPush(key, "world", "hello")
             removed <- lRem(key, 0, "goodbye")
             range   <- lRange(key, 0 to 1)
           } yield assert(removed)(equalTo(0L)) && assert(range)(equalTo(Chunk("hello", "world")))
@@ -224,7 +224,7 @@ trait ListSpec extends BaseSpec {
         testM("lRem error when not list") {
           for {
             key     <- uuid
-            _       <- set(key, "hello", None, None, None)
+            _       <- set(key, "hello")
             removed <- lRem(key, 0, "hello").either
           } yield assert(removed)(isLeft)
         }
@@ -233,7 +233,7 @@ trait ListSpec extends BaseSpec {
         testM("lSet element") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             _     <- lSet(key, 1, "goodbye")
             range <- lRange(key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello", "goodbye")))
@@ -241,14 +241,14 @@ trait ListSpec extends BaseSpec {
         testM("lSet error when index out of bounds") {
           for {
             key <- uuid
-            _   <- lPush(key)("world", "hello")
+            _   <- lPush(key, "world", "hello")
             set <- lSet(key, 2, "goodbye").either
           } yield assert(set)(isLeft)
         },
         testM("lSet error when not list") {
           for {
             key <- uuid
-            _   <- set(key, "hello", None, None, None)
+            _   <- set(key, "hello")
             set <- lSet(key, 0, "goodbye").either
           } yield assert(set)(isLeft)
         }
@@ -257,7 +257,7 @@ trait ListSpec extends BaseSpec {
         testM("lLen non-empty list") {
           for {
             key <- uuid
-            _   <- lPush(key)("world", "hello")
+            _   <- lPush(key, "world", "hello")
             len <- lLen(key)
           } yield assert(len)(equalTo(2L))
         },
@@ -270,7 +270,7 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             index <- lLen(key).either
           } yield assert(index)(isLeft)
         }
@@ -279,36 +279,36 @@ trait ListSpec extends BaseSpec {
         testM("lRange two elements") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             range <- lRange(key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRange two elements negative indices") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             range <- lRange(key, -2 to -1)
           } yield assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRange start out of bounds") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             range <- lRange(key, 2 to 3)
           } yield assert(range)(equalTo(Chunk()))
         },
         testM("lRange end out of bounds") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             range <- lRange(key, 1 to 2)
           } yield assert(range)(equalTo(Chunk("world")))
         },
         testM("lRange error when not list") {
           for {
             key   <- uuid
-            _     <- set(key, "hello", None, None, None)
-            range <- lRange(key, Range(1, 2)).either
+            _     <- set(key, "hello")
+            range <- lRange(key, 1 to 2).either
           } yield assert(range)(isLeft)
         }
       ),
@@ -316,21 +316,21 @@ trait ListSpec extends BaseSpec {
         testM("lIndex first element") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             index <- lIndex(key, 0L)
           } yield assert(index)(isSome(equalTo("hello")))
         },
         testM("lIndex last element") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             index <- lIndex(key, -1L)
           } yield assert(index)(isSome(equalTo("world")))
         },
         testM("lIndex no existing element") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             index <- lIndex(key, 3)
           } yield assert(index)(isNone)
         },
@@ -338,7 +338,7 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             index <- lIndex(key, -1L).either
           } yield assert(index)(isLeft)
         }
@@ -347,7 +347,7 @@ trait ListSpec extends BaseSpec {
         testM("lTrim element") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 0 to 0)
             range <- lRange(key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello")))
@@ -355,7 +355,7 @@ trait ListSpec extends BaseSpec {
         testM("lTrim start index out of bounds") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 2 to 5)
             range <- lRange(key, 0 to 1)
           } yield assert(range)(equalTo(Chunk()))
@@ -363,7 +363,7 @@ trait ListSpec extends BaseSpec {
         testM("lTrim end index out of bounds") {
           for {
             key   <- uuid
-            _     <- lPush(key)("world", "hello")
+            _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 0 to 3)
             range <- lRange(key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello", "world")))
@@ -371,7 +371,7 @@ trait ListSpec extends BaseSpec {
         testM("lTrim error when not list") {
           for {
             key  <- uuid
-            _    <- set(key, "hello", None, None, None)
+            _    <- set(key, "hello")
             trim <- lTrim(key, 0 to 3).either
           } yield assert(trim)(isLeft)
         }
@@ -380,7 +380,7 @@ trait ListSpec extends BaseSpec {
         testM("from single list") {
           for {
             key        <- uuid
-            _          <- lPush(key)("a", "b", "c")
+            _          <- lPush(key, "a", "b", "c")
             popped     <- blPop(key)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
@@ -390,7 +390,7 @@ trait ListSpec extends BaseSpec {
           for {
             empty      <- uuid
             nonEmpty   <- uuid
-            _          <- lPush(nonEmpty)("a", "b", "c")
+            _          <- lPush(nonEmpty, "a", "b", "c")
             popped     <- blPop(empty, nonEmpty)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(nonEmpty)) &&
@@ -412,7 +412,7 @@ trait ListSpec extends BaseSpec {
         testM("from non-empty list with timeout 0s") {
           for {
             key        <- uuid
-            _          <- lPush(key)("a", "b", "c")
+            _          <- lPush(key, "a", "b", "c")
             popped     <- blPop(key)(0.seconds).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
@@ -422,7 +422,7 @@ trait ListSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, value, None, None, None)
+            _      <- set(key, value)
             popped <- blPop(key)(1.second).either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -431,7 +431,7 @@ trait ListSpec extends BaseSpec {
         testM("from single list") {
           for {
             key        <- uuid
-            _          <- lPush(key)("a", "b", "c")
+            _          <- lPush(key, "a", "b", "c")
             popped     <- brPop(key)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
@@ -441,7 +441,7 @@ trait ListSpec extends BaseSpec {
           for {
             empty      <- uuid
             nonEmpty   <- uuid
-            _          <- lPush(nonEmpty)("a", "b", "c")
+            _          <- lPush(nonEmpty, "a", "b", "c")
             popped     <- brPop(empty, nonEmpty)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(nonEmpty)) &&
@@ -463,7 +463,7 @@ trait ListSpec extends BaseSpec {
         testM("from non-empty list with timeout 0s") {
           for {
             key        <- uuid
-            _          <- lPush(key)("a", "b", "c")
+            _          <- lPush(key, "a", "b", "c")
             popped     <- brPop(key)(0.seconds).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
@@ -473,7 +473,7 @@ trait ListSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, value, None, None, None)
+            _      <- set(key, value)
             popped <- brPop(key)(1.second).either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -482,14 +482,14 @@ trait ListSpec extends BaseSpec {
         testM("before pivot into non-empty list") {
           for {
             key <- uuid
-            _   <- lPush(key)("a", "b", "c")
+            _   <- lPush(key, "a", "b", "c")
             len <- lInsert(key, Position.Before, "b", "d")
           } yield assert(len)(equalTo(4L))
         },
         testM("after pivot into non-empty list") {
           for {
             key <- uuid
-            _   <- lPush(key)("a", "b", "c")
+            _   <- lPush(key, "a", "b", "c")
             len <- lInsert(key, Position.After, "b", "d")
           } yield assert(len)(equalTo(4L))
         },
@@ -508,14 +508,14 @@ trait ListSpec extends BaseSpec {
         testM("before pivot that doesn't exist") {
           for {
             key <- uuid
-            _   <- lPush(key)("a", "b", "c")
+            _   <- lPush(key, "a", "b", "c")
             len <- lInsert(key, Position.Before, "unknown", "d")
           } yield assert(len)(equalTo(-1L))
         },
         testM("after pivot that doesn't exist") {
           for {
             key <- uuid
-            _   <- lPush(key)("a", "b", "c")
+            _   <- lPush(key, "a", "b", "c")
             len <- lInsert(key, Position.After, "unknown", "d")
           } yield assert(len)(equalTo(-1L))
         },
@@ -523,7 +523,7 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             len   <- lInsert(key, Position.Before, "a", "b").either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         },
@@ -531,7 +531,7 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value, None, None, None)
+            _     <- set(key, value)
             len   <- lInsert(key, Position.After, "a", "b").either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }
