@@ -1,34 +1,94 @@
 package zio.redis.api
 
+import zio.{ Chunk, ZIO }
 import zio.redis.Input._
 import zio.redis.Output._
-import zio.redis.RedisCommand
+import zio.redis._
+import scala.util.matching.Regex
 
 trait Hashes {
-  final val hDel         = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val hExists      = RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
-  final val hGet         = RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
-  final val hGetAll      = RedisCommand("HGETALL", StringInput, KeyValueOutput)
-  final val hIncrBy      = RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
+  final val hDel =
+    new RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput) { self =>
+      def apply(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] = self.run((a, (b, bs.toList)))
+    }
+
+  final val hExists =
+    new RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput) { self =>
+      def apply(a: String, b: String): ZIO[RedisExecutor, RedisError, Boolean] = self.run((a, b))
+    }
+
+  final val hGet =
+    new RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput)) { self =>
+      def apply(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[String]] = self.run((a, b))
+    }
+
+  final val hGetAll =
+    new RedisCommand("HGETALL", StringInput, KeyValueOutput) { self =>
+      def apply(a: String): ZIO[RedisExecutor, RedisError, Map[String, String]] = self.run(a)
+    }
+
+  final val hIncrBy =
+    new RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput) { self =>
+      def apply(a: String, b: String, c: Long): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b, c))
+    }
+
   final val hIncrByFloat =
-    RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), IncrementOutput)
-  final val hKeys        = RedisCommand("HKEYS", StringInput, ChunkOutput)
-  final val hLen         = RedisCommand("HLEN", StringInput, LongOutput)
-  final val hmGet        = RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+    new RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), IncrementOutput) { self =>
+      def apply(a: String, b: String, c: Double): ZIO[RedisExecutor, RedisError, Double] = self.run((a, b, c))
+    }
 
-  final val hScan = RedisCommand(
-    "HSCAN",
-    Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
-    ScanOutput
-  )
+  final val hKeys =
+    new RedisCommand("HKEYS", StringInput, ChunkOutput) { self =>
+      def apply(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = self.run(a)
+    }
 
-  final val hSet = RedisCommand(
-    "HSET",
-    Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
-    LongOutput
-  )
+  final val hLen =
+    new RedisCommand("HLEN", StringInput, LongOutput) { self =>
+      def apply(a: String): ZIO[RedisExecutor, RedisError, Long] = self.run(a)
+    }
 
-  final val hSetNx  = RedisCommand("HSETNX", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
-  final val hStrLen = RedisCommand("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
-  final val hVals   = RedisCommand("HVALS", StringInput, ChunkOutput)
+  final val hmGet =
+    new RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput) { self =>
+      def apply(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+        self.run((a, (b, bs.toList)))
+    }
+
+  final val hScan =
+    new RedisCommand(
+      "HSCAN",
+      Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+      ScanOutput
+    ) { self =>
+      def apply(
+        a: Long,
+        b: Option[Regex] = None,
+        c: Option[Long] = None,
+        d: Option[String] = None
+      ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = self.run((a, b, c, d))
+    }
+
+  final val hSet =
+    new RedisCommand(
+      "HSET",
+      Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
+      LongOutput
+    ) { self =>
+      def apply(a: String, b: (String, String), bs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
+        self.run((a, (b, bs.toList)))
+    }
+
+  final val hSetNx =
+    new RedisCommand("HSETNX", Tuple3(StringInput, StringInput, StringInput), BoolOutput) { self =>
+      def apply(a: String, b: String, c: String): ZIO[RedisExecutor, RedisError, Boolean] = self.run((a, b, c))
+    }
+
+  final val hStrLen =
+    new RedisCommand("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput) { self =>
+      def apply(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b))
+    }
+
+  final val hVals =
+    new RedisCommand("HVALS", StringInput, ChunkOutput) { self =>
+      def apply(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = self.run(a)
+    }
 }
