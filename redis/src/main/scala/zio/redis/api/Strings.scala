@@ -7,110 +7,104 @@ import zio.redis._
 import java.time.Duration
 
 trait Strings {
-  final val append =
-    new RedisCommand("APPEND", Tuple2(StringInput, StringInput), LongOutput) { self =>
-      def apply(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b))
-    }
+  import Strings._
 
-  final val bitCount =
-    new RedisCommand("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput) { self =>
-      def apply(a: String, b: Option[Range] = None): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b))
-    }
+  final def append(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = Append.run((a, b))
 
-  final val bitField =
+  final def bitCount(a: String, b: Option[Range] = None): ZIO[RedisExecutor, RedisError, Long] = BitCount.run((a, b))
+
+  final def bitField(
+    a: String,
+    b: BitFieldCommand,
+    bs: BitFieldCommand*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[Long]]] = BitField.run((a, (b, bs.toList)))
+
+  final def bitOp(a: BitOperation, b: String, c: String, cs: String*): ZIO[RedisExecutor, RedisError, Long] =
+    BitOp.run((a, b, (c, cs.toList)))
+
+  final def bitPos(a: String, b: Boolean, c: Option[BitPosRange] = None): ZIO[RedisExecutor, RedisError, Long] =
+    BitPos.run((a, b, c))
+
+  final def decr(a: String): ZIO[RedisExecutor, RedisError, Long] = Decr.run(a)
+
+  final def decrBy(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = DecrBy.run((a, b))
+
+  final def get(a: String): ZIO[RedisExecutor, RedisError, Option[String]] = Get.run(a)
+
+  final def getBit(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = GetBit.run((a, b))
+
+  final def getRange(a: String, b: Range): ZIO[RedisExecutor, RedisError, String] = GetRange.run((a, b))
+
+  final def getSet(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[String]] = GetSet.run((a, b))
+
+  final def incr(a: String): ZIO[RedisExecutor, RedisError, Long] = Incr.run(a)
+
+  final def incrBy(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = IncrBy.run((a, b))
+
+  final def incrByFloat(a: String, b: Double): ZIO[RedisExecutor, RedisError, String] = IncrByFloat.run((a, b))
+
+  final def mGet(a: String, as: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
+    MGet.run((a, as.toList))
+
+  final def mSet(a: (String, String), as: (String, String)*): ZIO[RedisExecutor, RedisError, Unit] =
+    MSet.run((a, as.toList))
+
+  final def mSetNx(a: (String, String), as: (String, String)*): ZIO[RedisExecutor, RedisError, Boolean] =
+    MSetNx.run((a, as.toList))
+
+  final def pSetEx(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = PSetEx.run((a, b, c))
+
+  final def set(
+        a: String,
+        b: String,
+        c: Option[Duration] = None,
+        d: Option[Update] = None,
+        e: Option[KeepTtl] = None
+      ): ZIO[RedisExecutor, RedisError, Option[Unit]] = Set.run((a, b, c, d, e))
+
+  final def setBit(a: String, b: Long, c: Boolean): ZIO[RedisExecutor, RedisError, Boolean] = SetBit.run((a, b, c))
+
+  final def setEx(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = SetEx.run((a, b, c))
+
+  final def setNx(a: String, b: String): ZIO[RedisExecutor, RedisError, Boolean] = SetNx.run((a, b))
+
+  final def setRange(a: String, b: Long, c: String): ZIO[RedisExecutor, RedisError, Long] = SetRange.run((a, b, c))
+
+  final def strLen(a: String): ZIO[RedisExecutor, RedisError, Long] = StrLen.run(a)
+}
+
+private[api] object Strings {
+  final val Append   = new RedisCommand("APPEND", Tuple2(StringInput, StringInput), LongOutput)
+  final val BitCount = new RedisCommand("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
+
+  final val BitField =
     new RedisCommand(
       "BITFIELD",
       Tuple2(StringInput, NonEmptyList(BitFieldCommandInput)),
       ChunkOptionalLongOutput
-    ) { self =>
-      def apply(
-        a: String,
-        b: BitFieldCommand,
-        bs: BitFieldCommand*
-      ): ZIO[RedisExecutor, RedisError, Chunk[Option[Long]]] = self.run((a, (b, bs.toList)))
-    }
+    )
 
-  final val bitOp =
-    new RedisCommand("BITOP", Tuple3(BitOperationInput, StringInput, NonEmptyList(StringInput)), LongOutput) { self =>
-      def apply(a: BitOperation, b: String, c: String, cs: String*): ZIO[RedisExecutor, RedisError, Long] =
-        self.run((a, b, (c, cs.toList)))
-    }
+  final val BitOp =
+    new RedisCommand("BITOP", Tuple3(BitOperationInput, StringInput, NonEmptyList(StringInput)), LongOutput)
 
-  final val bitPos =
-    new RedisCommand("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(BitPosRangeInput)), LongOutput) { self =>
-      def apply(a: String, b: Boolean, c: Option[BitPosRange] = None): ZIO[RedisExecutor, RedisError, Long] =
-        self.run((a, b, c))
-    }
+  final val BitPos =
+    new RedisCommand("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
 
-  final val decr =
-    new RedisCommand("DECR", StringInput, LongOutput) { self =>
-      def apply(a: String): ZIO[RedisExecutor, RedisError, Long] = self.run(a)
-    }
+  final val Decr        = new RedisCommand("DECR", StringInput, LongOutput)
+  final val DecrBy      = new RedisCommand("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
+  final val Get         = new RedisCommand("GET", StringInput, OptionalOutput(MultiStringOutput))
+  final val GetBit      = new RedisCommand("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
+  final val GetRange    = new RedisCommand("GETRANGE", Tuple2(StringInput, RangeInput), MultiStringOutput)
+  final val GetSet      = new RedisCommand("GETSET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
+  final val Incr        = new RedisCommand("INCR", StringInput, LongOutput)
+  final val IncrBy      = new RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
+  final val IncrByFloat = new RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), MultiStringOutput)
+  final val MGet        = new RedisCommand("MGET", NonEmptyList(StringInput), ChunkOptionalMultiStringOutput)
+  final val MSet        = new RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, StringInput)), UnitOutput)
+  final val MSetNx      = new RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, StringInput)), BoolOutput)
+  final val PSetEx      = new RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, StringInput), UnitOutput)
 
-  final val decrBy =
-    new RedisCommand("DECRBY", Tuple2(StringInput, LongInput), LongOutput) { self =>
-      def apply(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b))
-    }
-
-  final val get =
-    new RedisCommand("GET", StringInput, OptionalOutput(MultiStringOutput)) { self =>
-      def apply(a: String): ZIO[RedisExecutor, RedisError, Option[String]] = self.run(a)
-    }
-
-  final val getBit =
-    new RedisCommand("GETBIT", Tuple2(StringInput, LongInput), LongOutput) { self =>
-      def apply(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b))
-    }
-
-  final val getRange =
-    new RedisCommand("GETRANGE", Tuple2(StringInput, RangeInput), MultiStringOutput) { self =>
-      def apply(a: String, b: Range): ZIO[RedisExecutor, RedisError, String] = self.run((a, b))
-    }
-
-  final val getSet =
-    new RedisCommand("GETSET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput)) { self =>
-      def apply(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[String]] = self.run((a, b))
-    }
-
-  final val incr =
-    new RedisCommand("INCR", StringInput, LongOutput) { self =>
-      def apply(a: String): ZIO[RedisExecutor, RedisError, Long] = self.run(a)
-    }
-
-  final val incrBy =
-    new RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput) { self =>
-      def apply(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b))
-    }
-
-  final val incrByFloat =
-    new RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), MultiStringOutput) { self =>
-      def apply(a: String, b: Double): ZIO[RedisExecutor, RedisError, String] = self.run((a, b))
-    }
-
-  final val mGet =
-    new RedisCommand("MGET", NonEmptyList(StringInput), ChunkOptionalMultiStringOutput) { self =>
-      def apply(a: String, as: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
-        self.run((a, as.toList))
-    }
-
-  final val mSet =
-    new RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, StringInput)), UnitOutput) { self =>
-      def apply(a: (String, String), as: (String, String)*): ZIO[RedisExecutor, RedisError, Unit] =
-        self.run((a, as.toList))
-    }
-
-  final val mSetNx =
-    new RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, StringInput)), BoolOutput) { self =>
-      def apply(a: (String, String), as: (String, String)*): ZIO[RedisExecutor, RedisError, Boolean] =
-        self.run((a, as.toList))
-    }
-
-  final val pSetEx =
-    new RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, StringInput), UnitOutput) { self =>
-      def apply(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = self.run((a, b, c))
-    }
-
-  final val set =
+  final val Set =
     new RedisCommand(
       "SET",
       Tuple5(
@@ -121,38 +115,11 @@ trait Strings {
         OptionalInput(KeepTtlInput)
       ),
       OptionalOutput(UnitOutput)
-    ) { self =>
-      def apply(
-        a: String,
-        b: String,
-        c: Option[Duration] = None,
-        d: Option[Update] = None,
-        e: Option[KeepTtl] = None
-      ): ZIO[RedisExecutor, RedisError, Option[Unit]] = self.run((a, b, c, d, e))
-    }
+    )
 
-  final val setBit =
-    new RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput) { self =>
-      def apply(a: String, b: Long, c: Boolean): ZIO[RedisExecutor, RedisError, Boolean] = self.run((a, b, c))
-    }
-
-  final val setEx =
-    new RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput) { self =>
-      def apply(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = self.run((a, b, c))
-    }
-
-  final val setNx =
-    new RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput) { self =>
-      def apply(a: String, b: String): ZIO[RedisExecutor, RedisError, Boolean] = self.run((a, b))
-    }
-
-  final val setRange =
-    new RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput) { self =>
-      def apply(a: String, b: Long, c: String): ZIO[RedisExecutor, RedisError, Long] = self.run((a, b, c))
-    }
-
-  final val strLen =
-    new RedisCommand("STRLEN", StringInput, LongOutput) { self =>
-      def apply(a: String): ZIO[RedisExecutor, RedisError, Long] = self.run(a)
-    }
+  final val SetBit   = new RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
+  final val SetEx    = new RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
+  final val SetNx    = new RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
+  final val SetRange = new RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+  final val StrLen   = new RedisCommand("STRLEN", StringInput, LongOutput)
 }
