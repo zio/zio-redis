@@ -6,19 +6,19 @@ import zio.redis.Output._
 import zio.redis._
 
 trait HyperLogLog {
-  final val pfAdd =
-    new RedisCommand("PFADD", Tuple2(StringInput, NonEmptyList(StringInput)), BoolOutput) { self =>
-      def apply(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Boolean] =
-        self.run((a, (b, bs.toList)))
-    }
+  import HyperLogLog._
 
-  final val pfCount = 
-    new RedisCommand("PFCOUNT", NonEmptyList(StringInput), LongOutput) { self =>
-      def apply(a: String, as: String*): ZIO[RedisExecutor, RedisError, Long] = self.run((a, as.toList))
-    }
+  final def pfAdd(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Boolean] =
+    PfAdd.run((a, (b, bs.toList)))
 
-  final val pfMerge = 
-    new RedisCommand("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput) { self =>
-      def apply(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Unit] = self.run((a, (b, bs.toList)))
-    }
+  final def pfCount(a: String, as: String*): ZIO[RedisExecutor, RedisError, Long] = PfCount.run((a, as.toList))
+
+  final def pfMerge(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Unit] =
+    PfMerge.run((a, (b, bs.toList)))
+}
+
+private[api] object HyperLogLog {
+  final val PfAdd   = new RedisCommand("PFADD", Tuple2(StringInput, NonEmptyList(StringInput)), BoolOutput)
+  final val PfCount = new RedisCommand("PFCOUNT", NonEmptyList(StringInput), LongOutput)
+  final val PfMerge = new RedisCommand("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
 }
