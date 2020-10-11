@@ -6,38 +6,69 @@ import zio.redis.Output._
 import zio.redis._
 
 trait Geo {
-  final val geoAdd =
-    new RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput) {
-      self =>
-      def apply(a: String, b: (LongLat, String), bs: (LongLat, String)*): ZIO[RedisExecutor, RedisError, Long] =
-        self.run((a, (b, bs.toList)))
-    }
+  import Geo._
 
-  final val geoDist =
+  final def geoAdd(a: String, b: (LongLat, String), bs: (LongLat, String)*): ZIO[RedisExecutor, RedisError, Long] =
+    GeoAdd.run((a, (b, bs.toList)))
+
+  final def geoDist(
+    a: String,
+    b: String,
+    c: String,
+    d: Option[RadiusUnit] = None
+  ): ZIO[RedisExecutor, RedisError, Option[Double]] = GeoDist.run((a, b, c, d))
+
+  final def geoHash(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    GeoHash.run((a, (b, bs.toList)))
+
+  final def geoPos(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[LongLat]] =
+    GeoPos.run((a, (b, bs.toList)))
+
+  final def geoRadius(
+    a: String,
+    b: LongLat,
+    c: Double,
+    d: RadiusUnit,
+    e: Option[WithCoord] = None,
+    f: Option[WithDist] = None,
+    g: Option[WithHash] = None,
+    h: Option[Count] = None,
+    i: Option[Order] = None,
+    j: Option[Store] = None,
+    k: Option[StoreDist] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = GeoRadius.run((a, b, c, d, e, f, g, h, i, j, k))
+
+  final def geoRadiusByMember(
+    a: String,
+    b: String,
+    c: Double,
+    d: RadiusUnit,
+    e: Option[WithCoord] = None,
+    f: Option[WithDist] = None,
+    g: Option[WithHash] = None,
+    h: Option[Count] = None,
+    i: Option[Order] = None,
+    j: Option[Store] = None,
+    k: Option[StoreDist] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = GeoRadiusByMember.run((a, b, c, d, e, f, g, h, i, j, k))
+}
+
+private[api] object Geo {
+  final val GeoAdd =
+    new RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
+
+  final val GeoDist =
     new RedisCommand(
       "GEODIST",
       Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
       OptionalOutput(DoubleOutput)
-    ) { self =>
-      def apply(
-        a: String,
-        b: String,
-        c: String,
-        d: Option[RadiusUnit] = None
-      ): ZIO[RedisExecutor, RedisError, Option[Double]] = self.run((a, b, c, d))
-    }
+    )
 
-  final val geoHash =
-    new RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput) { self =>
-      def apply(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] = self.run((a, (b, bs.toList)))
-    }
+  final val GeoHash = new RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
 
-  final val geoPos =
-    new RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput) { self =>
-      def apply(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[LongLat]] = self.run((a, (b, bs.toList)))
-    }
+  final val GeoPos = new RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
 
-  final val geoRadius =
+  final val GeoRadius =
     new RedisCommand(
       "GEORADIUS",
       Tuple11(
@@ -54,23 +85,9 @@ trait Geo {
         OptionalInput(StoreDistInput)
       ),
       GeoRadiusOutput
-    ) { self =>
-      def apply(
-        a: String,
-        b: LongLat,
-        c: Double,
-        d: RadiusUnit,
-        e: Option[WithCoord] = None,
-        f: Option[WithDist] = None,
-        g: Option[WithHash] = None,
-        h: Option[Count] = None,
-        i: Option[Order] = None,
-        j: Option[Store] = None,
-        k: Option[StoreDist] = None
-      ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = self.run((a, b, c, d, e, f, g, h, i, j, k))
-    }
+    )
 
-  final val geoRadiusByMember =
+  final val GeoRadiusByMember =
     new RedisCommand(
       "GEORADIUSBYMEMBER",
       Tuple11(
@@ -87,20 +104,5 @@ trait Geo {
         OptionalInput(StoreDistInput)
       ),
       GeoRadiusOutput
-    ) { self =>
-      def apply(
-        a: String,
-        b: String,
-        c: Double,
-        d: RadiusUnit,
-        e: Option[WithCoord] = None,
-        f: Option[WithDist] = None,
-        g: Option[WithHash] = None,
-        h: Option[Count] = None,
-        i: Option[Order] = None,
-        j: Option[Store] = None,
-        k: Option[StoreDist] = None
-      ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = self.run((a, b, c, d, e, f, g, h, i, j, k))
-
-    }
+    )
 }
