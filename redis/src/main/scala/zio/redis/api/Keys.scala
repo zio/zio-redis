@@ -82,15 +82,15 @@ trait Keys {
 }
 
 private[api] object Keys {
-  final val Del      = new RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
-  final val Dump     = new RedisCommand("DUMP", StringInput, MultiStringOutput)
-  final val Exists   = new RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
-  final val Expire   = new RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
-  final val ExpireAt = new RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
-  final val Keys     = new RedisCommand("KEYS", StringInput, ChunkOutput)
+  final val Del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
+  final val Dump     = RedisCommand("DUMP", StringInput, MultiStringOutput)
+  final val Exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
+  final val Expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
+  final val ExpireAt = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
+  final val Keys     = RedisCommand("KEYS", StringInput, ChunkOutput)
 
   final val Migrate =
-    new RedisCommand(
+    RedisCommand(
       "MIGRATE",
       Tuple9(
         StringInput,
@@ -106,17 +106,17 @@ private[api] object Keys {
       MultiStringOutput
     )
 
-  final val Move      = new RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
-  final val Persist   = new RedisCommand("PERSIST", StringInput, BoolOutput)
-  final val PExpire   = new RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
-  final val PExpireAt = new RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
-  final val PTtl      = new RedisCommand("PTTL", StringInput, DurationMillisecondsOutput)
-  final val RandomKey = new RedisCommand("RANDOMKEY", NoInput, OptionalOutput(MultiStringOutput))
-  final val Rename    = new RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
-  final val RenameNx  = new RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
+  final val Move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
+  final val Persist   = RedisCommand("PERSIST", StringInput, BoolOutput)
+  final val PExpire   = RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
+  final val PExpireAt = RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
+  final val PTtl      = RedisCommand("PTTL", StringInput, DurationMillisecondsOutput)
+  final val RandomKey = RedisCommand("RANDOMKEY", NoInput, OptionalOutput(MultiStringOutput))
+  final val Rename    = RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
+  final val RenameNx  = RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
   final val Restore =
-    new RedisCommand(
+    RedisCommand(
       "RESTORE",
       Tuple7(
         StringInput,
@@ -131,15 +131,15 @@ private[api] object Keys {
     )
 
   final val Scan =
-    new RedisCommand(
+    RedisCommand(
       "SCAN",
       Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
       ScanOutput
     )
 
-  final val Touch  = new RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
-  final val Ttl    = new RedisCommand("TTL", StringInput, DurationSecondsOutput)
-  final val TypeOf = new RedisCommand("TYPE", StringInput, TypeOutput)
-  final val Unlink = new RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
-  final val Wait   = new RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
+  final val Touch  = RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
+  final val Ttl    = RedisCommand("TTL", StringInput, DurationSecondsOutput)
+  final val TypeOf = RedisCommand("TYPE", StringInput, TypeOutput)
+  final val Unlink = RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
+  final val Wait   = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
 }

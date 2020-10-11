@@ -50,30 +50,30 @@ trait Hashes {
 }
 
 private[api] object Hashes {
-  final val HDel    = new RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val HExists = new RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
-  final val HGet    = new RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
-  final val HGetAll = new RedisCommand("HGETALL", StringInput, KeyValueOutput)
-  final val HIncrBy = new RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
+  final val HDel    = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val HExists = RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
+  final val HGet    = RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
+  final val HGetAll = RedisCommand("HGETALL", StringInput, KeyValueOutput)
+  final val HIncrBy = RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
 
   final val HIncrByFloat =
-    new RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), IncrementOutput)
+    RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), IncrementOutput)
 
-  final val HKeys = new RedisCommand("HKEYS", StringInput, ChunkOutput)
-  final val HLen  = new RedisCommand("HLEN", StringInput, LongOutput)
-  final val HmGet = new RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val HKeys = RedisCommand("HKEYS", StringInput, ChunkOutput)
+  final val HLen  = RedisCommand("HLEN", StringInput, LongOutput)
+  final val HmGet = RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
 
   final val HScan =
-    new RedisCommand(
+    RedisCommand(
       "HSCAN",
       Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
       ScanOutput
     )
 
   final val HSet =
-    new RedisCommand("HSET", Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, StringInput))), LongOutput)
+    RedisCommand("HSET", Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, StringInput))), LongOutput)
 
-  final val HSetNx  = new RedisCommand("HSETNX", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
-  final val HStrLen = new RedisCommand("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
-  final val HVals   = new RedisCommand("HVALS", StringInput, ChunkOutput)
+  final val HSetNx  = RedisCommand("HSETNX", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
+  final val HStrLen = RedisCommand("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
+  final val HVals   = RedisCommand("HVALS", StringInput, ChunkOutput)
 }

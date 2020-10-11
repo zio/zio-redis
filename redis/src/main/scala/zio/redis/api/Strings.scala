@@ -75,38 +75,38 @@ trait Strings {
 }
 
 private[api] object Strings {
-  final val Append   = new RedisCommand("APPEND", Tuple2(StringInput, StringInput), LongOutput)
-  final val BitCount = new RedisCommand("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
+  final val Append   = RedisCommand("APPEND", Tuple2(StringInput, StringInput), LongOutput)
+  final val BitCount = RedisCommand("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
 
   final val BitField =
-    new RedisCommand(
+    RedisCommand(
       "BITFIELD",
       Tuple2(StringInput, NonEmptyList(BitFieldCommandInput)),
       ChunkOptionalLongOutput
     )
 
   final val BitOp =
-    new RedisCommand("BITOP", Tuple3(BitOperationInput, StringInput, NonEmptyList(StringInput)), LongOutput)
+    RedisCommand("BITOP", Tuple3(BitOperationInput, StringInput, NonEmptyList(StringInput)), LongOutput)
 
   final val BitPos =
-    new RedisCommand("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
+    RedisCommand("BITPOS", Tuple3(StringInput, BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
 
-  final val Decr        = new RedisCommand("DECR", StringInput, LongOutput)
-  final val DecrBy      = new RedisCommand("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
-  final val Get         = new RedisCommand("GET", StringInput, OptionalOutput(MultiStringOutput))
-  final val GetBit      = new RedisCommand("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
-  final val GetRange    = new RedisCommand("GETRANGE", Tuple2(StringInput, RangeInput), MultiStringOutput)
-  final val GetSet      = new RedisCommand("GETSET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
-  final val Incr        = new RedisCommand("INCR", StringInput, LongOutput)
-  final val IncrBy      = new RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
-  final val IncrByFloat = new RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), MultiStringOutput)
-  final val MGet        = new RedisCommand("MGET", NonEmptyList(StringInput), ChunkOptionalMultiStringOutput)
-  final val MSet        = new RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, StringInput)), UnitOutput)
-  final val MSetNx      = new RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, StringInput)), BoolOutput)
-  final val PSetEx      = new RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, StringInput), UnitOutput)
+  final val Decr        = RedisCommand("DECR", StringInput, LongOutput)
+  final val DecrBy      = RedisCommand("DECRBY", Tuple2(StringInput, LongInput), LongOutput)
+  final val Get         = RedisCommand("GET", StringInput, OptionalOutput(MultiStringOutput))
+  final val GetBit      = RedisCommand("GETBIT", Tuple2(StringInput, LongInput), LongOutput)
+  final val GetRange    = RedisCommand("GETRANGE", Tuple2(StringInput, RangeInput), MultiStringOutput)
+  final val GetSet      = RedisCommand("GETSET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
+  final val Incr        = RedisCommand("INCR", StringInput, LongOutput)
+  final val IncrBy      = RedisCommand("INCRBY", Tuple2(StringInput, LongInput), LongOutput)
+  final val IncrByFloat = RedisCommand("INCRBYFLOAT", Tuple2(StringInput, DoubleInput), MultiStringOutput)
+  final val MGet        = RedisCommand("MGET", NonEmptyList(StringInput), ChunkOptionalMultiStringOutput)
+  final val MSet        = RedisCommand("MSET", NonEmptyList(Tuple2(StringInput, StringInput)), UnitOutput)
+  final val MSetNx      = RedisCommand("MSETNX", NonEmptyList(Tuple2(StringInput, StringInput)), BoolOutput)
+  final val PSetEx      = RedisCommand("PSETEX", Tuple3(StringInput, DurationMillisecondsInput, StringInput), UnitOutput)
 
   final val Set =
-    new RedisCommand(
+    RedisCommand(
       "SET",
       Tuple5(
         StringInput,
@@ -118,9 +118,9 @@ private[api] object Strings {
       OptionalOutput(UnitOutput)
     )
 
-  final val SetBit   = new RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
-  final val SetEx    = new RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
-  final val SetNx    = new RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
-  final val SetRange = new RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
-  final val StrLen   = new RedisCommand("STRLEN", StringInput, LongOutput)
+  final val SetBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
+  final val SetEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
+  final val SetNx    = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
+  final val SetRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+  final val StrLen   = RedisCommand("STRLEN", StringInput, LongOutput)
 }

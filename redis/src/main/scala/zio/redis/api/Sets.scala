@@ -53,29 +53,29 @@ trait Sets {
 }
 
 private[api] object Sets {
-  final val SAdd        = new RedisCommand("SADD", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val SCard       = new RedisCommand("SCARD", StringInput, LongOutput)
-  final val SDiff       = new RedisCommand("SDIFF", NonEmptyList(StringInput), ChunkOutput)
-  final val SDiffStore  = new RedisCommand("SDIFFSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val SInter      = new RedisCommand("SINTER", NonEmptyList(StringInput), ChunkOutput)
-  final val SInterStore = new RedisCommand("SINTERSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val SIsMember   = new RedisCommand("SISMEMBER", Tuple2(StringInput, StringInput), BoolOutput)
-  final val SMembers    = new RedisCommand("SMEMBERS", StringInput, ChunkOutput)
-  final val SMove       = new RedisCommand("SMOVE", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
-  final val SPop        = new RedisCommand("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), MultiStringChunkOutput)
+  final val SAdd        = RedisCommand("SADD", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val SCard       = RedisCommand("SCARD", StringInput, LongOutput)
+  final val SDiff       = RedisCommand("SDIFF", NonEmptyList(StringInput), ChunkOutput)
+  final val SDiffStore  = RedisCommand("SDIFFSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val SInter      = RedisCommand("SINTER", NonEmptyList(StringInput), ChunkOutput)
+  final val SInterStore = RedisCommand("SINTERSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val SIsMember   = RedisCommand("SISMEMBER", Tuple2(StringInput, StringInput), BoolOutput)
+  final val SMembers    = RedisCommand("SMEMBERS", StringInput, ChunkOutput)
+  final val SMove       = RedisCommand("SMOVE", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
+  final val SPop        = RedisCommand("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), MultiStringChunkOutput)
 
   final val SRandMember =
-    new RedisCommand("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), MultiStringChunkOutput)
+    RedisCommand("SRANDMEMBER", Tuple2(StringInput, OptionalInput(LongInput)), MultiStringChunkOutput)
 
-  final val SRem = new RedisCommand("SREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val SRem = RedisCommand("SREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 
   final val SScan =
-    new RedisCommand(
+    RedisCommand(
       "SSCAN",
       Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
       ScanOutput
     )
 
-  final val SUnion      = new RedisCommand("SUNION", NonEmptyList(StringInput), ChunkOutput)
-  final val SUnionStore = new RedisCommand("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val SUnion      = RedisCommand("SUNION", NonEmptyList(StringInput), ChunkOutput)
+  final val SUnionStore = RedisCommand("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 }

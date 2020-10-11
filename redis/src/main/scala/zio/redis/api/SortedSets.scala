@@ -118,12 +118,12 @@ trait SortedSets {
 
 private[api] object SortedSets {
   final val BzPopMax =
-    new RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
+    RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val BzPopMin =
-    new RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
+    RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
 
   final def ZAdd =
-    new RedisCommand(
+    RedisCommand(
       "ZADD",
       Tuple4(
         StringInput,
@@ -135,7 +135,7 @@ private[api] object SortedSets {
     )
 
   final def ZAddWithIncr =
-    new RedisCommand(
+    RedisCommand(
       "ZADD",
       Tuple5(
         StringInput,
@@ -147,12 +147,12 @@ private[api] object SortedSets {
       OptionalOutput(DoubleOutput)
     )
 
-  final val ZCard   = new RedisCommand("ZCARD", StringInput, LongOutput)
-  final val ZCount  = new RedisCommand("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
-  final val ZIncrBy = new RedisCommand("ZINCRBY", Tuple3(StringInput, LongInput, StringInput), DoubleOutput)
+  final val ZCard   = RedisCommand("ZCARD", StringInput, LongOutput)
+  final val ZCount  = RedisCommand("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
+  final val ZIncrBy = RedisCommand("ZINCRBY", Tuple3(StringInput, LongInput, StringInput), DoubleOutput)
 
   final val ZInterStore =
-    new RedisCommand(
+    RedisCommand(
       "ZINTERSTORE",
       Tuple5(
         StringInput,
@@ -164,55 +164,55 @@ private[api] object SortedSets {
       LongOutput
     )
 
-  final val ZLexCount = new RedisCommand("ZLEXCOUNT", Tuple2(StringInput, LexRangeInput), LongOutput)
-  final val ZPopMax   = new RedisCommand("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
-  final val ZPopMin   = new RedisCommand("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+  final val ZLexCount = RedisCommand("ZLEXCOUNT", Tuple2(StringInput, LexRangeInput), LongOutput)
+  final val ZPopMax   = RedisCommand("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+  final val ZPopMin   = RedisCommand("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
 
   final val ZRange =
-    new RedisCommand("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
+    RedisCommand("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
 
   final val ZRangeByLex =
-    new RedisCommand("ZRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput)
+    RedisCommand("ZRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput)
 
   final val ZRangeByScore =
-    new RedisCommand(
+    RedisCommand(
       "ZRANGEBYSCORE",
       Tuple4(StringInput, ScoreRangeInput, OptionalInput(WithScoresInput), OptionalInput(LimitInput)),
       ChunkOutput
     )
 
-  final val ZRank            = new RedisCommand("ZRANK", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
-  final val ZRem             = new RedisCommand("ZREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val ZRemRangeByLex   = new RedisCommand("ZREMRANGEBYLEX", Tuple2(StringInput, LexRangeInput), LongOutput)
-  final val ZRemRangeByRank  = new RedisCommand("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
-  final val ZRemRangeByScore = new RedisCommand("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
+  final val ZRank            = RedisCommand("ZRANK", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
+  final val ZRem             = RedisCommand("ZREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val ZRemRangeByLex   = RedisCommand("ZREMRANGEBYLEX", Tuple2(StringInput, LexRangeInput), LongOutput)
+  final val ZRemRangeByRank  = RedisCommand("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
+  final val ZRemRangeByScore = RedisCommand("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
 
   final val ZRevRange =
-    new RedisCommand("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
+    RedisCommand("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput)
 
   final val ZRevRangeByLex =
-    new RedisCommand("ZREVRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput)
+    RedisCommand("ZREVRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput)
 
   final val ZRevRangeByScore =
-    new RedisCommand(
+    RedisCommand(
       "ZREVRANGEBYSCORE",
       Tuple4(StringInput, ScoreRangeInput, OptionalInput(WithScoresInput), OptionalInput(LimitInput)),
       ChunkOutput
     )
 
-  final val ZRevRank = new RedisCommand("ZREVRANK", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
+  final val ZRevRank = RedisCommand("ZREVRANK", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
 
   final val ZScan =
-    new RedisCommand(
+    RedisCommand(
       "ZSCAN",
       Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
       ScanOutput
     )
 
-  final val ZScore = new RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(DoubleOutput))
+  final val ZScore = RedisCommand("ZSCORE", Tuple2(StringInput, StringInput), OptionalOutput(DoubleOutput))
 
   final val ZUnionStore =
-    new RedisCommand(
+    RedisCommand(
       "ZUNIONSTORE",
       Tuple5(
         StringInput,

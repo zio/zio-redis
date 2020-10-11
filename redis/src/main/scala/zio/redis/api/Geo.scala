@@ -55,21 +55,21 @@ trait Geo {
 
 private[api] object Geo {
   final val GeoAdd =
-    new RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
+    RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
 
   final val GeoDist =
-    new RedisCommand(
+    RedisCommand(
       "GEODIST",
       Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
       OptionalOutput(DoubleOutput)
     )
 
-  final val GeoHash = new RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val GeoHash = RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
 
-  final val GeoPos = new RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
+  final val GeoPos = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
 
   final val GeoRadius =
-    new RedisCommand(
+    RedisCommand(
       "GEORADIUS",
       Tuple11(
         StringInput,
@@ -88,7 +88,7 @@ private[api] object Geo {
     )
 
   final val GeoRadiusByMember =
-    new RedisCommand(
+    RedisCommand(
       "GEORADIUSBYMEMBER",
       Tuple11(
         StringInput,

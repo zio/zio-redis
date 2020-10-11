@@ -18,8 +18,8 @@ trait Connection {
 }
 
 private[api] object Connection {
-  final val Auth   = new RedisCommand("AUTH", StringInput, UnitOutput)
-  final val Echo   = new RedisCommand("ECHO", StringInput, MultiStringOutput)
-  final val Ping   = new RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
-  final val Select = new RedisCommand("SELECT", LongInput, UnitOutput)
+  final val Auth   = RedisCommand("AUTH", StringInput, UnitOutput)
+  final val Echo   = RedisCommand("ECHO", StringInput, MultiStringOutput)
+  final val Ping   = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
+  final val Select = RedisCommand("SELECT", LongInput, UnitOutput)
 }
