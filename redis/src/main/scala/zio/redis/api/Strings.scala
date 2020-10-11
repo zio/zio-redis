@@ -1,10 +1,11 @@
 package zio.redis.api
 
-import zio.{ Chunk, ZIO }
+import java.time.Duration
+
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import java.time.Duration
+import zio.{ Chunk, ZIO }
 
 trait Strings {
   import Strings._
@@ -55,12 +56,12 @@ trait Strings {
   final def pSetEx(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = PSetEx.run((a, b, c))
 
   final def set(
-        a: String,
-        b: String,
-        c: Option[Duration] = None,
-        d: Option[Update] = None,
-        e: Option[KeepTtl] = None
-      ): ZIO[RedisExecutor, RedisError, Option[Unit]] = Set.run((a, b, c, d, e))
+    a: String,
+    b: String,
+    c: Option[Duration] = None,
+    d: Option[Update] = None,
+    e: Option[KeepTtl] = None
+  ): ZIO[RedisExecutor, RedisError, Option[Unit]] = Set.run((a, b, c, d, e))
 
   final def setBit(a: String, b: Long, c: Boolean): ZIO[RedisExecutor, RedisError, Boolean] = SetBit.run((a, b, c))
 

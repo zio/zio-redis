@@ -1,10 +1,11 @@
 package zio.redis.api
 
-import zio.{ Chunk, ZIO }
+import java.time.Duration
+
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import java.time.Duration
+import zio.{ Chunk, ZIO }
 
 trait Lists {
   import Lists._

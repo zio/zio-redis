@@ -1,11 +1,13 @@
 package zio.redis.api
 
-import zio.{ Chunk, ZIO }
+import java.time.Duration
+
+import scala.util.matching.Regex
+
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import java.time.Duration
-import scala.util.matching.Regex
+import zio.{ Chunk, ZIO }
 
 trait SortedSets {
   import SortedSets._

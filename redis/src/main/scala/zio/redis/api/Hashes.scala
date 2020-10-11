@@ -1,10 +1,11 @@
 package zio.redis.api
 
-import zio.{ Chunk, ZIO }
+import scala.util.matching.Regex
+
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import scala.util.matching.Regex
+import zio.{ Chunk, ZIO }
 
 trait Hashes {
   import Hashes._
@@ -40,7 +41,7 @@ trait Hashes {
   final def hSet(a: String, b: (String, String), bs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
     HSet.run((a, (b, bs.toList)))
 
-  final def hSetNx(a: String, b: String, c: String): ZIO[RedisExecutor, RedisError, Boolean] = 
+  final def hSetNx(a: String, b: String, c: String): ZIO[RedisExecutor, RedisError, Boolean] =
     HSetNx.run((a, b, c))
 
   final def hStrLen(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = HStrLen.run((a, b))

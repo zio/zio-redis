@@ -1,10 +1,11 @@
 package zio.redis.api
 
-import zio.{ Chunk, ZIO }
+import scala.util.matching.Regex
+
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import scala.util.matching.Regex
+import zio.{ Chunk, ZIO }
 
 trait Sets {
   import Sets._

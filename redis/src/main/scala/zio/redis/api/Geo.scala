@@ -1,9 +1,9 @@
 package zio.redis.api
 
-import zio.{ Chunk, ZIO }
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
+import zio.{ Chunk, ZIO }
 
 trait Geo {
   import Geo._
