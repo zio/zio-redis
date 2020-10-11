@@ -53,7 +53,7 @@ trait Geo {
   ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = GeoRadiusByMember.run((a, b, c, d, e, f, g, h, i, j, k))
 }
 
-private[api] object Geo {
+private object Geo {
   final val GeoAdd =
     RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
 

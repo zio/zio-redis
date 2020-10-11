@@ -116,13 +116,13 @@ trait SortedSets {
   ): ZIO[RedisExecutor, RedisError, Long] = ZUnionStore.run((a, b, (c, cs.toList), d, e))
 }
 
-private[api] object SortedSets {
+private object SortedSets {
   final val BzPopMax =
     RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val BzPopMin =
     RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
 
-  final def ZAdd =
+  final val ZAdd =
     RedisCommand(
       "ZADD",
       Tuple4(
@@ -134,7 +134,7 @@ private[api] object SortedSets {
       LongOutput
     )
 
-  final def ZAddWithIncr =
+  final val ZAddWithIncr =
     RedisCommand(
       "ZADD",
       Tuple5(

@@ -81,7 +81,7 @@ trait Keys {
   final def wait_(a: Long, b: Long): ZIO[RedisExecutor, RedisError, Long] = Wait.run((a, b))
 }
 
-private[api] object Keys {
+private object Keys {
   final val Del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
   final val Dump     = RedisCommand("DUMP", StringInput, MultiStringOutput)
   final val Exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)

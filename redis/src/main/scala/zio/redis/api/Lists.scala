@@ -53,7 +53,7 @@ trait Lists {
     LInsert.run((a, b, c, d))
 }
 
-private[api] object Lists {
+private object Lists {
   final val BrPopLPush =
     RedisCommand(
       "BRPOPLPUSH",

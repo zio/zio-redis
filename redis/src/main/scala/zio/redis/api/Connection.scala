@@ -17,7 +17,7 @@ trait Connection {
   final def select(a: Long): ZIO[RedisExecutor, RedisError, Unit] = Select.run(a)
 }
 
-private[api] object Connection {
+private object Connection {
   final val Auth   = RedisCommand("AUTH", StringInput, UnitOutput)
   final val Echo   = RedisCommand("ECHO", StringInput, MultiStringOutput)
   final val Ping   = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)

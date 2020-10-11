@@ -52,7 +52,7 @@ trait Sets {
     SUnionStore.run((a, (b, bs.toList)))
 }
 
-private[api] object Sets {
+private object Sets {
   final val SAdd        = RedisCommand("SADD", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   final val SCard       = RedisCommand("SCARD", StringInput, LongOutput)
   final val SDiff       = RedisCommand("SDIFF", NonEmptyList(StringInput), ChunkOutput)
