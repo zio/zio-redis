@@ -46,9 +46,9 @@ lazy val redis =
     .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio"          % "1.0.2",
-        "dev.zio" %% "zio-test"     % "1.0.2" % Test,
-        "dev.zio" %% "zio-test-sbt" % "1.0.2" % Test
+        "dev.zio" %% "zio"          % "1.0.3",
+        "dev.zio" %% "zio-test"     % "1.0.3" % Test,
+        "dev.zio" %% "zio-test-sbt" % "1.0.3" % Test
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
@@ -66,7 +66,5 @@ lazy val benchmarks =
         "io.chrisdavenport" %% "rediculous"         % "0.0.8",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
-      scalacOptions in Compile := Seq(
-        "-Xlint:unused"
-      )
+      scalacOptions in Compile := Seq("-Xlint:unused")
     )

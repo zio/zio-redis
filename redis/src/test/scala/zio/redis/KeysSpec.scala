@@ -14,7 +14,7 @@ trait KeysSpec extends BaseSpec {
         for {
           key   <- uuid
           value <- uuid
-          _     <- set(key, value, None, None, None)
+          _     <- set(key, value)
           v     <- get(key)
         } yield assert(v)(isSome(equalTo(value)))
       },
@@ -27,7 +27,7 @@ trait KeysSpec extends BaseSpec {
       testM("handles wrong types") {
         for {
           key <- uuid
-          _   <- sAdd(key)("1", "2", "3")
+          _   <- sAdd(key, "1", "2", "3")
           v   <- get(key).either
         } yield assert(v)(isLeft)
       },
@@ -35,7 +35,7 @@ trait KeysSpec extends BaseSpec {
         for {
           key   <- uuid
           value <- uuid
-          _     <- set(key, value, None, None, None)
+          _     <- set(key, value)
           e1    <- exists(key)
           e2    <- exists("unknown")
         } yield assert(e1)(isTrue) && assert(e2)(isFalse)
@@ -44,7 +44,7 @@ trait KeysSpec extends BaseSpec {
         for {
           key     <- uuid
           value   <- uuid
-          _       <- set(key, value, None, None, None)
+          _       <- set(key, value)
           deleted <- del(key)
         } yield assert(deleted)(equalTo(1L))
       },
@@ -53,8 +53,8 @@ trait KeysSpec extends BaseSpec {
           value    <- uuid
           key1      = "custom_key_1"
           key2      = "custom_key_2"
-          _        <- set(key1, value, None, None, None)
-          _        <- set(key2, value, None, None, None)
+          _        <- set(key1, value)
+          _        <- set(key2, value)
           response <- keys("*custom*")
         } yield assert(response)(hasSameElements(Chunk(key1, key2)))
       },
@@ -62,7 +62,7 @@ trait KeysSpec extends BaseSpec {
         for {
           key     <- uuid
           value   <- uuid
-          _       <- set(key, value, None, None, None)
+          _       <- set(key, value)
           removed <- unlink(key)
         } yield assert(removed)(equalTo(1L))
       },
@@ -70,10 +70,10 @@ trait KeysSpec extends BaseSpec {
         for {
           key1    <- uuid
           value1  <- uuid
-          _       <- set(key1, value1, None, None, None)
+          _       <- set(key1, value1)
           key2    <- uuid
           value2  <- uuid
-          _       <- set(key2, value2, None, None, None)
+          _       <- set(key2, value2)
           touched <- touch(key1, key2)
         } yield assert(touched)(equalTo(2L))
       },
@@ -81,8 +81,8 @@ trait KeysSpec extends BaseSpec {
         for {
           key             <- uuid
           value           <- uuid
-          _               <- set(key, value, None, None, None)
-          scan            <- scan(0L, None, None, None)
+          _               <- set(key, value)
+          scan            <- scan(0L)
           (next, elements) = scan
         } yield assert(next)(isNonEmptyString) && assert(elements)(isNonEmpty)
       },
@@ -90,7 +90,7 @@ trait KeysSpec extends BaseSpec {
         for {
           key       <- uuid
           value     <- uuid
-          _         <- set(key, value, None, None, None)
+          _         <- set(key, value)
           allKeys   <- keys("*")
           randomKey <- randomKey()
         } yield assert(allKeys)(contains(randomKey.get))
@@ -99,10 +99,10 @@ trait KeysSpec extends BaseSpec {
         for {
           key      <- uuid
           value    <- uuid
-          _        <- set(key, value, None, None, None)
+          _        <- set(key, value)
           dumped   <- dump(key)
           _        <- del(key)
-          restore  <- restore(key, 0L, dumped, None, None, None, None).either
+          restore  <- restore(key, 0L, dumped).either
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
       } @@ ignore,
@@ -141,7 +141,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key       <- uuid
             value     <- uuid
-            _         <- set(key, value, None, None, None)
+            _         <- set(key, value)
             exp       <- pExpire(key, 2000.millis)
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
@@ -153,7 +153,7 @@ trait KeysSpec extends BaseSpec {
             key       <- uuid
             value     <- uuid
             expiresAt <- instantOf(2000)
-            _         <- set(key, value, None, None, None)
+            _         <- set(key, value)
             exp       <- pExpireAt(key, expiresAt)
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
@@ -164,7 +164,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key       <- uuid
             value     <- uuid
-            _         <- set(key, value, None, None, None)
+            _         <- set(key, value)
             exp       <- expire(key, 10000.millis)
             persisted <- persist(key)
           } yield assert(exp)(isTrue) && assert(persisted)(isTrue)
@@ -174,7 +174,7 @@ trait KeysSpec extends BaseSpec {
             key       <- uuid
             value     <- uuid
             expiresAt <- instantOf(2000)
-            _         <- set(key, value, None, None, None)
+            _         <- set(key, value)
             exp       <- expireAt(key, expiresAt)
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
@@ -188,7 +188,7 @@ trait KeysSpec extends BaseSpec {
             key     <- uuid
             newKey  <- uuid
             value   <- uuid
-            _       <- set(key, value, None, None, None)
+            _       <- set(key, value)
             renamed <- rename(key, newKey).either
             v       <- get(newKey)
           } yield assert(renamed)(isRight) && assert(v)(isSome(equalTo(value)))
@@ -205,7 +205,7 @@ trait KeysSpec extends BaseSpec {
             key     <- uuid
             newKey  <- uuid
             value   <- uuid
-            _       <- set(key, value, None, None, None)
+            _       <- set(key, value)
             renamed <- renameNx(key, newKey)
             v       <- get(newKey)
           } yield assert(renamed)(isTrue) && assert(v)(isSome(equalTo(value)))
@@ -223,7 +223,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, value, None, None, None)
+            _      <- set(key, value)
             string <- typeOf(key)
           } yield assert(string)(equalTo(RedisType.String))
         },
@@ -231,7 +231,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- lPush(key)(value)
+            _     <- lPush(key, value)
             list  <- typeOf(key)
           } yield assert(list)(equalTo(RedisType.List))
         },
@@ -239,7 +239,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- sAdd(key)(value)
+            _     <- sAdd(key, value)
             set   <- typeOf(key)
           } yield assert(set)(equalTo(RedisType.Set))
         },
@@ -247,7 +247,7 @@ trait KeysSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- zAdd(key, None, None, (MemberScore(1d, value), Nil))
+            _     <- zAdd(key)(MemberScore(1d, value))
             zset  <- typeOf(key)
           } yield assert(zset)(equalTo(RedisType.SortedSet))
         },
@@ -256,7 +256,7 @@ trait KeysSpec extends BaseSpec {
             key   <- uuid
             field <- uuid
             value <- uuid
-            _     <- hSet(key)((field, value))
+            _     <- hSet(key, (field, value))
             hash  <- typeOf(key)
           } yield assert(hash)(equalTo(RedisType.Hash))
         }

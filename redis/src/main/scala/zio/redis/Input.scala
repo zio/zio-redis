@@ -187,8 +187,8 @@ object Input {
     def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.toEpochMilli.toString))
   }
 
-  case object WeightsInput extends Input[List[Double]] {
-    def encode(data: List[Double]): Chunk[String] =
+  case object WeightsInput extends Input[::[Double]] {
+    def encode(data: ::[Double]): Chunk[String] =
       data.foldLeft(Chunk.single(wrap("WEIGHTS")): Chunk[String])((acc, a) => acc ++ Chunk.single(wrap(a.toString)))
   }
 
