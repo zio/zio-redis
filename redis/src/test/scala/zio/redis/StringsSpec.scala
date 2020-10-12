@@ -14,7 +14,7 @@ trait StringsSpec extends BaseSpec {
         testM("to the end of non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "val", None, None, None)
+            _   <- set(key, "val")
             len <- append(key, "ue")
           } yield assert(len)(equalTo(5L))
         },
@@ -27,7 +27,7 @@ trait StringsSpec extends BaseSpec {
         testM("empty value to the end of non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             len <- append(key, "")
           } yield assert(len)(equalTo(5L))
         },
@@ -40,7 +40,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key <- uuid
-            _   <- sAdd(key)("a")
+            _   <- sAdd(key, "a")
             len <- append(key, "b").either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -49,48 +49,48 @@ trait StringsSpec extends BaseSpec {
         testM("over non-empty string") {
           for {
             key   <- uuid
-            _     <- set(key, "value", None, None, None)
-            count <- bitCount(key, None)
+            _     <- set(key, "value")
+            count <- bitCount(key)
           } yield assert(count)(equalTo(21L))
         },
         testM("over empty string") {
           for {
             key   <- uuid
-            count <- bitCount(key, None)
+            count <- bitCount(key)
           } yield assert(count)(equalTo(0L))
         },
         testM("error when not string") {
           for {
             key   <- uuid
-            _     <- sAdd(key)("a")
-            count <- bitCount(key, None).either
+            _     <- sAdd(key, "a")
+            count <- bitCount(key).either
           } yield assert(count)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("over non-empty string with range") {
           for {
             key   <- uuid
-            _     <- set(key, "value", None, None, None)
+            _     <- set(key, "value")
             count <- bitCount(key, Some(1 to 3))
           } yield assert(count)(equalTo(12L))
         },
         testM("over non-empty string with range that is too large") {
           for {
             key   <- uuid
-            _     <- set(key, "value", None, None, None)
+            _     <- set(key, "value")
             count <- bitCount(key, Some(1 to 20))
           } yield assert(count)(equalTo(16L))
         },
         testM("over non-empty string with range that ends with the string") {
           for {
             key   <- uuid
-            _     <- set(key, "value", None, None, None)
+            _     <- set(key, "value")
             count <- bitCount(key, Some(1 to -1))
           } yield assert(count)(equalTo(16L))
         },
         testM("over non-empty string with range whose start is bigger than end") {
           for {
             key   <- uuid
-            _     <- set(key, "value", None, None, None)
+            _     <- set(key, "value")
             count <- bitCount(key, Some(3 to 1))
           } yield assert(count)(equalTo(0L))
         },
@@ -103,7 +103,7 @@ trait StringsSpec extends BaseSpec {
         testM("over not string with range") {
           for {
             key   <- uuid
-            _     <- sAdd(key)("a")
+            _     <- sAdd(key, "a")
             count <- bitCount(key, Some(1 to 3)).either
           } yield assert(count)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -112,169 +112,134 @@ trait StringsSpec extends BaseSpec {
         testM("get second byte with signed 8 type from existing value") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldGet(BitFieldType.SignedInt(8), 8)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldGet(BitFieldType.SignedInt(8), 8))
           } yield assert(result)(equalTo(Chunk(Some(97L))))
         },
         testM("get second byte with unsigned 8 type from existing value") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(8), 8)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(8), 8))
           } yield assert(result)(equalTo(Chunk(Some(97L))))
         },
         testM("get bit with offset out of range from existing value") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 100)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 100))
           } yield assert(result)(equalTo(Chunk(Some(0L))))
         },
         testM("get bit when empty string") {
           for {
             key    <- uuid
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 10)
-                      )
+            result <- bitField(key, BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 10))
           } yield assert(result)(equalTo(Chunk(Some(0L))))
         },
         testM("get error when negative offset") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), -10)
-                      ).either
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), -10)).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("get error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 10)
-                      ).either
+            _      <- sAdd(key, "a")
+            result <- bitField(key, BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(1), 10)).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("set second byte when non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "vblue", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 97)
-                      )
+            _      <- set(key, "vblue")
+            result <- bitField(key, BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 97))
           } yield assert(result)(equalTo(Chunk(Some(98L))))
         },
         testM("set bit when offset out of range") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 100, 97)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 100, 97))
           } yield assert(result)(equalTo(Chunk(Some(0L))))
         },
         testM("set negative value when unsigned type and existing string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(4), 10, -10)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(4), 10, -10))
           } yield assert(result)(equalTo(Chunk(Some(8L))))
         },
         testM("set too big value when unsigned type and existing string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(2), 10, 100)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(2), 10, 100))
           } yield assert(result)(equalTo(Chunk(Some(2L))))
         },
         testM("set error when negative offset") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(1), -10, 10)
-                      ).either
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(1), -10, 10)).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 97)
-                      ).either
+            _      <- sAdd(key, "a")
+            result <- bitField(key, BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 97)).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("increment byte when non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 3)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 3))
           } yield assert(result)(equalTo(Chunk(Some(100L))))
         },
         testM("increment byte by negative value when non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, -2)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, -2))
           } yield assert(result)(equalTo(Chunk(Some(95L))))
         },
         testM("increment bit when offset out of range") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), 100, 1)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), 100, 1))
           } yield assert(result)(equalTo(Chunk(Some(1L))))
         },
         testM("increment bit when value will overflow") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200)
-                      )
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200))
           } yield assert(result)(equalTo(Chunk(Some(41L))))
         },
         testM("increment error when negative offset") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), -10, 1)
-                      ).either
+            _      <- set(key, "value")
+            result <- bitField(key, BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), -10, 1)).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("increment error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
-            result <- bitField(key)(
-                        BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), 10, 1)
-                      ).either
+            _      <- sAdd(key, "a")
+            result <- bitField(key, BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(1), 10, 1)).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("increment with overflow saturation") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
+            _      <- set(key, "value")
+            result <- bitField(
+                        key,
                         BitFieldCommand.BitFieldOverflow.Sat,
                         BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200)
                       )
@@ -283,8 +248,9 @@ trait StringsSpec extends BaseSpec {
         testM("increment with overflow fail") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
+            _      <- set(key, "value")
+            result <- bitField(
+                        key,
                         BitFieldCommand.BitFieldOverflow.Fail,
                         BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200)
                       )
@@ -293,8 +259,9 @@ trait StringsSpec extends BaseSpec {
         testM("increment first with overflow wrap and then overflow fail") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
+            _      <- set(key, "value")
+            result <- bitField(
+                        key,
                         BitFieldCommand.BitFieldOverflow.Wrap,
                         BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 200),
                         BitFieldCommand.BitFieldOverflow.Fail,
@@ -306,7 +273,8 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- set(key, "value", None, None, None)
-            result <- bitField(key)(
+            result <- bitField(
+                        key,
                         BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 98L),
                         BitFieldCommand.BitFieldIncr(BitFieldType.UnsignedInt(8), 8, 2L),
                         BitFieldCommand.BitFieldGet(BitFieldType.UnsignedInt(8), 8)
@@ -321,10 +289,10 @@ trait StringsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             third  <- uuid
-            _      <- set(first, "a", None, None, None)
-            _      <- set(second, "ab", None, None, None)
-            _      <- set(third, "abc", None, None, None)
-            result <- bitOp(BitOperation.AND, dest)(first, second, third)
+            _      <- set(first, "a")
+            _      <- set(second, "ab")
+            _      <- set(third, "abc")
+            result <- bitOp(BitOperation.AND, dest, first, second, third)
           } yield assert(result)(equalTo(3L))
         },
         testM("AND over two non-empty strings") {
@@ -332,9 +300,9 @@ trait StringsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            _      <- set(first, "first", None, None, None)
-            _      <- set(second, "second", None, None, None)
-            result <- bitOp(BitOperation.AND, dest)(first, second)
+            _      <- set(first, "first")
+            _      <- set(second, "second")
+            result <- bitOp(BitOperation.AND, dest, first, second)
           } yield assert(result)(equalTo(6L))
         },
         testM("AND over one empty and one non-empty string") {
@@ -342,8 +310,8 @@ trait StringsSpec extends BaseSpec {
             dest     <- uuid
             empty    <- uuid
             nonEmpty <- uuid
-            _        <- set(nonEmpty, "value", None, None, None)
-            result   <- bitOp(BitOperation.AND, dest)(empty, nonEmpty)
+            _        <- set(nonEmpty, "value")
+            result   <- bitOp(BitOperation.AND, dest, empty, nonEmpty)
           } yield assert(result)(equalTo(5L))
         },
         testM("AND over two empty strings") {
@@ -351,7 +319,7 @@ trait StringsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            result <- bitOp(BitOperation.AND, dest)(first, second)
+            result <- bitOp(BitOperation.AND, dest, first, second)
           } yield assert(result)(equalTo(0L))
         },
         testM("error when AND over one empty and one not string") {
@@ -359,8 +327,8 @@ trait StringsSpec extends BaseSpec {
             dest      <- uuid
             empty     <- uuid
             notString <- uuid
-            _         <- sAdd(notString)("a")
-            result    <- bitOp(BitOperation.AND, dest)(empty, notString).either
+            _         <- sAdd(notString, "a")
+            result    <- bitOp(BitOperation.AND, dest, empty, notString).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when AND over non-empty and one not string") {
@@ -368,8 +336,8 @@ trait StringsSpec extends BaseSpec {
             dest      <- uuid
             nonEmpty  <- uuid
             notString <- uuid
-            _         <- sAdd(notString)("a")
-            result    <- bitOp(BitOperation.AND, dest)(nonEmpty, notString).either
+            _         <- sAdd(notString, "a")
+            result    <- bitOp(BitOperation.AND, dest, nonEmpty, notString).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("OR over multiple non-empty strings") {
@@ -378,10 +346,10 @@ trait StringsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             third  <- uuid
-            _      <- set(first, "a", None, None, None)
-            _      <- set(second, "ab", None, None, None)
-            _      <- set(third, "abc", None, None, None)
-            result <- bitOp(BitOperation.OR, dest)(first, second, third)
+            _      <- set(first, "a")
+            _      <- set(second, "ab")
+            _      <- set(third, "abc")
+            result <- bitOp(BitOperation.OR, dest, first, second, third)
           } yield assert(result)(equalTo(3L))
         },
         testM("OR over two non-empty strings") {
@@ -389,9 +357,9 @@ trait StringsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            _      <- set(first, "first", None, None, None)
-            _      <- set(second, "second", None, None, None)
-            result <- bitOp(BitOperation.OR, dest)(first, second)
+            _      <- set(first, "first")
+            _      <- set(second, "second")
+            result <- bitOp(BitOperation.OR, dest, first, second)
           } yield assert(result)(equalTo(6L))
         },
         testM("OR over one empty and one non-empty string") {
@@ -399,8 +367,8 @@ trait StringsSpec extends BaseSpec {
             dest     <- uuid
             empty    <- uuid
             nonEmpty <- uuid
-            _        <- set(nonEmpty, "value", None, None, None)
-            result   <- bitOp(BitOperation.OR, dest)(empty, nonEmpty)
+            _        <- set(nonEmpty, "value")
+            result   <- bitOp(BitOperation.OR, dest, empty, nonEmpty)
           } yield assert(result)(equalTo(5L))
         },
         testM("OR over two empty strings") {
@@ -408,7 +376,7 @@ trait StringsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            result <- bitOp(BitOperation.OR, dest)(first, second)
+            result <- bitOp(BitOperation.OR, dest, first, second)
           } yield assert(result)(equalTo(0L))
         },
         testM("error when OR over one empty and one not string") {
@@ -416,8 +384,8 @@ trait StringsSpec extends BaseSpec {
             dest      <- uuid
             empty     <- uuid
             notString <- uuid
-            _         <- sAdd(notString)("a")
-            result    <- bitOp(BitOperation.OR, dest)(empty, notString).either
+            _         <- sAdd(notString, "a")
+            result    <- bitOp(BitOperation.OR, dest, empty, notString).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when OR over non-empty and one not string") {
@@ -425,8 +393,8 @@ trait StringsSpec extends BaseSpec {
             dest      <- uuid
             nonEmpty  <- uuid
             notString <- uuid
-            _         <- sAdd(notString)("a")
-            result    <- bitOp(BitOperation.OR, dest)(nonEmpty, notString).either
+            _         <- sAdd(notString, "a")
+            result    <- bitOp(BitOperation.OR, dest, nonEmpty, notString).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("XOR over multiple non-empty strings") {
@@ -435,10 +403,10 @@ trait StringsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             third  <- uuid
-            _      <- set(first, "a", None, None, None)
-            _      <- set(second, "ab", None, None, None)
-            _      <- set(third, "abc", None, None, None)
-            result <- bitOp(BitOperation.XOR, dest)(first, second, third)
+            _      <- set(first, "a")
+            _      <- set(second, "ab")
+            _      <- set(third, "abc")
+            result <- bitOp(BitOperation.XOR, dest, first, second, third)
           } yield assert(result)(equalTo(3L))
         },
         testM("XOR over two non-empty strings") {
@@ -446,9 +414,9 @@ trait StringsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            _      <- set(first, "first", None, None, None)
-            _      <- set(second, "second", None, None, None)
-            result <- bitOp(BitOperation.XOR, dest)(first, second)
+            _      <- set(first, "first")
+            _      <- set(second, "second")
+            result <- bitOp(BitOperation.XOR, dest, first, second)
           } yield assert(result)(equalTo(6L))
         },
         testM("XOR over one empty and one non-empty string") {
@@ -456,8 +424,8 @@ trait StringsSpec extends BaseSpec {
             dest     <- uuid
             empty    <- uuid
             nonEmpty <- uuid
-            _        <- set(nonEmpty, "value", None, None, None)
-            result   <- bitOp(BitOperation.XOR, dest)(empty, nonEmpty)
+            _        <- set(nonEmpty, "value")
+            result   <- bitOp(BitOperation.XOR, dest, empty, nonEmpty)
           } yield assert(result)(equalTo(5L))
         },
         testM("XOR over two empty strings") {
@@ -465,7 +433,7 @@ trait StringsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            result <- bitOp(BitOperation.XOR, dest)(first, second)
+            result <- bitOp(BitOperation.XOR, dest, first, second)
           } yield assert(result)(equalTo(0L))
         },
         testM("error when XOR over one empty and one not string") {
@@ -473,8 +441,8 @@ trait StringsSpec extends BaseSpec {
             dest      <- uuid
             empty     <- uuid
             notString <- uuid
-            _         <- sAdd(notString)("a")
-            result    <- bitOp(BitOperation.XOR, dest)(empty, notString).either
+            _         <- sAdd(notString, "a")
+            result    <- bitOp(BitOperation.XOR, dest, empty, notString).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when XOR over non-empty and one not string") {
@@ -482,8 +450,8 @@ trait StringsSpec extends BaseSpec {
             dest      <- uuid
             nonEmpty  <- uuid
             notString <- uuid
-            _         <- sAdd(notString)("a")
-            result    <- bitOp(BitOperation.XOR, dest)(nonEmpty, notString).either
+            _         <- sAdd(notString, "a")
+            result    <- bitOp(BitOperation.XOR, dest, nonEmpty, notString).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when NOT over multiple non-empty strings") {
@@ -492,10 +460,10 @@ trait StringsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             third  <- uuid
-            _      <- set(first, "a", None, None, None)
-            _      <- set(second, "ab", None, None, None)
-            _      <- set(third, "abc", None, None, None)
-            result <- bitOp(BitOperation.NOT, dest)(first, second, third).either
+            _      <- set(first, "a")
+            _      <- set(second, "ab")
+            _      <- set(third, "abc")
+            result <- bitOp(BitOperation.NOT, dest, first, second, third).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when NOT over one non-empty and one empty string") {
@@ -503,31 +471,31 @@ trait StringsSpec extends BaseSpec {
             dest     <- uuid
             nonEmpty <- uuid
             empty    <- uuid
-            _        <- set(nonEmpty, "a", None, None, None)
-            result   <- bitOp(BitOperation.NOT, dest)(nonEmpty, empty).either
+            _        <- set(nonEmpty, "a")
+            result   <- bitOp(BitOperation.NOT, dest, nonEmpty, empty).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("NOT over non-empty string") {
           for {
             dest   <- uuid
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- bitOp(BitOperation.NOT, dest)(key)
+            _      <- set(key, "value")
+            result <- bitOp(BitOperation.NOT, dest, key)
           } yield assert(result)(equalTo(5L))
         },
         testM("NOT over empty string") {
           for {
             dest   <- uuid
             key    <- uuid
-            result <- bitOp(BitOperation.NOT, dest)(key)
+            result <- bitOp(BitOperation.NOT, dest, key)
           } yield assert(result)(equalTo(0L))
         },
         testM("error when NOT over not string") {
           for {
             dest   <- uuid
             key    <- uuid
-            _      <- sAdd(key)("a")
-            result <- bitOp(BitOperation.NOT, dest)(key).either
+            _      <- sAdd(key, "a")
+            result <- bitOp(BitOperation.NOT, dest, key).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -535,54 +503,54 @@ trait StringsSpec extends BaseSpec {
         testM("of 1 when non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
-            pos <- bitPos(key, true, None)
+            _   <- set(key, "value")
+            pos <- bitPos(key, true)
           } yield assert(pos)(equalTo(1L))
         },
         testM("of 0 when non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
-            pos <- bitPos(key, false, None)
+            _   <- set(key, "value")
+            pos <- bitPos(key, false)
           } yield assert(pos)(equalTo(0L))
         },
         testM("of 1 when empty string") {
           for {
             key <- uuid
-            pos <- bitPos(key, true, None)
+            pos <- bitPos(key, true)
           } yield assert(pos)(equalTo(-1L))
         },
         testM("of 0 when empty string") {
           for {
             key <- uuid
-            pos <- bitPos(key, false, None)
+            pos <- bitPos(key, false)
           } yield assert(pos)(equalTo(0L))
         },
         testM("of 1 when non-empty string with start") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, true, Some(BitPosRange(2L, None)))
           } yield assert(pos)(equalTo(17L))
         },
         testM("of 0 when non-empty string with start") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, false, Some(BitPosRange(2L, None)))
           } yield assert(pos)(equalTo(16L))
         },
         testM("of 1 when start is greater than non-empty string length") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, true, Some(BitPosRange(10L, None)))
           } yield assert(pos)(equalTo(-1L))
         },
         testM("of 0 when start is greater than non-empty string length") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, false, Some(BitPosRange(10L, None)))
           } yield assert(pos)(equalTo(-1L))
         },
@@ -601,56 +569,56 @@ trait StringsSpec extends BaseSpec {
         testM("of 1 when non-empty string with start and end") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, true, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(17L))
         },
         testM("of 0 when non-empty string with start and end") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(16L))
         },
         testM("of 1 when start is greater than end with non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
         testM("of 0 when start is greater than end with non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
         testM("of 1 when range is out of non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, true, Some(BitPosRange(10L, Some(15L))))
           } yield assert(pos)(equalTo(-1L))
         },
         testM("of 0 when range is out of non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, false, Some(BitPosRange(10L, Some(15L))))
           } yield assert(pos)(equalTo(-1L))
         },
         testM("of 1 when start is equal to end with non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, true, Some(BitPosRange(1L, Some(1L))))
           } yield assert(pos)(equalTo(9L))
         },
         testM("of 0 when start is equal to end with non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             pos <- bitPos(key, false, Some(BitPosRange(1L, Some(1L))))
           } yield assert(pos)(equalTo(8L))
         },
@@ -681,14 +649,14 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key <- uuid
-            _   <- sAdd(key)("a")
-            pos <- bitPos(key, true, None).either
+            _   <- sAdd(key, "a")
+            pos <- bitPos(key, true).either
           } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when not string and start is greater than end") {
           for {
             key <- uuid
-            _   <- sAdd(key)("a")
+            _   <- sAdd(key, "a")
             pos <- bitPos(key, false, Some(BitPosRange(4L, Some(2L)))).either
           } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -697,7 +665,7 @@ trait StringsSpec extends BaseSpec {
         testM("non-empty integer") {
           for {
             key    <- uuid
-            _      <- set(key, "5", None, None, None)
+            _      <- set(key, "5")
             result <- decr(key)
           } yield assert(result)(equalTo(4L))
         },
@@ -710,14 +678,14 @@ trait StringsSpec extends BaseSpec {
         testM("error when out of range integer") {
           for {
             key    <- uuid
-            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            _      <- set(key, "234293482390480948029348230948")
             result <- decr(key).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
-            _      <- set(key, "not-integer", None, None, None)
+            _      <- set(key, "not-integer")
             result <- decr(key).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
@@ -726,7 +694,7 @@ trait StringsSpec extends BaseSpec {
         testM("3 when non-empty integer") {
           for {
             key    <- uuid
-            _      <- set(key, "10", None, None, None)
+            _      <- set(key, "10")
             result <- decrBy(key, 3L)
           } yield assert(result)(equalTo(7L))
         },
@@ -739,21 +707,21 @@ trait StringsSpec extends BaseSpec {
         testM("-3 when non-empty integer") {
           for {
             key    <- uuid
-            _      <- set(key, "10", None, None, None)
+            _      <- set(key, "10")
             result <- decrBy(key, -3L)
           } yield assert(result)(equalTo(13L))
         },
         testM("error when out of range integer") {
           for {
             key    <- uuid
-            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            _      <- set(key, "234293482390480948029348230948")
             result <- decrBy(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
-            _      <- set(key, "not-integer", None, None, None)
+            _      <- set(key, "not-integer")
             result <- decrBy(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
@@ -762,7 +730,7 @@ trait StringsSpec extends BaseSpec {
         testM("non-emtpy string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             result <- get(key)
           } yield assert(result)(isSome(equalTo("value")))
         },
@@ -775,7 +743,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             result <- get(key).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -784,14 +752,14 @@ trait StringsSpec extends BaseSpec {
         testM("from non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             bit <- getBit(key, 17L)
           } yield assert(bit)(equalTo(1L))
         },
         testM("with offset larger then string length") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             bit <- getBit(key, 100L)
           } yield assert(bit)(equalTo(0L))
         },
@@ -810,7 +778,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key <- uuid
-            _   <- sAdd(key)("a")
+            _   <- sAdd(key, "a")
             bit <- getBit(key, 10L).either
           } yield assert(bit)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -819,42 +787,42 @@ trait StringsSpec extends BaseSpec {
         testM("from non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             substr <- getRange(key, 1 to 3)
           } yield assert(substr)(equalTo("alu"))
         },
         testM("with range that exceeds non-empty string length") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             substr <- getRange(key, 1 to 10)
           } yield assert(substr)(equalTo("alue"))
         },
         testM("with range that is outside of non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             substr <- getRange(key, 10 to 15)
           } yield assert(substr)(equalTo(""))
         },
         testM("with inverse range of non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             substr <- getRange(key, 15 to 3)
           } yield assert(substr)(equalTo(""))
         },
         testM("with negative range end from non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             substr <- getRange(key, 1 to -1)
           } yield assert(substr)(equalTo("alue"))
         },
         testM("with start and end equal from non-empty string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             substr <- getRange(key, 1 to 1)
           } yield assert(substr)(equalTo("a"))
         },
@@ -867,7 +835,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             substr <- getRange(key, 1 to 3).either
           } yield assert(substr)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -876,14 +844,14 @@ trait StringsSpec extends BaseSpec {
         testM("non-empty value to the existing string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             oldVal <- getSet(key, "abc")
           } yield assert(oldVal)(isSome(equalTo("value")))
         },
         testM("empty value to the existing string") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             oldVal <- getSet(key, "")
           } yield assert(oldVal)(isSome(equalTo("value")))
         },
@@ -902,7 +870,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             oldVal <- getSet(key, "value").either
           } yield assert(oldVal)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -911,7 +879,7 @@ trait StringsSpec extends BaseSpec {
         testM("non-empty integer") {
           for {
             key    <- uuid
-            _      <- set(key, "5", None, None, None)
+            _      <- set(key, "5")
             result <- incr(key)
           } yield assert(result)(equalTo(6L))
         },
@@ -924,14 +892,14 @@ trait StringsSpec extends BaseSpec {
         testM("error when out of range integer") {
           for {
             key    <- uuid
-            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            _      <- set(key, "234293482390480948029348230948")
             result <- incr(key).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
-            _      <- set(key, "not-integer", None, None, None)
+            _      <- set(key, "not-integer")
             result <- incr(key).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
@@ -940,7 +908,7 @@ trait StringsSpec extends BaseSpec {
         testM("3 when non-empty integer") {
           for {
             key    <- uuid
-            _      <- set(key, "10", None, None, None)
+            _      <- set(key, "10")
             result <- incrBy(key, 3L)
           } yield assert(result)(equalTo(13L))
         },
@@ -953,21 +921,21 @@ trait StringsSpec extends BaseSpec {
         testM("-3 when non-empty integer") {
           for {
             key    <- uuid
-            _      <- set(key, "10", None, None, None)
+            _      <- set(key, "10")
             result <- incrBy(key, -3L)
           } yield assert(result)(equalTo(7L))
         },
         testM("error when out of range integer") {
           for {
             key    <- uuid
-            _      <- set(key, "234293482390480948029348230948", None, None, None)
+            _      <- set(key, "234293482390480948029348230948")
             result <- incrBy(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
-            _      <- set(key, "not-integer", None, None, None)
+            _      <- set(key, "not-integer")
             result <- incrBy(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
@@ -976,7 +944,7 @@ trait StringsSpec extends BaseSpec {
         testM("3.4 when non-empty float") {
           for {
             key    <- uuid
-            _      <- set(key, "5.1", None, None, None)
+            _      <- set(key, "5.1")
             result <- incrByFloat(key, 3.4d)
           } yield assert(result)(equalTo("8.5"))
         },
@@ -989,21 +957,21 @@ trait StringsSpec extends BaseSpec {
         testM("-3.4 when non-empty float") {
           for {
             key    <- uuid
-            _      <- set(key, "5", None, None, None)
+            _      <- set(key, "5")
             result <- incrByFloat(key, -3.4d)
           } yield assert(result)(equalTo("1.6"))
         },
         testM("error when out of range value") {
           for {
             key    <- uuid
-            _      <- set(key, s"${Double.MaxValue.toString}1234", None, None, None)
+            _      <- set(key, s"${Double.MaxValue.toString}1234")
             result <- incrByFloat(key, 3d).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
-            _      <- set(key, "not-integer", None, None, None)
+            _      <- set(key, "not-integer")
             result <- incrByFloat(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
@@ -1013,8 +981,8 @@ trait StringsSpec extends BaseSpec {
           for {
             first  <- uuid
             second <- uuid
-            _      <- set(first, "1", None, None, None)
-            _      <- set(second, "2", None, None, None)
+            _      <- set(first, "1")
+            _      <- set(second, "2")
             result <- mGet(first, second)
           } yield assert(result)(equalTo(Chunk(Some("1"), Some("2"))))
         },
@@ -1022,7 +990,7 @@ trait StringsSpec extends BaseSpec {
           for {
             nonEmpty <- uuid
             empty    <- uuid
-            _        <- set(nonEmpty, "value", None, None, None)
+            _        <- set(nonEmpty, "value")
             result   <- mGet(nonEmpty, empty)
           } yield assert(result)(equalTo(Chunk(Some("value"), None)))
         },
@@ -1037,15 +1005,15 @@ trait StringsSpec extends BaseSpec {
           for {
             str    <- uuid
             notStr <- uuid
-            _      <- set(str, "value", None, None, None)
-            _      <- sAdd(notStr)("a")
+            _      <- set(str, "value")
+            _      <- sAdd(notStr, "a")
             result <- mGet(str, notStr)
           } yield assert(result)(equalTo(Chunk(Some("value"), None)))
         },
         testM("from one not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             result <- mGet(key)
           } yield assert(result)(equalTo(Chunk(None)))
         }
@@ -1094,7 +1062,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             result <- mSet((key, value)).either
           } yield assert(result)(isRight)
         }
@@ -1139,7 +1107,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key   <- uuid
             value <- uuid
-            _     <- sAdd(key)("a")
+            _     <- sAdd(key, "a")
             set   <- mSetNx((key, value))
           } yield assert(set)(isFalse)
         }
@@ -1159,7 +1127,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key        <- uuid
             value      <- uuid
-            _          <- set(key, "value", None, None, None)
+            _          <- set(key, "value")
             _          <- pSetEx(key, 1000.millis, value)
             currentVal <- get(key)
           } yield assert(currentVal)(isSome(equalTo(value)))
@@ -1168,7 +1136,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key        <- uuid
             value      <- uuid
-            _          <- sAdd(key)("a")
+            _          <- sAdd(key, "a")
             _          <- pSetEx(key, 1000.millis, value)
             currentVal <- get(key)
           } yield assert(currentVal)(isSome(equalTo(value)))
@@ -1193,82 +1161,82 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, None, None, None)
+            result <- set(key, value)
           } yield assert(result)(isSome)
         },
         testM("override existing string") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- set(key, value, None, None, None)
+            _      <- set(key, "value")
+            result <- set(key, value)
           } yield assert(result)(isSome)
         },
         testM("override not string") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- sAdd(key)("a")
-            result <- set(key, value, None, None, None)
+            _      <- sAdd(key, "a")
+            result <- set(key, value)
           } yield assert(result)(isSome)
         },
         testM("new value with ttl 1 second") {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, Some(1.second), None, None)
+            result <- set(key, value, Some(1.second))
           } yield assert(result)(isSome)
         },
         testM("new value with ttl 100 milliseconds") {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, Some(100.milliseconds), None, None)
+            result <- set(key, value, Some(100.milliseconds))
           } yield assert(result)(isSome)
         },
         testM("error when negative ttl") {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, Some((-1).millisecond), None, None).either
+            result <- set(key, value, Some((-1).millisecond)).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("new value with SetNew parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, None, Some(Update.SetNew), None)
+            result <- set(key, value, d = Some(Update.SetNew))
           } yield assert(result)(isSome)
         },
         testM("existing value with SetNew parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- set(key, value, None, Some(Update.SetNew), None)
+            _      <- set(key, "value")
+            result <- set(key, value, d = Some(Update.SetNew))
           } yield assert(result)(isNone)
         },
         testM("new value with SetExisting parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, None, Some(Update.SetExisting), None)
+            result <- set(key, value, d = Some(Update.SetExisting))
           } yield assert(result)(isNone)
         },
         testM("existing value with SetExisting parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, "value", None, None, None)
-            result <- set(key, value, None, Some(Update.SetExisting), None)
+            _      <- set(key, "value")
+            result <- set(key, value, d = Some(Update.SetExisting))
           } yield assert(result)(isSome)
         },
         testM("existing not string value with SetExisting parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- sAdd(key)("a")
-            result <- set(key, value, None, Some(Update.SetExisting), None)
+            _      <- sAdd(key, "a")
+            result <- set(key, value, d = Some(Update.SetExisting))
           } yield assert(result)(isSome)
         },
         // next three tests include KEEPTTL parameter that is valid for Redis version >= 6
@@ -1276,23 +1244,23 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, None, None, Some(KeepTtl))
+            result <- set(key, value, e = Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore,
         testM("existing value with KeepTtl parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, "value", Some(1.second), None, None)
-            result <- set(key, value, None, None, Some(KeepTtl))
+            _      <- set(key, "value", Some(1.second))
+            result <- set(key, value, e = Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore,
         testM("existing value with both ttl and KeepTtl parameters") {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, "value", Some(1.second), None, None)
-            result <- set(key, value, Some(1.second), None, Some(KeepTtl))
+            _      <- set(key, "value", Some(1.second))
+            result <- set(key, value, Some(1.second), e = Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore
       ),
@@ -1300,7 +1268,7 @@ trait StringsSpec extends BaseSpec {
         testM("for existing key") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             oldBit <- setBit(key, 16L, true)
           } yield assert(oldBit)(isFalse)
         },
@@ -1313,21 +1281,21 @@ trait StringsSpec extends BaseSpec {
         testM("for offset that is out of string range") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             oldBit <- setBit(key, 100L, true)
           } yield assert(oldBit)(isFalse)
         },
         testM("error when negative offset") {
           for {
             key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             oldBit <- setBit(key, -1L, false).either
           } yield assert(oldBit)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not string") {
           for {
             key    <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             oldBit <- setBit(key, 10L, true).either
           } yield assert(oldBit)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -1347,7 +1315,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key          <- uuid
             value        <- uuid
-            _            <- set(key, "value", None, None, None)
+            _            <- set(key, "value")
             _            <- setEx(key, 1.second, value)
             existsBefore <- exists(key)
             _            <- ZIO.sleep(1010.millis)
@@ -1358,7 +1326,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key          <- uuid
             value        <- uuid
-            _            <- sAdd(key)("a")
+            _            <- sAdd(key, "a")
             _            <- setEx(key, 1.second, value)
             existsBefore <- exists(key)
             _            <- ZIO.sleep(1010.millis)
@@ -1392,7 +1360,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- set(key, "value", None, None, None)
+            _      <- set(key, "value")
             result <- setNx(key, value)
           } yield assert(result)(isFalse)
         },
@@ -1400,7 +1368,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- sAdd(key)("a")
+            _      <- sAdd(key, "a")
             result <- setNx(key, value)
           } yield assert(result)(isFalse)
         }
@@ -1409,7 +1377,7 @@ trait StringsSpec extends BaseSpec {
         testM("in existing string") {
           for {
             key <- uuid
-            _   <- set(key, "val", None, None, None)
+            _   <- set(key, "val")
             len <- setRange(key, 3L, "ue")
           } yield assert(len)(equalTo(5L))
         },
@@ -1422,7 +1390,7 @@ trait StringsSpec extends BaseSpec {
         testM("when offset is larger then string length") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             len <- setRange(key, 7L, "value")
           } yield assert(len)(equalTo(12L))
         },
@@ -1435,7 +1403,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key <- uuid
-            _   <- sAdd(key)("a")
+            _   <- sAdd(key, "a")
             len <- setRange(key, 1L, "value").either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -1444,7 +1412,7 @@ trait StringsSpec extends BaseSpec {
         testM("for non-empty string") {
           for {
             key <- uuid
-            _   <- set(key, "value", None, None, None)
+            _   <- set(key, "value")
             len <- strLen(key)
           } yield assert(len)(equalTo(5L))
         },
@@ -1457,7 +1425,7 @@ trait StringsSpec extends BaseSpec {
         testM("error when not string") {
           for {
             key <- uuid
-            _   <- sAdd(key)("a")
+            _   <- sAdd(key, "a")
             len <- strLen(key).either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }

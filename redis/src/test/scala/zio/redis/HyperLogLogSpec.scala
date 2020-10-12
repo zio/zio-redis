@@ -11,14 +11,14 @@ trait HyperLogLogSpec extends BaseSpec {
         testM("pfAdd elements to key") {
           for {
             key <- uuid
-            add <- pfAdd(key)("one", "two", "three")
+            add <- pfAdd(key, "one", "two", "three")
           } yield assert(add)(equalTo(true))
         },
         testM("pfAdd nothing to key when new elements not unique") {
           for {
             key  <- uuid
-            add1 <- pfAdd(key)("one", "two", "three")
-            add2 <- pfAdd(key)("one", "two", "three")
+            add1 <- pfAdd(key, "one", "two", "three")
+            add2 <- pfAdd(key, "one", "two", "three")
           } yield assert(add1)(equalTo(true)) && assert(add2)(equalTo(false))
         },
         testM("pfAdd error when not hyperloglog") {
@@ -26,7 +26,7 @@ trait HyperLogLogSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value, None, None, None)
-            add   <- pfAdd(key)("one", "two", "three").either
+            add   <- pfAdd(key, "one", "two", "three").either
           } yield assert(add)(isLeft)
         }
       ),
@@ -39,7 +39,7 @@ trait HyperLogLogSpec extends BaseSpec {
         testM("pfCount values at key") {
           for {
             key   <- uuid
-            add   <- pfAdd(key)("one", "two", "three")
+            add   <- pfAdd(key, "one", "two", "three")
             count <- pfCount(key)
           } yield assert(add)(equalTo(true)) && assert(count)(equalTo(3L))
         },
@@ -47,8 +47,8 @@ trait HyperLogLogSpec extends BaseSpec {
           for {
             key   <- uuid
             key2  <- uuid
-            add   <- pfAdd(key)("one", "two", "three")
-            add2  <- pfAdd(key2)("four", "five", "six")
+            add   <- pfAdd(key, "one", "two", "three")
+            add2  <- pfAdd(key2, "four", "five", "six")
             count <- pfCount(key, key2)
           } yield assert(add)(equalTo(true)) && assert(add2)(equalTo(true)) && assert(count)(equalTo(6L))
         },
@@ -67,9 +67,9 @@ trait HyperLogLogSpec extends BaseSpec {
             key   <- uuid
             key2  <- uuid
             key3  <- uuid
-            _     <- pfAdd(key)("one", "two", "three", "four")
-            _     <- pfAdd(key2)("five", "six", "seven")
-            _     <- pfMerge(key3)(key2, key)
+            _     <- pfAdd(key, "one", "two", "three", "four")
+            _     <- pfAdd(key2, "five", "six", "seven")
+            _     <- pfMerge(key3, key2, key)
             count <- pfCount(key3)
           } yield assert(count)(equalTo(7L))
         },
@@ -78,10 +78,10 @@ trait HyperLogLogSpec extends BaseSpec {
             key   <- uuid
             key2  <- uuid
             key3  <- uuid
-            _     <- pfAdd(key)("one", "two", "three", "four")
-            _     <- pfAdd(key2)("five", "six", "seven")
-            _     <- pfAdd(key3)("eight", "nine", "ten")
-            _     <- pfMerge(key3)(key2, key)
+            _     <- pfAdd(key, "one", "two", "three", "four")
+            _     <- pfAdd(key2, "five", "six", "seven")
+            _     <- pfAdd(key3, "eight", "nine", "ten")
+            _     <- pfMerge(key3, key2, key)
             count <- pfCount(key3)
           } yield assert(count)(equalTo(10L))
         },
@@ -92,8 +92,8 @@ trait HyperLogLogSpec extends BaseSpec {
             key2  <- uuid
             key3  <- uuid
             _     <- set(key, value, None, None, None)
-            _     <- pfAdd(key2)("five", "six", "seven")
-            merge <- pfMerge(key3)(key2, key).either
+            _     <- pfAdd(key2, "five", "six", "seven")
+            merge <- pfMerge(key3, key2, key).either
           } yield assert(merge)(isLeft)
         }
       )
