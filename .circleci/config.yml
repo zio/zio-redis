@@ -70,15 +70,6 @@ filter_tags: &filter_tags
   tags:
     only: /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 
-compile: &compile
-  steps:
-    - checkout
-    - <<: *load_cache
-    - run:
-        name: Compile code
-        command: ./sbt ++${SCALA_VERSION}! compile
-    - <<: *save_cache
-
 lint: &lint
   steps:
     - checkout
