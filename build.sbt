@@ -22,15 +22,12 @@ inThisBuild(
 )
 
 addCommandAlias("prepare", "fix; fmt")
-addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
-addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
+addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheckAll")
+addCommandAlias("fix", "all compile:scalafix test:scalafix")
+addCommandAlias("fixCheck", "; compile:scalafix --check ; test:scalafix --check")
 addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
 addCommandAlias("testJVM211", ";redis/test")
-addCommandAlias("fix", "all compile:scalafix test:scalafix")
-addCommandAlias(
-  "fixCheck",
-  "; compile:scalafix --check ; test:scalafix --check"
-)
 
 lazy val root =
   project
