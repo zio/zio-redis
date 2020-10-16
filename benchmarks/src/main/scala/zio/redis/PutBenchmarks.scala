@@ -76,7 +76,7 @@ class PutBenchmarks {
   def zio(): Unit = {
     val effect = ZIO
       .foreach_(items)(i => set(i, i, None, None, None))
-      .provideLayer(RedisExecutor.live(RedisHost, RedisPort).orDie)
+      .provideLayer(RedisExecutor.liveServer(RedisHost, RedisPort).orDie)
 
     unsafeRun(effect)
   }

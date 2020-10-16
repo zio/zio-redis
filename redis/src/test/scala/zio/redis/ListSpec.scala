@@ -174,9 +174,9 @@ trait ListSpec extends BaseSpec {
             dest    <- uuid
             _       <- rPush(dest, "four")
             st      <- currentTime(TimeUnit.SECONDS)
-            s       <- brPopLPush(key, dest, 1.seconds).either
+            s       <- brPopLPush(key, dest, 1.seconds)
             endTime <- currentTime(TimeUnit.SECONDS)
-          } yield assert(s)(isLeft) && assert(endTime - st)(isGreaterThanEqualTo(1L))
+          } yield assert(s)(isNone) && assert(endTime - st)(isGreaterThanEqualTo(1L))
         },
         testM("brPopLPush error when not list") {
           for {

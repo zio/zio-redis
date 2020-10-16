@@ -8,122 +8,102 @@ import zio.test._
 import zio.{ Chunk, Task }
 
 object OutputSpec extends BaseSpec {
+
+  private def respBulkString(s: String) = RespValue.bulkString(s)
+
+  private def respDouble(d: Double) = respBulkString(d.toString)
+
+  private def respArray(xs: String*) = RespValue.Array(Chunk.fromIterable(xs.map(respBulkString)))
+
+  private def respArrayVals(xs: RespValue*) = RespValue.Array(Chunk.fromIterable(xs))
+
   def spec =
     suite("Output decoders")(
       suite("errors")(
         testM("protocol errors") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(s"-ERR\r\n$Noise\r\n")).either
+            res <- Task(BoolOutput.unsafeDecode(RespValue.Error(s"ERR $Noise"))).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(Noise))))
         },
         testM("wrong type") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(s"-WRONGTYPE\r\n$Noise\r\n")).either
+            res <- Task(BoolOutput.unsafeDecode(RespValue.Error(s"WRONGTYPE $Noise"))).either
           } yield assert(res)(isLeft(equalTo(WrongType(Noise))))
         }
       ),
       suite("boolean")(
         testM("extract true") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(":1\r\n"))
+            res <- Task(BoolOutput.unsafeDecode(RespValue.Integer(1L)))
           } yield assert(res)(isTrue)
         },
         testM("extract false") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(":0\r\n"))
+            res <- Task(BoolOutput.unsafeDecode(RespValue.Integer(0)))
           } yield assert(res)(isFalse)
-        },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(BoolOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't a boolean."))))
         }
       ),
       suite("chunk")(
         testM("extract empty arrays") {
           for {
-            res <- Task(ChunkOutput.unsafeDecode("*0\r\n"))
+            res <- Task(ChunkOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract non-empty arrays") {
           for {
-            res <- Task(ChunkOutput.unsafeDecode("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"))
+            res <- Task(ChunkOutput.unsafeDecode(respArray("foo", "bar")))
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
-        },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(ChunkOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't an array."))))
         }
       ),
       suite("double")(
         testM("extract numbers") {
           val num = 42.3
           for {
-            res <- Task(DoubleOutput.unsafeDecode(s"$$4\r\n$num\r\n"))
+            res <- Task(DoubleOutput.unsafeDecode(respDouble(num)))
           } yield assert(res)(equalTo(num))
         },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(DoubleOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't a double."))))
-        },
         testM("report number format exceptions as protocol errors") {
-          val bad = "$2\r\nok\r\n"
+          val bad = "ok"
           for {
-            res <- Task(DoubleOutput.unsafeDecode(bad)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$bad isn't a double."))))
+            res <- Task(DoubleOutput.unsafeDecode(respBulkString(bad))).either
+          } yield assert(res)(isLeft(equalTo(ProtocolError(s"'$bad' isn't a double."))))
         }
       ),
       suite("durations")(
         suite("milliseconds")(
           testM("extract milliseconds") {
-            val num = 42
+            val num = 42L
             for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(s":$num\r\n"))
+              res <- Task(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(num)))
             } yield assert(res)(equalTo(num.millis))
           },
           testM("report error for non-existing key") {
-            val bad = ":-2\r\n"
             for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(bad)).either
+              res <- Task(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(-2L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key not found."))))
           },
           testM("report error for key without TTL") {
-            val bad = ":-1\r\n"
             for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(bad)).either
+              res <- Task(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(-1L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key has no expire."))))
-          },
-          testM("report invalid input as protocol error") {
-            for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(Noise)).either
-            } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't a duration."))))
           }
         ),
         suite("seconds")(
           testM("extract seconds") {
-            val num = 42
+            val num = 42L
             for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(s":$num\r\n"))
+              res <- Task(DurationSecondsOutput.unsafeDecode(RespValue.Integer(num)))
             } yield assert(res)(equalTo(num.seconds))
           },
           testM("report error for non-existing key") {
-            val bad = ":-2\r\n"
             for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(bad)).either
+              res <- Task(DurationSecondsOutput.unsafeDecode(RespValue.Integer(-2L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key not found."))))
           },
           testM("report error for key without TTL") {
-            val bad = ":-1\r\n"
             for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(bad)).either
+              res <- Task(DurationSecondsOutput.unsafeDecode(RespValue.Integer(-1L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key has no expire."))))
-          },
-          testM("report invalid input as protocol error") {
-            for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(Noise)).either
-            } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't a duration."))))
           }
         )
       ),
@@ -131,89 +111,63 @@ object OutputSpec extends BaseSpec {
         testM("extract positive numbers") {
           val num = 42L
           for {
-            res <- Task(LongOutput.unsafeDecode(s":$num\r\n"))
+            res <- Task(LongOutput.unsafeDecode(RespValue.Integer(num)))
           } yield assert(res)(equalTo(num))
         },
         testM("extract negative numbers") {
           val num = -42L
           for {
-            res <- Task(LongOutput.unsafeDecode(s":$num\r\n"))
+            res <- Task(LongOutput.unsafeDecode(RespValue.Integer(num)))
           } yield assert(res)(equalTo(num))
-        },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(LongOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't a number."))))
         }
       ),
       suite("optional")(
         testM("extract None") {
           for {
-            res <- Task(OptionalOutput(UnitOutput).unsafeDecode("$-1"))
+            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(RespValue.NullValue))
           } yield assert(res)(isNone)
         },
         testM("extract some") {
           for {
-            res <- Task(OptionalOutput(UnitOutput).unsafeDecode("+OK\r\n"))
+            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(RespValue.SimpleString("OK")))
           } yield assert(res)(isSome(isUnit))
-        },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't unit."))))
         }
       ),
       suite("scan")(
         testM("extract cursor and elements") {
-          val input = "*2\r\n$1\r\n5\r\n*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"
+          val input = respArrayVals(respBulkString("5"), respArray("foo", "bar"))
           for {
             res <- Task(ScanOutput.unsafeDecode(input))
           } yield assert(res)(equalTo("5" -> Chunk("foo", "bar")))
-        },
-        testM("report invalid input as protocol error") {
-          // TODO: expand failure cases
-          for {
-            res <- Task(ScanOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't scan output."))))
         }
       ),
       suite("string")(
         testM("extract strings") {
           for {
-            res <- Task(MultiStringOutput.unsafeDecode(s"$$${Noise.length}\r\n$Noise\r\n"))
+            res <- Task(MultiStringOutput.unsafeDecode(respBulkString(Noise)))
           } yield assert(res)(equalTo(Noise))
-        },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(MultiStringOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't a string."))))
         }
       ),
       suite("unit")(
         testM("extract unit") {
           for {
-            res <- Task(UnitOutput.unsafeDecode(s"+OK\r\n"))
+            res <- Task(UnitOutput.unsafeDecode(RespValue.SimpleString("OK")))
           } yield assert(res)(isUnit)
-        },
-        testM("report invalid input as protocol error") {
-          for {
-            res <- Task(UnitOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(equalTo(ProtocolError(s"$Noise isn't unit."))))
         }
       ),
       suite("keyElem")(
         testM("extract none") {
           for {
-            res <- Task(KeyElemOutput.unsafeDecode(s"*-1\r\n"))
+            res <- Task(KeyElemOutput.unsafeDecode(RespValue.NullValue))
           } yield assert(res)(isNone)
         },
         testM("extract key and element") {
           for {
-            res <- Task(KeyElemOutput.unsafeDecode("*2\r\n$3\r\nkey\r\n$1\r\na\r\n"))
+            res <- Task(KeyElemOutput.unsafeDecode(respArray("key", "a")))
           } yield assert(res)(isSome(equalTo(("key", "a"))))
         },
         testM("report invalid input as protocol error") {
-          val input = "*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
+          val input = respArray("1", "2", "3")
           for {
             res <- Task(KeyElemOutput.unsafeDecode(input)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
@@ -222,77 +176,72 @@ object OutputSpec extends BaseSpec {
       suite("multiStringChunk")(
         testM("extract one empty value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode("$-1\r\n"))
+            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.NullValue))
           } yield assert(res)(isEmpty)
         },
         testM("extract one multi-string value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode("$2\r\nab\r\n"))
+            res <- Task(MultiStringChunkOutput.unsafeDecode(respBulkString("ab")))
           } yield assert(res)(hasSameElements(Chunk("ab")))
         },
         testM("extract one array value") {
-          val input = "*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
+          val input = respArray("1", "2", "3")
           for {
             res <- Task(MultiStringChunkOutput.unsafeDecode(input))
           } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
-        },
-        testM("error when extracting from an invalid value") {
-          for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
       suite("chunkOptionalMultiString")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode("*-1\r\n"))
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.NullValue))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with one non-empty element") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode("*1\r\n$2\r\nab\r\n"))
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(respArray("ab")))
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
         testM("extract array with multiple non-empty elements") {
-          val input = "*3\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
+          val input = respArray("1", "2", "3")
           for {
             res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
         testM("extract array with empty and non-empty elements") {
-          val input = "*3\r\n$1\r\n1\r\n$-1\r\n$1\r\n3\r\n"
+          val input = respArrayVals(respBulkString("1"), RespValue.NullValue, respBulkString("3"))
           for {
             res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
-        },
-        testM("error when extracting from an invalid value") {
-          for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
       suite("chunkOptionalLong")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode("*0\r\n"))
+            res <- Task(ChunkOptionalLongOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with empty and non-empty elements") {
-          val input = "*4\r\n:1\r\n$-1\r\n:2\r\n:3\r\n"
+          val input = respArrayVals(
+            RespValue.Integer(1L),
+            RespValue.NullValue,
+            RespValue.Integer(2L),
+            RespValue.Integer(3L)
+          )
           for {
             res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
         },
         testM("extract array with non-empty elements") {
-          val input = "*4\r\n:1\r\n:1\r\n:2\r\n:3\r\n"
+          val input = respArrayVals(
+            RespValue.Integer(1L),
+            RespValue.Integer(1L),
+            RespValue.Integer(2L),
+            RespValue.Integer(3L)
+          )
           for {
             res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
-        },
-        testM("error when extracting from an invalid value") {
-          for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(Noise)).either
-          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )
     )

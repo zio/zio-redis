@@ -28,10 +28,10 @@ object BuildHelper {
     )
 
   val Scala211 = "2.11.12"
-  val Scala212 = "2.12.10"
-  val Scala213 = "2.13.1"
+  val Scala212 = "2.12.11"
+  val Scala213 = "2.13.3"
 
-  private val SilencerVersion = "1.4.4"
+  private val SilencerVersion = "1.7.1"
 
   private val StdOpts =
     Seq(
