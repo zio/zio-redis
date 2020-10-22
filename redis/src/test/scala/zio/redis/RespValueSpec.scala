@@ -2,9 +2,9 @@ package zio.redis
 import java.nio.charset.StandardCharsets
 
 import zio.Chunk
-import zio.test._
-import zio.test.Assertion._
 import zio.stream.Stream
+import zio.test.Assertion._
+import zio.test._
 
 object RespValueSpec extends BaseSpec {
 

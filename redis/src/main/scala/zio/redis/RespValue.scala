@@ -2,8 +2,8 @@ package zio.redis
 
 import java.nio.charset.StandardCharsets
 
-import zio.{ Chunk, IO, Ref }
 import zio.stream.{ Sink, ZSink }
+import zio.{ Chunk, IO, Ref }
 
 sealed trait RespValue extends Any {
 
