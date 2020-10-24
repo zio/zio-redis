@@ -16,7 +16,7 @@ trait Interpreter {
 
   object RedisExecutor {
 
-    val defaultPort = 6379
+    private[redis] val DefaultPort = 6379
 
     trait Service {
 
@@ -24,12 +24,7 @@ trait Interpreter {
 
     }
 
-    /**
-     * This is to make better use of pipelining by writing requests to the socket in batches.
-     * Ideally this*(average RESP serialized message size) should equal the buffer size used by `ByteStream`,
-     * but we can only guesstimate.
-     */
-    private val requestQueueSize = 20
+    private val RequestQueueSize = 16
 
     private final class Live(
       reqQueue: Queue[Request],
@@ -42,13 +37,15 @@ trait Interpreter {
           .make[RedisError, RespValue]
           .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
 
-      private def sendNext(out: Chunk[Byte] => IO[IOException, Unit]): IO[RedisError, Unit] =
+      private def sendWith(out: Chunk[Byte] => IO[IOException, Unit]): IO[RedisError, Unit] =
         reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
           val bytes = Chunk.fromIterable(reqs).flatMap(req => RespValue.Array(req.command).serialize)
           out(bytes)
             .mapError(RedisError.IOError)
-            .tapError(e => IO.foreach(reqs)(_.promise.fail(e)))
-            .zipLeft(IO.foreach(reqs)(req => resQueue.offer(req.promise)))
+            .tapBoth(
+              e => IO.foreach_(reqs)(_.promise.fail(e)),
+              _ => IO.foreach_(reqs)(req => resQueue.offer(req.promise))
+            )
         }
 
       private def runReceive(inStream: Stream[IOException, Byte]): IO[RedisError, Unit] =
@@ -66,41 +63,39 @@ trait Interpreter {
         byteStream
           .mapError(RedisError.IOError)
           .use { rwBytes =>
-            sendNext(rwBytes.write).forever race runReceive(rwBytes.read)
+            sendWith(rwBytes.write).forever race runReceive(rwBytes.read)
           }
           .tapError { e =>
-            IO.effectTotal(println(s"Reconnecting due to error: $e")) *>
-              resQueue.takeAll.flatMap(IO.foreach(_)(_.fail(e)))
+            // TODO - log that a reconnection is happening
+            resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
           }
           .retryWhile(Function.const(true))
-          .tapCause(c => IO.effectTotal(Console.err.println(s"Executor exiting: $c")))
-
     }
 
-    def live: ZLayer[ByteStream, RedisError.IOError, RedisExecutor] =
+    private def fromBytestream: ZLayer[ByteStream, RedisError.IOError, RedisExecutor] =
       ZLayer.fromServiceManaged { env =>
         for {
-          reqQueue <- Queue.bounded[Request](requestQueueSize).toManaged_
+          reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
           resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
           live      = new Live(reqQueue, resQueue, env.connect)
           _        <- live.run.forkManaged
         } yield live
       }
 
-    def liveServer(address: SocketAddress): Layer[RedisError.IOError, RedisExecutor] =
-      ByteStream.socket(address).mapError(RedisError.IOError) >>> live
+    def live(address: SocketAddress): Layer[RedisError.IOError, RedisExecutor] =
+      ByteStream.socket(address).mapError(RedisError.IOError) >>> fromBytestream
 
-    def liveServer(host: String, port: Int = defaultPort): Layer[RedisError.IOError, RedisExecutor] =
-      ByteStream.socket(host, port).mapError(RedisError.IOError) >>> live
+    def live(host: String, port: Int = DefaultPort): Layer[RedisError.IOError, RedisExecutor] =
+      ByteStream.socket(host, port).mapError(RedisError.IOError) >>> fromBytestream
 
-    def liveLoopback(port: Int = defaultPort): Layer[RedisError.IOError, RedisExecutor] =
-      ByteStream.socketLoopback(port).mapError(RedisError.IOError) >>> live
+    def loopback(port: Int = DefaultPort): Layer[RedisError.IOError, RedisExecutor] =
+      ByteStream.socketLoopback(port).mapError(RedisError.IOError) >>> fromBytestream
 
   }
 
-  type ByteStream = Has[ByteStream.Service]
+  private type ByteStream = Has[ByteStream.Service]
 
-  object ByteStream {
+  private[redis] object ByteStream {
 
     val ResponseBufferSize = 1024
 
@@ -108,7 +103,7 @@ trait Interpreter {
 
     trait Service {
 
-      def connect: Managed[IOException, ReadWriteBytes]
+      val connect: Managed[IOException, ReadWriteBytes]
 
     }
 
@@ -120,24 +115,22 @@ trait Interpreter {
 
     }
 
-    /**
-     * Adapts `ComplectionHandler` async channel operations with interruption support.
-     */
-    private def effectAsyncChannel[C <: Channel, T](
+    private def completionHandlerCallback[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
+      new CompletionHandler[A, Any] {
+        def completed(result: A, u: Any): Unit = k(IO.succeedNow(result))
+
+        def failed(t: Throwable, u: Any): Unit =
+          t match {
+            case e: IOException => k(IO.fail(e))
+            case _              => k(IO.die(t))
+          }
+      }
+
+    private def effectAsyncChannel[C <: Channel, A](
       channel: C
-    )(op: C => CompletionHandler[T, Any] => Any): IO[IOException, T] =
+    )(op: C => CompletionHandler[A, Any] => Any): IO[IOException, A] =
       IO.effectAsyncInterrupt { k =>
-        val handler = new CompletionHandler[T, Any] {
-          def completed(result: T, u: Any): Unit = k(IO.succeedNow(result))
-
-          def failed(t: Throwable, u: Any): Unit =
-            t match {
-              case e: IOException => k(IO.fail(e))
-              case _              => k(IO.die(t))
-            }
-        }
-
-        op(channel)(handler)
+        op(channel)(completionHandlerCallback(k))
         Left(IO.effect(channel.close()).ignore)
       }
 
@@ -179,9 +172,9 @@ trait Interpreter {
         Managed.fromAutoCloseable(make).refineToOrDie[IOException]
       }
 
-      override def connect: Managed[IOException, ReadWriteBytes] =
+      override val connect: Managed[IOException, ReadWriteBytes] =
         openChannel.map { channel =>
-          val readChunk: IO[Option[IOException], Chunk[Byte]] =
+          val readChunk =
             (for {
               _     <- IO.effectTotal(readBuffer.clear())
               _     <- effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.read(readBuffer, null, _))
@@ -198,6 +191,7 @@ trait Interpreter {
               case e: IOException  => Some(e)
             }
 
+          @inline
           def writeChunk(chunk: Chunk[Byte]): IO[IOException, Unit] =
             IO.when(chunk.nonEmpty) {
               IO.effectTotal {
@@ -214,9 +208,9 @@ trait Interpreter {
             }
 
           new ReadWriteBytes {
-            override def read = Stream.repeatEffectChunkOption(readChunk)
+            def read: Stream[IOException, Byte] = Stream.repeatEffectChunkOption(readChunk)
 
-            override def write(chunk: Chunk[Byte]) = writeChunk(chunk)
+            def write(chunk: Chunk[Byte]): IO[IOException, Unit] = writeChunk(chunk)
           }
         }
 

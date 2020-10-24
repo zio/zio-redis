@@ -7,12 +7,14 @@ import zio.{ Chunk, IO, Ref }
 
 sealed trait RespValue extends Any {
 
+  self =>
+
   import RespValue._
 
   final def serialize: Chunk[Byte] = {
-    def simpleString(s: String) = Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ crLf
+    def simpleString(s: String) = Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
 
-    this match {
+    self match {
       case SimpleString(s)   =>
         Header.simpleString +: simpleString(s)
       case Error(s)          =>
@@ -20,13 +22,13 @@ sealed trait RespValue extends Any {
       case Integer(i)        =>
         Header.integer +: simpleString(i.toString)
       case BulkString(bytes) =>
-        Header.bulkString +: (simpleString(bytes.length.toString) ++ bytes ++ crLf)
+        Header.bulkString +: (simpleString(bytes.length.toString) ++ bytes ++ CrLf)
       case Array(elements)   =>
         Header.array +: (simpleString(elements.size.toString) ++ elements.foldLeft[Chunk[Byte]](Chunk.empty)(
           (acc, elem) => acc ++ elem.serialize
         ))
       case NullValue         =>
-        nullString
+        NullString
     }
   }
 
@@ -42,13 +44,13 @@ object RespValue {
     val array        = '*'.toByte
   }
 
-  private[redis] val cr = '\r'.toByte
+  private[redis] val Cr = '\r'.toByte
 
-  private[redis] val lf = '\n'.toByte
+  private[redis] val Lf = '\n'.toByte
 
-  private val crLf = Chunk(cr, lf)
+  private val CrLf = Chunk(Cr, Lf)
 
-  private val nullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
+  private val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
   final case class SimpleString(value: String) extends AnyVal with RespValue
 
@@ -73,11 +75,15 @@ object RespValue {
   def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   sealed trait State {
+
+    self =>
+
     import State._
-    final def continue: Boolean =
-      this match {
-        case InProgress(_) | CrSeen(_) => true
-        case Complete(_) | Failed      => false
+
+    final def finished: Boolean =
+      self match {
+        case InProgress(_) | CrSeen(_) => false
+        case Complete(_) | Failed      => true
       }
   }
 
@@ -93,15 +99,15 @@ object RespValue {
 
   }
 
-  def simpleStringDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, String] = {
+  val simpleStringDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, String] = {
     import State._
     Sink
-      .fold[Byte, State](InProgress(Chunk.empty))(_.continue) { (acc, b) =>
+      .fold[Byte, State](InProgress(Chunk.empty))(!_.finished) { (acc, b) =>
         acc match {
-          case InProgress(chunk) if b == cr => CrSeen(chunk)
-          case InProgress(_) if b == lf     => Failed
+          case InProgress(chunk) if b == Cr => CrSeen(chunk)
+          case InProgress(_) if b == Lf     => Failed
           case InProgress(chunk)            => InProgress(chunk :+ b.toChar)
-          case CrSeen(chunk) if b == lf     => Complete(chunk)
+          case CrSeen(chunk) if b == Lf     => Complete(chunk)
           case _                            => Failed
         }
       }
@@ -113,14 +119,14 @@ object RespValue {
       }
   }
 
-  def intDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, Long] =
+  val intDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, Long] =
     simpleStringDeserialize.mapM { s =>
       IO.effect(s.toLong).refineOrDie {
         case _: NumberFormatException => RedisError.ProtocolError(s"'$s' is not a valid integer")
       }
     }
 
-  def bulkStringDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
+  val bulkStringDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
     intDeserialize.flatMap {
       case size if size >= 0 =>
         for {
@@ -133,7 +139,7 @@ object RespValue {
         Sink.fail(RedisError.ProtocolError(s"Invalid bulk string length: $other"))
     }
 
-  def arrayDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] = {
+  val arrayDeserialize: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] = {
     def help(
       count: Int,
       elements: Chunk[RespValue]
@@ -146,7 +152,7 @@ object RespValue {
     }
   }
 
-  def deserialize: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
+  val deserialize: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
     sinkTake[Byte](1).flatMap { header =>
       header.head match {
         case Header.simpleString => simpleStringDeserialize.map(SimpleString)

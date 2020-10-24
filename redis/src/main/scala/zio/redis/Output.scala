@@ -23,7 +23,7 @@ sealed trait Output[+A] {
 
   final def map[B](f: A => B): Output[B] =
     new Output[B] {
-      override protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
+      protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
     }
 
 }

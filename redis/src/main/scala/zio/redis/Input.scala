@@ -14,6 +14,7 @@ sealed trait Input[-A] {
 
 object Input {
 
+  @inline
   private[this] def stringEncode(s: String) = RespValue.bulkString(s)
 
   case object AbsTtlInput extends Input[AbsTtl] {

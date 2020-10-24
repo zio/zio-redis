@@ -18,5 +18,5 @@ object ByteStreamSpec extends BaseSpec {
 
         }
       }
-    ).provideCustomLayerShared(ByteStream.socketLoopback(RedisExecutor.defaultPort).orDie)
+    ).provideCustomLayerShared(ByteStream.socketLoopback(RedisExecutor.DefaultPort).orDie)
 }
