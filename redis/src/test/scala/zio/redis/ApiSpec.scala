@@ -25,5 +25,5 @@ object ApiSpec
       hashSuite
     ).provideCustomLayerShared(Executor ++ Clock.live)
 
-  private val Executor = RedisExecutor.live("127.0.0.1", 6379).orDie
+  private val Executor = RedisExecutor.loopback().orDie
 }
