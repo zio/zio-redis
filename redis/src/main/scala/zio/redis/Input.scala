@@ -9,206 +9,222 @@ import zio.Chunk
 import zio.duration.Duration
 
 sealed trait Input[-A] {
-  private[redis] def encode(data: A): Chunk[String]
+  private[redis] def encode(data: A): Chunk[RespValue.BulkString]
 }
 
 object Input {
-  private[this] def wrap(text: String): String = s"$$${text.length}\r\n$text\r\n"
+
+  @inline
+  private[this] def stringEncode(s: String) = RespValue.bulkString(s)
 
   case object AbsTtlInput extends Input[AbsTtl] {
-    def encode(data: AbsTtl): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: AbsTtl): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object AggregateInput extends Input[Aggregate] {
-    def encode(data: Aggregate): Chunk[String] = Chunk(wrap("AGGREGATE"), wrap(data.stringify))
+    def encode(data: Aggregate): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("AGGREGATE"), stringEncode(data.stringify))
   }
 
   case object AuthInput extends Input[Auth] {
-    def encode(data: Auth): Chunk[String] = Chunk(wrap("AUTH"), wrap(data.password))
+    def encode(data: Auth): Chunk[RespValue.BulkString] = Chunk(stringEncode("AUTH"), stringEncode(data.password))
   }
 
   case object BoolInput extends Input[Boolean] {
-    def encode(data: Boolean): Chunk[String] = Chunk.single(wrap(if (data) "1" else "0"))
+    def encode(data: Boolean): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(if (data) "1" else "0"))
   }
 
   case object BitFieldCommandInput extends Input[BitFieldCommand] {
-    def encode(data: BitFieldCommand): Chunk[String] = {
+    def encode(data: BitFieldCommand): Chunk[RespValue.BulkString] = {
       import BitFieldCommand._
 
       data match {
-        case BitFieldGet(t, o)     => Chunk(wrap("GET"), wrap(t.stringify), wrap(o.toString))
-        case BitFieldSet(t, o, v)  => Chunk(wrap("SET"), wrap(t.stringify), wrap(o.toString), wrap(v.toString))
-        case BitFieldIncr(t, o, i) => Chunk(wrap("INCRBY"), wrap(t.stringify), wrap(o.toString), wrap(i.toString))
-        case bfo: BitFieldOverflow => Chunk(wrap("OVERFLOW"), wrap(bfo.stringify))
+        case BitFieldGet(t, o)     => Chunk(stringEncode("GET"), stringEncode(t.stringify), stringEncode(o.toString))
+        case BitFieldSet(t, o, v)  =>
+          Chunk(stringEncode("SET"), stringEncode(t.stringify), stringEncode(o.toString), stringEncode(v.toString))
+        case BitFieldIncr(t, o, i) =>
+          Chunk(stringEncode("INCRBY"), stringEncode(t.stringify), stringEncode(o.toString), stringEncode(i.toString))
+        case bfo: BitFieldOverflow => Chunk(stringEncode("OVERFLOW"), stringEncode(bfo.stringify))
       }
     }
   }
 
   case object BitOperationInput extends Input[BitOperation] {
-    def encode(data: BitOperation): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: BitOperation): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object BitPosRangeInput extends Input[BitPosRange] {
-    def encode(data: BitPosRange): Chunk[String] = {
-      val start = wrap(data.start.toString)
-      data.end.fold(Chunk.single(start))(end => Chunk(start, wrap(end.toString)))
+    def encode(data: BitPosRange): Chunk[RespValue.BulkString] = {
+      val start = stringEncode(data.start.toString)
+      data.end.fold(Chunk.single(start))(end => Chunk(start, stringEncode(end.toString)))
     }
   }
 
   case object ChangedInput extends Input[Changed] {
-    def encode(data: Changed): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Changed): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object CopyInput extends Input[Copy] {
-    def encode(data: Copy): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Copy): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object CountInput extends Input[Count] {
-    def encode(data: Count): Chunk[String] = Chunk(wrap("COUNT"), wrap(data.count.toString))
+    def encode(data: Count): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("COUNT"), stringEncode(data.count.toString))
   }
 
   case object PositionInput extends Input[Position] {
-    def encode(data: Position): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Position): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object DoubleInput extends Input[Double] {
-    def encode(data: Double): Chunk[String] = Chunk.single(wrap(data.toString))
+    def encode(data: Double): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.toString))
   }
 
   case object DurationMillisecondsInput extends Input[Duration] {
-    def encode(data: Duration): Chunk[String] = Chunk.single(wrap(data.toMillis.toString))
+    def encode(data: Duration): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.toMillis.toString))
   }
 
   case object DurationSecondsInput extends Input[Duration] {
-    def encode(data: Duration): Chunk[String] = {
+    def encode(data: Duration): Chunk[RespValue.BulkString] = {
       val seconds = TimeUnit.MILLISECONDS.toSeconds(data.toMillis)
-      Chunk.single(wrap(seconds.toString))
+      Chunk.single(stringEncode(seconds.toString))
     }
   }
 
   case object DurationTtlInput extends Input[Duration] {
-    def encode(data: Duration): Chunk[String] = {
+    def encode(data: Duration): Chunk[RespValue.BulkString] = {
       val milliseconds = data.toMillis
-      Chunk(wrap("PX"), wrap(milliseconds.toString))
+      Chunk(stringEncode("PX"), stringEncode(milliseconds.toString))
     }
   }
 
   case object FreqInput extends Input[Freq] {
-    def encode(data: Freq): Chunk[String] = Chunk(wrap("FREQ"), wrap(data.frequency))
+    def encode(data: Freq): Chunk[RespValue.BulkString] = Chunk(stringEncode("FREQ"), stringEncode(data.frequency))
   }
 
   case object IdleTimeInput extends Input[IdleTime] {
-    def encode(data: IdleTime): Chunk[String] = Chunk(wrap("IDLETIME"), wrap(data.seconds.toString))
+    def encode(data: IdleTime): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("IDLETIME"), stringEncode(data.seconds.toString))
   }
 
   case object IncrementInput extends Input[Increment] {
-    def encode(data: Increment): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Increment): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object KeepTtlInput extends Input[KeepTtl] {
-    def encode(data: KeepTtl): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: KeepTtl): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object LexRangeInput extends Input[LexRange] {
-    def encode(data: LexRange): Chunk[String] = Chunk(wrap(data.min.stringify), wrap(data.max.stringify))
+    def encode(data: LexRange): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode(data.min.stringify), stringEncode(data.max.stringify))
   }
 
   case object LimitInput extends Input[Limit] {
-    def encode(data: Limit): Chunk[String] =
-      Chunk(wrap("LIMIT"), wrap(data.offset.toString), wrap(data.count.toString))
+    def encode(data: Limit): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("LIMIT"), stringEncode(data.offset.toString), stringEncode(data.count.toString))
   }
 
   case object LongInput extends Input[Long] {
-    def encode(data: Long): Chunk[String] = Chunk.single(wrap(data.toString))
+    def encode(data: Long): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.toString))
   }
 
   case object LongLatInput extends Input[LongLat] {
-    def encode(data: LongLat): Chunk[String] = Chunk(wrap(data.longitude.toString), wrap(data.latitude.toString))
+    def encode(data: LongLat): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode(data.longitude.toString), stringEncode(data.latitude.toString))
   }
 
   case object MemberScoreInput extends Input[MemberScore] {
-    def encode(data: MemberScore): Chunk[String] = Chunk(wrap(data.score.toString), wrap(data.member))
+    def encode(data: MemberScore): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode(data.score.toString), stringEncode(data.member))
   }
 
   case object NoInput extends Input[Unit] {
-    def encode(data: Unit): Chunk[String] = Chunk.empty
+    def encode(data: Unit): Chunk[RespValue.BulkString] = Chunk.empty
   }
 
   final case class NonEmptyList[-A](input: Input[A]) extends Input[(A, List[A])] {
-    def encode(data: (A, List[A])): Chunk[String] =
-      (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ input.encode(a))
+    def encode(data: (A, List[A])): Chunk[RespValue.BulkString] =
+      (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
   case object OrderInput extends Input[Order] {
-    def encode(data: Order): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Order): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object RadiusUnitInput extends Input[RadiusUnit] {
-    def encode(data: RadiusUnit): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: RadiusUnit): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object RangeInput extends Input[Range] {
-    def encode(data: Range): Chunk[String] = Chunk(wrap(data.start.toString), wrap(data.end.toString))
+    def encode(data: Range): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode(data.start.toString), stringEncode(data.end.toString))
   }
 
   case object RegexInput extends Input[Regex] {
-    def encode(data: Regex): Chunk[String] = Chunk(wrap("MATCH"), wrap(data.regex))
+    def encode(data: Regex): Chunk[RespValue.BulkString] = Chunk(stringEncode("MATCH"), stringEncode(data.regex))
   }
 
   case object ReplaceInput extends Input[Replace] {
-    def encode(data: Replace): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Replace): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object StoreDistInput extends Input[StoreDist] {
-    def encode(data: StoreDist): Chunk[String] = Chunk(wrap("STOREDIST"), wrap(data.key))
+    def encode(data: StoreDist): Chunk[RespValue.BulkString] = Chunk(stringEncode("STOREDIST"), stringEncode(data.key))
   }
 
   case object StoreInput extends Input[Store] {
-    def encode(data: Store): Chunk[String] = Chunk(wrap("STORE"), wrap(data.key))
+    def encode(data: Store): Chunk[RespValue.BulkString] = Chunk(stringEncode("STORE"), stringEncode(data.key))
   }
 
   case object ScoreRangeInput extends Input[ScoreRange] {
-    def encode(data: ScoreRange): Chunk[String] = Chunk(wrap(data.min.stringify), wrap(data.max.stringify))
+    def encode(data: ScoreRange): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode(data.min.stringify), stringEncode(data.max.stringify))
   }
 
   case object StringInput extends Input[String] {
-    def encode(data: String): Chunk[String] = Chunk.single(wrap(data))
+    def encode(data: String): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data))
   }
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]] {
-    def encode(data: Option[A]): Chunk[String] = data.fold(Chunk.empty: Chunk[String])(a.encode)
+    def encode(data: Option[A]): Chunk[RespValue.BulkString] =
+      data.fold(Chunk.empty: Chunk[RespValue.BulkString])(a.encode)
   }
 
   case object TimeSecondsInput extends Input[Instant] {
-    def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.getEpochSecond.toString))
+    def encode(data: Instant): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.getEpochSecond.toString))
   }
 
   case object TimeMillisecondsInput extends Input[Instant] {
-    def encode(data: Instant): Chunk[String] = Chunk.single(wrap(data.toEpochMilli.toString))
+    def encode(data: Instant): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.toEpochMilli.toString))
   }
 
   case object WeightsInput extends Input[::[Double]] {
-    def encode(data: ::[Double]): Chunk[String] =
-      data.foldLeft(Chunk.single(wrap("WEIGHTS")): Chunk[String])((acc, a) => acc ++ Chunk.single(wrap(a.toString)))
+    def encode(data: ::[Double]): Chunk[RespValue.BulkString] =
+      data.foldLeft(Chunk.single(stringEncode("WEIGHTS")): Chunk[RespValue.BulkString])((acc, a) =>
+        acc ++ Chunk.single(stringEncode(a.toString))
+      )
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
-    def encode(data: (A, B)): Chunk[String] = _1.encode(data._1) ++ _2.encode(data._2)
+    def encode(data: (A, B)): Chunk[RespValue.BulkString] = _1.encode(data._1) ++ _2.encode(data._2)
   }
 
   final case class Tuple3[-A, -B, -C](_1: Input[A], _2: Input[B], _3: Input[C]) extends Input[(A, B, C)] {
-    def encode(data: (A, B, C)): Chunk[String] = _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3)
+    def encode(data: (A, B, C)): Chunk[RespValue.BulkString] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3)
   }
 
   final case class Tuple4[-A, -B, -C, -D](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D])
       extends Input[(A, B, C, D)] {
-    def encode(data: (A, B, C, D)): Chunk[String] =
+    def encode(data: (A, B, C, D)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4)
   }
 
   final case class Tuple5[-A, -B, -C, -D, -E](_1: Input[A], _2: Input[B], _3: Input[C], _4: Input[D], _5: Input[E])
       extends Input[(A, B, C, D, E)] {
-    def encode(data: (A, B, C, D, E)): Chunk[String] =
+    def encode(data: (A, B, C, D, E)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5)
   }
 
@@ -221,7 +237,7 @@ object Input {
     _6: Input[F],
     _7: Input[G]
   ) extends Input[(A, B, C, D, E, F, G)] {
-    def encode(data: (A, B, C, D, E, F, G)): Chunk[String] =
+    def encode(data: (A, B, C, D, E, F, G)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
         _6.encode(data._6) ++ _7.encode(data._7)
   }
@@ -237,7 +253,7 @@ object Input {
     _8: Input[H],
     _9: Input[I]
   ) extends Input[(A, B, C, D, E, F, G, H, I)] {
-    def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[String] =
+    def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
         _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8) ++ _9.encode(data._9)
   }
@@ -255,34 +271,34 @@ object Input {
     _10: Input[J],
     _11: Input[K]
   ) extends Input[(A, B, C, D, E, F, G, H, I, J, K)] {
-    def encode(data: (A, B, C, D, E, F, G, H, I, J, K)): Chunk[String] =
+    def encode(data: (A, B, C, D, E, F, G, H, I, J, K)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++
         _5.encode(data._5) ++ _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8) ++
         _9.encode(data._9) ++ _10.encode(data._10) ++ _11.encode(data._11)
   }
 
   case object UpdateInput extends Input[Update] {
-    def encode(data: Update): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: Update): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
-    def encode(data: Iterable[A]): Chunk[String] =
-      data.foldLeft(Chunk.empty: Chunk[String])((acc, a) => acc ++ input.encode(a))
+    def encode(data: Iterable[A]): Chunk[RespValue.BulkString] =
+      data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
   case object WithScoresInput extends Input[WithScores] {
-    def encode(data: WithScores): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: WithScores): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object WithCoordInput extends Input[WithCoord] {
-    def encode(data: WithCoord): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: WithCoord): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object WithDistInput extends Input[WithDist] {
-    def encode(data: WithDist): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: WithDist): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
   case object WithHashInput extends Input[WithHash] {
-    def encode(data: WithHash): Chunk[String] = Chunk.single(wrap(data.stringify))
+    def encode(data: WithHash): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 }

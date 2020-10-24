@@ -57,7 +57,7 @@ private object Hashes {
   final val HIncrBy = RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)
 
   final val HIncrByFloat =
-    RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), IncrementOutput)
+    RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), DoubleOutput)
 
   final val HKeys = RedisCommand("HKEYS", StringInput, ChunkOutput)
   final val HLen  = RedisCommand("HLEN", StringInput, LongOutput)
