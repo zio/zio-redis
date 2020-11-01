@@ -3,6 +3,7 @@ package zio.redis
 import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
+
 import zio.ZIO
 import zio.logging.Logging
 
@@ -26,10 +27,9 @@ class PutBenchmarks {
 
   @Benchmark
   def laserdisc(): Unit = {
-    import _root_.laserdisc._
     import _root_.laserdisc.auto._
     import _root_.laserdisc.fs2._
-    import _root_.laserdisc.{ all => cmd }
+    import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
 

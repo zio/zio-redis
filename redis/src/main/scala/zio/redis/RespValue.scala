@@ -32,16 +32,6 @@ sealed trait RespValue extends Any {
     }
   }
 
-  override final def toString: String =
-    self match {
-      case SimpleString(s)  => s
-      case Error(s)         => s
-      case Integer(i)       => i.toString
-      case bulk: BulkString => bulk.asString
-      case Array(elements)  => elements.mkString(",")
-      case NullValue        => "null"
-    }
-
 }
 
 object RespValue {

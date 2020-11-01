@@ -1,8 +1,8 @@
 package zio.redis
 
 import zio.clock.Clock
-import zio.test._
 import zio.logging.Logging
+import zio.test._
 
 object ApiSpec
     extends KeysSpec

@@ -4,7 +4,6 @@ import java.io.{ EOFException, IOException }
 import java.net.{ InetAddress, InetSocketAddress, SocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousByteChannel, AsynchronousSocketChannel, Channel, CompletionHandler }
-import java.util.UUID
 
 import zio._
 import zio.logging._
@@ -36,15 +35,9 @@ trait Interpreter {
     ) extends Service {
 
       override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
-        logger.locally(LogAnnotation.CorrelationId(Some(UUID.randomUUID()))) {
-          for {
-            _      <- logger.debug(s"Sending command: ${command.mkString(" ")}")
-            result <- Promise
-                        .make[RedisError, RespValue]
-                        .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
-            _      <- logger.debug(s"Received result $result")
-          } yield result
-        }
+        Promise
+          .make[RedisError, RespValue]
+          .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
 
       private def sendWith(out: Chunk[Byte] => IO[IOException, Unit]): IO[RedisError, Unit] =
         reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
@@ -79,9 +72,7 @@ trait Interpreter {
               resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
           }
           .retryWhile(Function.const(true))
-          .tapError { e =>
-            logger.error(s"Executor exiting: $e")
-          }
+          .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 
     private def fromBytestream: ZLayer[ByteStream with Logging, RedisError.IOError, RedisExecutor] =
