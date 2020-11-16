@@ -1,6 +1,7 @@
 package zio.redis
 
 import zio.clock.Clock
+import zio.logging.Logging
 import zio.test._
 
 object ApiSpec
@@ -23,7 +24,7 @@ object ApiSpec
       geoSuite,
       hyperLogLogSuite,
       hashSuite
-    ).provideCustomLayerShared(Executor ++ Clock.live)
+    ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live)
 
   private val Executor = RedisExecutor.loopback().orDie
 }
