@@ -25,6 +25,16 @@ trait Keys {
 
   sealed case class Freq(frequency: String)
 
+  sealed trait RedisType
+
+  object RedisType {
+    case object String    extends RedisType
+    case object List      extends RedisType
+    case object Set       extends RedisType
+    case object SortedSet extends RedisType
+    case object Hash      extends RedisType
+  }
+
   case object Replace {
     private[redis] def stringify: String = "REPLACE"
   }
