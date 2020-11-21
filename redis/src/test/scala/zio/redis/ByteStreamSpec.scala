@@ -1,4 +1,5 @@
 package zio.redis
+
 import java.nio.charset.StandardCharsets
 
 import zio.Chunk
@@ -19,5 +20,5 @@ object ByteStreamSpec extends BaseSpec {
 
         }
       }
-    ).provideCustomLayerShared(Logging.ignore >>> ByteStream.socketLoopback(RedisExecutor.DefaultPort).orDie)
+    ).provideCustomLayerShared(Logging.ignore >>> ByteStream.socketLoopback().orDie)
 }
