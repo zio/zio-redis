@@ -15,15 +15,15 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
-  def live(host: String, port: Int): ZLayer[Logging, RedisError.IOError, ByteStream] =
+  def live(host: String, port: Int): ZLayer[Logging, RedisError.IOError, Has[Service]] =
     live(new InetSocketAddress(host, port))
 
-  def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, ByteStream] = connect(address)
+  def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, Has[Service]] = connect(address)
 
-  def loopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, RedisError.IOError, ByteStream] =
+  def loopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, RedisError.IOError, Has[Service]] =
     live(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
 
-  private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, ByteStream] =
+  private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, Has[Service]] =
     (for {
       address     <- UIO(address).toManaged_
       makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))

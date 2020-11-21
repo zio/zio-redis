@@ -16,7 +16,4 @@ package object redis
     with options.SortedSets
     with options.Strings
     with options.Lists
-    with Interpreter {
-
-  private[redis] type ByteStream = Has[ByteStream.Service]
-}
+    with Interpreter
