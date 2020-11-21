@@ -15,7 +15,7 @@ trait SortedSets {
   /**
    * Remove and return the member with the highest score from one or more sorted sets, or block until one is available.
    *
-   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely.
+   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
    * @param key Key of the set
    * @param keys Keys of the rest sets
    * @return A three-element Chunk with the first element being the name of the key where a member was popped,
@@ -32,7 +32,7 @@ trait SortedSets {
   /**
    * Remove and return the member with the lowest score from one or more sorted sets, or block until one is available.
    *
-   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely.
+   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
    * @param key Key of the set
    * @param keys Keys of the rest sets
    * @return A three-element Chunk with the first element being the name of the key where a member was popped,
@@ -110,15 +110,15 @@ trait SortedSets {
   /**
    * Intersect multiple sorted sets and store the resulting sorted set in a new key.
    *
-   * @param destination Key of the output.
-   * @param inputKeysNum Number of input keys.
-   * @param key Key of a sorted set.
-   * @param keys Keys of the rest sorted sets.
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated.
+   * @param destination Key of the output
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of the rest sorted sets
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
    * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set.
    *          This means that the score of every element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
    *          When WEIGHTS is not given, the multiplication factors default to 1.
-   * @return The number of elements in the resulting sorted set at destination.
+   * @return The number of elements in the resulting sorted set at destination
    */
   final def zInterStore(destination: String, inputKeysNum: Long, key: String, keys: String*)(
     aggregate: Option[Aggregate] = None,
