@@ -18,16 +18,12 @@ trait Interpreter {
   type RedisExecutor = Has[RedisExecutor.Service]
 
   object RedisExecutor {
-
-    private[redis] val DefaultPort = 6379
-
     trait Service {
-
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
-
     }
 
-    private val RequestQueueSize = 16
+    private[this] final val DefaultPort      = 6379
+    private[this] final val RequestQueueSize = 16
 
     private final class Live(
       reqQueue: Queue[Request],
@@ -36,7 +32,7 @@ trait Interpreter {
       logger: Logger[String]
     ) extends Service {
 
-      override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+      def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
         Promise
           .make[RedisError, RespValue]
           .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
@@ -77,9 +73,8 @@ trait Interpreter {
           .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 
-    private final class InMemory(
-    ) extends Service {
-      override def execute(command: Chunk[RespValue.BulkString]): zio.IO[RedisError, RespValue] =
+    private final class InMemory() extends Service {
+      def execute(command: Chunk[RespValue.BulkString]): zio.IO[RedisError, RespValue] =
         for {
           name   <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
           result <- runCommand(name.asString, command.tail).commit
@@ -94,6 +89,7 @@ trait Interpreter {
               else
                 input.head
             }
+
           case _                        => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
         }
     }
@@ -126,23 +122,17 @@ trait Interpreter {
   private type ByteStream = Has[ByteStream.Service]
 
   private[redis] object ByteStream {
-
-    val ResponseBufferSize = 1024
+    private[this] final val ResponseBufferSize = 1024
 
     def connect: ZManaged[ByteStream, IOException, ReadWriteBytes] = ZManaged.accessManaged(_.get.connect)
 
     trait Service {
-
       val connect: Managed[IOException, ReadWriteBytes]
-
     }
 
     trait ReadWriteBytes {
-
       def read: Stream[IOException, Byte]
-
       def write(chunk: Chunk[Byte]): IO[IOException, Unit]
-
     }
 
     private def completionHandlerCallback[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
@@ -246,18 +236,10 @@ trait Interpreter {
             def write(chunk: Chunk[Byte]): IO[IOException, Unit] = writeChunk(chunk)
           }
         }
-
     }
-
   }
-
 }
 
 object Interpreter {
-
-  private final case class Request(
-    command: Chunk[RespValue.BulkString],
-    promise: Promise[RedisError, RespValue]
-  )
-
+  private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 }
