@@ -9,11 +9,11 @@ object BenchmarksUtils {
 
   import BenchmarkRuntime.RedisHost
   import BenchmarkRuntime.RedisPort
-  import BenchmarkRuntime.{ unsafeRun => zUnsafeRun }
+  import BenchmarkRuntime.unsafeRun
 
   def unsafeClientRun[CL](f: CL => CatsIO[Unit])(implicit unsafeRunner: QueryUnsafeRunner[CL]): Unit =
     unsafeRunner.unsafeRun(f)
 
   def zioUnsafeRun(source: ZIO[RedisExecutor, RedisError, Unit]): Unit =
-    zUnsafeRun(source.provideLayer(Logging.ignore >>> RedisExecutor.live(RedisHost, RedisPort).orDie))
+    unsafeRun(source.provideLayer(Logging.ignore >>> RedisExecutor.live(RedisHost, RedisPort).orDie))
 }
