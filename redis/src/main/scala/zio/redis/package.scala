@@ -1,7 +1,8 @@
 package zio
 
 package object redis
-    extends api.Connection
+    extends api.Cluster
+    with api.Connection
     with api.Geo
     with api.Hashes
     with api.HyperLogLog
@@ -10,6 +11,7 @@ package object redis
     with api.Sets
     with api.Strings
     with api.SortedSets
+    with options.Cluster
     with options.Geo
     with options.Keys
     with options.Shared

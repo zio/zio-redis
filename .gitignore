@@ -2,3 +2,4 @@
 /.bloop
 target/
 /.bsp
+/.metals/

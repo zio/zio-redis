@@ -298,4 +298,103 @@ object Output {
       }
   }
 
+  case object ClusterInfoOutput extends Output[ClusterInfo] {
+    protected def tryDecode(respValue: RespValue): ClusterInfo = {
+      val kv            = KeyValueOutput.unsafeDecode(respValue)
+      val state         =
+        kv.getOrElse("cluster_state", throw new ProtocolError("missing cluster_state in cluster info")) match {
+          case "ok"   => ClusterState.Ok
+          case "fail" => ClusterState.Fail
+          case other  => throw new ProtocolError(s"$other is not a valid value for cluster_state")
+        }
+      val slotsAssigned =
+        try kv
+          .getOrElse(
+            "cluster_slots_assigned",
+            throw new ProtocolError("missing cluster_slots_assigned in cluster info")
+          )
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_slots_assigned is not a number")
+        }
+      val slotsOk       =
+        try kv.getOrElse("cluster_slots_ok", throw new ProtocolError("missing cluster_slots_ok in cluster info")).toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_slots_ok is not a number")
+        }
+      val slotsPfail    =
+        try kv
+          .getOrElse("cluster_slots_pfail", throw new ProtocolError("missing cluster_slots_pfail in cluster info"))
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_slots_pfail is not a number")
+        }
+
+      val slotsFail             =
+        try kv
+          .getOrElse("cluster_slots_fail", throw new ProtocolError("missing cluster_slots_fail in cluster info"))
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_slots_fail is not a number")
+        }
+      val knownNodes            =
+        try kv
+          .getOrElse("cluster_known_nodes", throw new ProtocolError("missing cluster_known_nodes in cluster info"))
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_known_nodes is not a number")
+        }
+      val size                  =
+        try kv.getOrElse("cluster_size", throw new ProtocolError("missing cluster_size in cluster info")).toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_size is not a number")
+        }
+      val currentEpoch          =
+        try kv
+          .getOrElse("cluster_current_epoch", throw new ProtocolError("missing cluster_current_epoch in cluster info"))
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_current_epoch is not a number")
+        }
+      val myEpoch               =
+        try kv.getOrElse("cluster_my_epoch", throw new ProtocolError("missing cluster_my_epoch in cluster info")).toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_my_epoch is not a number")
+        }
+      val statsMessagesSent     =
+        try kv
+          .getOrElse(
+            "cluster_stats_messages_sent",
+            throw new ProtocolError("missing cluster_stats_messages_sent in cluster info")
+          )
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_stats_messages_sent is not a number")
+        }
+      val statsMessagesReceived =
+        try kv
+          .getOrElse(
+            "cluster_stats_messages_received",
+            throw new ProtocolError("missing cluster_stats_messages_received in cluster info")
+          )
+          .toInt
+        catch {
+          case _: NumberFormatException => throw new ProtocolError("cluster_stats_messages_received is not a number")
+        }
+      ClusterInfo(
+        state = state,
+        slotsAssigned = slotsAssigned,
+        slotsOk = slotsOk,
+        slotsPfail = slotsPfail,
+        slotsFail = slotsFail,
+        knownNodes = knownNodes,
+        size = size,
+        currentEpoch = currentEpoch,
+        myEpoch = myEpoch,
+        statsMessagesSent = statsMessagesSent,
+        statsMessagesReceived = statsMessagesReceived
+      )
+    }
+
+  }
 }

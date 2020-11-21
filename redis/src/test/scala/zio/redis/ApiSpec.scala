@@ -5,7 +5,8 @@ import zio.logging.Logging
 import zio.test._
 
 object ApiSpec
-    extends KeysSpec
+    extends ClusterSpec
+    with KeysSpec
     with ListSpec
     with SetsSpec
     with SortedSetsSpec
@@ -16,6 +17,7 @@ object ApiSpec
 
   def spec =
     suite("Redis commands")(
+      clusterSuite,
       keysSuite,
       listSuite,
       setsSuite,
