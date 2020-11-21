@@ -7,7 +7,7 @@ import java.nio.channels.{ AsynchronousByteChannel, AsynchronousSocketChannel, C
 
 import zio._
 import zio.logging._
-import zio.stream.Stream
+import zio.stream.{ Stream, ZStream }
 
 trait Interpreter {
 
@@ -22,6 +22,8 @@ trait Interpreter {
     trait Service {
 
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
+
+      def executeStream(command: Chunk[RespValue.BulkString]): ZStream[Any, RedisError, RespValue]
 
     }
 
@@ -38,6 +40,18 @@ trait Interpreter {
         Promise
           .make[RedisError, RespValue]
           .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
+
+      override def executeStream(command: Chunk[RespValue.BulkString]): ZStream[Any, RedisError, RespValue] =
+        for {
+          promise <- ZStream.fromEffect(Promise.make[RedisError, RespValue])
+          _       <- ZStream.fromEffect(reqQueue.offer(Request(command, promise)))
+          _       <- ZStream.fromEffect(promise.await)
+          res     <- ZStream
+                   .fromEffect(resQueue.poll)
+                   .collect { case Some(v) => v }
+                   .flatMap(v => ZStream.fromEffect(v.await))
+                   .forever
+        } yield res
 
       private def sendWith(out: Chunk[Byte] => IO[IOException, Unit]): IO[RedisError, Unit] =
         reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
