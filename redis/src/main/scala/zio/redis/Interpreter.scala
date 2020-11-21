@@ -239,6 +239,6 @@ trait Interpreter {
   }
 }
 
-object Interpreter {
+private[redis] object Interpreter {
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 }
