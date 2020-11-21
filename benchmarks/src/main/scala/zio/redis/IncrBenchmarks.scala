@@ -8,9 +8,9 @@ import zio.ZIO
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
-@Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
-@Fork(4)
+@Measurement(iterations = 15)
+@Warmup(iterations = 15)
+@Fork(2)
 class IncrBenchmarks {
 
   import BenchmarkRuntime._

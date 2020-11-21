@@ -5,14 +5,12 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 import zio.ZIO
 
-import scala.util.Random
-
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
-@Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
-@Fork(4)
+@Measurement(iterations = 15)
+@Warmup(iterations = 15)
+@Fork(2)
 class AppendBenchmarks {
   import BenchmarkRuntime._
   import BenchmarksUtils._
@@ -25,7 +23,7 @@ class AppendBenchmarks {
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    items = (0 to count).toList.map(Random.nextString)
+    items = (0 to count).toList.map(_.toString)
     zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
   }
 

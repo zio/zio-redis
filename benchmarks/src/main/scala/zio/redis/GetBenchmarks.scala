@@ -4,14 +4,12 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 import zio.ZIO
 
-import scala.util.Random
-
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
-@Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
-@Fork(4)
+@Measurement(iterations = 15)
+@Warmup(iterations = 15)
+@Fork(2)
 class GetBenchmarks {
   import BenchmarkRuntime._
   import BenchmarksUtils._
@@ -24,7 +22,7 @@ class GetBenchmarks {
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    items = (0 to count).toList.map(Random.nextString)
+    items = (0 to count).toList.map(_.toString)
     zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
   }
 
@@ -34,7 +32,6 @@ class GetBenchmarks {
     import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
-
     unsafeClientRun[LaserDiskClient](c => items.traverse_(i => c.send(cmd.get[String](Key.unsafeFrom(i)))))
   }
 
