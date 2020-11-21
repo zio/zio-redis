@@ -22,9 +22,31 @@ trait Interpreter {
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
     }
 
+    def live(address: SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
+      (ZLayer.identity[Logging] ++ ByteStream.socket(address).mapError(RedisError.IOError)) >>> StreamedExecutor
+
+    def live(host: String, port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
+      (ZLayer.identity[Logging] ++ ByteStream.socket(host, port).mapError(RedisError.IOError)) >>> StreamedExecutor
+
+    def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
+      (ZLayer.identity[Logging] ++ ByteStream.socketLoopback(port).mapError(RedisError.IOError)) >>> StreamedExecutor
+
+    val test: ZLayer[Any, Nothing, RedisExecutor] = ZLayer.succeed(new InMemory())
+
     private[redis] final val DefaultPort = 6379
 
     private[this] final val RequestQueueSize = 16
+
+    private[this] final val StreamedExecutor =
+      ZLayer.fromServicesManaged[ByteStream.Service, Logger[String], Any, RedisError.IOError, RedisExecutor.Service] {
+        (byteStream: ByteStream.Service, logging: Logger[String]) =>
+          for {
+            reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
+            resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
+            live      = new Live(reqQueue, resQueue, byteStream.connect, logging)
+            _        <- live.run.forkManaged
+          } yield live
+      }
 
     private final class Live(
       reqQueue: Queue[Request],
@@ -94,30 +116,6 @@ trait Interpreter {
           case _                        => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
         }
     }
-
-    private def fromBytestream: ZLayer[ByteStream with Logging, RedisError.IOError, RedisExecutor] =
-      ZLayer.fromServicesManaged[ByteStream.Service, Logger[String], Any, RedisError.IOError, RedisExecutor.Service] {
-        (byteStream: ByteStream.Service, logging: Logger[String]) =>
-          for {
-            reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
-            resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
-            live      = new Live(reqQueue, resQueue, byteStream.connect, logging)
-            _        <- live.run.forkManaged
-          } yield live
-      }
-
-    val test: ZLayer[Any, Nothing, RedisExecutor] =
-      ZLayer.succeed(new InMemory())
-
-    def live(address: SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.socket(address).mapError(RedisError.IOError)) >>> fromBytestream
-
-    def live(host: String, port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.socket(host, port).mapError(RedisError.IOError)) >>> fromBytestream
-
-    def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.socketLoopback(port).mapError(RedisError.IOError)) >>> fromBytestream
-
   }
 
   private type ByteStream = Has[ByteStream.Service]
