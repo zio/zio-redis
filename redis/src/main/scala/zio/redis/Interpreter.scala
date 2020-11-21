@@ -22,7 +22,8 @@ trait Interpreter {
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
     }
 
-    private[this] final val DefaultPort      = 6379
+    private[redis] final val DefaultPort = 6379
+
     private[this] final val RequestQueueSize = 16
 
     private final class Live(
