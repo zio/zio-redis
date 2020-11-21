@@ -15,7 +15,7 @@ sealed trait Input[-A] {
 object Input {
 
   @inline
-  private[this] def stringEncode(s: String) = RespValue.bulkString(s)
+  private[redis] def stringEncode(s: String) = RespValue.bulkString(s)
 
   case object AbsTtlInput extends Input[AbsTtl] {
     def encode(data: AbsTtl): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
@@ -62,6 +62,24 @@ object Input {
 
   case object ChangedInput extends Input[Changed] {
     def encode(data: Changed): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object ClientKillInput extends Input[Chunk[ClientKillFilter]] {
+    override private[redis] def encode(data: Chunk[ClientKillFilter]): Chunk[RespValue.BulkString] =
+      data.flatMap {
+        case ClientKillFilter.Address(ip, port)      =>
+          Chunk("ADDR", s"${ip.getHostAddress}:$port")
+        case ClientKillFilter.LocalAddress(ip, port) =>
+          Chunk("LADDR ", s"${ip.getHostAddress}:$port")
+        case ClientKillFilter.Id(id)                 =>
+          Chunk("ID", id.toString)
+        case ClientKillFilter.Type(clientType)       =>
+          Chunk("TYPE", clientType.name)
+        case ClientKillFilter.User(username)         =>
+          Chunk("USER", username)
+        case ClientKillFilter.SkipMe(skip)           =>
+          Chunk("SKIPME", if (skip) "yes" else "no")
+      }.map(stringEncode)
   }
 
   case object CopyInput extends Input[Copy] {
@@ -277,6 +295,11 @@ object Input {
         _9.encode(data._9) ++ _10.encode(data._10) ++ _11.encode(data._11)
   }
 
+  case object ClientTypeInput extends Input[Option[ClientType]] {
+    override private[redis] def encode(data: Option[ClientType]): Chunk[RespValue.BulkString] =
+      data.map(t => Chunk("TYPE", t.name).map(stringEncode)).getOrElse(Chunk.empty)
+  }
+
   case object UpdateInput extends Input[Update] {
     def encode(data: Update): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
@@ -301,4 +324,10 @@ object Input {
   case object WithHashInput extends Input[WithHash] {
     def encode(data: WithHash): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
+
+  case object YesNoInput extends Input[Boolean] {
+    override private[redis] def encode(data: Boolean): Chunk[RespValue.BulkString] =
+      Chunk.single(stringEncode(if (data) "YES" else "NO"))
+  }
+
 }

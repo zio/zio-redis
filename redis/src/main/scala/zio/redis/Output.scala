@@ -1,5 +1,7 @@
 package zio.redis
 
+import java.net.InetAddress
+
 import zio.Chunk
 import zio.duration._
 
@@ -64,6 +66,104 @@ object Output {
           throw ProtocolError(s"$other isn't an array")
       }
 
+  }
+
+  case object ClientInfoOutput extends Output[Chunk[ClientInfo]] {
+
+    private def parseLong(s: String)                                          =
+      try Some(s.toLong)
+      catch { case _: NumberFormatException => None }
+
+    private def parseInt(s: String)                                           =
+      try Some(s.toInt)
+      catch { case _: NumberFormatException => None }
+
+    override protected def tryDecode(respValue: RespValue): Chunk[ClientInfo] =
+      respValue match {
+        case bulk @ RespValue.BulkString(_) =>
+          val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
+            _.split(' ').toList.map {
+              _.split('=').toList match {
+                case key :: value :: Nil => key -> value
+                case other               => throw ProtocolError(s"Invalid text $other in client information")
+              }
+            }.toMap
+          }
+
+          // A: connection to be closed ASAP
+          //b: the client is waiting in a blocking operation
+          //c: connection to be closed after writing entire reply
+          //d: a watched keys has been modified - EXEC will fail
+          //i: the client is waiting for a VM I/O (deprecated)
+          //M: the client is a master
+          //N: no specific flag set
+          //O: the client is a client in MONITOR mode
+          //P: the client is a Pub/Sub subscriber
+          //r: the client is in readonly mode against a cluster node
+          //S: the client is a replica node connection to this instance
+          //u: the client is unblocked
+          //U: the client is connected via a Unix domain socket
+          //x: the client is in a MULTI/EXEC context
+          //t: the client enabled keys tracking in order to perform client side caching
+          //R: the client tracking target client is invalid
+          //B: the client enabled broadcast tracking mode
+          Chunk.fromIterable(clients).map { client =>
+            val flags: Set[ClientFlag] = client
+              .get("flags")
+              .map { s =>
+                import ClientFlag._
+                s.collect {
+                  case 'A' => ToBeClosedAsap
+                  case 'b' => Blocked
+                  case 'c' => ToBeClosedAfterReply
+                  case 'd' => WatchedKeysModified
+                  case 'M' => IsMaster
+                  case 'O' => MonitorMode
+                  case 'P' => PubSub
+                  case 'r' => ReadOnlyMode
+                  case 'S' => Replica
+                  case 'u' => Unblocked
+                  case 'U' => UnixDomainSocket
+                  case 'x' => MultiExecContext
+                  case 't' => KeysTrackingEnabled
+                  case 'R' => TrackingTargetClientInvalid
+                  case 'B' => BroadcastTrackingMode
+                }.toSet[ClientFlag]
+              }
+              .getOrElse(Set.empty)
+            val events                 =
+              client
+                .get("events")
+                .map(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
+                .getOrElse(ClientEvents(readable = false, writable = false))
+            ClientInfo(
+              id = client.get("id").flatMap(parseLong).getOrElse(0L),
+              name = client.get("name"),
+              address = client.get("addr").map(InetAddress.getByName),
+              localAddress = client.get("laddr").map(InetAddress.getByName),
+              fileDescriptor = client.get("fd").flatMap(parseLong),
+              age = client.get("age").flatMap(parseLong).map(_.seconds),
+              idle = client.get("idle").flatMap(parseLong).map(_.seconds),
+              flags = flags,
+              databaseId = client.get("db").flatMap(parseLong),
+              subscriptions = client.get("sub").flatMap(parseInt).getOrElse(0),
+              patternSubscriptions = client.get("psub").flatMap(parseInt).getOrElse(0),
+              multiCommands = client.get("multi").flatMap(parseInt).getOrElse(0),
+              queryBufferLength = client.get("qbuf").flatMap(parseInt),
+              queryBufferFree = client.get("qbuf-free").flatMap(parseInt),
+              outputBufferLength = client.get("obl").flatMap(parseInt),
+              outputListLength = client.get("oll").flatMap(parseInt),
+              outputBufferMem = client.get("omem").flatMap(parseLong),
+              events = events,
+              lastCommand = client.get("cmd"),
+              argvMemory = client.get("argv-mem").flatMap(parseLong),
+              totalMemory = client.get("tot-mem").flatMap(parseLong),
+              redirectionClientId = client.get("redir").flatMap(parseLong),
+              user = client.get("user")
+            )
+          }
+        case other                          => throw ProtocolError(s"$other isn't a bulk string")
+      }
   }
 
   case object DoubleOutput extends Output[Double] {
