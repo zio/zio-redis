@@ -159,6 +159,14 @@ object Output {
 
   }
 
+  case object BulkStringOutput extends Output[Chunk[Byte]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[Byte] =
+      respValue match {
+        case RespValue.BulkString(value) => value
+        case other                       => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
+
   case object MultiStringChunkOutput extends Output[Chunk[String]] {
 
     override protected def tryDecode(respValue: RespValue): Chunk[String] =
