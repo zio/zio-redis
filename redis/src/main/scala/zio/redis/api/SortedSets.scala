@@ -149,148 +149,148 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by index.
    *
-   * @param a Key of a sorted set
-   * @param b Inclusive range
-   * @param c the optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @param key Key of a sorted set
+   * @param range Inclusive range
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
    * @return Chunk of elements in the specified range (optionally with their scores, in case the WITHSCORES option is given)
    */
-  final def zRange(a: String, b: Range, c: Option[WithScores] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRange.run((a, b, c))
+  final def zRange(key: String, range: Range, withScores: Option[WithScores] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZRange.run((key, range, withScores))
 
   /**
    * Return a range of members in a sorted set, by lexicographical range.
    *
-   * @param a key of a sorted set.
-   * @param b LexRange that must be satisfied.
-   * @param c the optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset.
-   * @return Chunk of elements in the specified score range.
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified score range
    */
   final def zRangeByLex(
-    a: String,
-    b: LexRange,
-    c: Option[Limit] = None
+                         key: String,
+                         lexRange: LexRange,
+                         limit: Option[Limit] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRangeByLex.run((a, b, c))
+    ZRangeByLex.run((key, lexRange, limit))
 
   /**
    * Return a range of members in a sorted set, by score.
    *
-   * @param a key of a sorted set.
-   * @param b ScoreRange that must be satisfied.
-   * @param c the optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone.
-   * @param d the optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset.
-   * @return Chunk of elements in the specified score range (optionally with their scores).
+   * @param key Key of a sorted set
+   * @param scoreRange ScoreRange that must be satisfied
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified score range (optionally with their scores)
    */
   final def zRangeByScore(
-    a: String,
-    b: ScoreRange,
-    c: Option[WithScores] = None,
-    d: Option[Limit] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] = ZRangeByScore.run((a, b, c, d))
+                           key: String,
+                           scoreRange: ScoreRange,
+                           withScores: Option[WithScores] = None,
+                           limit: Option[Limit] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] = ZRangeByScore.run((key, scoreRange, withScores, limit))
 
   /**
    * Determine the index of a member in a sorted set.
    *
-   * @param a key of a sorted set.
-   * @param b member of sorted set.
-   * @return the rank of member in the sorted set stored at key, with the scores ordered from low to high.
+   * @param key Key of a sorted set
+   * @param member Member of sorted set
+   * @return The rank of member in the sorted set stored at key, with the scores ordered from low to high
    */
-  final def zRank(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRank.run((a, b))
+  final def zRank(key: String, member: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRank.run((key, member))
 
   /**
    * Remove one or more members from a sorted set.
    *
-   * @param a key of a sorted set.
-   * @param b member to be removed.
-   * @param bs other members to be removed.
-   * @return the number of members removed from the sorted set, not including non existing members.
+   * @param key Key of a sorted set
+   * @param firstMember Member to be removed
+   * @param restMembers Rest members to be removed
+   * @return The number of members removed from the sorted set, not including non existing members
    */
-  final def zRem(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    ZRem.run((a, (b, bs.toList)))
+  final def zRem(key: String, firstMember: String, restMembers: String*): ZIO[RedisExecutor, RedisError, Long] =
+    ZRem.run((key, (firstMember, restMembers.toList)))
 
   /**
    * Remove all members in a sorted set between the given lexicographical range.
    *
-   * @param a key of a sorted set.
-   * @param b LexRange that must be satisfied.
-   * @return the number of elements removed.
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @return The number of elements removed
    */
-  final def zRemRangeByLex(a: String, b: LexRange): ZIO[RedisExecutor, RedisError, Long] = ZRemRangeByLex.run((a, b))
+  final def zRemRangeByLex(key: String, lexRange: LexRange): ZIO[RedisExecutor, RedisError, Long] = ZRemRangeByLex.run((key, lexRange))
 
   /**
    * Remove all members in a sorted set within the given indexes.
    *
-   * @param a key of a sorted set.
-   * @param b Range that must be satisfied.
-   * @return the number of elements removed.
+   * @param key Key of a sorted set
+   * @param range Range that must be satisfied
+   * @return The number of elements removed
    */
-  final def zRemRangeByRank(a: String, b: Range): ZIO[RedisExecutor, RedisError, Long] = ZRemRangeByRank.run((a, b))
+  final def zRemRangeByRank(key: String, range: Range): ZIO[RedisExecutor, RedisError, Long] = ZRemRangeByRank.run((key, range))
 
   /**
    * Remove all members in a sorted set within the given scores.
    *
-   * @param a key of a sorted set.
-   * @param b ScoreRange that must be satisfied.
-   * @return the number of elements removed.
+   * @param key Key of a sorted set
+   * @param scoreRange ScoreRange that must be satisfied
+   * @return The number of elements removed
    */
-  final def zRemRangeByScore(a: String, b: ScoreRange): ZIO[RedisExecutor, RedisError, Long] =
-    ZRemRangeByScore.run((a, b))
+  final def zRemRangeByScore(key: String, scoreRange: ScoreRange): ZIO[RedisExecutor, RedisError, Long] =
+    ZRemRangeByScore.run((key, scoreRange))
 
   /**
    * Return a range of members in a sorted set, by index, with scores ordered from high to low.
    *
-   * @param a key of a sorted set.
-   * @param b Range that must be satisfied.
-   * @param c the optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone.
-   * @return Chunk of elements in the specified range (optionally with their scores).
+   * @param key Key of a sorted set
+   * @param range Range that must be satisfied
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @return Chunk of elements in the specified range (optionally with their scores)
    */
   final def zRevRange(
-    a: String,
-    b: Range,
-    c: Option[WithScores] = None
+                       key: String,
+                       range: Range,
+                       withScores: Option[WithScores] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRevRange.run((a, b, c))
+    ZRevRange.run((key, range, withScores))
 
   /**
    * Return a range of members in a sorted set, by lexicographical range, ordered from higher to lower strings.
    *
-   * @param a key of a sorted set.
-   * @param b LexRange that must be satisfied.
-   * @param c the optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset.
-   * @return Chunk of elements in the specified score range.
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified score range
    */
   final def zRevRangeByLex(
-    a: String,
-    b: LexRange,
-    c: Option[Limit] = None
+                            key: String,
+                            lexRange: LexRange,
+                            limit: Option[Limit] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRevRangeByLex.run((a, b, c))
+    ZRevRangeByLex.run((key, lexRange, limit))
 
   /**
    * Return a range of members in a sorted set, by score, with scores ordered from high to low.
    *
-   * @param a key of a sorted set.
-   * @param b ScoreRange that must be satisfied.
-   * @param c the optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone.
-   * @param d the optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset.
-   * @return Chunk of elements in the specified range (optionally with their scores).
+   * @param key Key of a sorted set
+   * @param scoreRange ScoreRange that must be satisfied
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified range (optionally with their scores)
    */
   final def zRevRangeByScore(
-    a: String,
-    b: ScoreRange,
-    c: Option[WithScores] = None,
-    d: Option[Limit] = None
+                              key: String,
+                              scoreRange: ScoreRange,
+                              withScores: Option[WithScores] = None,
+                              limit: Option[Limit] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRevRangeByScore.run((a, b, c, d))
+    ZRevRangeByScore.run((key, scoreRange, withScores, limit))
 
   /**
    * Determine the index of a member in a sorted set, with scores ordered from high to low.
    *
-   * @param a key of a sorted set.
-   * @param b member of sorted set.
-   * @return the rank of member.
+   * @param key Key of a sorted set
+   * @param member Member of sorted set
+   * @return The rank of member
    */
-  final def zRevRank(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRevRank.run((a, b))
+  final def zRevRank(key: String, member: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRevRank.run((key, member))
 
   /**
    * Incrementally iterate sorted sets elements and associated scores.
@@ -311,24 +311,24 @@ trait SortedSets {
   /**
    * Get the score associated with the given member in a sorted set.
    *
-   * @param a key of a sorted set.
-   * @param b member of sorted set.
-   * @return  the score of member (a double precision floating point number.
+   * @param key Key of a sorted set
+   * @param member Member of sorted set
+   * @return The score of member (a double precision floating point number
    */
-  final def zScore(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[Double]] = ZScore.run((a, b))
+  final def zScore(key: String, member: String): ZIO[RedisExecutor, RedisError, Option[Double]] = ZScore.run((key, member))
 
   /**
    * Add multiple sorted sets and store the resulting sorted set in a new key.
    *
-   * @param a key of the output.
-   * @param b number of input keys.
-   * @param c key of a sorted set.
-   * @param cs keys of other sorted sets.
-   * @param d represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set.
+   * @param a key of the output
+   * @param b number of input keys
+   * @param c key of a sorted set
+   * @param cs keys of other sorted sets
+   * @param d represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set
    *          This means that the score of every element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
    *          When WEIGHTS is not given, the multiplication factors default to 1.
-   * @param e with the AGGREGATE option, it is possible to specify how the results of the union are aggregated.
-   * @return the number of elements in the resulting sorted set at destination.
+   * @param e with the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return the number of elements in the resulting sorted set at destination
    */
   final def zUnionStore(a: String, b: Long, c: String, cs: String*)(
     d: Option[::[Double]] = None,

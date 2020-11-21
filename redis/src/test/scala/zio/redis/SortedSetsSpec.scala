@@ -478,7 +478,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByScore(
                         key,
                         ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(2500)),
-                        d = Some(Limit(offset = 1, count = 3))
+                        limit = Some(Limit(offset = 1, count = 3))
                       )
           } yield assert(result.toList)(equalTo(List("MicroSoft", "Micromax", "Nokia")))
         },
@@ -749,7 +749,7 @@ trait SortedSetsSpec extends BaseSpec {
                                min = ScoreMinimum.Open(2500),
                                max = ScoreMaximum.Closed(2000)
                              ),
-                             d = Some(Limit(1, 2))
+                             limit = Some(Limit(1, 2))
                            )
           } yield assert(rangeResult.toList)(equalTo(List("Nokia")))
         },
