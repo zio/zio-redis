@@ -187,6 +187,10 @@ object Input {
     def encode(data: String): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data))
   }
 
+  case object ByteInput extends Input[Chunk[Byte]] {
+    override private[redis] def encode(data: Chunk[Byte]) = Chunk.single(RespValue.BulkString(data))
+  }
+
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]] {
     def encode(data: Option[A]): Chunk[RespValue.BulkString] =
       data.fold(Chunk.empty: Chunk[RespValue.BulkString])(a.encode)
