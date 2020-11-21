@@ -26,7 +26,6 @@ object BenchmarksUtils {
   import dev.profunktor.redis4cats.effect.Log.NoOp.instance
   private val redis4CatsConnection: Resource[IO, RedisCommands[IO, String, String]] = Redis[IO].utf8(s"redis://$RedisHost:$RedisPort")
 
-
   def laserdiscQuery(f: LaserDiskClient[IO] => IO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
 
   def rediculousQuery(f: RediculousClient[IO] => IO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync
