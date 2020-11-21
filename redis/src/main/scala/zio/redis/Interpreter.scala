@@ -46,7 +46,7 @@ trait Interpreter {
           } yield live
       }
 
-    private final class Live(
+    private[this] final class Live(
       reqQueue: Queue[Request],
       resQueue: Queue[Promise[RedisError, RespValue]],
       byteStream: ByteStream.Service,
@@ -88,7 +88,7 @@ trait Interpreter {
           .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 
-    private final class InMemory() extends Service {
+    private[this] final class InMemory() extends Service {
       def execute(command: Chunk[RespValue.BulkString]): zio.IO[RedisError, RespValue] =
         for {
           name   <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
