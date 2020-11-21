@@ -167,6 +167,17 @@ object Output {
       }
   }
 
+  case object SingleOrMultiStringOutput extends Output[String] {
+
+    override protected def tryDecode(respValue: RespValue): String =
+      respValue match {
+        case RespValue.SimpleString(s)   => s
+        case s @ RespValue.BulkString(_) => s.asString
+        case other                       => throw ProtocolError(s"$other isn't a bulk string")
+      }
+
+  }
+
   case object MultiStringChunkOutput extends Output[Chunk[String]] {
 
     override protected def tryDecode(respValue: RespValue): Chunk[String] =
