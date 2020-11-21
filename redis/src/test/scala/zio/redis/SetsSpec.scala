@@ -755,7 +755,7 @@ trait SetsSpec extends BaseSpec {
             _                <- sAdd(key, "one", "two", "three")
             scan             <- sScan(key, 0L, Some("t[a-z]*".r))
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo(0L)) &&
+          } yield assert(cursor)(isZero) &&
             assert(members)(isNonEmpty)
         },
         testM("with count over non-empty set with two iterations") {
