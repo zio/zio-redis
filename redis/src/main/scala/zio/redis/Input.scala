@@ -286,9 +286,9 @@ object Input {
       Chunk(stringEncode("GROUP"), stringEncode(data.group), stringEncode(data.consumer))
   }
 
-  case object NoAckInput extends Input[Boolean] {
-    def encode(data: Boolean): Chunk[RespValue.BulkString] =
-      Chunk.single(stringEncode(NoAck.stringify))
+  case object NoAckInput extends Input[NoAck] {
+    def encode(data: NoAck): Chunk[RespValue.BulkString] =
+      Chunk.single(stringEncode(data.stringify))
   }
 
   case object MaxLenInput extends Input[MaxLen] {

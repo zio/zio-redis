@@ -33,8 +33,8 @@ trait Streams {
     XAdd.run((key, Some(MaxLen(approximate, count)), id, (pair, pairs.toList)))
 
   final def xClaim(key: String, group: String, consumer: String, minIdleTime: Duration, id: String, ids: String*)(
-    idle: Option[Idle] = None,
-    time: Option[Time] = None,
+    idle: Option[Duration] = None,
+    time: Option[Duration] = None,
     retryCount: Option[Long] = None,
     force: Boolean = false
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, String]]] =
@@ -45,8 +45,8 @@ trait Streams {
         consumer,
         minIdleTime,
         (id, ids.toList),
-        idle,
-        time,
+        idle.map(i => Idle(i.toMillis)),
+        time.map(t => Time(t.toMillis)),
         retryCount.map(RetryCount),
         if (force) Some(WithForce) else None
       )
@@ -60,9 +60,9 @@ trait Streams {
     id: String,
     ids: String*
   )(
-    idle: Option[Idle] = None,
-    time: Option[Time] = None,
-    retryCount: Option[RetryCount] = None,
+    idle: Option[Duration] = None,
+    time: Option[Duration] = None,
+    retryCount: Option[Long] = None,
     force: Boolean = false
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     XClaimWithJustId.run(
@@ -72,9 +72,9 @@ trait Streams {
         consumer,
         minIdleTime,
         (id, ids.toList),
-        idle,
-        time,
-        retryCount,
+        idle.map(i => Idle(i.toMillis)),
+        time.map(t => Time(t.toMillis)),
+        retryCount.map(RetryCount),
         if (force) Some(WithForce) else None,
         WithJustId
       )
@@ -153,7 +153,13 @@ trait Streams {
     streams: (String, String)*
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, Map[String, String]]]] =
     XReadGroup.run(
-      (Group(group, consumer), count.map(Count), block.map(Block), noAck, (stream, Chunk.fromIterable(streams)))
+      (
+        Group(group, consumer),
+        count.map(Count),
+        block.map(Block),
+        if (noAck) Some(NoAck) else None,
+        (stream, Chunk.fromIterable(streams))
+      )
     )
 
   final def xRevRange(
@@ -260,7 +266,7 @@ private object Streams {
 
   final val XReadGroup = RedisCommand(
     "XREADGROUP",
-    Tuple5(GroupInput, OptionalInput(CountInput), OptionalInput(BlockInput), NoAckInput, StreamsInput),
+    Tuple5(GroupInput, OptionalInput(CountInput), OptionalInput(BlockInput), OptionalInput(NoAckInput), StreamsInput),
     XReadOutput
   )
 
