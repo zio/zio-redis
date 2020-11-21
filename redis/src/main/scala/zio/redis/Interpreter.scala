@@ -6,10 +6,10 @@ import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousByteChannel, AsynchronousSocketChannel, Channel, CompletionHandler }
 
 import zio._
-import zio.stm._
 import zio.logging._
-import zio.stream.Stream
 import zio.redis.RedisError.ProtocolError
+import zio.stm._
+import zio.stream.Stream
 
 trait Interpreter {
 

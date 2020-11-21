@@ -1,7 +1,7 @@
 package zio.redis
 
-import zio.test._
 import zio.test.Assertion._
+import zio.test._
 
 trait ConnectionSpec extends BaseSpec {
 
