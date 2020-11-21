@@ -768,7 +768,7 @@ trait SetsSpec extends BaseSpec {
             (cursor2, members2) = scan2
           } yield assert(cursor)(isGreaterThan(0L)) &&
             assert(members)(isNonEmpty) &&
-            assert(cursor2)(equalTo(0L))
+            assert(cursor2)(isZero)
         },
         testM("with count over non-empty set") {
           for {
