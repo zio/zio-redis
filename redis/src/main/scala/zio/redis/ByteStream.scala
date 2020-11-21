@@ -16,25 +16,23 @@ private[redis] object ByteStream {
   }
 
   def socket(host: String, port: Int): ZLayer[Logging, IOException, ByteStream] =
-    socket(IO.effectTotal(new InetSocketAddress(host, port)))
+    socket(new InetSocketAddress(host, port))
 
-  def socket(address: SocketAddress): ZLayer[Logging, IOException, ByteStream] = socket(UIO.succeed(address))
+  def socket(address: => SocketAddress): ZLayer[Logging, IOException, ByteStream] = connect(address)
 
   def socketLoopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, IOException, ByteStream] =
-    socket(IO.effectTotal(new InetSocketAddress(InetAddress.getLoopbackAddress, port)))
+    socket(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
 
-  private[this] def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
-    val makeBuffer = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
-
+  private[this] def connect(address: => SocketAddress): ZLayer[Logging, IOException, ByteStream] =
     ZLayer.fromServiceManaged { logger =>
       for {
-        address     <- getAddress.toManaged_
+        address     <- UIO(address).toManaged_
+        makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
         readBuffer  <- makeBuffer.toManaged_
         writeBuffer <- makeBuffer.toManaged_
         channel     <- openChannel(address, logger)
       } yield new Connection(readBuffer, writeBuffer, channel)
     }
-  }
 
   private[this] final val ResponseBufferSize = 1024
 

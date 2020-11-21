@@ -20,7 +20,7 @@ trait Interpreter {
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
     }
 
-    def live(address: SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
+    def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       (ZLayer.identity[Logging] ++ ByteStream.socket(address).mapError(RedisError.IOError)) >>> StreamedExecutor
 
     def live(host: String, port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
