@@ -222,8 +222,6 @@ trait Interpreter {
           case object Empty                              extends State
           final case class Continue(values: Set[String]) extends State
         }
-        // Left(None) -> empty set
-        // Left(Some(Unit)) -> wrong type
         def get(key: String): STM[Nothing, State] =
           STM.ifM(isSet(key))(
             sets.get(key).map(_.fold[State](State.Empty)(State.Continue(_))),
