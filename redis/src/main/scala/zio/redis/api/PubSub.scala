@@ -8,23 +8,25 @@ import zio.{ Chunk, ZIO }
 trait PubSub {
   import PubSub._
 
-  final def pSubscribe(a: String, as: String*): ZIO[RedisExecutor, RedisError, Unit] = PSubscribe.run((a, as.toList))
+  final def pSubscribe(pattern: String, patterns: String*): ZIO[RedisExecutor, RedisError, Unit] =
+    PSubscribe.run((pattern, patterns.toList))
 
-  final def pubSubChannels(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    PubSubChannels.run(("CHANNELS", List(a)))
+  final def pubSubChannels(pattern: String): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    PubSubChannels.run(("CHANNELS", List(pattern)))
 
-  final def pubSubNumSub(a: String, as: String*): ZIO[RedisExecutor, RedisError, Map[String, Long]] =
-    PubSubNumSub.run(("NUMSUB", a :: as.toList))
+  final def pubSubNumSub(channel: String, channels: String*): ZIO[RedisExecutor, RedisError, Map[String, Long]] =
+    PubSubNumSub.run(("NUMSUB", channel :: channels.toList))
 
   final def pubSubNumPat(): ZIO[RedisExecutor, RedisError, Long] = PubSubNumPat.run("NUMPAT")
 
-  final def publish(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = Publish.run((a, b))
+  final def publish(channel: String, msg: String): ZIO[RedisExecutor, RedisError, Long] = Publish.run((channel, msg))
 
-  final def pUnSubscribe(as: String*): ZIO[RedisExecutor, RedisError, Unit] = PUnSubscribe.run(as.toList)
+  final def pUnsubscribe(patterns: String*): ZIO[RedisExecutor, RedisError, Unit] = PUnsubscribe.run(patterns.toList)
 
-  final def subscribe(a: String, as: String*): ZIO[RedisExecutor, RedisError, Unit] = Subscribe.run((a, as.toList))
+  final def subscribe(channel: String, channels: String*): ZIO[RedisExecutor, RedisError, Unit] =
+    Subscribe.run((channel, channels.toList))
 
-  final def unSubscribe(as: String*): ZIO[RedisExecutor, RedisError, Unit] = UnSubscribe.run(as.toList)
+  final def unsubscribe(channels: String*): ZIO[RedisExecutor, RedisError, Unit] = Unsubscribe.run(channels.toList)
 
 }
 
@@ -34,8 +36,8 @@ private object PubSub {
   final val PubSubNumSub   = RedisCommand("PUBSUB", NonEmptyList(StringInput), KeyLongValueOutput)
   final val PubSubNumPat   = RedisCommand("PUBSUB", StringInput, LongOutput)
   final val Publish        = RedisCommand("PUBLISH", Tuple2(StringInput, StringInput), LongOutput)
-  final val PUnSubscribe   = RedisCommand("PUNSUBSCRIBE", ListInput(StringInput), UnitOutput)
+  final val PUnsubscribe   = RedisCommand("PUNSUBSCRIBE", ListInput(StringInput), UnitOutput)
   final val Subscribe      = RedisCommand("SUBSCRIBE", NonEmptyList(StringInput), UnitOutput)
-  final val UnSubscribe    = RedisCommand("UNSUBSCRIBE", ListInput(StringInput), UnitOutput)
+  final val Unsubscribe    = RedisCommand("UNSUBSCRIBE", ListInput(StringInput), UnitOutput)
 
 }
