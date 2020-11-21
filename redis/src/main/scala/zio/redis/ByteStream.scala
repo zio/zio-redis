@@ -43,7 +43,7 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
-  private def completionHandlerCallback[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
+  private def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
       def completed(result: A, u: Any): Unit = k(IO.succeedNow(result))
 
@@ -58,7 +58,7 @@ private[redis] object ByteStream {
     channel: C
   )(op: C => CompletionHandler[A, Any] => Any): IO[IOException, A] =
     IO.effectAsyncInterrupt { k =>
-      op(channel)(completionHandlerCallback(k))
+      op(channel)(completionHandler(k))
       Left(IO.effect(channel.close()).ignore)
     }
 
