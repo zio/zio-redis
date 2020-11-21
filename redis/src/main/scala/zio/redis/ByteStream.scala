@@ -3,7 +3,7 @@ package zio.redis
 import java.io.{ EOFException, IOException }
 import java.net.{ InetAddress, InetSocketAddress, SocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
-import java.nio.channels.{ AsynchronousByteChannel, AsynchronousSocketChannel, Channel, CompletionHandler }
+import java.nio.channels.{ AsynchronousSocketChannel, Channel, CompletionHandler }
 
 import zio._
 import zio.logging._
@@ -50,11 +50,9 @@ private[redis] object ByteStream {
         }
     }
 
-  private[this] def effectAsyncChannel[C <: Channel, A](
-    channel: C
-  )(op: C => CompletionHandler[A, Any] => Any): IO[IOException, A] =
+  private[this] def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =
     IO.effectAsyncInterrupt { k =>
-      op(channel)(completionHandler(k))
+      op(completionHandler(k))
       Left(IO.effect(channel.close()).ignore)
     }
 
@@ -68,7 +66,7 @@ private[redis] object ByteStream {
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }
-        _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
+        _       <- closeWith[Void](channel)(channel.connect(address, null, _))
         _       <- logger.info("Connected to the redis server.")
       } yield channel
     }.refineToOrDie[IOException]
@@ -79,12 +77,11 @@ private[redis] object ByteStream {
     channel: AsynchronousSocketChannel
   ) extends Service {
 
-    def read: Stream[IOException, Byte] =
+    val read: Stream[IOException, Byte] =
       Stream.repeatEffectChunkOption {
         (for {
           _     <- IO.effectTotal(readBuffer.clear())
-          _     <- effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.read(readBuffer, null, _))
-                 .filterOrFail(_ >= 0)(new EOFException())
+          _     <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
           chunk <- IO.effectTotal {
                      readBuffer.flip()
                      val count = readBuffer.remaining()
@@ -107,7 +104,7 @@ private[redis] object ByteStream {
           writeBuffer.flip()
           remainder
         }.flatMap { remainder =>
-          effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.write(writeBuffer, null, _))
+          closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
             .repeatWhileM(_ => IO.effectTotal(writeBuffer.hasRemaining))
             .zipRight(write(remainder))
         }
