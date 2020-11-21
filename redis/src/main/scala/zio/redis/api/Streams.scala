@@ -2,10 +2,10 @@ package zio.redis.api
 
 import java.time.Duration
 
-import zio.{ Chunk, ZIO }
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
+import zio.{ Chunk, ZIO }
 
 trait Streams {
   import Streams._
