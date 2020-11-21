@@ -124,7 +124,7 @@ trait SortedSets {
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
   ): ZIO[RedisExecutor, RedisError, Long] =
-    ZInterStore.run((destination, inputKeysNum, (destination, keys.toList), aggregate, weights))
+    ZInterStore.run((destination, inputKeysNum, (key, keys.toList), aggregate, weights))
 
   /**
    * Count the number of members in a sorted set between a given lexicographical range.
