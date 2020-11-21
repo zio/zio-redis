@@ -801,7 +801,7 @@ trait SortedSetsSpec extends BaseSpec {
             key              <- uuid
             scan             <- zScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo(0L)) && assert(members)(isEmpty)
+          } yield assert(cursor)(isZero) && assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
           for {
