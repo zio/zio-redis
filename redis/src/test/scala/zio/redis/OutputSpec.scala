@@ -138,7 +138,7 @@ object OutputSpec extends BaseSpec {
           val input = respArrayVals(respBulkString("5"), respArray("foo", "bar"))
           for {
             res <- Task(ScanOutput.unsafeDecode(input))
-          } yield assert(res)(equalTo("5" -> Chunk("foo", "bar")))
+          } yield assert(res)(equalTo(5L -> Chunk("foo", "bar")))
         }
       ),
       suite("string")(
