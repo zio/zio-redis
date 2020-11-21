@@ -33,7 +33,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(skip in publish := true)
-    .aggregate(redis, benchmarks)
+    .aggregate(redis, benchmarks, examples)
 
 lazy val redis =
   project
@@ -63,6 +63,28 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects" % "0.10.3",
         "io.chrisdavenport" %% "rediculous"         % "0.0.8",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
+      ),
+      scalacOptions in Compile := Seq("-Xlint:unused")
+    )
+
+lazy val examples =
+  project
+    .in(file("examples"))
+    .settings(stdSettings("examples"))
+    .dependsOn(redis)
+    .settings(
+      skip in publish := true,
+      libraryDependencies ++= Seq(
+        "io.scalac" %% "zio-akka-http-interop" % "0.4.0",
+        "com.softwaremill.sttp.client" %% "core" % "2.0.3",
+        "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.0.3",
+        "com.softwaremill.sttp.client" %% "circe" % "2.0.3",
+        "io.circe" %% "circe-core" % "0.12.3",
+        "io.circe" %% "circe-generic" % "0.12.3",
+        "dev.zio" %% "zio-json" % "0.0.1",
+        "dev.zio" %% "zio-config" % "1.0.0-RC29-1",
+        "dev.zio" %% "zio-config-magnolia" % "1.0.0-RC29-1",
+        "dev.zio" %% "zio-config-typesafe" % "1.0.0-RC29-1"
       ),
       scalacOptions in Compile := Seq("-Xlint:unused")
     )
