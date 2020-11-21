@@ -10,46 +10,84 @@ import zio.{ Chunk, ZIO }
 trait Sets {
   import Sets._
 
-  final def sAdd(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SAdd.run((a, (b, bs.toList)))
+  // Add one or more members to a set
+  final def sAdd(key: String, firstMember: String, restMembers: String*): ZIO[RedisExecutor, RedisError, Long] =
+    SAdd.run((key, (firstMember, restMembers.toList)))
 
-  final def sCard(a: String): ZIO[RedisExecutor, RedisError, Long] = SCard.run(a)
+  // Get the number of members in a set
+  final def sCard(key: String): ZIO[RedisExecutor, RedisError, Long] = SCard.run(key)
 
-  final def sDiff(a: String, as: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] = SDiff.run((a, as.toList))
+  // Subtract multiple sets
+  final def sDiff(firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SDiff.run((firstKey, restKeys.toList))
 
-  final def sDiffStore(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SDiffStore.run((a, (b, bs.toList)))
+  // Subtract multiple sets and store the resulting set in a key
+  final def sDiffStore(destination: String, firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Long] =
+    SDiffStore.run((destination, (firstKey, restKeys.toList)))
 
-  final def sInter(a: String, as: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] = SInter.run((a, as.toList))
+  // Intersect multiple sets and store the resulting set in a key
+  final def sInter(destination: String, keys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SInter.run((destination, keys.toList))
 
-  final def sInterStore(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SInterStore.run((a, (b, bs.toList)))
+  // Intersect multiple sets and store the resulting set in a key
+  final def sInterStore(
+    destination: String,
+    firstKey: String,
+    restKeys: String*
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    SInterStore.run((destination, (firstKey, restKeys.toList)))
 
-  final def sIsMember(a: String, b: String): ZIO[RedisExecutor, RedisError, Boolean] = SIsMember.run((a, b))
+  // Determine is a given value is a member of a set
+  final def sIsMember(key: String, member: String): ZIO[RedisExecutor, RedisError, Boolean] =
+    SIsMember.run((key, member))
 
-  final def sMembers(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = SMembers.run(a)
+  // Get all the members in a set
+  final def sMembers(key: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = SMembers.run(key)
 
-  final def sMove(a: String, b: String, c: String): ZIO[RedisExecutor, RedisError, Boolean] = SMove.run((a, b, c))
+  // Move a member from one set to another
+  final def sMove(source: String, destination: String, member: String): ZIO[RedisExecutor, RedisError, Boolean] =
+    SMove.run((source, destination, member))
 
-  final def sPop(a: String, b: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] = SPop.run((a, b))
+  // Remove and return one or multiple random members from a set
+  final def sPop(key: String, count: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SPop.run((key, count))
 
-  final def sRandMember(a: String, b: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    SRandMember.run((a, b))
+  // Get one or multiple random members from a set
+  final def sRandMember(key: String, count: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SRandMember.run((key, count))
 
-  final def sRem(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SRem.run((a, (b, bs.toList)))
+  // Remove one of more members from a set
+  final def sRem(key: String, firstMember: String, restMembers: String*): ZIO[RedisExecutor, RedisError, Long] =
+    SRem.run((key, (firstMember, restMembers.toList)))
 
+  /** Incrementally iterate Set elements
+   *
+    * This is a cursor based iteration of the entire set. You pass an initial cursor of zero and you will receive
+   * a number of elements back. You can give Redis a hint to the number you would like on each iteration using the
+   * count parameter, but this is not guaranteed to be exact.
+   * The result of the first call to Scan includes a cursor which you can use for the next call, and so on until the
+   * cursor is zero.
+   *
+    * If you provide a regex, only set elements that match the regex will be included in the results.
+   */
   final def sScan(
-    a: String,
-    b: Long,
-    c: Option[Regex] = None,
-    d: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = SScan.run((a, b, c, d))
+    key: String,
+    cursor: Long,
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = SScan.run((key, cursor, regex, count))
 
-  final def sUnion(a: String, as: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] = SUnion.run((a, as.toList))
+  // Add multiple sets
+  final def sUnion(firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SUnion.run((firstKey, restKeys.toList))
 
-  final def sUnionStore(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SUnionStore.run((a, (b, bs.toList)))
+  // Add multiple sets and add the resulting set in a key
+  final def sUnionStore(
+    destination: String,
+    firstKey: String,
+    restKeys: String*
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    SUnionStore.run((destination, (firstKey, restKeys.toList)))
 }
 
 private object Sets {
