@@ -3,6 +3,8 @@ package zio.redis
 import zio.Chunk
 import zio.duration._
 
+import scala.util.Try
+
 sealed trait Output[+A] {
 
   self =>
@@ -290,4 +292,20 @@ object Output {
       }
   }
 
+  case object KeyLongValueOutput extends Output[Map[String, Long]] {
+    protected def tryDecode(respValue: RespValue): Map[String, Long] = {
+      val mapOutput = KeyValueOutput.unsafeDecode(respValue)
+
+      val res = mapOutput
+        .mapValues(value => Try(value.toLong).toOption)
+        .collect {
+          case (key, Some(value)) => key -> value
+        }
+
+      if (res.size != mapOutput.size)
+        throw ProtocolError(s"$mapOutput doesn't have a number after a string")
+      else
+        res
+    }
+  }
 }

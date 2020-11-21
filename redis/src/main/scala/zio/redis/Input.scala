@@ -149,6 +149,11 @@ object Input {
       (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
+  final case class ListInput[-A](input: Input[A]) extends Input[List[A]] {
+    def encode(data: List[A]): Chunk[RespValue.BulkString] =
+      data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
+  }
+
   case object OrderInput extends Input[Order] {
     def encode(data: Order): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
