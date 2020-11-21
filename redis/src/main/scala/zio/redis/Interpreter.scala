@@ -160,7 +160,7 @@ trait Interpreter {
 
     def socket(address: SocketAddress): ZLayer[Logging, IOException, ByteStream] = socket(UIO.succeed(address))
 
-    def socketLoopback(port: Int): ZLayer[Logging, IOException, ByteStream] =
+    def socketLoopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, IOException, ByteStream] =
       socket(IO.effectTotal(new InetSocketAddress(InetAddress.getLoopbackAddress, port)))
 
     private def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
