@@ -8,13 +8,16 @@ import zio.redis._
 trait HyperLogLog {
   import HyperLogLog._
 
-  final def pfAdd(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Boolean] =
-    PfAdd.run((a, (b, bs.toList)))
+  /** Adds the specified elements to the specified HyperLogLog. */
+  final def pfAdd(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Boolean] =
+    PfAdd.run((key, (element, elements.toList)))
 
-  final def pfCount(a: String, as: String*): ZIO[RedisExecutor, RedisError, Long] = PfCount.run((a, as.toList))
+  /** Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s). */
+  final def pfCount(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] = PfCount.run((key, keys.toList))
 
-  final def pfMerge(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Unit] =
-    PfMerge.run((a, (b, bs.toList)))
+  /** Merge N different HyperLogLogs into a single one. */
+  final def pfMerge(destKey: String, sourceKey: String, sourceKeys: String*): ZIO[RedisExecutor, RedisError, Unit] =
+    PfMerge.run((destKey, (sourceKey, sourceKeys.toList)))
 }
 
 private object HyperLogLog {
