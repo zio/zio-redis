@@ -12,7 +12,8 @@ object ApiSpec
     with StringsSpec
     with GeoSpec
     with HyperLogLogSpec
-    with HashSpec {
+    with HashSpec
+    with PubSubSpec {
 
   def spec =
     suite("Redis commands")(
@@ -23,7 +24,8 @@ object ApiSpec
       stringsSuite,
       geoSuite,
       hyperLogLogSuite,
-      hashSuite
+      hashSuite,
+      pubSubSuite
     ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live)
 
   private val Executor = RedisExecutor.loopback().orDie
