@@ -29,7 +29,15 @@ trait Interpreter {
     def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       (ZLayer.identity[Logging] ++ ByteStream.loopback(port)) >>> StreamedExecutor
 
-    val test: ZLayer[Any, Nothing, RedisExecutor] = ZLayer.succeed(new InMemory())
+    val test: ZLayer[Any, Nothing, RedisExecutor] =
+      ZLayer.fromEffect {
+        STM.atomically {
+          for {
+            sets    <- TMap.empty[String, Set[String]]
+            strings <- TMap.empty[String, String]
+          } yield new Test(sets, strings)
+        }
+      }
 
     private[redis] final val DefaultPort = 6379
 
