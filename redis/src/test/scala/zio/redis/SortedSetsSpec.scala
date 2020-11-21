@@ -71,7 +71,7 @@ trait SortedSetsSpec extends BaseSpec {
             key    <- uuid
             _      <- zAdd(key)(MemberScore(1d, "v1"))
             _      <- zAdd(key)(MemberScore(2d, "v2"))
-            added  <- zAdd(key, c = Some(Changed))(MemberScore(3d, "v3"), MemberScore(11d, "v1"))
+            added  <- zAdd(key, change = Some(Changed))(MemberScore(3d, "v3"), MemberScore(11d, "v1"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(2L)) &&
             assert(result.toList)(equalTo(List("v2", "v3", "v1")))
