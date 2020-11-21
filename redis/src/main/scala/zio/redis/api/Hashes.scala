@@ -28,7 +28,7 @@ trait Hashes {
 
   final def hLen(a: String): ZIO[RedisExecutor, RedisError, Long] = HLen.run(a)
 
-  final def hmGet(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+  final def hmGet(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
     HmGet.run((a, (b, bs.toList)))
 
   /** Deprecated: As per Redis 4.0.0, HMSET is considered deprecated. Please use HSET in new code. */
@@ -65,7 +65,9 @@ private object Hashes {
 
   final val HKeys = RedisCommand("HKEYS", StringInput, ChunkOutput)
   final val HLen  = RedisCommand("HLEN", StringInput, LongOutput)
-  final val HmGet = RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val HmGet =
+    RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
+
   final val HmSet =
     RedisCommand(
       "HMSET",
