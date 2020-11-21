@@ -20,15 +20,37 @@ trait Streams {
     pair: (String, String),
     pairs: (String, String)*
   ): ZIO[RedisExecutor, RedisError, String] =
-    XAdd.run((key, id, (pair, pairs.toList)))
+    XAdd.run((key, None, id, (pair, pairs.toList)))
+
+  final def xAddWithMaxLen(
+    key: String,
+    id: String,
+    count: Long,
+    approximate: Boolean,
+    pair: (String, String),
+    pairs: (String, String)*
+  ): ZIO[RedisExecutor, RedisError, String] =
+    XAdd.run((key, Some(MaxLen(approximate, count)), id, (pair, pairs.toList)))
 
   final def xClaim(key: String, group: String, consumer: String, minIdleTime: Duration, id: String, ids: String*)(
     idle: Option[Idle] = None,
     time: Option[Time] = None,
-    retryCount: Option[RetryCount] = None,
-    withForce: Option[WithForce] = None
+    retryCount: Option[Long] = None,
+    force: Boolean = false
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, String]]] =
-    XClaim.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, withForce))
+    XClaim.run(
+      (
+        key,
+        group,
+        consumer,
+        minIdleTime,
+        (id, ids.toList),
+        idle,
+        time,
+        retryCount.map(RetryCount),
+        if (force) Some(WithForce) else None
+      )
+    )
 
   final def xClaimWithJustId(
     key: String,
@@ -41,10 +63,21 @@ trait Streams {
     idle: Option[Idle] = None,
     time: Option[Time] = None,
     retryCount: Option[RetryCount] = None,
-    withForce: Option[WithForce] = None
+    force: Boolean = false
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    XClainWithJustId.run(
-      (key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, withForce, WithJustId)
+    XClaimWithJustId.run(
+      (
+        key,
+        group,
+        consumer,
+        minIdleTime,
+        (id, ids.toList),
+        idle,
+        time,
+        retryCount,
+        if (force) Some(WithForce) else None,
+        WithJustId
+      )
     )
 
   final def xDel(key: String, id: String, ids: String*): ZIO[RedisExecutor, RedisError, Long] =
@@ -55,26 +88,29 @@ trait Streams {
     group: String,
     id: String,
     mkStream: Boolean = false
-  ): ZIO[RedisExecutor, RedisError, String] =
+  ): ZIO[RedisExecutor, RedisError, Unit] =
     XGroupCreate.run(Create(key, group, id, mkStream))
 
-  final def xGroupSetId(key: String, group: String, id: String): ZIO[RedisExecutor, RedisError, String] =
+  final def xGroupSetId(key: String, group: String, id: String): ZIO[RedisExecutor, RedisError, Unit] =
     XGroupSetId.run(SetId(key, group, id))
 
-  final def xGroupDestroy(key: String, group: String): ZIO[RedisExecutor, RedisError, String] =
+  final def xGroupDestroy(key: String, group: String): ZIO[RedisExecutor, RedisError, Long] =
     XGroupDestroy.run(Destroy(key, group))
 
-  final def xGroupCreateConsumer(key: String, group: String, consumer: String): ZIO[RedisExecutor, RedisError, String] =
+  final def xGroupCreateConsumer(key: String, group: String, consumer: String): ZIO[RedisExecutor, RedisError, Unit] =
     XGroupCreateConsumer.run(CreateConsumer(key, group, consumer))
 
-  final def xGroupDelConsumer(key: String, group: String, consumer: String): ZIO[RedisExecutor, RedisError, String] =
+  final def xGroupDelConsumer(key: String, group: String, consumer: String): ZIO[RedisExecutor, RedisError, Long] =
     XGroupDelConsumer.run(DelConsumer(key, group, consumer))
 
   final def xLen(key: String): ZIO[RedisExecutor, RedisError, Long] =
     XLen.run(key)
 
   final def xPending(key: String, group: String): ZIO[RedisExecutor, RedisError, PendingInfo] =
-    XPending.run((key, group))
+    XPending.run((key, group, None))
+
+  final def xPending(key: String, group: String, idle: Duration): ZIO[RedisExecutor, RedisError, PendingInfo] =
+    XPending.run((key, group, Some(Idle(idle.toMillis))))
 
   final def xPending(
     key: String,
@@ -82,9 +118,10 @@ trait Streams {
     start: String,
     end: String,
     count: Long,
-    consumer: Option[String] = None
+    consumer: Option[String] = None,
+    idle: Option[Duration] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[PendingMessage]] =
-    XPendingMessages.run((key, group, start, end, count, consumer))
+    XPendingMessages.run((key, group, start, end, count, consumer, idle.map(i => Idle(i.toMillis))))
 
   final def xRange(
     key: String,
@@ -101,7 +138,6 @@ trait Streams {
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, String]]] =
     XRange.run((key, start, end, Some(Count(count))))
 
-  // TODO: change map to list of pairs everywhere
   final def xRead(count: Option[Long] = None, block: Option[Duration] = None)(
     stream: (String, String),
     streams: (String, String)*
@@ -145,7 +181,7 @@ private object Streams {
 
   final val XAdd = RedisCommand(
     "XADD",
-    Tuple3(StringInput, StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
+    Tuple4(StringInput, OptionalInput(MaxLenInput), StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
     MultiStringOutput
   )
 
@@ -165,7 +201,7 @@ private object Streams {
     StreamOutput
   )
 
-  final val XClainWithJustId = RedisCommand(
+  final val XClaimWithJustId = RedisCommand(
     "XCLAIM",
     Tuple10(
       StringInput,
@@ -184,26 +220,35 @@ private object Streams {
 
   final val XDel = RedisCommand("XDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 
-  final val XGroupCreate = RedisCommand("XGROUP", XGroupCreateInput, StringOutput)
+  final val XGroupCreate = RedisCommand("XGROUP", XGroupCreateInput, UnitOutput)
 
-  final val XGroupSetId = RedisCommand("XGROUP", XGroupSetIdInput, StringOutput)
+  final val XGroupSetId = RedisCommand("XGROUP", XGroupSetIdInput, UnitOutput)
 
-  final val XGroupDestroy = RedisCommand("XGROUP", XGroupDestroyInput, StringOutput)
+  final val XGroupDestroy = RedisCommand("XGROUP", XGroupDestroyInput, LongOutput)
 
-  final val XGroupCreateConsumer = RedisCommand("XGROUP", XGroupCreateConsumerInput, StringOutput)
+  final val XGroupCreateConsumer = RedisCommand("XGROUP", XGroupCreateConsumerInput, UnitOutput)
 
-  final val XGroupDelConsumer = RedisCommand("XGROUP", XGroupDelConsumerInput, StringOutput)
+  final val XGroupDelConsumer = RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
 
   // TODO: implement XINFO command
 
   final val XLen = RedisCommand("XLEN", StringInput, LongOutput)
 
-  final val XPending = RedisCommand("XPENDING", Tuple2(StringInput, StringInput), XPendingOutput)
+  final val XPending =
+    RedisCommand("XPENDING", Tuple3(StringInput, StringInput, OptionalInput(IdleInput)), XPendingOutput)
 
   final val XPendingMessages =
     RedisCommand(
       "XPENDING",
-      Tuple6(StringInput, StringInput, StringInput, StringInput, LongInput, OptionalInput(StringInput)),
+      Tuple7(
+        StringInput,
+        StringInput,
+        StringInput,
+        StringInput,
+        LongInput,
+        OptionalInput(StringInput),
+        OptionalInput(IdleInput)
+      ),
       PendingMessagesOutput
     )
 
