@@ -49,7 +49,7 @@ trait Hashes {
   final def hVals(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HVals.run(a)
 }
 
-private object Hashes {
+private[redis] object Hashes {
   final val HDel    = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   final val HExists = RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
   final val HGet    = RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))

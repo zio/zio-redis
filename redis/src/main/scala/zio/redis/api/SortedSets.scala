@@ -116,7 +116,7 @@ trait SortedSets {
   ): ZIO[RedisExecutor, RedisError, Long] = ZUnionStore.run((a, b, (c, cs.toList), d, e))
 }
 
-private object SortedSets {
+private[redis] object SortedSets {
   final val BzPopMax =
     RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val BzPopMin =
