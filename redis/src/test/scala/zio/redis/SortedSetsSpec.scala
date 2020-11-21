@@ -967,7 +967,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zUnionStore(dest, 2, first, second)(e = Some(Aggregate.Max))
+            card   <- zUnionStore(dest, 2, first, second)(aggregate = Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         },
         testM("set aggregate parameter MIN") {
@@ -977,7 +977,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zUnionStore(dest, 2, first, second)(e = Some(Aggregate.Min))
+            card   <- zUnionStore(dest, 2, first, second)(aggregate = Some(Aggregate.Min))
           } yield assert(card)(equalTo(4L))
         },
         testM("parameter weights provided along with aggregate") {

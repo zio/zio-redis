@@ -16,35 +16,35 @@ trait SortedSets {
    * Remove and return the member with the highest score from one or more sorted sets, or block until one is available.
    *
    * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely.
-   * @param firstKey Key of the set
-   * @param restKeys Keys of the rest sets
+   * @param key Key of the set
+   * @param keys Keys of the rest sets
    * @return A three-element Chunk with the first element being the name of the key where a member was popped,
    *         the second element is the popped member itself, and the third element is the score of the popped element.
    *         An empty chunk is returned when no element could be popped and the timeout expired.
    */
   final def bzPopMax(
     timeout: Duration,
-    firstKey: String,
-    restKeys: String*
+    key: String,
+    keys: String*
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    BzPopMax.run((timeout, (firstKey, restKeys.toList)))
+    BzPopMax.run((timeout, (key, keys.toList)))
 
   /**
    * Remove and return the member with the lowest score from one or more sorted sets, or block until one is available.
    *
    * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely.
-   * @param firstKey Key of the set
-   * @param restKeys Keys of the rest sets
+   * @param key Key of the set
+   * @param keys Keys of the rest sets
    * @return A three-element Chunk with the first element being the name of the key where a member was popped,
    *         the second element is the popped member itself, and the third element is the score of the popped element.
    *         An empty chunk is returned when no element could be popped and the timeout expired.
    */
   final def bzPopMin(
     timeout: Duration,
-    firstKey: String,
-    restKeys: String*
+    key: String,
+    keys: String*
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    BzPopMin.run((timeout, (firstKey, restKeys.toList)))
+    BzPopMin.run((timeout, (key, keys.toList)))
 
   /**
    * Add one or more members to a sorted set, or update its score if it already exists.
@@ -52,14 +52,14 @@ trait SortedSets {
    * @param key Key of set to add to
    * @param update Set existing and never add elements or always set new elements and don't update existing elements
    * @param change Modify the return value from the number of new elements added, to the total number of elements change
-   * @param firstMemberScore Score that should be added to specific element for a given sorted set key
-   * @param restMemberScores Rest scores that should be added to specific elements fr a given sorted set key
+   * @param memberScore Score that should be added to specific element for a given sorted set key
+   * @param memberScores Rest scores that should be added to specific elements fr a given sorted set key
    * @return The number of elements added to the sorted set, not including elements already existing for which the score was updated
    */
   final def zAdd(key: String, update: Option[Update] = None, change: Option[Changed] = None)(
-    firstMemberScore: MemberScore,
-    restMemberScores: MemberScore*
-  ): ZIO[RedisExecutor, RedisError, Long] = ZAdd.run((key, update, change, (firstMemberScore, restMemberScores.toList)))
+    memberScore: MemberScore,
+    memberScores: MemberScore*
+  ): ZIO[RedisExecutor, RedisError, Long] = ZAdd.run((key, update, change, (memberScore, memberScores.toList)))
 
   /**
    * Add one or more members to a sorted set, or update its score if it already exists.
@@ -68,16 +68,16 @@ trait SortedSets {
    * @param update Set existing and never add elements or always set new elements and don't update existing elements
    * @param change Modify the return value from the number of new elements added, to the total number of elements change
    * @param increment When this option is specified ZADD acts like ZINCRBY. Only one score-element pair can be specified in this mode
-   * @param firstMemberScore Score that should be added to specific element for a given sorted set key
-   * @param restMemberScores Rest scores that should be added to specific elements fr a given sorted set key
+   * @param memberScore Score that should be added to specific element for a given sorted set key
+   * @param memberScores Rest scores that should be added to specific elements fr a given sorted set key
    * @return The new score of member (a double precision floating point number), or None if the operation was aborted (when called with either the XX or the NX option)
    */
   final def zAddWithIncr(key: String, update: Option[Update] = None, change: Option[Changed] = None)(
     increment: Increment,
-    firstMemberScore: MemberScore,
-    restMemberScores: MemberScore*
+    memberScore: MemberScore,
+    memberScores: MemberScore*
   ): ZIO[RedisExecutor, RedisError, Option[Double]] =
-    ZAddWithIncr.run((key, update, change, increment, (firstMemberScore, restMemberScores.toList)))
+    ZAddWithIncr.run((key, update, change, increment, (memberScore, memberScores.toList)))
 
   /**
    * Get the number of members in a sorted set.
@@ -110,21 +110,21 @@ trait SortedSets {
   /**
    * Intersect multiple sorted sets and store the resulting sorted set in a new key.
    *
-   * @param key Key of the output.
+   * @param destination Key of the output.
    * @param inputKeysNum Number of input keys.
-   * @param firstKey Key of a sorted set.
-   * @param restKeys Keys of the rest sorted sets.
+   * @param key Key of a sorted set.
+   * @param keys Keys of the rest sorted sets.
    * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated.
    * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set.
    *          This means that the score of every element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
    *          When WEIGHTS is not given, the multiplication factors default to 1.
-   * @return the number of elements in the resulting sorted set at destination.
+   * @return The number of elements in the resulting sorted set at destination.
    */
-  final def zInterStore(key: String, inputKeysNum: Long, firstKey: String, restKeys: String*)(
+  final def zInterStore(destination: String, inputKeysNum: Long, key: String, keys: String*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
   ): ZIO[RedisExecutor, RedisError, Long] =
-    ZInterStore.run((key, inputKeysNum, (firstKey, restKeys.toList), aggregate, weights))
+    ZInterStore.run((destination, inputKeysNum, (destination, keys.toList), aggregate, weights))
 
   /**
    * Count the number of members in a sorted set between a given lexicographical range.
@@ -340,20 +340,21 @@ trait SortedSets {
   /**
    * Add multiple sorted sets and store the resulting sorted set in a new key.
    *
-   * @param a key of the output
-   * @param b number of input keys
-   * @param c key of a sorted set
-   * @param cs keys of other sorted sets
-   * @param d represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set
+   * @param destination Key of the output
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set
    *          This means that the score of every element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
    *          When WEIGHTS is not given, the multiplication factors default to 1.
-   * @param e with the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @return the number of elements in the resulting sorted set at destination
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return The number of elements in the resulting sorted set at destination
    */
-  final def zUnionStore(a: String, b: Long, c: String, cs: String*)(
-    d: Option[::[Double]] = None,
-    e: Option[Aggregate] = None
-  ): ZIO[RedisExecutor, RedisError, Long] = ZUnionStore.run((a, b, (c, cs.toList), d, e))
+  final def zUnionStore(destination: String, inputKeysNum: Long, key: String, keys: String*)(
+    weights: Option[::[Double]] = None,
+    aggregate: Option[Aggregate] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    ZUnionStore.run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
 }
 
 private object SortedSets {
