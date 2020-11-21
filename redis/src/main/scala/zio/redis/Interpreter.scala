@@ -41,7 +41,7 @@ trait Interpreter {
           for {
             reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
             resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
-            live      = new Live(reqQueue, resQueue, byteStream.connect, logging)
+            live      = new Live(reqQueue, resQueue, byteStream, logging)
             _        <- live.run.forkManaged
           } yield live
       }
@@ -49,7 +49,7 @@ trait Interpreter {
     private final class Live(
       reqQueue: Queue[Request],
       resQueue: Queue[Promise[RedisError, RespValue]],
-      byteStream: Managed[IOException, ByteStream.ReadWriteBytes],
+      byteStream: ByteStream.Service,
       logger: Logger[String]
     ) extends Service {
 
@@ -58,10 +58,11 @@ trait Interpreter {
           .make[RedisError, RespValue]
           .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
 
-      private def sendWith(out: Chunk[Byte] => IO[IOException, Unit]): IO[RedisError, Unit] =
+      private def send: IO[RedisError, Unit] =
         reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
           val bytes = Chunk.fromIterable(reqs).flatMap(req => RespValue.Array(req.command).serialize)
-          out(bytes)
+          byteStream
+            .write(bytes)
             .mapError(RedisError.IOError)
             .tapBoth(
               e => IO.foreach_(reqs)(_.promise.fail(e)),
@@ -81,16 +82,9 @@ trait Interpreter {
        * Only exits by interruption or defect.
        */
       def run: IO[RedisError, Unit] =
-        byteStream
-          .mapError(RedisError.IOError)
-          .use { rwBytes =>
-            sendWith(rwBytes.write).forever race runReceive(rwBytes.read)
-          }
-          .tapError { e =>
-            logger.warn(s"Reconnecting due to error: $e") *>
-              resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
-          }
-          .retryWhile(Function.const(true))
+        (send.forever race runReceive(byteStream.read)).tapError { e =>
+          logger.warn(s"Reconnecting due to error: $e") *> resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
+        }.retryWhile(Function.const(true))
           .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 

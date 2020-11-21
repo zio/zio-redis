@@ -11,10 +11,9 @@ import zio.stream.Stream
 
 private[redis] object ByteStream {
   trait Service {
-    val connect: Managed[IOException, ReadWriteBytes]
+    def read: Stream[IOException, Byte]
+    def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
-
-  def connect: ZManaged[ByteStream, IOException, ReadWriteBytes] = ZManaged.accessManaged(_.get.connect)
 
   def socket(host: String, port: Int): ZLayer[Logging, IOException, ByteStream] =
     socket(IO.effectTotal(new InetSocketAddress(host, port)))
@@ -27,21 +26,17 @@ private[redis] object ByteStream {
   private[this] def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
     val makeBuffer = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
 
-    ZLayer.fromServiceM { logger =>
+    ZLayer.fromServiceManaged { logger =>
       for {
-        address     <- getAddress
-        readBuffer  <- makeBuffer
-        writeBuffer <- makeBuffer
-      } yield new Connection(address, readBuffer, writeBuffer, logger)
+        address     <- getAddress.toManaged_
+        readBuffer  <- makeBuffer.toManaged_
+        writeBuffer <- makeBuffer.toManaged_
+        channel     <- openChannel(address, logger)
+      } yield new Connection(readBuffer, writeBuffer, channel)
     }
   }
 
   private[this] final val ResponseBufferSize = 1024
-
-  trait ReadWriteBytes {
-    def read: Stream[IOException, Byte]
-    def write(chunk: Chunk[Byte]): IO[IOException, Unit]
-  }
 
   private[this] def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
@@ -62,69 +57,118 @@ private[redis] object ByteStream {
       Left(IO.effect(channel.close()).ignore)
     }
 
-  private[this] final class Connection(
+  private[this] def openChannel(
     address: SocketAddress,
+    logger: Logger[String]
+  ): Managed[IOException, AsynchronousSocketChannel] =
+    Managed.fromAutoCloseable {
+      for {
+        channel <- IO.effect {
+                     val channel = AsynchronousSocketChannel.open()
+                     channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+                     channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
+                     channel
+                   }
+        _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
+      } yield channel
+    }.tap(_ => logger.info("Connected to the redis servier.").toManaged_).refineToOrDie[IOException]
+
+  private[this] final class Connection(
     readBuffer: ByteBuffer,
     writeBuffer: ByteBuffer,
-    logger: Logger[String]
+    channel: AsynchronousSocketChannel
   ) extends Service {
 
-    private def openChannel: Managed[IOException, AsynchronousSocketChannel] = {
-      val channel =
-        for {
-          channel <- IO.effect {
-                       val channel = AsynchronousSocketChannel.open()
-                       channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
-                       channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
-                       channel
-                     }
-          _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
-          _       <- logger.info("Connected to the redis server.")
-        } yield channel
-
-      Managed.fromAutoCloseable(channel).refineToOrDie[IOException]
-    }
-
-    override val connect: Managed[IOException, ReadWriteBytes] =
-      openChannel.map { channel =>
-        val readChunk =
-          (for {
-            _     <- IO.effectTotal(readBuffer.clear())
-            _     <- effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.read(readBuffer, null, _))
-                   .filterOrFail(_ >= 0)(new EOFException())
-            chunk <- IO.effectTotal {
-                       readBuffer.flip()
-                       val count = readBuffer.remaining()
-                       val array = Array.ofDim[Byte](count)
-                       readBuffer.get(array)
-                       Chunk.fromArray(array)
-                     }
-          } yield chunk).mapError {
-            case _: EOFException => None
-            case e: IOException  => Some(e)
-          }
-
-        @inline
-        def writeChunk(chunk: Chunk[Byte]): IO[IOException, Unit] =
-          IO.when(chunk.nonEmpty) {
-            IO.effectTotal {
-              writeBuffer.clear()
-              val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
-              writeBuffer.put(c.toArray)
-              writeBuffer.flip()
-              remainder
-            }.flatMap { remainder =>
-              effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.write(writeBuffer, null, _))
-                .repeatWhileM(_ => IO.effectTotal(writeBuffer.hasRemaining))
-                .zipRight(writeChunk(remainder))
-            }
-          }
-
-        new ReadWriteBytes {
-          def read: Stream[IOException, Byte] = Stream.repeatEffectChunkOption(readChunk)
-
-          def write(chunk: Chunk[Byte]): IO[IOException, Unit] = writeChunk(chunk)
+    def read: Stream[IOException, Byte] =
+      Stream.repeatEffectChunkOption {
+        (for {
+          _     <- IO.effectTotal(readBuffer.clear())
+          _     <- effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.read(readBuffer, null, _))
+                 .filterOrFail(_ >= 0)(new EOFException())
+          chunk <- IO.effectTotal {
+                     readBuffer.flip()
+                     val count = readBuffer.remaining()
+                     val array = Array.ofDim[Byte](count)
+                     readBuffer.get(array)
+                     Chunk.fromArray(array)
+                   }
+        } yield chunk).mapError {
+          case _: EOFException => None
+          case e: IOException  => Some(e)
         }
       }
+
+    def write(chunk: Chunk[Byte]): IO[IOException, Unit] =
+      IO.when(chunk.nonEmpty) {
+        IO.effectTotal {
+          writeBuffer.clear()
+          val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
+          writeBuffer.put(c.toArray)
+          writeBuffer.flip()
+          remainder
+        }.flatMap { remainder =>
+          effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.write(writeBuffer, null, _))
+            .repeatWhileM(_ => IO.effectTotal(writeBuffer.hasRemaining))
+            .zipRight(write(remainder))
+        }
+      }
+
+    // private def openChannel: Managed[IOException, AsynchronousSocketChannel] = {
+    //   val channel =
+    //     for {
+    //       channel <- IO.effect {
+    //                    val channel = AsynchronousSocketChannel.open()
+    //                    channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+    //                    channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
+    //                    channel
+    //                  }
+    //       _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
+    //       _       <- logger.info("Connected to the redis server.")
+    //     } yield channel
+
+    //   Managed.fromAutoCloseable(channel).refineToOrDie[IOException]
+    // }
+
+    // override val connect: Managed[IOException, ReadWriteBytes] =
+    //   channel.map { channel =>
+    //     val readChunk =
+    //       (for {
+    //         _     <- IO.effectTotal(readBuffer.clear())
+    //         _     <- effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.read(readBuffer, null, _))
+    //                .filterOrFail(_ >= 0)(new EOFException())
+    //         chunk <- IO.effectTotal {
+    //                    readBuffer.flip()
+    //                    val count = readBuffer.remaining()
+    //                    val array = Array.ofDim[Byte](count)
+    //                    readBuffer.get(array)
+    //                    Chunk.fromArray(array)
+    //                  }
+    //       } yield chunk).mapError {
+    //         case _: EOFException => None
+    //         case e: IOException  => Some(e)
+    //       }
+
+    //     @inline
+    //     def writeChunk(chunk: Chunk[Byte]): IO[IOException, Unit] =
+    //       IO.when(chunk.nonEmpty) {
+    //         IO.effectTotal {
+    //           writeBuffer.clear()
+    //           val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
+    //           writeBuffer.put(c.toArray)
+    //           writeBuffer.flip()
+    //           remainder
+    //         }.flatMap { remainder =>
+    //           effectAsyncChannel[AsynchronousByteChannel, Integer](channel)(c => c.write(writeBuffer, null, _))
+    //             .repeatWhileM(_ => IO.effectTotal(writeBuffer.hasRemaining))
+    //             .zipRight(writeChunk(remainder))
+    //         }
+    //       }
+
+    //     new ReadWriteBytes {
+    //       def read: Stream[IOException, Byte] = Stream.repeatEffectChunkOption(readChunk)
+
+    //       def write(chunk: Chunk[Byte]): IO[IOException, Unit] = writeChunk(chunk)
+    //     }
+    //   }
   }
 }
