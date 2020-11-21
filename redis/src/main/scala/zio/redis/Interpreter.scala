@@ -21,13 +21,13 @@ trait Interpreter {
     }
 
     def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.live(address).mapError(RedisError.IOError)) >>> StreamedExecutor
+      (ZLayer.identity[Logging] ++ ByteStream.live(address)) >>> StreamedExecutor
 
     def live(host: String, port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.live(host, port).mapError(RedisError.IOError)) >>> StreamedExecutor
+      (ZLayer.identity[Logging] ++ ByteStream.live(host, port)) >>> StreamedExecutor
 
     def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.loopback(port).mapError(RedisError.IOError)) >>> StreamedExecutor
+      (ZLayer.identity[Logging] ++ ByteStream.loopback(port)) >>> StreamedExecutor
 
     val test: ZLayer[Any, Nothing, RedisExecutor] = ZLayer.succeed(new InMemory())
 

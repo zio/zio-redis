@@ -15,23 +15,26 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
-  def live(host: String, port: Int): ZLayer[Logging, IOException, ByteStream] =
+  def live(host: String, port: Int): ZLayer[Logging, RedisError.IOError, ByteStream] =
     live(new InetSocketAddress(host, port))
 
-  def live(address: => SocketAddress): ZLayer[Logging, IOException, ByteStream] = connect(address)
+  def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, ByteStream] = connect(address)
 
-  def loopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, IOException, ByteStream] =
+  def loopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, RedisError.IOError, ByteStream] =
     live(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
 
-  private[this] def connect(address: => SocketAddress): ZLayer[Logging, IOException, ByteStream] =
+  private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, ByteStream] =
     ZLayer.fromServiceManaged { logger =>
-      for {
-        address     <- UIO(address).toManaged_
-        makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
-        readBuffer  <- makeBuffer.toManaged_
-        writeBuffer <- makeBuffer.toManaged_
-        channel     <- openChannel(address, logger)
-      } yield new Connection(readBuffer, writeBuffer, channel)
+      val managed =
+        for {
+          address     <- UIO(address).toManaged_
+          makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
+          readBuffer  <- makeBuffer.toManaged_
+          writeBuffer <- makeBuffer.toManaged_
+          channel     <- openChannel(address, logger)
+        } yield new Connection(readBuffer, writeBuffer, channel)
+
+      managed.mapError(RedisError.IOError)
     }
 
   private[this] final val ResponseBufferSize = 1024
