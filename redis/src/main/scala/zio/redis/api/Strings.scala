@@ -31,31 +31,31 @@ trait Strings {
   /** Perform arbitrary bitfield integer operations on strings
    *
     * @param key Key of the string to operate on
-   * @param firstCommand First command to apply
-   * @param restCommands Subsequent commands to apply
+   * @param command First command to apply
+   * @param commands Subsequent commands to apply
    * @return Returns an optional long result of each command applied
    */
   final def bitField(
     key: String,
-    firstCommand: BitFieldCommand,
-    restCommands: BitFieldCommand*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Option[Long]]] = BitField.run((key, (firstCommand, restCommands.toList)))
+    command: BitFieldCommand,
+    commands: BitFieldCommand*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[Long]]] = BitField.run((key, (command, commands.toList)))
 
   /** Perform bitwise operations between strings
    *
     * @param operation Bit operation to apply
    * @param destKey Key of destination string to store the result
-   * @param firstSrcKey First source key to apply the operation to
-   * @param restSrcKeys Subsequent source keys to apply the operation to
+   * @param srcKey First source key to apply the operation to
+   * @param srcKeys Subsequent source keys to apply the operation to
    * @return Returns size of the string stored in the destination key, that is equal to the size of the longest input string
    */
   final def bitOp(
     operation: BitOperation,
     destKey: String,
-    firstSrcKey: String,
-    restSrcKeys: String*
+    srcKey: String,
+    srcKeys: String*
   ): ZIO[RedisExecutor, RedisError, Long] =
-    BitOp.run((operation, destKey, (firstSrcKey, restSrcKeys.toList)))
+    BitOp.run((operation, destKey, (srcKey, srcKeys.toList)))
 
   /** Find first bit set or clear in a string
    *
@@ -141,35 +141,35 @@ trait Strings {
 
   /** Get all the values of the given keys
    *
-    * @param firstKey First key to get
-   * @param restKeys Subsequent keys to get
+    * @param key First key to get
+   * @param keys Subsequent keys to get
    * @return Returns the values of the given keys
    */
-  final def mGet(firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
-    MGet.run((firstKey, restKeys.toList))
+  final def mGet(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
+    MGet.run((key, keys.toList))
 
   /** Set multiple keys to multiple values
    *
-    * @param firstKeyValue Tuple of key and value, first one to set
-   * @param restKeyValues Subsequent tuples of key values
+    * @param keyValue Tuple of key and value, first one to set
+   * @param keyValues Subsequent tuples of key values
    */
   final def mSet(
-    firstKeyValue: (String, String),
-    restKeyValues: (String, String)*
+    keyValue: (String, String),
+    keyValues: (String, String)*
   ): ZIO[RedisExecutor, RedisError, Unit] =
-    MSet.run((firstKeyValue, restKeyValues.toList))
+    MSet.run((keyValue, keyValues.toList))
 
   /** Set multiple keys to multiple values only if none of the keys exist
    *
-    * @param firstKeyValue First key value to set
-   * @param restKeyValues Subsequent key values to set
+    * @param keyValue First key value to set
+   * @param keyValues Subsequent key values to set
    * @return 1 if the all the keys were set. 0 if no key was set (at least one key already existed)
    */
   final def mSetNx(
-    firstKeyValue: (String, String),
-    restKeyValues: (String, String)*
+    keyValue: (String, String),
+    keyValues: (String, String)*
   ): ZIO[RedisExecutor, RedisError, Boolean] =
-    MSetNx.run((firstKeyValue, restKeyValues.toList))
+    MSetNx.run((keyValue, keyValues.toList))
 
   /** Set the value and expiration in milliseconds of a key
    *
