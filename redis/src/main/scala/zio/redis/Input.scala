@@ -4,7 +4,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import scala.util.matching.Regex
-
 import zio.Chunk
 import zio.duration.Duration
 
@@ -273,10 +272,10 @@ object Input {
       Chunk(stringEncode("BLOCK"), stringEncode(data.value.toMillis.toString))
   }
 
-  case object StreamsInput extends Input[Map[String, String]] {
-    def encode(data: Map[String, String]): Chunk[RespValue.BulkString] = {
-      val keys = data.keys.foldLeft(Chunk.empty[RespValue.BulkString])((acc, key) => acc ++ stringEncode(key))
-      val ids  = data.values.foldLeft(Chunk.empty[RespValue.BulkString])((acc, id) => acc ++ stringEncode(id))
+  case object StreamsInput extends Input[((String, String), Chunk[(String, String)])] {
+    def encode(data: ((String, String), Chunk[(String, String)])): Chunk[RespValue.BulkString] = {
+      val (keys, ids) =
+        Chunk.fromIterable(data._1 +: data._2).map(pair => (stringEncode(pair._1), stringEncode(pair._2))).unzip
 
       Chunk.single(stringEncode("STREAMS")) ++ keys ++ ids
     }

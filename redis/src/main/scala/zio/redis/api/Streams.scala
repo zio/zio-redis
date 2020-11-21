@@ -103,16 +103,22 @@ trait Streams {
 
   // TODO: change map to list of pairs everywhere
   final def xRead(count: Option[Long] = None, block: Option[Duration] = None)(
-    streams: Map[String, String]
+    stream: (String, String),
+    streams: (String, String)*
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, Map[String, String]]]] =
-    XRead.run((count.map(Count), block.map(Block), streams))
+    XRead.run((count.map(Count), block.map(Block), (stream, Chunk.fromIterable(streams))))
 
   final def xReadGroup(group: String, consumer: String)(
     count: Option[Long] = None,
     block: Option[Duration] = None,
     noAck: Boolean = false
-  )(streams: Map[String, String]): ZIO[RedisExecutor, RedisError, Map[String, Map[String, Map[String, String]]]] =
-    XReadGroup.run((Group(group, consumer), count.map(Count), block.map(Block), noAck, streams))
+  )(
+    stream: (String, String),
+    streams: (String, String)*
+  ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, Map[String, String]]]] =
+    XReadGroup.run(
+      (Group(group, consumer), count.map(Count), block.map(Block), noAck, (stream, Chunk.fromIterable(streams)))
+    )
 
   final def xRevRange(
     key: String,

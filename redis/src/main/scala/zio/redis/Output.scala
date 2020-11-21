@@ -3,8 +3,6 @@ package zio.redis
 import zio.Chunk
 import zio.duration._
 
-import scala.:+
-
 sealed trait Output[+A] {
 
   self =>
@@ -390,6 +388,8 @@ object Output {
                 ) =>
               PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
           }
+        case other                     =>
+          throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -404,6 +404,7 @@ object Output {
             streams(pos) match {
               case stream @ RespValue.BulkString(_) =>
                 output += (stream.asString -> StreamOutput.unsafeDecode(streams(pos + 1)))
+              case _                                =>
             }
 
             pos += 2
