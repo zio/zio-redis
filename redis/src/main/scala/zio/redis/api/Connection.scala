@@ -20,6 +20,6 @@ trait Connection {
 private[redis] object Connection {
   final val Auth   = RedisCommand("AUTH", StringInput, UnitOutput)
   final val Echo   = RedisCommand("ECHO", StringInput, MultiStringOutput)
-  final val Ping   = RedisCommand("PING", OptionalInput(StringInput), MultiStringOutput)
+  final val Ping   = RedisCommand("PING", OptionalInput(StringInput), SingleOrMultiStringOutput)
   final val Select = RedisCommand("SELECT", LongInput, UnitOutput)
 }
