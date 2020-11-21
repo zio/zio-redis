@@ -10,68 +10,116 @@ import zio.{ Chunk, ZIO }
 trait Strings {
   import Strings._
 
-  final def append(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = Append.run((a, b))
+  // Append a value to a key
+  final def append(key: String, value: String): ZIO[RedisExecutor, RedisError, Long] = Append.run((key, value))
 
-  final def bitCount(a: String, b: Option[Range] = None): ZIO[RedisExecutor, RedisError, Long] = BitCount.run((a, b))
+  // Count set bits in a string
+  final def bitCount(key: String, range: Option[Range] = None): ZIO[RedisExecutor, RedisError, Long] =
+    BitCount.run((key, range))
 
+  // Perform arbitrary bitfield integer operations on strings
   final def bitField(
-    a: String,
-    b: BitFieldCommand,
-    bs: BitFieldCommand*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Option[Long]]] = BitField.run((a, (b, bs.toList)))
+    key: String,
+    firstCommand: BitFieldCommand,
+    restCommands: BitFieldCommand*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[Long]]] = BitField.run((key, (firstCommand, restCommands.toList)))
 
-  final def bitOp(a: BitOperation, b: String, c: String, cs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    BitOp.run((a, b, (c, cs.toList)))
+  // Perform bitwise operations between strings
+  final def bitOp(
+    operation: BitOperation,
+    destKey: String,
+    firstSrcKey: String,
+    restSrcKeys: String*
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    BitOp.run((operation, destKey, (firstSrcKey, restSrcKeys.toList)))
 
-  final def bitPos(a: String, b: Boolean, c: Option[BitPosRange] = None): ZIO[RedisExecutor, RedisError, Long] =
-    BitPos.run((a, b, c))
+  // Find first bit set or clear in a string
+  final def bitPos(key: String, bit: Boolean, range: Option[BitPosRange] = None): ZIO[RedisExecutor, RedisError, Long] =
+    BitPos.run((key, bit, range))
 
-  final def decr(a: String): ZIO[RedisExecutor, RedisError, Long] = Decr.run(a)
+  // Decrement the integer value of a key by one
+  final def decr(key: String): ZIO[RedisExecutor, RedisError, Long] = Decr.run(key)
 
-  final def decrBy(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = DecrBy.run((a, b))
+  // Decrement the integer value of a key by the given number
+  final def decrBy(key: String, decrement: Long): ZIO[RedisExecutor, RedisError, Long] = DecrBy.run((key, decrement))
 
-  final def get(a: String): ZIO[RedisExecutor, RedisError, Option[String]] = Get.run(a)
+  // Get the value of a key
+  final def get(key: String): ZIO[RedisExecutor, RedisError, Option[String]] = Get.run(key)
 
-  final def getBit(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = GetBit.run((a, b))
+  // Returns the bit value at offset in the string value stored at key
+  final def getBit(key: String, offset: Long): ZIO[RedisExecutor, RedisError, Long] = GetBit.run((key, offset))
 
-  final def getRange(a: String, b: Range): ZIO[RedisExecutor, RedisError, String] = GetRange.run((a, b))
+  // Get a substring of the string stored at key
+  final def getRange(key: String, range: Range): ZIO[RedisExecutor, RedisError, String] = GetRange.run((key, range))
 
-  final def getSet(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[String]] = GetSet.run((a, b))
+  // Set the string value of a key and return its old value
+  final def getSet(key: String, value: String): ZIO[RedisExecutor, RedisError, Option[String]] =
+    GetSet.run((key, value))
 
-  final def incr(a: String): ZIO[RedisExecutor, RedisError, Long] = Incr.run(a)
+  // Increment the integer value of a key by one
+  final def incr(key: String): ZIO[RedisExecutor, RedisError, Long] = Incr.run(key)
 
-  final def incrBy(a: String, b: Long): ZIO[RedisExecutor, RedisError, Long] = IncrBy.run((a, b))
+  // Increment the integer value of a key by the given amount
+  final def incrBy(key: String, increment: Long): ZIO[RedisExecutor, RedisError, Long] = IncrBy.run((key, increment))
 
-  final def incrByFloat(a: String, b: Double): ZIO[RedisExecutor, RedisError, String] = IncrByFloat.run((a, b))
+  // Increment the float value of a key by the given amount
+  final def incrByFloat(key: String, increment: Double): ZIO[RedisExecutor, RedisError, String] =
+    IncrByFloat.run((key, increment))
 
-  final def mGet(a: String, as: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
-    MGet.run((a, as.toList))
+  // Get all the values of the given keys
+  final def mGet(firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
+    MGet.run((firstKey, restKeys.toList))
 
-  final def mSet(a: (String, String), as: (String, String)*): ZIO[RedisExecutor, RedisError, Unit] =
-    MSet.run((a, as.toList))
+  // Set multiple keys to multiple values
+  final def mSet(
+    firstKeyValue: (String, String),
+    restKeyValues: (String, String)*
+  ): ZIO[RedisExecutor, RedisError, Unit] =
+    MSet.run((firstKeyValue, restKeyValues.toList))
 
-  final def mSetNx(a: (String, String), as: (String, String)*): ZIO[RedisExecutor, RedisError, Boolean] =
-    MSetNx.run((a, as.toList))
+  // Set multiple keys to multiple values only if none of the keys exist
+  final def mSetNx(
+    firstKeyValue: (String, String),
+    restKeyValues: (String, String)*
+  ): ZIO[RedisExecutor, RedisError, Boolean] =
+    MSetNx.run((firstKeyValue, restKeyValues.toList))
 
-  final def pSetEx(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = PSetEx.run((a, b, c))
+  // Set the value and expiration in milliseconds of a key
+  final def pSetEx(key: String, milliseconds: Duration, value: String): ZIO[RedisExecutor, RedisError, Unit] =
+    PSetEx.run((key, milliseconds, value))
 
+  /** Set the string value of a key
+   *
+   * You can optionally set the expireTime, the update method and the KeepTTL parameter
+   * Update can be Update.SetExisting which only sets the key if it exists, or Update.SetNew which
+   * only sets the key if it does not exist.
+   * If you specify KEEPTTL then any previously set expire time remains unchanged.
+   */
   final def set(
-    a: String,
-    b: String,
-    c: Option[Duration] = None,
-    d: Option[Update] = None,
-    e: Option[KeepTtl] = None
-  ): ZIO[RedisExecutor, RedisError, Option[Unit]] = Set.run((a, b, c, d, e))
+    key: String,
+    value: String,
+    expireTime: Option[Duration] = None,
+    update: Option[Update] = None,
+    keepTtl: Option[KeepTtl] = None
+  ): ZIO[RedisExecutor, RedisError, Option[Unit]] = Set.run((key, value, expireTime, update, keepTtl))
 
-  final def setBit(a: String, b: Long, c: Boolean): ZIO[RedisExecutor, RedisError, Boolean] = SetBit.run((a, b, c))
+  // Sets or clears the bit at offset in the string value stored at key
+  final def setBit(key: String, offset: Long, value: Boolean): ZIO[RedisExecutor, RedisError, Boolean] =
+    SetBit.run((key, offset, value))
 
-  final def setEx(a: String, b: Duration, c: String): ZIO[RedisExecutor, RedisError, Unit] = SetEx.run((a, b, c))
+  // Set the value and expiration of a key
+  final def setEx(key: String, expiration: Duration, value: String): ZIO[RedisExecutor, RedisError, Unit] =
+    SetEx.run((key, expiration, value))
 
-  final def setNx(a: String, b: String): ZIO[RedisExecutor, RedisError, Boolean] = SetNx.run((a, b))
+  // Set the value of a key, only if the key does not exist
+  final def setNx(key: String, value: String): ZIO[RedisExecutor, RedisError, Boolean] = SetNx.run((key, value))
 
-  final def setRange(a: String, b: Long, c: String): ZIO[RedisExecutor, RedisError, Long] = SetRange.run((a, b, c))
+  // Overwrite part of a string at key starting at the specified offset
+  final def setRange(key: String, offset: Long, value: String): ZIO[RedisExecutor, RedisError, Long] =
+    SetRange.run((key, offset, value))
 
-  final def strLen(a: String): ZIO[RedisExecutor, RedisError, Long] = StrLen.run(a)
+  // Get the length of a value stored in a key
+  final def strLen(key: String): ZIO[RedisExecutor, RedisError, Long] = StrLen.run(key)
 }
 
 private object Strings {
