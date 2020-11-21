@@ -70,17 +70,19 @@ private[redis] object ByteStream {
   ) extends Service {
 
     private def openChannel: Managed[IOException, AsynchronousSocketChannel] = {
-      val make = for {
-        channel <- IO.effect {
-                     val channel = AsynchronousSocketChannel.open()
-                     channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
-                     channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
-                     channel
-                   }
-        _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
-        _       <- logger.info("Connected to the redis server.")
-      } yield channel
-      Managed.fromAutoCloseable(make).refineToOrDie[IOException]
+      val channel =
+        for {
+          channel <- IO.effect {
+                       val channel = AsynchronousSocketChannel.open()
+                       channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+                       channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
+                       channel
+                     }
+          _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
+          _       <- logger.info("Connected to the redis server.")
+        } yield channel
+
+      Managed.fromAutoCloseable(channel).refineToOrDie[IOException]
     }
 
     override val connect: Managed[IOException, ReadWriteBytes] =
