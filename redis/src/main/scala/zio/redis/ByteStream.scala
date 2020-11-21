@@ -10,13 +10,11 @@ import zio.logging._
 import zio.stream.Stream
 
 private[redis] object ByteStream {
-  private[this] final val ResponseBufferSize = 1024
-
-  def connect: ZManaged[ByteStream, IOException, ReadWriteBytes] = ZManaged.accessManaged(_.get.connect)
-
   trait Service {
     val connect: Managed[IOException, ReadWriteBytes]
   }
+
+  def connect: ZManaged[ByteStream, IOException, ReadWriteBytes] = ZManaged.accessManaged(_.get.connect)
 
   def socket(host: String, port: Int): ZLayer[Logging, IOException, ByteStream] =
     socket(IO.effectTotal(new InetSocketAddress(host, port)))
@@ -37,6 +35,8 @@ private[redis] object ByteStream {
       } yield new Connection(address, readBuffer, writeBuffer, logger)
     }
   }
+
+  private[this] final val ResponseBufferSize = 1024
 
   trait ReadWriteBytes {
     def read: Stream[IOException, Byte]
