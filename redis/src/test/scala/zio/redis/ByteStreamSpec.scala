@@ -2,10 +2,10 @@ package zio.redis
 
 import java.nio.charset.StandardCharsets
 
-import zio.{ Chunk, ZIO }
 import zio.logging.Logging
 import zio.test.Assertion._
 import zio.test._
+import zio.{ Chunk, ZIO }
 
 object ByteStreamSpec extends BaseSpec {
   override def spec: ZSpec[Environment, Failure] =
