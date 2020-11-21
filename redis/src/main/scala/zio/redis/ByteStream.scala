@@ -18,6 +18,26 @@ private[redis] object ByteStream {
     val connect: Managed[IOException, ReadWriteBytes]
   }
 
+  def socket(host: String, port: Int): ZLayer[Logging, IOException, ByteStream] =
+    socket(IO.effectTotal(new InetSocketAddress(host, port)))
+
+  def socket(address: SocketAddress): ZLayer[Logging, IOException, ByteStream] = socket(UIO.succeed(address))
+
+  def socketLoopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, IOException, ByteStream] =
+    socket(IO.effectTotal(new InetSocketAddress(InetAddress.getLoopbackAddress, port)))
+
+  private def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
+    val makeBuffer = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
+
+    ZLayer.fromServiceM { logger =>
+      for {
+        address     <- getAddress
+        readBuffer  <- makeBuffer
+        writeBuffer <- makeBuffer
+      } yield new Connection(address, readBuffer, writeBuffer, logger)
+    }
+  }
+
   trait ReadWriteBytes {
     def read: Stream[IOException, Byte]
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
@@ -41,26 +61,6 @@ private[redis] object ByteStream {
       op(channel)(completionHandlerCallback(k))
       Left(IO.effect(channel.close()).ignore)
     }
-
-  def socket(host: String, port: Int): ZLayer[Logging, IOException, ByteStream] =
-    socket(IO.effectTotal(new InetSocketAddress(host, port)))
-
-  def socket(address: SocketAddress): ZLayer[Logging, IOException, ByteStream] = socket(UIO.succeed(address))
-
-  def socketLoopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, IOException, ByteStream] =
-    socket(IO.effectTotal(new InetSocketAddress(InetAddress.getLoopbackAddress, port)))
-
-  private def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
-    val makeBuffer = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
-
-    ZLayer.fromServiceM { logger =>
-      for {
-        address     <- getAddress
-        readBuffer  <- makeBuffer
-        writeBuffer <- makeBuffer
-      } yield new Connection(address, readBuffer, writeBuffer, logger)
-    }
-  }
 
   private final class Connection(
     address: SocketAddress,
