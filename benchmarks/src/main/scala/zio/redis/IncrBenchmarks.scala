@@ -1,10 +1,9 @@
 package zio.redis
 
 import java.util.concurrent.TimeUnit
+
 import org.openjdk.jmh.annotations._
 import zio.ZIO
-
-import scala.util.Random
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
@@ -12,7 +11,8 @@ import scala.util.Random
 @Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
 @Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 3)
 @Fork(4)
-class SetBenchmarks {
+class IncrBenchmarks {
+
   import BenchmarkRuntime._
   import BenchmarksUtils._
   import RedisClients._
@@ -23,8 +23,10 @@ class SetBenchmarks {
   private var items: List[String] = _
 
   @Setup(Level.Trial)
-  def setup(): Unit =
-    items = (0 to count).toList.map(Random.nextString)
+  def setup(): Unit = {
+    items = (0 to count).toList.map(_.toString)
+    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+  }
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -33,23 +35,23 @@ class SetBenchmarks {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeClientRun[LaserDiskClient](c => items.traverse_(i => c.send(cmd.set(Key.unsafeFrom(i), i))))
+    unsafeClientRun[LaserDiskClient](c => items.traverse_(i => c.send(cmd.incr[Long](Key.unsafeFrom(i)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeClientRun[RediculousClient](c => items.traverse_(i => RedisCommands.set[RedisIO](i, i).run(c)))
+    unsafeClientRun[RediculousClient](c => items.traverse_(i => RedisCommands.append[RedisIO](i, i).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[Redis4CatsClient[String]](c => items.traverse_(i => c.set(i, i)))
+    unsafeClientRun[Redis4CatsClient[Long]](c => items.traverse_(i => c.incr(i)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => incr(i)))
 }

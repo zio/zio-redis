@@ -25,7 +25,7 @@ class GetBenchmarks {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(Random.nextString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i, None, None, None)))
+    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
@@ -49,7 +49,7 @@ class GetBenchmarks {
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[Redis4CatsClient](c => items.traverse_(i => c.get(i)))
+    unsafeClientRun[Redis4CatsClient[String]](c => items.traverse_(i => c.get(i)))
   }
 
   @Benchmark
