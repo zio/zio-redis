@@ -81,6 +81,7 @@ lazy val examples =
         "com.softwaremill.sttp.client" %% "circe" % "2.0.3",
         "io.circe" %% "circe-core" % "0.12.3",
         "io.circe" %% "circe-generic" % "0.12.3",
+        "de.heikoseeberger" %% "akka-http-circe" % "1.31.0",
         "dev.zio" %% "zio-json" % "0.0.1",
         "dev.zio" %% "zio-config" % "1.0.0-RC29-1",
         "dev.zio" %% "zio-config-magnolia" % "1.0.0-RC29-1",

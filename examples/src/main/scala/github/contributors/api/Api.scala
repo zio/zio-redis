@@ -4,13 +4,13 @@ import akka.http.interop.{HttpServer, ZIOSupport}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import github.contributors.domain.{Contributor, GithubUnavailable}
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import sttp.client._
 import sttp.client.circe._
 import sttp.client.{NothingT, SttpBackend, basicRequest}
 import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zio._
 import zio.config.ZConfig
-import io.circe.syntax._
 
 object Api {
 
@@ -23,7 +23,7 @@ object Api {
   val live: ZLayer[ZConfig[HttpServer.Config], Nothing, Api] =
     ZLayer.fromFunction { env =>
       new Service with ZIOSupport {
-        import Contributor.encoder
+
         def routes = contributorRoutes
 
         val contributorRoutes: Route =
@@ -32,8 +32,7 @@ object Api {
               val response = for {
                 backend <- AsyncHttpClientZioBackend()
                 contributors <- fetchContributors(backend)
-                json <- ZIO.succeed(contributors.asJson.toString)
-              } yield json
+              } yield contributors
 
               complete(response)
             }
@@ -46,11 +45,11 @@ object Api {
             .send()
             .map(_.body)
             .flatMap {
-              case Right(contributor) => Task.succeed(contributor)
+              case Right(contributors) => Task.succeed(contributors)
               case Left(error) => Task.fail(GithubUnavailable(error.body))
             }
       }
     }
 
-  val routes: URIO[Api, Route] = ZIO.access[Api](a => Route.seal(a.get.routes))
+  val routes: URIO[Api, Route] = ZIO.access[Api](api => Route.seal(api.get.routes))
 }
