@@ -1,5 +1,7 @@
 import BuildHelper._
 
+val zioVersion = "1.0.3"
+
 inThisBuild(
   List(
     organization := "dev.zio",
@@ -43,10 +45,10 @@ lazy val redis =
     .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-streams"  % "1.0.3",
+        "dev.zio" %% "zio-streams"  % zioVersion,
         "dev.zio" %% "zio-logging"  % "0.5.3",
-        "dev.zio" %% "zio-test"     % "1.0.3" % Test,
-        "dev.zio" %% "zio-test-sbt" % "1.0.3" % Test
+        "dev.zio" %% "zio-test"     % zioVersion % Test,
+        "dev.zio" %% "zio-test-sbt" % zioVersion % Test
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
