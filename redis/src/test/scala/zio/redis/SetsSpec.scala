@@ -575,7 +575,7 @@ trait SetsSpec extends BaseSpec {
             members <- sRandMember(key, Some(3L)).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sRem")(
         testM("existing elements from non-empty set") {
           for {
@@ -612,7 +612,7 @@ trait SetsSpec extends BaseSpec {
             removed <- sRem(key, "a", "b").either
           } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sUnion")(
         testM("two non-empty sets") {
           for {
@@ -668,7 +668,7 @@ trait SetsSpec extends BaseSpec {
             union  <- sUnion(first, second).either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sUnionStore")(
         testM("two non-empty sets") {
           for {
@@ -730,7 +730,7 @@ trait SetsSpec extends BaseSpec {
             card   <- sUnionStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sScan")(
         testM("non-empty set") {
           for {
@@ -787,6 +787,6 @@ trait SetsSpec extends BaseSpec {
             scan  <- sScan(key, 0L).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
-      )
+      ) @@ testExecutorUnsupported
     )
 }

@@ -29,8 +29,11 @@ object ApiSpec
         hashSuite
       ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live),
       suite("Test Executor")(
-        connectionSuite
-      ).provideCustomLayerShared(RedisExecutor.test)
+        connectionSuite,
+        setsSuite
+      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
+        .get
+        .provideCustomLayerShared(RedisExecutor.test)
     )
 
   private val Executor = RedisExecutor.loopback().orDie
