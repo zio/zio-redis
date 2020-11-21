@@ -41,7 +41,6 @@ trait SetsSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value)
             added <- sAdd(key, "hello").either
-            //_      = println(added)
           } yield assert(added)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
