@@ -81,7 +81,7 @@ trait Interpreter {
     ) extends Service {
       override def execute(command: Chunk[RespValue.BulkString]): zio.IO[RedisError, RespValue] =
         for {
-          name   <- ZIO.fromOption(command.headOption).mapError(_ => ProtocolError("Malformed command."))
+          name   <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
           result <- runCommand(name.asString, command.tail).commit
         } yield result
 
@@ -94,7 +94,7 @@ trait Interpreter {
               else
                 input.head
             }
-          case _                        => STM.fail(RedisError.ProtocolError(s"Command not supported by inmemory executor: $name"))
+          case _                        => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
         }
     }
 
@@ -109,7 +109,7 @@ trait Interpreter {
           } yield live
       }
 
-    val inMemory: ZLayer[Any, Nothing, RedisExecutor] =
+    val test: ZLayer[Any, Nothing, RedisExecutor] =
       ZLayer.succeed(new InMemory())
 
     def live(address: SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
