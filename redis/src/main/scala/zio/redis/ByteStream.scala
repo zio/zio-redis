@@ -24,14 +24,14 @@ private[redis] object ByteStream {
     live(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
 
   private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, ByteStream] =
-    ZLayer.fromServiceManaged { logger =>
+    ZLayer.fromManaged {
       val managed =
         for {
           address     <- UIO(address).toManaged_
           makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
           readBuffer  <- makeBuffer.toManaged_
           writeBuffer <- makeBuffer.toManaged_
-          channel     <- openChannel(address, logger)
+          channel     <- openChannel(address)
         } yield new Connection(readBuffer, writeBuffer, channel)
 
       managed.mapError(RedisError.IOError)
@@ -58,12 +58,10 @@ private[redis] object ByteStream {
       Left(IO.effect(channel.close()).ignore)
     }
 
-  private[this] def openChannel(
-    address: SocketAddress,
-    logger: Logger[String]
-  ): Managed[IOException, AsynchronousSocketChannel] =
+  private[this] def openChannel(address: SocketAddress): ZManaged[Logging, IOException, AsynchronousSocketChannel] =
     Managed.fromAutoCloseable {
       for {
+        logger  <- ZIO.service[Logger[String]]
         channel <- IO.effect {
                      val channel = AsynchronousSocketChannel.open()
                      channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
@@ -71,8 +69,9 @@ private[redis] object ByteStream {
                      channel
                    }
         _       <- effectAsyncChannel[AsynchronousSocketChannel, Void](channel)(c => c.connect(address, null, _))
+        _       <- logger.info("Connected to the redis server.")
       } yield channel
-    }.tap(_ => logger.info("Connected to the redis servier.").toManaged_).refineToOrDie[IOException]
+    }.refineToOrDie[IOException]
 
   private[this] final class Connection(
     readBuffer: ByteBuffer,
