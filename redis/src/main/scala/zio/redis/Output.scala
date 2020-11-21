@@ -305,7 +305,7 @@ object Output {
       if (res.size != mapOutput.size)
         throw ProtocolError(s"$mapOutput doesn't have a number after a string")
       else
-        res
+        res.toMap
     }
   }
 }
