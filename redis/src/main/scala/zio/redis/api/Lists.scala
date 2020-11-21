@@ -10,7 +10,8 @@ import zio.{ Chunk, ZIO }
 trait Lists {
   import Lists._
 
-  /** Pops an element from the list stored at source, pushes it to the list stored at destination; or block until one
+  /**
+   * Pops an element from the list stored at source, pushes it to the list stored at destination; or block until one
    * is available. This is the blocking variant of [[zio.redis.api.Lists#rPopLPush]]
    *
    * @param source      the key identifier of the source list
@@ -27,7 +28,8 @@ trait Lists {
   ): ZIO[RedisExecutor, RedisError, Option[String]] =
     BrPopLPush.run((source, destination, timeout))
 
-  /** Returns the element at index in the list stored at key
+  /**
+   * Returns the element at index in the list stored at key
    *
    * @param key   they key identifier
    * @param index the requested index. It is zero-based, so 0 means the first element, 1 the second element and so on.
@@ -36,7 +38,8 @@ trait Lists {
    */
   final def lIndex(key: String, index: Long): ZIO[RedisExecutor, RedisError, Option[String]] = LIndex.run((key, index))
 
-  /** Returns the length of the list stored at key
+  /**
+   * Returns the length of the list stored at key
    *
    * @param key the key identifier. If key does not exist, it is interpreted as an empty list and 0 is returned
    * @return the length of the list at key
@@ -50,7 +53,8 @@ trait Lists {
    */
   final def lPop(key: String): ZIO[RedisExecutor, RedisError, Option[String]] = LPop.run(key)
 
-  /** Prepends one or multiple elements to the list stored at key. If key does not exist, it is created as empty list
+  /**
+   * Prepends one or multiple elements to the list stored at key. If key does not exist, it is created as empty list
    * before performing the push operations
    *
    * @param key      the key identifier
@@ -61,7 +65,8 @@ trait Lists {
   final def lPush(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
     LPush.run((key, (element, elements.toList)))
 
-  /** Prepends an element to a list, only if the list exists. In contrary to [[zio.redis.api.Lists#lPush]], no
+  /**
+   * Prepends an element to a list, only if the list exists. In contrary to [[zio.redis.api.Lists#lPush]], no
    * operation will be performed when key does not yet exist
    *
    * @param key      the key identifier
@@ -72,7 +77,8 @@ trait Lists {
   final def lPushX(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
     LPushX.run((key, (element, elements.toList)))
 
-  /** Gets a range of elements from the list stored at key
+  /**
+   * Gets a range of elements from the list stored at key
    *
    * @param key   the key identifier
    * @param range the range of elements to retrieve. The range should be zero-based, with 0 being the first element of
@@ -81,7 +87,8 @@ trait Lists {
    */
   final def lRange(key: String, range: Range): ZIO[RedisExecutor, RedisError, Chunk[String]] = LRange.run((key, range))
 
-  /** Removes the first count occurrences of element from the list stored at key.
+  /**
+   * Removes the first count occurrences of element from the list stored at key.
    * The count argument influences the operation in the following ways:
    *  - count > 0: Remove elements equal to element moving from head to tail.
    *  - count < 0: Remove elements equal to element moving from tail to head.
@@ -96,7 +103,8 @@ trait Lists {
   final def lRem(key: String, count: Long, element: String): ZIO[RedisExecutor, RedisError, Long] =
     LRem.run((key, count, element))
 
-  /** Sets the list element at index to element
+  /**
+   * Sets the list element at index to element
    *
    * @param key     the key identifier
    * @param index   the requested index. The index is zero-based, so 0 means the first element, 1 the second element
@@ -107,7 +115,8 @@ trait Lists {
   final def lSet(key: String, index: Long, element: String): ZIO[RedisExecutor, RedisError, Unit] =
     LSet.run((key, index, element))
 
-  /** Trims an existing list so that it will contain only the specified range of elements
+  /**
+   * Trims an existing list so that it will contain only the specified range of elements
    *
    * @param key   the key identifier
    * @param range the range of elements to trim. The range should be zero-based, with 0 being the first element of the
@@ -116,14 +125,16 @@ trait Lists {
    */
   final def lTrim(key: String, range: Range): ZIO[RedisExecutor, RedisError, Unit] = LTrim.run((key, range))
 
-  /** Removes and returns the last element in the list stored at key
+  /**
+   * Removes and returns the last element in the list stored at key
    *
    * @param key the key identifier
    * @return the value of the last element, or empty when key does not exist
    */
   final def rPop(key: String): ZIO[RedisExecutor, RedisError, Option[String]] = RPop.run(key)
 
-  /** Atomically removes the last element in the list stored at source, prepends it to the list stored at destination
+  /**
+   * Atomically removes the last element in the list stored at source, prepends it to the list stored at destination
    * and returns it. If source and destination are the same, the operation is equivalent to removing the last element
    * from the list and pushing it as first element of the same list, so it can be considered as a list rotation command
    *
@@ -135,7 +146,8 @@ trait Lists {
   final def rPopLPush(source: String, destination: String): ZIO[RedisExecutor, RedisError, Option[String]] =
     RPopLPush.run((source, destination))
 
-  /** Appends one or more elements to the list stored at key. If key does not exist, it is created as empty list before
+  /**
+   * Appends one or more elements to the list stored at key. If key does not exist, it is created as empty list before
    * performing the push operation
    *
    * @param key      the key identifier
@@ -146,7 +158,8 @@ trait Lists {
   final def rPush(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
     RPush.run((key, (element, elements.toList)))
 
-  /** Appends on or multiple elements to the list stored at key, only if the list exists.
+  /**
+   * Appends on or multiple elements to the list stored at key, only if the list exists.
    * In contrary to [[zio.redis.api.Lists#rPush]], no operation will be performed when key does not yet exist
    *
    * @param key      the key identifier
@@ -157,7 +170,8 @@ trait Lists {
   final def rPushX(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
     RPushX.run((key, (element, elements.toList)))
 
-  /** Removes and gets the first element in a list, or blocks until one is available. An element is popped from the head
+  /**
+   * Removes and gets the first element in a list, or blocks until one is available. An element is popped from the head
    * of the first list that is non-empty, with the given keys being checked in the order that they are given
    *
    * @param key     the key identifier of the first list to be checked
@@ -173,7 +187,8 @@ trait Lists {
   ): ZIO[RedisExecutor, RedisError, Option[(String, String)]] =
     BlPop.run(((key, keys.toList), timeout))
 
-  /** Removes and gets the last element in a list, or block until one is available. An element is popped from the tail
+  /**
+   * Removes and gets the last element in a list, or block until one is available. An element is popped from the tail
    * of the first list that is non-empty, with the given keys being checked in the order that they are given
    *
    * @param key     the key identifier of the first list to be checked
@@ -189,7 +204,8 @@ trait Lists {
   ): ZIO[RedisExecutor, RedisError, Option[(String, String)]] =
     BrPop.run(((key, keys.toList), timeout))
 
-  /** Inserts element in the list stored at key either before or after the reference value pivot
+  /**
+   * Inserts element in the list stored at key either before or after the reference value pivot
    *
    * @param key      the key identifier
    * @param position the position in which the element will be inserted
