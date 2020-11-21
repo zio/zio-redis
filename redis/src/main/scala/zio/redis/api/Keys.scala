@@ -15,7 +15,7 @@ trait Keys {
 
   final def del(a: String, as: String*): ZIO[RedisExecutor, RedisError, Long] = Del.run((a, as.toList))
 
-  final def dump(a: String): ZIO[RedisExecutor, RedisError, String] = Dump.run(a)
+  final def dump(a: String): ZIO[RedisExecutor, RedisError, Chunk[Byte]] = Dump.run(a)
 
   final def exists(a: String, as: String*): ZIO[RedisExecutor, RedisError, Boolean] = Exists.run((a, as.toList))
 
@@ -56,7 +56,7 @@ trait Keys {
   final def restore(
     a: String,
     b: Long,
-    c: String,
+    c: Chunk[Byte],
     d: Option[Replace] = None,
     e: Option[AbsTtl] = None,
     f: Option[IdleTime] = None,
@@ -83,7 +83,7 @@ trait Keys {
 
 private object Keys {
   final val Del      = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
-  final val Dump     = RedisCommand("DUMP", StringInput, MultiStringOutput)
+  final val Dump     = RedisCommand("DUMP", StringInput, BulkStringOutput)
   final val Exists   = RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
   final val Expire   = RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
   final val ExpireAt = RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
@@ -121,7 +121,7 @@ private object Keys {
       Tuple7(
         StringInput,
         LongInput,
-        StringInput,
+        ByteInput,
         OptionalInput(ReplaceInput),
         OptionalInput(AbsTtlInput),
         OptionalInput(IdleTimeInput),
