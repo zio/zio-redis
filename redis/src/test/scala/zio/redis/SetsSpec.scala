@@ -762,7 +762,7 @@ trait SetsSpec extends BaseSpec {
           for {
             key              <- uuid
             _                <- sAdd(key, "a", "b", "c", "d", "e")
-            scan             <- sScan(key, 0L, d = Some(Count(3L)))
+            scan             <- sScan(key, 0L, count = Some(Count(3L)))
             (cursor, members) = scan
           } yield assert(cursor)(isNonEmptyString) &&
             assert(members)(isNonEmpty)
