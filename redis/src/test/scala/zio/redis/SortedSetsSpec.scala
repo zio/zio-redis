@@ -809,7 +809,7 @@ trait SortedSetsSpec extends BaseSpec {
             _                <- zAdd(key)(MemberScore(1d, "one"), MemberScore(2d, "two"), MemberScore(3d, "three"))
             scan             <- zScan(key, 0L, Some("t[a-z]*".r))
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo(0L)) && assert(members)(isNonEmpty)
+          } yield assert(cursor)(isZero) && assert(members)(isNonEmpty)
         },
         testM("with count over non-empty set") {
           for {
