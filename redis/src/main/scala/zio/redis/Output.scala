@@ -153,8 +153,9 @@ object Output {
 
     override protected def tryDecode(respValue: RespValue): String =
       respValue match {
-        case s @ RespValue.BulkString(_) => s.asString
-        case other                       => throw ProtocolError(s"$other isn't a bulk string")
+        case RespValue.SimpleString(value) => value
+        case s @ RespValue.BulkString(_)   => s.asString
+        case other                         => throw ProtocolError(s"$other isn't a bulk string")
       }
 
   }

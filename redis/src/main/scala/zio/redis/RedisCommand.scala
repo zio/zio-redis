@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.ZIO
 
-final class RedisCommand[-In, +Out] private (name: String, input: Input[In], output: Output[Out]) {
+final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out]) {
   private[redis] def run(in: In): ZIO[RedisExecutor, RedisError, Out] =
     ZIO
       .accessM[RedisExecutor](_.get.execute(Input.StringInput.encode(name) ++ input.encode(in)))

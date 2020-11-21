@@ -3,9 +3,11 @@ package zio.redis
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test._
+// import zio.test.TestAspect.ignore
 
 object ApiSpec
-    extends KeysSpec
+    extends ConnectionSpec
+    with KeysSpec
     with ListSpec
     with SetsSpec
     with SortedSetsSpec
@@ -16,15 +18,21 @@ object ApiSpec
 
   def spec =
     suite("Redis commands")(
-      keysSuite,
-      listSuite,
-      setsSuite,
-      sortedSetsSuite,
-      stringsSuite,
-      geoSuite,
-      hyperLogLogSuite,
-      hashSuite
-    ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live)
+      suite("Live Executor")(
+        connectionSuite,
+        keysSuite,
+        listSuite,
+        setsSuite,
+        sortedSetsSuite,
+        stringsSuite,
+        geoSuite,
+        hyperLogLogSuite,
+        hashSuite
+      ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live),
+      suite("InMemory Executor")(
+        connectionSuite
+      ).provideCustomLayerShared(RedisExecutor.inMemory)
+    )
 
   private val Executor = RedisExecutor.loopback().orDie
 }

@@ -6,8 +6,10 @@ import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousByteChannel, AsynchronousSocketChannel, Channel, CompletionHandler }
 
 import zio._
+import zio.stm._
 import zio.logging._
 import zio.stream.Stream
+import zio.redis.RedisError.ProtocolError
 
 trait Interpreter {
 
@@ -75,6 +77,29 @@ trait Interpreter {
           .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 
+    private final class InMemory(
+    ) extends Service {
+      override def execute(command: Chunk[RespValue.BulkString]): zio.IO[RedisError, RespValue] =
+        for {
+          name   <- ZIO.fromOption(command.headOption).mapError(_ => ProtocolError("Malformed command."))
+          result <- runCommand(name.asString, command.tail).commit
+        } yield result
+
+      private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): STM[RedisError, RespValue] =
+        name match {
+          case api.Connection.Ping.name =>
+            STM.succeedNow {
+              if (input.isEmpty)
+                RespValue.bulkString("PONG")
+              else {
+                val payload = input.head.asString
+                RespValue.SimpleString(payload)
+              }
+            }
+          case _                        => STM.fail(RedisError.ProtocolError(s"Command not supported by inmemory executor: $name"))
+        }
+    }
+
     private def fromBytestream: ZLayer[ByteStream with Logging, RedisError.IOError, RedisExecutor] =
       ZLayer.fromServicesManaged[ByteStream.Service, Logger[String], Any, RedisError.IOError, RedisExecutor.Service] {
         (byteStream: ByteStream.Service, logging: Logger[String]) =>
@@ -85,6 +110,9 @@ trait Interpreter {
             _        <- live.run.forkManaged
           } yield live
       }
+
+    val inMemory: ZLayer[Any, Nothing, RedisExecutor] =
+      ZLayer.succeed(new InMemory())
 
     def live(address: SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       (ZLayer.identity[Logging] ++ ByteStream.socket(address).mapError(RedisError.IOError)) >>> fromBytestream

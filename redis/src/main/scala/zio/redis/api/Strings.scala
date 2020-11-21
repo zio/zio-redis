@@ -74,7 +74,7 @@ trait Strings {
   final def strLen(a: String): ZIO[RedisExecutor, RedisError, Long] = StrLen.run(a)
 }
 
-private object Strings {
+private[redis] object Strings {
   final val Append   = RedisCommand("APPEND", Tuple2(StringInput, StringInput), LongOutput)
   final val BitCount = RedisCommand("BITCOUNT", Tuple2(StringInput, OptionalInput(RangeInput)), LongOutput)
 

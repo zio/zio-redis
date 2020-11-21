@@ -12,14 +12,14 @@ trait Connection {
 
   final def echo(a: String): ZIO[RedisExecutor, RedisError, String] = Echo.run(a)
 
-  final def ping(as: String*): ZIO[RedisExecutor, RedisError, String] = Ping.run(as)
+  final def ping(a: Option[String] = None): ZIO[RedisExecutor, RedisError, String] = Ping.run(a)
 
   final def select(a: Long): ZIO[RedisExecutor, RedisError, Unit] = Select.run(a)
 }
 
-private object Connection {
+private[redis] object Connection {
   final val Auth   = RedisCommand("AUTH", StringInput, UnitOutput)
   final val Echo   = RedisCommand("ECHO", StringInput, MultiStringOutput)
-  final val Ping   = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
+  final val Ping   = RedisCommand("PING", OptionalInput(StringInput), MultiStringOutput)
   final val Select = RedisCommand("SELECT", LongInput, UnitOutput)
 }
