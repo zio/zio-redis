@@ -1205,7 +1205,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, d = Some(Update.SetNew))
+            result <- set(key, value, update = Some(Update.SetNew))
           } yield assert(result)(isSome)
         },
         testM("existing value with SetNew parameter") {
@@ -1213,14 +1213,14 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, "value")
-            result <- set(key, value, d = Some(Update.SetNew))
+            result <- set(key, value, update = Some(Update.SetNew))
           } yield assert(result)(isNone)
         },
         testM("new value with SetExisting parameter") {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, d = Some(Update.SetExisting))
+            result <- set(key, value, update = Some(Update.SetExisting))
           } yield assert(result)(isNone)
         },
         testM("existing value with SetExisting parameter") {
@@ -1228,7 +1228,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, "value")
-            result <- set(key, value, d = Some(Update.SetExisting))
+            result <- set(key, value, update = Some(Update.SetExisting))
           } yield assert(result)(isSome)
         },
         testM("existing not string value with SetExisting parameter") {
@@ -1236,7 +1236,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- sAdd(key, "a")
-            result <- set(key, value, d = Some(Update.SetExisting))
+            result <- set(key, value, update = Some(Update.SetExisting))
           } yield assert(result)(isSome)
         },
         // next three tests include KEEPTTL parameter that is valid for Redis version >= 6
@@ -1244,7 +1244,7 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            result <- set(key, value, e = Some(KeepTtl))
+            result <- set(key, value, keepTtl = Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore,
         testM("existing value with KeepTtl parameter") {
@@ -1252,7 +1252,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, "value", Some(1.second))
-            result <- set(key, value, e = Some(KeepTtl))
+            result <- set(key, value, keepTtl = Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore,
         testM("existing value with both ttl and KeepTtl parameters") {
@@ -1260,7 +1260,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, "value", Some(1.second))
-            result <- set(key, value, Some(1.second), e = Some(KeepTtl))
+            result <- set(key, value, Some(1.second), keepTtl = Some(KeepTtl))
           } yield assert(result)(isSome)
         } @@ ignore
       ),
