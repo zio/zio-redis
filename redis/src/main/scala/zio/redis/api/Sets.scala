@@ -13,12 +13,12 @@ trait Sets {
   /** Add one or more members to a set
    *
     * @param key Key of set to add to
-   * @param firstMember first member to add
-   * @param restMembers subsequent members to add
+   * @param member first member to add
+   * @param members subsequent members to add
    * @return Returns the number of elements that were added to the set, not including all the elements already present into the set
    */
-  final def sAdd(key: String, firstMember: String, restMembers: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SAdd.run((key, (firstMember, restMembers.toList)))
+  final def sAdd(key: String, member: String, members: String*): ZIO[RedisExecutor, RedisError, Long] =
+    SAdd.run((key, (member, members.toList)))
 
   /** Get the number of members in a set
    *
@@ -29,22 +29,22 @@ trait Sets {
 
   /** Subtract multiple sets
    *
-    * @param firstKey Key of the set to subtract from
-   * @param restKeys Keys of the sets to subtract
+    * @param key Key of the set to subtract from
+   * @param keys Keys of the sets to subtract
    * @return Returns the members of the set resulting from the difference between the first set and all the successive sets
    */
-  final def sDiff(firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    SDiff.run((firstKey, restKeys.toList))
+  final def sDiff(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SDiff.run((key, keys.toList))
 
   /** Subtract multiple sets and store the resulting set in a key
    *
     * @param destination Key of set to store the resulting set
-   * @param firstKey Key of set to be subtracted from
-   * @param restKeys Keys of sets to subtract
+   * @param key Key of set to be subtracted from
+   * @param keys Keys of sets to subtract
    * @return Returns the number of elements in the resulting set
    */
-  final def sDiffStore(destination: String, firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SDiffStore.run((destination, (firstKey, restKeys.toList)))
+  final def sDiffStore(destination: String, key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] =
+    SDiffStore.run((destination, (key, keys.toList)))
 
   /** Intersect multiple sets and store the resulting set in a key
    *
@@ -58,16 +58,16 @@ trait Sets {
   /** Intersect multiple sets and store the resulting set in a key
    *
     * @param destination Key of set to store the resulting set
-   * @param firstKey Key of first set to intersect
-   * @param restKeys Keys of subsequent sets to intersect
+   * @param key Key of first set to intersect
+   * @param keys Keys of subsequent sets to intersect
    * @return Returns the number of elements in the resulting set
    */
   final def sInterStore(
     destination: String,
-    firstKey: String,
-    restKeys: String*
+    key: String,
+    keys: String*
   ): ZIO[RedisExecutor, RedisError, Long] =
-    SInterStore.run((destination, (firstKey, restKeys.toList)))
+    SInterStore.run((destination, (key, keys.toList)))
 
   /** Determine if a given value is a member of a set
    *
@@ -116,12 +116,12 @@ trait Sets {
   /** Remove one of more members from a set
    *
     * @param key Key of the set to remove members from
-   * @param firstMember Value of the first element to remove
-   * @param restMembers Subsequent values of elements to remove
+   * @param member Value of the first element to remove
+   * @param members Subsequent values of elements to remove
    * @return Returns the number of members that were removed from the set, not including non existing members
    */
-  final def sRem(key: String, firstMember: String, restMembers: String*): ZIO[RedisExecutor, RedisError, Long] =
-    SRem.run((key, (firstMember, restMembers.toList)))
+  final def sRem(key: String, member: String, members: String*): ZIO[RedisExecutor, RedisError, Long] =
+    SRem.run((key, (member, members.toList)))
 
   /** Incrementally iterate Set elements
    *
@@ -144,26 +144,26 @@ trait Sets {
   /**
    * Add multiple sets
    *
-    * @param firstKey Key of the first set to add
-   * @param restKeys Keys of the subsequent sets to add
+    * @param key Key of the first set to add
+   * @param keys Keys of the subsequent sets to add
    * @return Returns a list with members of the resulting set
    */
-  final def sUnion(firstKey: String, restKeys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    SUnion.run((firstKey, restKeys.toList))
+  final def sUnion(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    SUnion.run((key, keys.toList))
 
   /** Add multiple sets and add the resulting set in a key
    *
     * @param destination Key of destination to store the result
-   * @param firstKey Key of first set to add
-   * @param restKeys Subsequent keys of sets to add
+   * @param key Key of first set to add
+   * @param keys Subsequent keys of sets to add
    * @return Returns the number of elements in the resulting set
    */
   final def sUnionStore(
     destination: String,
-    firstKey: String,
-    restKeys: String*
+    key: String,
+    keys: String*
   ): ZIO[RedisExecutor, RedisError, Long] =
-    SUnionStore.run((destination, (firstKey, restKeys.toList)))
+    SUnionStore.run((destination, (key, keys.toList)))
 }
 
 private[redis] object Sets {
