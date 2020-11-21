@@ -82,9 +82,11 @@ trait Interpreter {
        * Only exits by interruption or defect.
        */
       def run: IO[RedisError, Unit] =
-        (send.forever race runReceive(byteStream.read)).tapError { e =>
-          logger.warn(s"Reconnecting due to error: $e") *> resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
-        }.retryWhile(Function.const(true))
+        (send.forever race runReceive(byteStream.read))
+          .tapError { e =>
+            logger.warn(s"Reconnecting due to error: $e") *> resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
+          }
+          .retryWhile(True)
           .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 
@@ -113,4 +115,6 @@ trait Interpreter {
 
 private[redis] object Interpreter {
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
+
+  private val True: Any => Boolean = _ => true
 }
