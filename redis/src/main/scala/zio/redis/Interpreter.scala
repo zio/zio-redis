@@ -91,10 +91,8 @@ trait Interpreter {
             STM.succeedNow {
               if (input.isEmpty)
                 RespValue.bulkString("PONG")
-              else {
-                val payload = input.head.asString
-                RespValue.SimpleString(payload)
-              }
+              else
+                input.head
             }
           case _                        => STM.fail(RedisError.ProtocolError(s"Command not supported by inmemory executor: $name"))
         }
