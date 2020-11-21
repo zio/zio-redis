@@ -71,7 +71,7 @@ trait SortedSetsSpec extends BaseSpec {
             key    <- uuid
             _      <- zAdd(key)(MemberScore(1d, "v1"))
             _      <- zAdd(key)(MemberScore(2d, "v2"))
-            added  <- zAdd(key, c = Some(Changed))(MemberScore(3d, "v3"), MemberScore(11d, "v1"))
+            added  <- zAdd(key, change = Some(Changed))(MemberScore(3d, "v3"), MemberScore(11d, "v1"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(2L)) &&
             assert(result.toList)(equalTo(List("v2", "v3", "v1")))
@@ -229,7 +229,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zInterStore(dest, 2, first, second)(e = Some(::(2.0, 3.0 :: Nil)))
+            card   <- zInterStore(dest, 2, first, second)(weights = Some(::(2.0, 3.0 :: Nil)))
           } yield assert(card)(equalTo(2L))
         },
         testM("error when invalid weights provided ( less than sets number )") {
@@ -239,7 +239,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zInterStore(dest, 2, first, second)(e = Some(::(2, Nil))).either
+            card   <- zInterStore(dest, 2, first, second)(weights = Some(::(2, Nil))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid weights provided ( more than sets number )") {
@@ -249,7 +249,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zInterStore(dest, 2, first, second)(e = Some(::(2.0, List(3.0, 5.0)))).either
+            card   <- zInterStore(dest, 2, first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set aggregate parameter MAX") {
@@ -478,7 +478,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByScore(
                         key,
                         ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(2500)),
-                        d = Some(Limit(offset = 1, count = 3))
+                        limit = Some(Limit(offset = 1, count = 3))
                       )
           } yield assert(result.toList)(equalTo(List("MicroSoft", "Micromax", "Nokia")))
         },
@@ -749,7 +749,7 @@ trait SortedSetsSpec extends BaseSpec {
                                min = ScoreMinimum.Open(2500),
                                max = ScoreMaximum.Closed(2000)
                              ),
-                             d = Some(Limit(1, 2))
+                             limit = Some(Limit(1, 2))
                            )
           } yield assert(rangeResult.toList)(equalTo(List("Nokia")))
         },
@@ -967,7 +967,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zUnionStore(dest, 2, first, second)(e = Some(Aggregate.Max))
+            card   <- zUnionStore(dest, 2, first, second)(aggregate = Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         },
         testM("set aggregate parameter MIN") {
@@ -977,7 +977,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- zUnionStore(dest, 2, first, second)(e = Some(Aggregate.Min))
+            card   <- zUnionStore(dest, 2, first, second)(aggregate = Some(Aggregate.Min))
           } yield assert(card)(equalTo(4L))
         },
         testM("parameter weights provided along with aggregate") {
