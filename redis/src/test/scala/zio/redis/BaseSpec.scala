@@ -5,6 +5,7 @@ import java.util.UUID
 
 import zio.UIO
 import zio.duration._
+import zio.test.TestAspect.tag
 import zio.test._
 
 trait BaseSpec extends DefaultRunnableSpec {
@@ -13,4 +14,7 @@ trait BaseSpec extends DefaultRunnableSpec {
   def instantOf(millis: Long): UIO[Instant] = UIO(Instant.now().plusMillis(millis))
 
   val uuid = UIO(UUID.randomUUID().toString)
+
+  val TestExecutorUnsupportedTag   = "test executor unsupported"
+  lazy val testExecutorUnsupported = tag(TestExecutorUnsupportedTag)
 }
