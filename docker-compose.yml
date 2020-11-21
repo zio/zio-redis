@@ -1,7 +1,7 @@
 version: "3.2"
 
 services:
-  dynamodb:
+  redis:
     container_name: test_redis
     image: redis:6-alpine
     ports:
