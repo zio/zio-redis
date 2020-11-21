@@ -96,7 +96,7 @@ trait GeoSpec extends BaseSpec {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, g = Some(WithHash))
+            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, withHash = Some(WithHash))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -110,8 +110,14 @@ trait GeoSpec extends BaseSpec {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <-
-              geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, f = Some(WithDist), g = Some(WithHash))
+            response <- geoRadius(
+                          key,
+                          LongLat(15d, 37d),
+                          200d,
+                          RadiusUnit.Kilometers,
+                          withDist = Some(WithDist),
+                          withHash = Some(WithHash)
+                        )
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -125,7 +131,7 @@ trait GeoSpec extends BaseSpec {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, f = Some(WithDist))
+            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, withDist = Some(WithDist))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -140,7 +146,7 @@ trait GeoSpec extends BaseSpec {
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
-              geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), g = Some(WithHash))
+              geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), withHash = Some(WithHash))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -219,7 +225,7 @@ trait GeoSpec extends BaseSpec {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, g = Some(WithHash))
+            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, withHash = Some(WithHash))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -235,8 +241,14 @@ trait GeoSpec extends BaseSpec {
           val member2Distance = 166.2742
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <-
-              geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, f = Some(WithDist), g = Some(WithHash))
+            response <- geoRadiusByMember(
+                          key,
+                          member1,
+                          200d,
+                          RadiusUnit.Kilometers,
+                          withDist = Some(WithDist),
+                          withHash = Some(WithHash)
+                        )
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -252,7 +264,7 @@ trait GeoSpec extends BaseSpec {
           val member2Distance = 166.2742
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, f = Some(WithDist))
+            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, withDist = Some(WithDist))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -267,7 +279,7 @@ trait GeoSpec extends BaseSpec {
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
-              geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), g = Some(WithHash))
+              geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), withHash = Some(WithHash))
           } yield assert(response)(
             hasSameElements(
               Chunk(
