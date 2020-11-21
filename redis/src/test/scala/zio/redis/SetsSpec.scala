@@ -738,7 +738,7 @@ trait SetsSpec extends BaseSpec {
             _                <- sAdd(key, "a", "b", "c")
             scan             <- sScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo(0L)) &&
+          } yield assert(cursor)(isZero) &&
             assert(members)(isNonEmpty)
         },
         testM("empty set") {
