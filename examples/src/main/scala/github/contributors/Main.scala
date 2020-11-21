@@ -4,8 +4,11 @@ import akka.actor.ActorSystem
 import akka.http.interop._
 import akka.http.scaladsl.server.Route
 import com.typesafe.config.{Config, ConfigFactory}
-import github.contributors.api.Api
+import github.contributors.api.{Api, SttpClient}
 import github.contributors.config.AppConfig
+import sttp.client.SttpBackend
+import sttp.client.asynchttpclient.WebSocketHandler
+import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zio._
 import zio.console._
 import zio.redis._
@@ -36,7 +39,8 @@ object Main extends App {
     val apiConfigLayer = configLayer.map(config => Has(config.get.api))
     val redisConfigLayer = configLayer.map(config => Has(config.get.redis))
 
-    val apiLayer: TaskLayer[Api] = apiConfigLayer >>> Api.live
+    val sttpLayer: TaskLayer[SttpClient] = AsyncHttpClientZioBackend().toLayer
+    val apiLayer: TaskLayer[Api] = (apiConfigLayer ++ sttpLayer) >>> Api.live
     val routesLayer: URLayer[Api, Has[Route]] = ZLayer.fromService(_.routes)
 
     val serverEnv: TaskLayer[HttpServer] =

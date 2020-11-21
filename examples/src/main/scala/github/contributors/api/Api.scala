@@ -3,12 +3,8 @@ package github.contributors.api
 import akka.http.interop.{HttpServer, ZIOSupport}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import github.contributors.domain.{Contributor, GithubUnavailable}
+import github.contributors.domain.ContributorService
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import sttp.client._
-import sttp.client.circe._
-import sttp.client.{NothingT, SttpBackend, basicRequest}
-import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zio._
 import zio.config.ZConfig
 
@@ -20,7 +16,7 @@ object Api {
     def routes: Route
   }
 
-  val live: ZLayer[ZConfig[HttpServer.Config], Nothing, Api] =
+  val live: ZLayer[ZConfig[HttpServer.Config] with SttpClient, Nothing, Api] =
     ZLayer.fromFunction { env =>
       new Service with ZIOSupport {
 
@@ -29,25 +25,13 @@ object Api {
         val contributorRoutes: Route =
           pathPrefix("contributors") {
             get {
-              val response = for {
-                backend <- AsyncHttpClientZioBackend()
-                contributors <- fetchContributors(backend)
-              } yield contributors
-
-              complete(response)
+              complete {
+                ContributorService
+                  .getContributors(url)
+                  .provide(env)
+              }
             }
           }
-
-        private def fetchContributors(implicit sttpBackend: SttpBackend[Task, Nothing, NothingT]): Task[List[Contributor]] =
-          basicRequest
-            .get(uri"$url")
-            .response(asJson[List[Contributor]])
-            .send()
-            .map(_.body)
-            .flatMap {
-              case Right(contributors) => Task.succeed(contributors)
-              case Left(error) => Task.fail(GithubUnavailable(error.body))
-            }
       }
     }
 
