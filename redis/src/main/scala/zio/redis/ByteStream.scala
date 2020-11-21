@@ -24,7 +24,7 @@ private[redis] object ByteStream {
   def socketLoopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, IOException, ByteStream] =
     socket(IO.effectTotal(new InetSocketAddress(InetAddress.getLoopbackAddress, port)))
 
-  private def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
+  private[this] def socket(getAddress: UIO[SocketAddress]): ZLayer[Logging, IOException, ByteStream] = {
     val makeBuffer = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
 
     ZLayer.fromServiceM { logger =>
@@ -43,7 +43,7 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
-  private def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
+  private[this] def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
       def completed(result: A, u: Any): Unit = k(IO.succeedNow(result))
 
@@ -54,7 +54,7 @@ private[redis] object ByteStream {
         }
     }
 
-  private def effectAsyncChannel[C <: Channel, A](
+  private[this] def effectAsyncChannel[C <: Channel, A](
     channel: C
   )(op: C => CompletionHandler[A, Any] => Any): IO[IOException, A] =
     IO.effectAsyncInterrupt { k =>
@@ -62,7 +62,7 @@ private[redis] object ByteStream {
       Left(IO.effect(channel.close()).ignore)
     }
 
-  private final class Connection(
+  private[this] final class Connection(
     address: SocketAddress,
     readBuffer: ByteBuffer,
     writeBuffer: ByteBuffer,
