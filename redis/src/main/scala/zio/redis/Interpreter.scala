@@ -58,6 +58,19 @@ trait Interpreter {
           .make[RedisError, RespValue]
           .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
 
+      /**
+       * Opens a connection to the server and launches send and receive operations.
+       * All failures are retried by opening a new connection.
+       * Only exits by interruption or defect.
+       */
+      val run: IO[RedisError, Unit] =
+        (send.forever race runReceive(byteStream.read))
+          .tapError(e => logger.warn(s"Reconnecting due to error: $e") *> drainWith(e))
+          .retryWhile(True)
+          .tapError(e => logger.error(s"Executor exiting: $e"))
+
+      private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
+
       private def send: IO[RedisError, Unit] =
         reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
           val bytes = Chunk.fromIterable(reqs).flatMap(req => RespValue.Array(req.command).serialize)
@@ -76,18 +89,6 @@ trait Interpreter {
           .transduce(RespValue.deserialize.toTransducer)
           .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 
-      /**
-       * Opens a connection to the server and launches send and receive operations.
-       * All failures are retried by opening a new connection.
-       * Only exits by interruption or defect.
-       */
-      def run: IO[RedisError, Unit] =
-        (send.forever race runReceive(byteStream.read))
-          .tapError { e =>
-            logger.warn(s"Reconnecting due to error: $e") *> resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
-          }
-          .retryWhile(True)
-          .tapError(e => logger.error(s"Executor exiting: $e"))
     }
 
     private[this] final class InMemory() extends Service {
