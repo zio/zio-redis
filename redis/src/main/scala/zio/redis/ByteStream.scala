@@ -24,18 +24,13 @@ private[redis] object ByteStream {
     live(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
 
   private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, ByteStream] =
-    ZLayer.fromManaged {
-      val managed =
-        for {
-          address     <- UIO(address).toManaged_
-          makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
-          readBuffer  <- makeBuffer.toManaged_
-          writeBuffer <- makeBuffer.toManaged_
-          channel     <- openChannel(address)
-        } yield new Connection(readBuffer, writeBuffer, channel)
-
-      managed.mapError(RedisError.IOError)
-    }
+    (for {
+      address     <- UIO(address).toManaged_
+      makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
+      readBuffer  <- makeBuffer.toManaged_
+      writeBuffer <- makeBuffer.toManaged_
+      channel     <- openChannel(address)
+    } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError).toLayer
 
   private[this] final val ResponseBufferSize = 1024
 
