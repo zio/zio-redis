@@ -837,7 +837,7 @@ trait SortedSetsSpec extends BaseSpec {
                  )
             scan             <- zScan(key, 0L, Some("t[a-z]*".r), Some(Count(3L)))
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo(0L)) && assert(members)(isNonEmpty)
+          } yield assert(cursor)(isZero) && assert(members)(isNonEmpty)
         },
         testM("error when not set") {
           for {
