@@ -84,7 +84,7 @@ trait KeysSpec extends BaseSpec {
           _               <- set(key, value)
           scan            <- scan(0L)
           (next, elements) = scan
-        } yield assert(next)(isNonEmptyString) && assert(elements)(isNonEmpty)
+        } yield assert(next)(isGreaterThan(0L)) && assert(elements)(isNonEmpty)
       },
       testM("fetch random key") {
         for {

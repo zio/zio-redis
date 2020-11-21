@@ -145,14 +145,14 @@ trait Sets {
    * @param cursor Cursor to use for this iteration of scan
    * @param regex Glob-style pattern that filters which elements are returned
    * @param count Count of elements. Roughly this number will be returned by Redis if possible
-   * @return Returns the items for this iteration or nothing when you reach the end
+   * @return Returns the next cursor, and items for this iteration or nothing when you reach the end, as a tuple
    */
   final def sScan(
     key: String,
     cursor: Long,
     regex: Option[Regex] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = SScan.run((key, cursor, regex, count))
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = SScan.run((key, cursor, regex, count))
 
   /**
    * Add multiple sets

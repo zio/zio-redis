@@ -36,7 +36,7 @@ trait Hashes {
     b: Option[Regex] = None,
     c: Option[Long] = None,
     d: Option[String] = None
-  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = HScan.run((a, b, c, d))
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = HScan.run((a, b, c, d))
 
   final def hSet(a: String, b: (String, String), bs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
     HSet.run((a, (b, bs.toList)))

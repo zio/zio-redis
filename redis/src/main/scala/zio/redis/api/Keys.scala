@@ -68,7 +68,7 @@ trait Keys {
     b: Option[Regex] = None,
     c: Option[Long] = None,
     d: Option[String] = None
-  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = Scan.run((a, b, c, d))
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((a, b, c, d))
 
   final def touch(a: String, as: String*): ZIO[RedisExecutor, RedisError, Long] = Touch.run((a, as.toList))
 

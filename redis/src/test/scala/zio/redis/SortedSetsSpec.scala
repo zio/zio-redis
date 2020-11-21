@@ -794,14 +794,14 @@ trait SortedSetsSpec extends BaseSpec {
             _                <- zAdd(key)(MemberScore(1d, "atest"), MemberScore(2d, "btest"), MemberScore(3d, "ctest"))
             scan             <- zScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) && assert(members)(isNonEmpty)
+          } yield assert(cursor)(equalTo(0L)) && assert(members)(isNonEmpty)
         },
         testM("empty set") {
           for {
             key              <- uuid
             scan             <- zScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo("0")) && assert(members)(isEmpty)
+          } yield assert(cursor)(equalTo(0L)) && assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
           for {
@@ -809,7 +809,7 @@ trait SortedSetsSpec extends BaseSpec {
             _                <- zAdd(key)(MemberScore(1d, "one"), MemberScore(2d, "two"), MemberScore(3d, "three"))
             scan             <- zScan(key, 0L, Some("t[a-z]*".r))
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) && assert(members)(isNonEmpty)
+          } yield assert(cursor)(equalTo(0L)) && assert(members)(isNonEmpty)
         },
         testM("with count over non-empty set") {
           for {
@@ -823,7 +823,7 @@ trait SortedSetsSpec extends BaseSpec {
                  )
             scan             <- zScan(key, 0L, None, Some(Count(3L)))
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) && assert(members)(isNonEmpty)
+          } yield assert(cursor)(equalTo(0L)) && assert(members)(isNonEmpty)
         },
         testM("match with count over non-empty set") {
           for {
@@ -837,7 +837,7 @@ trait SortedSetsSpec extends BaseSpec {
                  )
             scan             <- zScan(key, 0L, Some("t[a-z]*".r), Some(Count(3L)))
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) && assert(members)(isNonEmpty)
+          } yield assert(cursor)(equalTo(0L)) && assert(members)(isNonEmpty)
         },
         testM("error when not set") {
           for {

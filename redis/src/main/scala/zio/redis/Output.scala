@@ -110,16 +110,16 @@ object Output {
 
   }
 
-  case object ScanOutput extends Output[(String, Chunk[String])] {
+  case object ScanOutput extends Output[(Long, Chunk[String])] {
 
-    override protected def tryDecode(respValue: RespValue): (String, Chunk[String]) =
+    override protected def tryDecode(respValue: RespValue): (Long, Chunk[String]) =
       respValue match {
         case RespValue.ArrayValues(cursor @ RespValue.BulkString(_), RespValue.Array(items)) =>
           val strings = items.map {
             case s @ RespValue.BulkString(_) => s.asString
             case other                       => s"$other is not a bulk string"
           }
-          (cursor.asString, strings)
+          (cursor.asString.toLong, strings)
         case other                                                                           =>
           throw ProtocolError(s"$other isn't scan output")
       }

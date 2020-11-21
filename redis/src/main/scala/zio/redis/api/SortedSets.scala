@@ -325,7 +325,7 @@ trait SortedSets {
     cursor: Long,
     regex: Option[Regex] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = ZScan.run((key, cursor, regex, count))
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = ZScan.run((key, cursor, regex, count))
 
   /**
    * Get the score associated with the given member in a sorted set.
