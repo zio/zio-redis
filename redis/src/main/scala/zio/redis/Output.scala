@@ -3,8 +3,6 @@ package zio.redis
 import zio.Chunk
 import zio.duration._
 
-import scala.util.Try
-
 sealed trait Output[+A] {
 
   self =>
@@ -293,19 +291,26 @@ object Output {
   }
 
   case object KeyLongValueOutput extends Output[Map[String, Long]] {
-    protected def tryDecode(respValue: RespValue): Map[String, Long] = {
-      val mapOutput = KeyValueOutput.unsafeDecode(respValue)
-
-      val res = mapOutput
-        .mapValues(value => Try(value.toLong).toOption)
-        .collect {
-          case (key, Some(value)) => key -> value
-        }
-
-      if (res.size != mapOutput.size)
-        throw ProtocolError(s"$mapOutput doesn't have a number after a string")
-      else
-        res.toMap
-    }
+    protected def tryDecode(respValue: RespValue): Map[String, Long] =
+      respValue match {
+        case RespValue.Array(elements) if elements.length % 2 == 0 =>
+          val output = collection.mutable.Map.empty[String, Long]
+          val len    = elements.length
+          var pos    = 0
+          while (pos < len) {
+            (elements(pos), elements(pos + 1)) match {
+              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                output += key.asString -> value.value
+              case _                                                             =>
+                throw ProtocolError(s"$elements don't contain (string, number) pairs")
+            }
+            pos += 2
+          }
+          output.toMap
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have an even number of elements")
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
   }
 }
