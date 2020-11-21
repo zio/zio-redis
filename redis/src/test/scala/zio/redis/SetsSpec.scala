@@ -746,7 +746,7 @@ trait SetsSpec extends BaseSpec {
             key              <- uuid
             scan             <- sScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo(0L)) &&
+          } yield assert(cursor)(isZero) &&
             assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
