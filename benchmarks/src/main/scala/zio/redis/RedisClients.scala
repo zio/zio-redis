@@ -1,6 +1,6 @@
 package zio.redis
 
-import cats.effect.{Blocker, Resource, IO => CatsIO}
+import cats.effect.{Blocker, ContextShift, Resource, Timer, IO => CatsIO}
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.data.RedisCodec
 import fs2.io.tcp.SocketGroup
@@ -8,9 +8,12 @@ import io.chrisdavenport.rediculous.{Redis, RedisConnection}
 import io.lettuce.core.ClientOptions
 import laserdisc.fs2.RedisClient
 
+import scala.concurrent.ExecutionContext
+
 trait RedisClients {
 
-  self: EffectContexts =>
+  implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)
+  implicit val timer: Timer[CatsIO]     = CatsIO.timer(ExecutionContext.global)
 
   final val RedisHost = "127.0.0.1"
   final val RedisPort = 6379
@@ -25,24 +28,22 @@ trait RedisClients {
     def unsafeRun(f: F => CatsIO[Unit]): Unit
   }
 
-  object QueryUnsafeRunner {
-    implicit object LaserDiscClientRunner extends QueryUnsafeRunner[LaserDiscClient] {
-      override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
-    }
+  implicit object LaserDiscClientRunner extends QueryUnsafeRunner[LaserDiscClient] {
+    override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
+  }
 
-    implicit object RedicoulusClientRunner extends QueryUnsafeRunner[RediculousClient] {
-      override def unsafeRun(f: RediculousClient => CatsIO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync
-    }
+  implicit object RedicoulusClientRunner extends QueryUnsafeRunner[RediculousClient] {
+    override def unsafeRun(f: RediculousClient => CatsIO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync
+  }
 
-    implicit object Redis4CatsClientRunnerString extends QueryUnsafeRunner[Redis4CatsClient[String]] {
-      override def unsafeRun(f: Redis4CatsClient[String] => CatsIO[Unit]): Unit =
-        redis4CatsConnectionString.use(f).unsafeRunSync
-    }
+  implicit object Redis4CatsClientRunnerString extends QueryUnsafeRunner[Redis4CatsClient[String]] {
+    override def unsafeRun(f: Redis4CatsClient[String] => CatsIO[Unit]): Unit =
+      redis4CatsConnectionString.use(f).unsafeRunSync
+  }
 
-    implicit object Redis4CatsClientRunnerLong extends QueryUnsafeRunner[Redis4CatsClient[Long]] {
-      override def unsafeRun(f: Redis4CatsClient[Long] => CatsIO[Unit]): Unit =
-        redis4CatsConnectionLong.use(f).unsafeRunSync
-    }
+  implicit object Redis4CatsClientRunnerLong extends QueryUnsafeRunner[Redis4CatsClient[Long]] {
+    override def unsafeRun(f: Redis4CatsClient[Long] => CatsIO[Unit]): Unit =
+      redis4CatsConnectionLong.use(f).unsafeRunSync
   }
 
   private val redicoulusConnection: Resource[CatsIO, RediculousClient] =

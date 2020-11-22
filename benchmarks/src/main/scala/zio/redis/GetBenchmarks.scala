@@ -10,8 +10,7 @@ import zio.ZIO
 @Measurement(iterations = 15)
 @Warmup(iterations = 15)
 @Fork(2)
-class GetBenchmarks {
-  import BenchmarkRuntime._
+class GetBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
   private var count: Int = _
