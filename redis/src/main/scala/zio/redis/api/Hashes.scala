@@ -31,9 +31,20 @@ trait Hashes {
   final def hmGet(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
     HmGet.run((a, (b, bs.toList)))
 
-  /** Deprecated: As per Redis 4.0.0, HMSET is considered deprecated. Please use HSET in new code. */
-  final def hmSet(a: String, b: (String, String), bs: (String, String)*): ZIO[RedisExecutor, RedisError, Unit] =
-    HmSet.run((a, (b, bs.toList)))
+  /**
+   *  Sets the specified `field -> value` pairs in the hash stored at `key`.
+   *  Deprecated: As per Redis 4.0.0, HMSET is considered deprecated. Please use `hSet` instead.
+   *  @param key hash key
+   *  @param pair mapping of a field to value
+   *  @param pairs additional pairs
+   *  @return unit if fields are successfully set
+   */
+  final def hmSet(
+    key: String,
+    pair: (String, String),
+    pairs: (String, String)*
+  ): ZIO[RedisExecutor, RedisError, Unit] =
+    HmSet.run((key, (pair, pairs.toList)))
 
   final def hScan(
     a: Long,
