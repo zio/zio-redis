@@ -3,6 +3,8 @@ package zio.redis
 import java.io.IOException
 import java.net.SocketAddress
 
+import scala.collection.compat.immutable.LazyList
+
 import zio._
 import zio.logging._
 import zio.redis.RedisError.ProtocolError
@@ -29,15 +31,26 @@ trait Interpreter {
     def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       (ZLayer.identity[Logging] ++ ByteStream.loopback(port)) >>> StreamedExecutor
 
-    val test: ZLayer[Any, Nothing, RedisExecutor] =
+    val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
+      val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
+        for {
+          seed   <- random.nextInt
+          sRandom = new scala.util.Random(seed)
+          ref    <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
+        } yield (i: Int) => ref.modify(s => (s.head(i), s.tail))
+
       ZLayer.fromEffect {
-        STM.atomically {
-          for {
-            sets    <- TMap.empty[String, Set[String]]
-            strings <- TMap.empty[String, String]
-          } yield new Test(sets, strings)
-        }
+        for {
+          randomPick <- makePickRandom
+          executor   <- STM.atomically {
+                        for {
+                          sets    <- TMap.empty[String, Set[String]]
+                          strings <- TMap.empty[String, String]
+                        } yield new Test(sets, strings, randomPick)
+                      }
+        } yield executor
       }
+    }
 
     private[redis] final val DefaultPort = 6379
 
@@ -101,7 +114,8 @@ trait Interpreter {
 
     private final class Test(
       sets: TMap[String, Set[String]],
-      strings: TMap[String, String]
+      strings: TMap[String, String],
+      randomPick: Int => USTM[Int]
     ) extends Service {
       override def execute(command: Chunk[RespValue.BulkString]): zio.IO[RedisError, RespValue] =
         for {
@@ -225,6 +239,28 @@ trait Interpreter {
               sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_))),
               STM.succeedNow(Replies.WrongType)
             )
+          case api.Sets.SRandMember.name =>
+            val key = input.head.asString
+            STM.ifM(isSet(key))(
+              {
+                val maybeCount = input.tail.headOption.map(b => b.asString.toLong)
+                for {
+                  set     <- sets.getOrElse(key, Set.empty[String])
+                  asVector = set.toVector
+                  res     <- maybeCount match {
+                           case None             =>
+                             selectOne[String](asVector, randomPick).map(maybeValue =>
+                               maybeValue.map(RespValue.bulkString).getOrElse(RespValue.NullValue)
+                             )
+                           case Some(n) if n > 0 => selectN(asVector, n, randomPick).map(Replies.array)
+                           case Some(n) if n < 0 =>
+                             selectNWithReplacement(asVector, -1 * n, randomPick).map(Replies.array)
+                           case Some(0)          => STM.succeedNow(RespValue.NullValue)
+                         }
+                } yield res
+              },
+              STM.succeedNow(Replies.WrongType)
+            )
           case api.Sets.SRem.name        =>
             val key = input.head.asString
             STM.ifM(isSet(key))(
@@ -310,6 +346,33 @@ trait Interpreter {
         for {
           isString <- strings.contains(name)
         } yield !isString
+
+      private[this] def selectN[A](values: Vector[A], n: Long, pickRandom: Int => USTM[Int]): USTM[List[A]] = {
+        def go(remaining: Vector[A], toPick: Long, acc: List[A]): USTM[List[A]] =
+          (remaining, toPick) match {
+            case (Vector(), _) | (_, 0) => STM.succeed(acc)
+            case _                      =>
+              pickRandom(remaining.size).flatMap { index =>
+                val x  = remaining(index)
+                val xs = remaining.patch(index, Nil, 1)
+                go(xs, toPick - 1, x :: acc)
+              }
+          }
+        go(values, Math.max(n, 0), Nil)
+      }
+
+      private[this] def selectOne[A](values: Vector[A], pickRandom: Int => USTM[Int]): USTM[Option[A]] =
+        if (values.isEmpty) STM.succeedNow(None)
+        else pickRandom(values.size).map(index => Some(values(index)))
+
+      private[this] def selectNWithReplacement[A](
+        values: Vector[A],
+        n: Long,
+        pickRandom: Int => USTM[Int]
+      ): USTM[List[A]] =
+        STM
+          .loop(Math.max(n, 0))(_ > 0, _ - 1)(_ => selectOne(values, pickRandom))
+          .map(_.flatten)
 
       private[this] def sInter(mainKey: String, otherKeys: Chunk[String]): STM[Unit, Set[String]] = {
         sealed trait State

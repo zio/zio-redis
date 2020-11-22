@@ -575,7 +575,7 @@ trait SetsSpec extends BaseSpec {
             members <- sRandMember(key, Some(3L)).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ testExecutorUnsupported,
+      ),
       suite("sRem")(
         testM("existing elements from non-empty set") {
           for {
