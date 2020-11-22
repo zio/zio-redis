@@ -39,9 +39,23 @@ trait Hashes {
   final def hLen(key: String): ZIO[RedisExecutor, RedisError, Long] = HLen.run(key)
 
   /** Returns the values associated with the specified `fields` in the hash stored at `key`. */
-  final def hmGet(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+  final def hmGet(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
     HmGet.run((a, (b, bs.toList)))
-
+  
+  /**
+   *  Sets the specified `field -> value` pairs in the hash stored at `key`.
+   *  Deprecated: As per Redis 4.0.0, HMSET is considered deprecated. Please use `hSet` instead.
+   *  @param key hash key
+   *  @param pair mapping of a field to value
+   *  @param pairs additional pairs
+   *  @return unit if fields are successfully set
+   */
+  final def hmSet(
+    key: String,
+    pair: (String, String),
+    pairs: (String, String)*
+  ): ZIO[RedisExecutor, RedisError, Unit] =
+    HmSet.run((key, (pair, pairs.toList)))
   /** Iterates `fields` of Hash types and their associated values. */
   final def hScan(
     cursor: Long,
@@ -49,6 +63,13 @@ trait Hashes {
     count: Option[Long] = None,
     `type`: Option[String] = None
   ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = HScan.run((cursor, pattern, count, `type`))
+
+  final def hScan(
+    a: Long,
+    b: Option[Regex] = None,
+    c: Option[Long] = None,
+    d: Option[String] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = HScan.run((a, b, c, d))
 
   /** Sets `field -> value` pairs in the hash stored at `key`. */
   final def hSet(key: String, pair: (String, String), pairs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
@@ -65,7 +86,7 @@ trait Hashes {
   final def hVals(key: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HVals.run(key)
 }
 
-private object Hashes {
+private[redis] object Hashes {
   final val HDel    = RedisCommand("HDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
   final val HExists = RedisCommand("HEXISTS", Tuple2(StringInput, StringInput), BoolOutput)
   final val HGet    = RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
@@ -77,7 +98,15 @@ private object Hashes {
 
   final val HKeys = RedisCommand("HKEYS", StringInput, ChunkOutput)
   final val HLen  = RedisCommand("HLEN", StringInput, LongOutput)
-  final val HmGet = RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val HmGet =
+    RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
+
+  final val HmSet =
+    RedisCommand(
+      "HMSET",
+      Tuple2(StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
+      UnitOutput
+    )
 
   final val HScan =
     RedisCommand(

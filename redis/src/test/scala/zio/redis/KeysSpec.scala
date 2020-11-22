@@ -84,7 +84,7 @@ trait KeysSpec extends BaseSpec {
           _               <- set(key, value)
           scan            <- scan(0L)
           (next, elements) = scan
-        } yield assert(next)(isNonEmptyString) && assert(elements)(isNonEmpty)
+        } yield assert(next)(isGreaterThan(0L)) && assert(elements)(isNonEmpty)
       },
       testM("fetch random key") {
         for {
@@ -105,7 +105,7 @@ trait KeysSpec extends BaseSpec {
           restore  <- restore(key, 0L, dumped).either
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
-      } @@ ignore,
+      },
       suite("ttl")(
         testM("check ttl for existing key") {
           for {

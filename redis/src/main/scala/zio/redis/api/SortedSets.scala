@@ -12,111 +12,352 @@ import zio.{ Chunk, ZIO }
 trait SortedSets {
   import SortedSets._
 
-  final def bzPopMax(a: Duration, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    BzPopMax.run((a, (b, bs.toList)))
+  /**
+   * Remove and return the member with the highest score from one or more sorted sets, or block until one is available.
+   *
+   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
+   * @param key Key of the set
+   * @param keys Keys of the rest sets
+   * @return A three-element Chunk with the first element being the name of the key where a member was popped,
+   *         the second element is the popped member itself, and the third element is the score of the popped element.
+   *         An empty chunk is returned when no element could be popped and the timeout expired.
+   */
+  final def bzPopMax(
+    timeout: Duration,
+    key: String,
+    keys: String*
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    BzPopMax.run((timeout, (key, keys.toList)))
 
-  final def bzPopMin(a: Duration, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    BzPopMin.run((a, (b, bs.toList)))
+  /**
+   * Remove and return the member with the lowest score from one or more sorted sets, or block until one is available.
+   *
+   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
+   * @param key Key of the set
+   * @param keys Keys of the rest sets
+   * @return A three-element Chunk with the first element being the name of the key where a member was popped,
+   *         the second element is the popped member itself, and the third element is the score of the popped element.
+   *         An empty chunk is returned when no element could be popped and the timeout expired.
+   */
+  final def bzPopMin(
+    timeout: Duration,
+    key: String,
+    keys: String*
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    BzPopMin.run((timeout, (key, keys.toList)))
 
-  final def zAdd(a: String, b: Option[Update] = None, c: Option[Changed] = None)(
-    d: MemberScore,
-    ds: MemberScore*
-  ): ZIO[RedisExecutor, RedisError, Long] = ZAdd.run((a, b, c, (d, ds.toList)))
+  /**
+   * Add one or more members to a sorted set, or update its score if it already exists.
+   *
+   * @param key Key of set to add to
+   * @param update Set existing and never add elements or always set new elements and don't update existing elements
+   * @param change Modify the return value from the number of new elements added, to the total number of elements change
+   * @param memberScore Score that should be added to specific element for a given sorted set key
+   * @param memberScores Rest scores that should be added to specific elements fr a given sorted set key
+   * @return The number of elements added to the sorted set, not including elements already existing for which the score was updated
+   */
+  final def zAdd(key: String, update: Option[Update] = None, change: Option[Changed] = None)(
+    memberScore: MemberScore,
+    memberScores: MemberScore*
+  ): ZIO[RedisExecutor, RedisError, Long] = ZAdd.run((key, update, change, (memberScore, memberScores.toList)))
 
-  final def zAddWithIncr(a: String, b: Option[Update] = None, c: Option[Changed] = None)(
-    d: Increment,
-    e: MemberScore,
-    es: MemberScore*
-  ): ZIO[RedisExecutor, RedisError, Option[Double]] = ZAddWithIncr.run((a, b, c, d, (e, es.toList)))
+  /**
+   * Add one or more members to a sorted set, or update its score if it already exists.
+   *
+   * @param key Key of set to add to.
+   * @param update Set existing and never add elements or always set new elements and don't update existing elements
+   * @param change Modify the return value from the number of new elements added, to the total number of elements change
+   * @param increment When this option is specified ZADD acts like ZINCRBY. Only one score-element pair can be specified in this mode
+   * @param memberScore Score that should be added to specific element for a given sorted set key
+   * @param memberScores Rest scores that should be added to specific elements fr a given sorted set key
+   * @return The new score of member (a double precision floating point number), or None if the operation was aborted (when called with either the XX or the NX option)
+   */
+  final def zAddWithIncr(key: String, update: Option[Update] = None, change: Option[Changed] = None)(
+    increment: Increment,
+    memberScore: MemberScore,
+    memberScores: MemberScore*
+  ): ZIO[RedisExecutor, RedisError, Option[Double]] =
+    ZAddWithIncr.run((key, update, change, increment, (memberScore, memberScores.toList)))
 
-  final def zCard(a: String): ZIO[RedisExecutor, RedisError, Long] = ZCard.run(a)
+  /**
+   * Get the number of members in a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @return The cardinality (number of elements) of the sorted set, or 0 if key does not exist
+   */
+  final def zCard(key: String): ZIO[RedisExecutor, RedisError, Long] = ZCard.run(key)
 
-  final def zCount(a: String, b: Range): ZIO[RedisExecutor, RedisError, Long] = ZCount.run((a, b))
+  /**
+   * Returns the number of elements in the sorted set at key with a score between min and max.
+   *
+   * @param key Key of a sorted set
+   * @param range Min and max score (including elements with score equal to min or max)
+   * @return the number of elements in the specified score range
+   */
+  final def zCount(key: String, range: Range): ZIO[RedisExecutor, RedisError, Long] = ZCount.run((key, range))
 
-  final def zIncrBy(a: String, b: Long, c: String): ZIO[RedisExecutor, RedisError, Double] = ZIncrBy.run((a, b, c))
+  /**
+   * Increment the score of a member in a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @param increment Increment value
+   * @param member Member of sorted set
+   * @return The new score of member (a double precision floating point number)
+   */
+  final def zIncrBy(key: String, increment: Long, member: String): ZIO[RedisExecutor, RedisError, Double] =
+    ZIncrBy.run((key, increment, member))
 
-  final def zInterStore(a: String, b: Long, c: String, cs: String*)(
-    d: Option[Aggregate] = None,
-    e: Option[::[Double]] = None
-  ): ZIO[RedisExecutor, RedisError, Long] = ZInterStore.run((a, b, (c, cs.toList), d, e))
+  /**
+   * Intersect multiple sorted sets and store the resulting sorted set in a new key.
+   *
+   * @param destination Key of the output
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of the rest sorted sets
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set.
+   *          This means that the score of every element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
+   *          When WEIGHTS is not given, the multiplication factors default to 1.
+   * @return The number of elements in the resulting sorted set at destination
+   */
+  final def zInterStore(destination: String, inputKeysNum: Long, key: String, keys: String*)(
+    aggregate: Option[Aggregate] = None,
+    weights: Option[::[Double]] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    ZInterStore.run((destination, inputKeysNum, (key, keys.toList), aggregate, weights))
 
-  final def zLexCount(a: String, b: LexRange): ZIO[RedisExecutor, RedisError, Long] = ZLexCount.run((a, b))
+  /**
+   * Count the number of members in a sorted set between a given lexicographical range.
+   *
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @return The number of elements in the specified score range
+   */
+  final def zLexCount(key: String, lexRange: LexRange): ZIO[RedisExecutor, RedisError, Long] =
+    ZLexCount.run((key, lexRange))
 
-  final def zPopMax(a: String, b: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZPopMax.run((a, b))
+  /**
+   * Remove and return members with the highest scores in a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @param count When left unspecified, the default value for count is 1. Specifying a count value that is higher than the sorted set's cardinality will not produce an error.
+   *          When returning multiple elements, the one with the highest score will be the first, followed by the elements with lower scores.
+   * @return Chunk of popped elements and scores
+   */
+  final def zPopMax(key: String, count: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZPopMax.run((key, count))
 
-  final def zPopMin(a: String, b: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZPopMin.run((a, b))
+  /**
+   * Remove and return members with the lowest scores in a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @param count When left unspecified, the default value for count is 1. Specifying a count value that is higher than the sorted set's cardinality will not produce an error.
+   *          When returning multiple elements, the one with the lowest score will be the first, followed by the elements with greater scores.
+   * @return Chunk of popped elements and scores
+   */
+  final def zPopMin(key: String, count: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZPopMin.run((key, count))
 
-  final def zRange(a: String, b: Range, c: Option[WithScores] = None): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRange.run((a, b, c))
+  /**
+   * Return a range of members in a sorted set, by index.
+   *
+   * @param key Key of a sorted set
+   * @param range Inclusive range
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @return Chunk of elements in the specified range (optionally with their scores, in case the WITHSCORES option is given)
+   */
+  final def zRange(
+    key: String,
+    range: Range,
+    withScores: Option[WithScores] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZRange.run((key, range, withScores))
 
+  /**
+   * Return a range of members in a sorted set, by lexicographical range.
+   *
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified score range
+   */
   final def zRangeByLex(
-    a: String,
-    b: LexRange,
-    c: Option[Limit] = None
+    key: String,
+    lexRange: LexRange,
+    limit: Option[Limit] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRangeByLex.run((a, b, c))
+    ZRangeByLex.run((key, lexRange, limit))
 
+  /**
+   * Return a range of members in a sorted set, by score.
+   *
+   * @param key Key of a sorted set
+   * @param scoreRange ScoreRange that must be satisfied
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified score range (optionally with their scores)
+   */
   final def zRangeByScore(
-    a: String,
-    b: ScoreRange,
-    c: Option[WithScores] = None,
-    d: Option[Limit] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] = ZRangeByScore.run((a, b, c, d))
+    key: String,
+    scoreRange: ScoreRange,
+    withScores: Option[WithScores] = None,
+    limit: Option[Limit] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] = ZRangeByScore.run((key, scoreRange, withScores, limit))
 
-  final def zRank(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRank.run((a, b))
+  /**
+   * Determine the index of a member in a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @param member Member of sorted set
+   * @return The rank of member in the sorted set stored at key, with the scores ordered from low to high
+   */
+  final def zRank(key: String, member: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRank.run((key, member))
 
-  final def zRem(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    ZRem.run((a, (b, bs.toList)))
+  /**
+   * Remove one or more members from a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @param firstMember Member to be removed
+   * @param restMembers Rest members to be removed
+   * @return The number of members removed from the sorted set, not including non existing members
+   */
+  final def zRem(key: String, firstMember: String, restMembers: String*): ZIO[RedisExecutor, RedisError, Long] =
+    ZRem.run((key, (firstMember, restMembers.toList)))
 
-  final def zRemRangeByLex(a: String, b: LexRange): ZIO[RedisExecutor, RedisError, Long] = ZRemRangeByLex.run((a, b))
+  /**
+   * Remove all members in a sorted set between the given lexicographical range.
+   *
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @return The number of elements removed
+   */
+  final def zRemRangeByLex(key: String, lexRange: LexRange): ZIO[RedisExecutor, RedisError, Long] =
+    ZRemRangeByLex.run((key, lexRange))
 
-  final def zRemRangeByRank(a: String, b: Range): ZIO[RedisExecutor, RedisError, Long] = ZRemRangeByRank.run((a, b))
+  /**
+   * Remove all members in a sorted set within the given indexes.
+   *
+   * @param key Key of a sorted set
+   * @param range Range that must be satisfied
+   * @return The number of elements removed
+   */
+  final def zRemRangeByRank(key: String, range: Range): ZIO[RedisExecutor, RedisError, Long] =
+    ZRemRangeByRank.run((key, range))
 
-  final def zRemRangeByScore(a: String, b: ScoreRange): ZIO[RedisExecutor, RedisError, Long] =
-    ZRemRangeByScore.run((a, b))
+  /**
+   * Remove all members in a sorted set within the given scores.
+   *
+   * @param key Key of a sorted set
+   * @param scoreRange ScoreRange that must be satisfied
+   * @return The number of elements removed
+   */
+  final def zRemRangeByScore(key: String, scoreRange: ScoreRange): ZIO[RedisExecutor, RedisError, Long] =
+    ZRemRangeByScore.run((key, scoreRange))
 
+  /**
+   * Return a range of members in a sorted set, by index, with scores ordered from high to low.
+   *
+   * @param key Key of a sorted set
+   * @param range Range that must be satisfied
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @return Chunk of elements in the specified range (optionally with their scores)
+   */
   final def zRevRange(
-    a: String,
-    b: Range,
-    c: Option[WithScores] = None
+    key: String,
+    range: Range,
+    withScores: Option[WithScores] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRevRange.run((a, b, c))
+    ZRevRange.run((key, range, withScores))
 
+  /**
+   * Return a range of members in a sorted set, by lexicographical range, ordered from higher to lower strings.
+   *
+   * @param key Key of a sorted set
+   * @param lexRange LexRange that must be satisfied
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified score range
+   */
   final def zRevRangeByLex(
-    a: String,
-    b: LexRange,
-    c: Option[Limit] = None
+    key: String,
+    lexRange: LexRange,
+    limit: Option[Limit] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRevRangeByLex.run((a, b, c))
+    ZRevRangeByLex.run((key, lexRange, limit))
 
+  /**
+   * Return a range of members in a sorted set, by score, with scores ordered from high to low.
+   *
+   * @param key Key of a sorted set
+   * @param scoreRange ScoreRange that must be satisfied
+   * @param withScores The optional WITHSCORES argument makes the command return both the element and its score, instead of the element alone
+   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns all elements from the offset
+   * @return Chunk of elements in the specified range (optionally with their scores)
+   */
   final def zRevRangeByScore(
-    a: String,
-    b: ScoreRange,
-    c: Option[WithScores] = None,
-    d: Option[Limit] = None
+    key: String,
+    scoreRange: ScoreRange,
+    withScores: Option[WithScores] = None,
+    limit: Option[Limit] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZRevRangeByScore.run((a, b, c, d))
+    ZRevRangeByScore.run((key, scoreRange, withScores, limit))
 
-  final def zRevRank(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[Long]] = ZRevRank.run((a, b))
+  /**
+   * Determine the index of a member in a sorted set, with scores ordered from high to low.
+   *
+   * @param key Key of a sorted set
+   * @param member Member of sorted set
+   * @return The rank of member
+   */
+  final def zRevRank(key: String, member: String): ZIO[RedisExecutor, RedisError, Option[Long]] =
+    ZRevRank.run((key, member))
 
+  /**
+   * Incrementally iterate sorted sets elements and associated scores.
+   *
+   * @param key Key of the set to scan
+   * @param cursor Cursor to use for this iteration of scan
+   * @param regex Glob-style pattern that filters which elements are returned
+   * @param count Count of elements. Roughly this number will be returned by Redis if possible
+   * @return Returns the items for this iteration or nothing when you reach the end
+   */
   final def zScan(
-    a: String,
-    b: Long,
-    c: Option[Regex] = None,
-    d: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (String, Chunk[String])] = ZScan.run((a, b, c, d))
+    key: String,
+    cursor: Long,
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = ZScan.run((key, cursor, regex, count))
 
-  final def zScore(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[Double]] = ZScore.run((a, b))
+  /**
+   * Get the score associated with the given member in a sorted set.
+   *
+   * @param key Key of a sorted set
+   * @param member Member of sorted set
+   * @return The score of member (a double precision floating point number
+   */
+  final def zScore(key: String, member: String): ZIO[RedisExecutor, RedisError, Option[Double]] =
+    ZScore.run((key, member))
 
-  final def zUnionStore(a: String, b: Long, c: String, cs: String*)(
-    d: Option[::[Double]] = None,
-    e: Option[Aggregate] = None
-  ): ZIO[RedisExecutor, RedisError, Long] = ZUnionStore.run((a, b, (c, cs.toList), d, e))
+  /**
+   * Add multiple sorted sets and store the resulting sorted set in a new key.
+   *
+   * @param destination Key of the output
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set
+   *          This means that the score of every element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
+   *          When WEIGHTS is not given, the multiplication factors default to 1.
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return The number of elements in the resulting sorted set at destination
+   */
+  final def zUnionStore(destination: String, inputKeysNum: Long, key: String, keys: String*)(
+    weights: Option[::[Double]] = None,
+    aggregate: Option[Aggregate] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    ZUnionStore.run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
 }
 
-private object SortedSets {
+private[redis] object SortedSets {
   final val BzPopMax =
     RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
   final val BzPopMin =

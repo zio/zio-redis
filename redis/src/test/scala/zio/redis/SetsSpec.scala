@@ -575,7 +575,7 @@ trait SetsSpec extends BaseSpec {
             members <- sRandMember(key, Some(3L)).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sRem")(
         testM("existing elements from non-empty set") {
           for {
@@ -612,7 +612,7 @@ trait SetsSpec extends BaseSpec {
             removed <- sRem(key, "a", "b").either
           } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sUnion")(
         testM("two non-empty sets") {
           for {
@@ -668,7 +668,7 @@ trait SetsSpec extends BaseSpec {
             union  <- sUnion(first, second).either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sUnionStore")(
         testM("two non-empty sets") {
           for {
@@ -730,7 +730,7 @@ trait SetsSpec extends BaseSpec {
             card   <- sUnionStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("sScan")(
         testM("non-empty set") {
           for {
@@ -738,7 +738,7 @@ trait SetsSpec extends BaseSpec {
             _                <- sAdd(key, "a", "b", "c")
             scan             <- sScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) &&
+          } yield assert(cursor)(isZero) &&
             assert(members)(isNonEmpty)
         },
         testM("empty set") {
@@ -746,7 +746,7 @@ trait SetsSpec extends BaseSpec {
             key              <- uuid
             scan             <- sScan(key, 0L)
             (cursor, members) = scan
-          } yield assert(cursor)(equalTo("0")) &&
+          } yield assert(cursor)(isZero) &&
             assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
@@ -755,16 +755,28 @@ trait SetsSpec extends BaseSpec {
             _                <- sAdd(key, "one", "two", "three")
             scan             <- sScan(key, 0L, Some("t[a-z]*".r))
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) &&
+          } yield assert(cursor)(isZero) &&
             assert(members)(isNonEmpty)
+        },
+        testM("with count over non-empty set with two iterations") {
+          for {
+            key                <- uuid
+            _                  <- sAdd(key, "a", "b", "c", "d", "e")
+            scan               <- sScan(key, 0L, count = Some(Count(3L)))
+            (cursor, members)   = scan
+            scan2              <- sScan(key, cursor, count = Some(Count(3L)))
+            (cursor2, members2) = scan2
+          } yield assert(cursor)(isGreaterThan(0L)) &&
+            assert(members)(isNonEmpty) &&
+            assert(cursor2)(isZero)
         },
         testM("with count over non-empty set") {
           for {
             key              <- uuid
             _                <- sAdd(key, "a", "b", "c", "d", "e")
-            scan             <- sScan(key, 0L, d = Some(Count(3L)))
+            scan             <- sScan(key, 0L, count = Some(Count(3L)))
             (cursor, members) = scan
-          } yield assert(cursor)(isNonEmptyString) &&
+          } yield assert(cursor)(isGreaterThan(0L)) &&
             assert(members)(isNonEmpty)
         },
         testM("error when not set") {
@@ -775,6 +787,6 @@ trait SetsSpec extends BaseSpec {
             scan  <- sScan(key, 0L).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
-      )
+      ) @@ testExecutorUnsupported
     )
 }
