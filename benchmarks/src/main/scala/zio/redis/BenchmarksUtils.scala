@@ -1,8 +1,9 @@
 package zio.redis
 
 import cats.effect.{ IO => CatsIO }
-import zio.{ BootstrapRuntime, ZIO }
+
 import zio.logging.Logging
+import zio.{ BootstrapRuntime, ZIO }
 
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>
