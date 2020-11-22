@@ -16,4 +16,5 @@ package object redis
     with options.SortedSets
     with options.Strings
     with options.Lists
+    with options.Streams
     with Interpreter

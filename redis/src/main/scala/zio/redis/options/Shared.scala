@@ -13,4 +13,6 @@ trait Shared {
     case object SetExisting extends Update
     case object SetNew      extends Update
   }
+
+  sealed case class Count(count: Long)
 }

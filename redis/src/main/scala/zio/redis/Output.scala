@@ -10,9 +10,11 @@ sealed trait Output[+A] {
   private[redis] final def unsafeDecode(respValue: RespValue): A =
     respValue match {
       case RespValue.Error(msg) if msg.startsWith("ERR")       =>
-        throw RedisError.ProtocolError(msg.drop(3).trim())
+        throw RedisError.ProtocolError(msg.drop(3).trim)
       case RespValue.Error(msg) if msg.startsWith("WRONGTYPE") =>
-        throw RedisError.WrongType(msg.drop(9).trim())
+        throw RedisError.WrongType(msg.drop(9).trim)
+      case RespValue.Error(msg) if msg.startsWith("BUSYGROUP") =>
+        throw RedisError.WrongType(msg.drop(9).trim)
       case RespValue.Error(msg)                                =>
         throw RedisError.ProtocolError(msg.trim)
       case success                                             =>
@@ -307,6 +309,121 @@ object Output {
           throw ProtocolError(s"$array doesn't have an even number of elements")
         case other =>
           throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object StreamOutput extends Output[Map[String, Map[String, String]]] {
+    protected def tryDecode(respValue: RespValue): Map[String, Map[String, String]] =
+      respValue match {
+        case RespValue.Array(entities) if entities.length % 2 == 0 =>
+          val output = collection.mutable.Map.empty[String, Map[String, String]]
+          val len    = entities.length
+          var pos    = 0
+          while (pos < len) {
+            (entities(pos), entities(pos + 1)) match {
+              case (id @ RespValue.BulkString(_), RespValue.Array(elements)) if elements.length % 2 == 0 =>
+                val entity = collection.mutable.Map.empty[String, String]
+                val elen   = elements.length
+                var epos   = 0
+                while (epos < elen) {
+                  (elements(epos), elements(epos + 1)) match {
+                    case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
+                      entity += key.asString -> value.asString
+                    case _                                                                =>
+                  }
+                  epos += 2
+                }
+                output += id.asString -> entity.toMap
+              case _ =>
+            }
+            pos += 2
+          }
+          output.toMap
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have an even number of elements")
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object XPendingOutput extends Output[PendingInfo] {
+    protected def tryDecode(respValue: RespValue): PendingInfo =
+      respValue match {
+        case RespValue.Array(
+              Seq(
+                RespValue.Integer(total),
+                first @ RespValue.BulkString(_),
+                last @ RespValue.BulkString(_),
+                RespValue.Array(pairs)
+              )
+            ) =>
+          val consumers = collection.mutable.Map.empty[String, Long]
+          pairs.foreach {
+            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), RespValue.Integer(total))) =>
+              consumers += (consumer.asString -> total)
+            case _                                                                                  =>
+              throw ProtocolError(s"Consumer doesn't have 2 elements")
+          }
+
+          PendingInfo(total, first.asString, last.asString, consumers.toMap)
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have valid format")
+        case other                      =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object PendingMessagesOutput extends Output[Chunk[PendingMessage]] {
+    protected def tryDecode(respValue: RespValue): Chunk[PendingMessage] =
+      respValue match {
+        case RespValue.Array(messages) =>
+          messages.collect {
+            case RespValue.Array(
+                  Seq(
+                    id @ RespValue.BulkString(_),
+                    owner @ RespValue.BulkString(_),
+                    RespValue.Integer(lastDelivered),
+                    RespValue.Integer(counter)
+                  )
+                ) =>
+              PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
+          }
+        case other                     =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object XReadOutput extends Output[Map[String, Map[String, Map[String, String]]]] {
+    protected def tryDecode(respValue: RespValue): Map[String, Map[String, Map[String, String]]] =
+      respValue match {
+        case RespValue.Array(streams) if streams.length % 2 == 0 =>
+          val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
+          val len    = streams.length
+          var pos    = 0
+          while (pos < len) {
+            streams(pos) match {
+              case stream @ RespValue.BulkString(_) =>
+                output += (stream.asString -> StreamOutput.unsafeDecode(streams(pos + 1)))
+              case _                                =>
+            }
+
+            pos += 2
+          }
+
+          output.toMap
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have valid format")
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object SetOutput extends Output[Boolean] {
+    protected def tryDecode(respValue: RespValue): Boolean =
+      respValue match {
+        case RespValue.NullValue       => false
+        case RespValue.SimpleString(_) => true
+        case other                     => throw ProtocolError(s"$other isn't a valid set response")
       }
   }
 

@@ -211,6 +211,99 @@ object Input {
       )
   }
 
+  case object IdleInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("IDLE"), stringEncode(data.toMillis.toString))
+  }
+
+  case object TimeInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("TIME"), stringEncode(data.toMillis.toString))
+  }
+
+  case object RetryCountInput extends Input[Long] {
+    def encode(data: Long): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("RETRYCOUNT"), stringEncode(data.toString))
+  }
+
+  case object XGroupCreateInput extends Input[XGroupCommand.Create] {
+    def encode(data: XGroupCommand.Create): Chunk[RespValue.BulkString] = {
+      val chunk =
+        Chunk(
+          stringEncode("CREATE"),
+          stringEncode(data.key),
+          stringEncode(data.group),
+          stringEncode(data.id)
+        )
+
+      if (data.mkStream)
+        chunk :+ stringEncode(MkStream.stringify)
+      else
+        chunk
+    }
+  }
+
+  case object XGroupSetIdInput extends Input[XGroupCommand.SetId] {
+    def encode(data: XGroupCommand.SetId): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("SETID"), stringEncode(data.key), stringEncode(data.group), stringEncode(data.id))
+  }
+
+  case object XGroupDestroyInput extends Input[XGroupCommand.Destroy] {
+    def encode(data: XGroupCommand.Destroy): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("DESTROY"), stringEncode(data.key), stringEncode(data.group))
+  }
+
+  case object XGroupCreateConsumerInput extends Input[XGroupCommand.CreateConsumer] {
+    def encode(data: XGroupCommand.CreateConsumer): Chunk[RespValue.BulkString] =
+      Chunk(
+        stringEncode("CREATECONSUMER"),
+        stringEncode(data.key),
+        stringEncode(data.group),
+        stringEncode(data.consumer)
+      )
+  }
+
+  case object XGroupDelConsumerInput extends Input[XGroupCommand.DelConsumer] {
+    def encode(data: XGroupCommand.DelConsumer): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("DELCONSUMER"), stringEncode(data.key), stringEncode(data.group), stringEncode(data.consumer))
+  }
+
+  case object BlockInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("BLOCK"), stringEncode(data.toMillis.toString))
+  }
+
+  case object StreamsInput extends Input[((String, String), Chunk[(String, String)])] {
+    def encode(data: ((String, String), Chunk[(String, String)])): Chunk[RespValue.BulkString] = {
+      val (keys, ids) =
+        Chunk.fromIterable(data._1 +: data._2).map(pair => (stringEncode(pair._1), stringEncode(pair._2))).unzip
+
+      Chunk.single(stringEncode("STREAMS")) ++ keys ++ ids
+    }
+  }
+
+  case object GroupInput extends Input[Group] {
+    def encode(data: Group): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("GROUP"), stringEncode(data.group), stringEncode(data.consumer))
+  }
+
+  case object NoAckInput extends Input[NoAck] {
+    def encode(data: NoAck): Chunk[RespValue.BulkString] =
+      Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object MaxLenInput extends Input[MaxLen] {
+    def encode(data: MaxLen): Chunk[RespValue.BulkString] = {
+      val chunk =
+        if (data.approximate)
+          Chunk(stringEncode("MAXLEN"), stringEncode("~"))
+        else
+          Chunk.single(stringEncode("MAXLEN"))
+
+      chunk :+ stringEncode(data.count.toString)
+    }
+  }
+
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
     def encode(data: (A, B)): Chunk[RespValue.BulkString] = _1.encode(data._1) ++ _2.encode(data._2)
   }
@@ -230,6 +323,19 @@ object Input {
       extends Input[(A, B, C, D, E)] {
     def encode(data: (A, B, C, D, E)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5)
+  }
+
+  final case class Tuple6[-A, -B, -C, -D, -E, -F](
+    _1: Input[A],
+    _2: Input[B],
+    _3: Input[C],
+    _4: Input[D],
+    _5: Input[E],
+    _6: Input[F]
+  ) extends Input[(A, B, C, D, E, F)] {
+    def encode(data: (A, B, C, D, E, F)): Chunk[RespValue.BulkString] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
+        _6.encode(data._6)
   }
 
   final case class Tuple7[-A, -B, -C, -D, -E, -F, -G](
@@ -260,6 +366,24 @@ object Input {
     def encode(data: (A, B, C, D, E, F, G, H, I)): Chunk[RespValue.BulkString] =
       _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
         _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8) ++ _9.encode(data._9)
+  }
+
+  final case class Tuple10[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J](
+    _1: Input[A],
+    _2: Input[B],
+    _3: Input[C],
+    _4: Input[D],
+    _5: Input[E],
+    _6: Input[F],
+    _7: Input[G],
+    _8: Input[H],
+    _9: Input[I],
+    _10: Input[J]
+  ) extends Input[(A, B, C, D, E, F, G, H, I, J)] {
+    def encode(data: (A, B, C, D, E, F, G, H, I, J)): Chunk[RespValue.BulkString] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++
+        _5.encode(data._5) ++ _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8) ++
+        _9.encode(data._9) ++ _10.encode(data._10)
   }
 
   final case class Tuple11[-A, -B, -C, -D, -E, -F, -G, -H, -I, -J, -K](
@@ -304,5 +428,13 @@ object Input {
 
   case object WithHashInput extends Input[WithHash] {
     def encode(data: WithHash): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object WithForceInput extends Input[WithForce] {
+    def encode(data: WithForce): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object WithJustIdInput extends Input[WithJustId] {
+    def encode(data: WithJustId): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 }

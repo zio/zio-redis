@@ -2,8 +2,6 @@ package zio.redis.options
 
 trait Geo {
 
-  sealed case class Count(count: Long)
-
   sealed case class LongLat(longitude: Double, latitude: Double)
 
   sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
