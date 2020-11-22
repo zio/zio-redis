@@ -30,21 +30,21 @@ class SetBenchmarks {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeClientRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.set(Key.unsafeFrom(i), i))))
+    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.set(Key.unsafeFrom(i), i))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeClientRun[RediculousClient](c => items.traverse_(i => RedisCommands.set[RedisIO](i, i).run(c)))
+    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.set[RedisIO](i, i).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[Redis4CatsClient[String]](c => items.traverse_(i => c.set(i, i)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.set(i, i)))
   }
 
   @Benchmark

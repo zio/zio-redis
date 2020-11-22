@@ -7,7 +7,7 @@ import zio.logging.Logging
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>
 
-  def unsafeClientRun[CL](f: CL => CatsIO[Unit])(implicit unsafeRunner: QueryUnsafeRunner[CL]): Unit =
+  def unsafeRun[CL](f: CL => CatsIO[Unit])(implicit unsafeRunner: QueryUnsafeRunner[CL]): Unit =
     unsafeRunner.unsafeRun(f)
 
   def zioUnsafeRun(source: ZIO[RedisExecutor, RedisError, Unit]): Unit =

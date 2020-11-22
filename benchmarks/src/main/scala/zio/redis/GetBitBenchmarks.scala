@@ -31,21 +31,21 @@ class GetBitBenchmarks {
     import _root_.laserdisc.{all => cmd, _}
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
+    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeClientRun[RediculousClient](c => items.traverse_(i => RedisCommands.getbit[RedisIO](i, 0L).run(c)))
+    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.getbit[RedisIO](i, 0L).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[Redis4CatsClient[String]](c => items.traverse_(i => c.getBit(i, 0L)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.getBit(i, 0L)))
   }
 
   @Benchmark
