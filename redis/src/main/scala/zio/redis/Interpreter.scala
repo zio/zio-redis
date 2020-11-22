@@ -94,7 +94,7 @@ trait Interpreter {
       private def runReceive(inStream: Stream[IOException, Byte]): IO[RedisError, Unit] =
         inStream
           .mapError(RedisError.IOError)
-          .transduce(RespValue.deserialize.toTransducer)
+          .transduce(RespValue.Deserializer.toTransducer)
           .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 
     }

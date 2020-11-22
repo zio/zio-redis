@@ -23,7 +23,7 @@ object RespValueSpec extends BaseSpec {
         testM("simple string") {
           val s     = "Hello, world."
           val bytes = Chunk.fromArray((s + "\r\n").getBytes(StandardCharsets.UTF_8))
-          Stream.fromChunk(bytes).run(RespValue.simpleStringDeserialize).map(assert(_)(equalTo(s)))
+          Stream.fromChunk(bytes).run(RespValue.SimpleStringDeserializer).map(assert(_)(equalTo(s)))
         },
         testM("an array") {
           val value = RespValue.array(
@@ -32,11 +32,11 @@ object RespValueSpec extends BaseSpec {
             RespValue.NullValue,
             RespValue.bulkString("last")
           )
-          Stream.fromChunk(value.serialize).run(RespValue.deserialize).map(assert(_)(equalTo(value)))
+          Stream.fromChunk(value.serialize).run(RespValue.Deserializer).map(assert(_)(equalTo(value)))
         },
         testM("a bulk string") {
           val bytes = encode("$6\r\nfoobar\r\n$4\r\ntest\r\n")
-          Stream.fromChunk(bytes).run(RespValue.deserialize).map(assert(_)(equalTo(RespValue.bulkString("foobar"))))
+          Stream.fromChunk(bytes).run(RespValue.Deserializer).map(assert(_)(equalTo(RespValue.bulkString("foobar"))))
         },
         testM("as transducer") {
           val values = Chunk(
@@ -47,7 +47,7 @@ object RespValueSpec extends BaseSpec {
           val bytes  = values.flatMap(_.serialize)
           Stream
             .fromChunk(bytes)
-            .transduce(RespValue.deserialize.toTransducer)
+            .transduce(RespValue.Deserializer.toTransducer)
             .runCollect
             .map(assert(_)(equalTo(values)))
         }
