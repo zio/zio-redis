@@ -1,11 +1,16 @@
 package zio.redis
 
+import scala.util.matching.Regex
+
+import zio.Chunk
+import zio.ZIO
 import zio.redis.RedisError.{ ProtocolError, WrongType }
+import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
-  val sortedSetsSuite =
+  val sortedSetsSuite                              =
     suite("sorted sets")(
       suite("zAdd")(
         testM("to empty set") {
@@ -790,11 +795,10 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zScan")(
         testM("non-empty set") {
           for {
-            key              <- uuid
-            _                <- zAdd(key)(MemberScore(1d, "atest"), MemberScore(2d, "btest"), MemberScore(3d, "ctest"))
-            scan             <- zScan(key, 0L)
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) && assert(members)(isNonEmpty)
+            key     <- uuid
+            _       <- zAdd(key)(MemberScore(1d, "atest"), MemberScore(2d, "btest"), MemberScore(3d, "ctest"))
+            members <- scanAll(key)
+          } yield assert(members)(equalTo(Chunk("atest", "1", "btest", "2", "ctest", "3")))
         },
         testM("empty set") {
           for {
@@ -805,39 +809,36 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("with match over non-empty set") {
           for {
-            key              <- uuid
-            _                <- zAdd(key)(MemberScore(1d, "one"), MemberScore(2d, "two"), MemberScore(3d, "three"))
-            scan             <- zScan(key, 0L, Some("t[a-z]*".r))
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) && assert(members)(isNonEmpty)
+            key     <- uuid
+            _       <- zAdd(key)(MemberScore(1d, "one"), MemberScore(2d, "two"), MemberScore(3d, "three"))
+            members <- scanAll(key, Some("t[a-z]*".r))
+          } yield assert(members)(equalTo((Chunk("two", "2", "three", "3"))))
         },
         testM("with count over non-empty set") {
           for {
-            key              <- uuid
-            _                <- zAdd(key)(
+            key     <- uuid
+            _       <- zAdd(key)(
                    MemberScore(1d, "a"),
                    MemberScore(2d, "b"),
                    MemberScore(3d, "c"),
                    MemberScore(4d, "d"),
                    MemberScore(5d, "e")
                  )
-            scan             <- zScan(key, 0L, None, Some(Count(3L)))
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) && assert(members)(isNonEmpty)
+            members <- scanAll(key, count = Some(Count(3L)))
+          } yield assert(members)(isNonEmpty)
         },
         testM("match with count over non-empty set") {
           for {
-            key              <- uuid
-            _                <- zAdd(key)(
+            key     <- uuid
+            _       <- zAdd(key)(
                    MemberScore(1d, "testa"),
                    MemberScore(2d, "testb"),
                    MemberScore(3d, "testc"),
                    MemberScore(4d, "testd"),
                    MemberScore(5d, "teste")
                  )
-            scan             <- zScan(key, 0L, Some("t[a-z]*".r), Some(Count(3L)))
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) && assert(members)(isNonEmpty)
+            members <- scanAll(key, Some("t[a-z]*".r), Some(Count(3L)))
+          } yield assert(members)(isNonEmpty)
         },
         testM("error when not set") {
           for {
@@ -992,4 +993,17 @@ trait SortedSetsSpec extends BaseSpec {
         }
       )
     )
+  private def scanAll(
+    key: String,
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZStream
+      .paginateChunkM(0L) { cursor =>
+        zScan(key, cursor, regex, count).map {
+          case (nc, nm) if nc == 0 => (nm, None)
+          case (nc, nm)            => (nm, Some(nc))
+        }
+      }
+      .runCollect
 }

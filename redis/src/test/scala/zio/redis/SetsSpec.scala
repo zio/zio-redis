@@ -1,12 +1,17 @@
 package zio.redis
 
+import scala.util.matching.Regex
+
 import zio.Chunk
+import zio.NonEmptyChunk
+import zio.ZIO
 import zio.redis.RedisError.WrongType
+import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 
 trait SetsSpec extends BaseSpec {
-  val setsSuite =
+  val setsSuite                                    =
     suite("sets")(
       suite("sAdd")(
         testM("to empty set") {
@@ -733,13 +738,12 @@ trait SetsSpec extends BaseSpec {
       ),
       suite("sScan")(
         testM("non-empty set") {
+          val testData = NonEmptyChunk("a", "b", "c")
           for {
-            key              <- uuid
-            _                <- sAdd(key, "a", "b", "c")
-            scan             <- sScan(key, 0L)
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) &&
-            assert(members)(isNonEmpty)
+            key     <- uuid
+            _       <- sAdd(key, testData.head, testData.tail: _*)
+            members <- scanAll(key)
+          } yield assert(members.toSet)(equalTo(testData.toSet))
         },
         testM("empty set") {
           for {
@@ -750,34 +754,20 @@ trait SetsSpec extends BaseSpec {
             assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
+          val testData = NonEmptyChunk("one", "two", "three")
           for {
-            key              <- uuid
-            _                <- sAdd(key, "one", "two", "three")
-            scan             <- sScan(key, 0L, Some("t[a-z]*".r))
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) &&
-            assert(members)(isNonEmpty)
-        },
-        testM("with count over non-empty set with two iterations") {
-          for {
-            key                <- uuid
-            _                  <- sAdd(key, "a", "b", "c", "d", "e")
-            scan               <- sScan(key, 0L, count = Some(Count(3L)))
-            (cursor, members)   = scan
-            scan2              <- sScan(key, cursor, count = Some(Count(3L)))
-            (cursor2, members2) = scan2
-          } yield assert(cursor)(isGreaterThan(0L)) &&
-            assert(members)(isNonEmpty) &&
-            assert(cursor2)(isZero)
+            key     <- uuid
+            _       <- sAdd(key, testData.head, testData.tail: _*)
+            members <- scanAll(key, Some("t[a-z]*".r))
+          } yield assert(members.toSet)(equalTo(Set("two", "three")))
         },
         testM("with count over non-empty set") {
+          val testData = NonEmptyChunk("a", "b", "c", "d", "e")
           for {
-            key              <- uuid
-            _                <- sAdd(key, "a", "b", "c", "d", "e")
-            scan             <- sScan(key, 0L, count = Some(Count(3L)))
-            (cursor, members) = scan
-          } yield assert(cursor)(isGreaterThan(0L)) &&
-            assert(members)(isNonEmpty)
+            key     <- uuid
+            _       <- sAdd(key, testData.head, testData.tail: _*)
+            members <- scanAll(key, None, Some(Count(3L)))
+          } yield assert(members.toSet)(equalTo(testData.toSet))
         },
         testM("error when not set") {
           for {
@@ -789,4 +779,17 @@ trait SetsSpec extends BaseSpec {
         }
       )
     )
+  private def scanAll(
+    key: String,
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZStream
+      .paginateChunkM(0L) { cursor =>
+        sScan(key, cursor, regex, count).map {
+          case (nc, nm) if nc == 0 => (nm, None)
+          case (nc, nm)            => (nm, Some(nc))
+        }
+      }
+      .runCollect
 }
