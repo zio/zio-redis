@@ -294,7 +294,7 @@ trait Keys {
    * by at least the specified number of replicas.
    *
    * @param replicas minimum replicas to reach
-   * @param timeout 0 means to block forever.
+   * @param timeout specified in milliseconds, 0 means to block forever
    * @return the number of replicas reached both in case of failure and success
    *
    * @see <a href="https://redis.io/commands/wait">https://redis.io/commands/wait</a>
