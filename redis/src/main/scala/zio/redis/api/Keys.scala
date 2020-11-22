@@ -70,7 +70,8 @@ trait Keys {
    * @see [[expire]]
    * @see <a href="https://redis.io/commands/expireat">https://redis.io/commands/expireat</a>
    */
-  final def expireAt(key: String, timestamp: Instant): ZIO[RedisExecutor, RedisError, Boolean] = ExpireAt.run((key, timestamp))
+  final def expireAt(key: String, timestamp: Instant): ZIO[RedisExecutor, RedisError, Boolean] =
+    ExpireAt.run((key, timestamp))
 
   /**
    * Returns all keys matching pattern.
@@ -109,7 +110,8 @@ trait Keys {
     copy: Option[Copy] = None,
     replace: Option[Replace] = None,
     keys: Option[(String, List[String])]
-  ): ZIO[RedisExecutor, RedisError, String] = Migrate.run((host, port, key, destinationDb, timeout, copy, replace, auth, keys))
+  ): ZIO[RedisExecutor, RedisError, String] =
+    Migrate.run((host, port, key, destinationDb, timeout, copy, replace, auth, keys))
 
   /**
    * Move key from the currently selected database to the specified destination database. When key already
@@ -121,7 +123,8 @@ trait Keys {
    *
    * @see <a href="https://redis.io/commands/move">https://redis.io/commands/move</a>
    */
-  final def move(key: String, destination_db: Long): ZIO[RedisExecutor, RedisError, Boolean] = Move.run((key, destination_db))
+  final def move(key: String, destination_db: Long): ZIO[RedisExecutor, RedisError, Boolean] =
+    Move.run((key, destination_db))
 
   /**
    * Remove the existing timeout on key
@@ -143,7 +146,8 @@ trait Keys {
    * @see [[pExpireAt]]
    * @see <a href="https://redis.io/commands/pexpire">https://redis.io/commands/pexpire</a>
    */
-  final def pExpire(key: String, timeout: Duration): ZIO[RedisExecutor, RedisError, Boolean] = PExpire.run((key, timeout))
+  final def pExpire(key: String, timeout: Duration): ZIO[RedisExecutor, RedisError, Boolean] =
+    PExpire.run((key, timeout))
 
   /**
    * Deletes the key at the specific timestamp. A timestamp in the past will delete the key immediately.
@@ -155,7 +159,8 @@ trait Keys {
    * @see [[pExpire]]
    * @see <a href="https://redis.io/commands/pexpireat">https://redis.io/commands/pexpireat</a>
    */
-  final def pExpireAt(key: String, timestamp: Instant): ZIO[RedisExecutor, RedisError, Boolean] = PExpireAt.run((key, timestamp))
+  final def pExpireAt(key: String, timestamp: Instant): ZIO[RedisExecutor, RedisError, Boolean] =
+    PExpireAt.run((key, timestamp))
 
   /**
    * Returns the remaining time to live of a key that has a timeout.
