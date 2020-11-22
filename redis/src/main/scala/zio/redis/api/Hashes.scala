@@ -10,26 +10,84 @@ import zio.{ Chunk, ZIO }
 trait Hashes {
   import Hashes._
 
-  final def hDel(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Long] =
-    HDel.run((a, (b, bs.toList)))
+  /**
+   * Removes the specified fields from the hash stored at `key`.
+   * @param key
+   * @param field field to remove
+   * @param fields additional fields
+   * @return number of fields removed from the hash
+   */
+  final def hDel(key: String, field: String, fields: String*): ZIO[RedisExecutor, RedisError, Long] =
+    HDel.run((key, (field, fields.toList)))
 
-  final def hExists(a: String, b: String): ZIO[RedisExecutor, RedisError, Boolean] = HExists.run((a, b))
+  /**
+   * Returns if `field` is an existing field in the hash stored at `key`.
+   * @param key
+   * @param field field to inspect
+   * @return boolean if the field exists
+   */
+  final def hExists(key: String, field: String): ZIO[RedisExecutor, RedisError, Boolean] = HExists.run((key, field))
 
-  final def hGet(a: String, b: String): ZIO[RedisExecutor, RedisError, Option[String]] = HGet.run((a, b))
+  /**
+   * Returns the value associated with `field` in the hash stored at `key`.
+   * @param key
+   * @param field
+   * @return value stored in the field, if any
+   */
+  final def hGet(key: String, field: String): ZIO[RedisExecutor, RedisError, Option[String]] = HGet.run((key, field))
 
-  final def hGetAll(a: String): ZIO[RedisExecutor, RedisError, Map[String, String]] = HGetAll.run(a)
+  /**
+   * Returns all fields and values of the hash stored at `key`.
+   * @param key
+   * @return map of `field -> value` pairs under the key
+   */
+  final def hGetAll(key: String): ZIO[RedisExecutor, RedisError, Map[String, String]] = HGetAll.run(key)
 
-  final def hIncrBy(a: String, b: String, c: Long): ZIO[RedisExecutor, RedisError, Long] = HIncrBy.run((a, b, c))
+  /**
+   * Increments the number stored at `field` in the hash stored at `key` by `increment`. If field does not exist the
+   * value is set to `increment`.
+   * @param key
+   * @param field field containing an integer, or a new field
+   * @param increment integer to increment with
+   * @return integer value after incrementing, or error if the field is not an integer
+   */
+  final def hIncrBy(key: String, field: String, increment: Long): ZIO[RedisExecutor, RedisError, Long] =
+    HIncrBy.run((key, field, increment))
 
-  final def hIncrByFloat(a: String, b: String, c: Double): ZIO[RedisExecutor, RedisError, Double] =
-    HIncrByFloat.run((a, b, c))
+  /**
+   * Increment the specified `field` of a hash stored at `key`, and representing a floating point number
+   * by the specified `increment`.
+   * @param key
+   * @param field field containing a float, or a new field
+   * @param increment float to increment with
+   * @return float value after incrementing, or error if the field is not a float
+   */
+  final def hIncrByFloat(key: String, field: String, increment: Double): ZIO[RedisExecutor, RedisError, Double] =
+    HIncrByFloat.run((key, field, increment))
 
-  final def hKeys(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HKeys.run(a)
+  /**
+   * Returns all field names in the hash stored at `key`.
+   * @param key
+   * @return chunk of field names
+   */
+  final def hKeys(key: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HKeys.run(key)
 
-  final def hLen(a: String): ZIO[RedisExecutor, RedisError, Long] = HLen.run(a)
+  /**
+   * Returns the number of fields contained in the hash stored at `key`.
+   * @param key
+   * @return number of fields
+   */
+  final def hLen(key: String): ZIO[RedisExecutor, RedisError, Long] = HLen.run(key)
 
-  final def hmGet(a: String, b: String, bs: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
-    HmGet.run((a, (b, bs.toList)))
+  /**
+   * Returns the values associated with the specified `fields` in the hash stored at `key`.
+   * @param key
+   * @param field fields to retrieve
+   * @param fields additional fields
+   * @return chunk of values, where value is `None` if the field is not in the hash
+   */
+  final def hmGet(key: String, field: String, fields: String*): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
+    HmGet.run((key, (field, fields.toList)))
 
   /**
    *  Sets the specified `field -> value` pairs in the hash stored at `key`.
@@ -46,22 +104,56 @@ trait Hashes {
   ): ZIO[RedisExecutor, RedisError, Unit] =
     HmSet.run((key, (pair, pairs.toList)))
 
+  /**
+   * Iterates `fields` of Hash types and their associated values using a cursor-based iterator.
+   * @param key
+   * @param cursor integer representing iterator
+   * @param pattern regular expression matching keys to scan
+   * @param count approximate number of elements to return (see https://redis.io/commands/scan#the-count-option)
+   * @return pair containing the next cursor and list of elements scanned
+   */
   final def hScan(
-    a: Long,
-    b: Option[Regex] = None,
-    c: Option[Long] = None,
-    d: Option[String] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = HScan.run((a, b, c, d))
+    key: String,
+    cursor: Long,
+    pattern: Option[Regex] = None,
+    count: Option[Long] = None,
+    `type`: Option[String] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = HScan.run((key, cursor, pattern, count, `type`))
 
-  final def hSet(a: String, b: (String, String), bs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
-    HSet.run((a, (b, bs.toList)))
+  /**
+   * Sets `field -> value` pairs in the hash stored at `key`.
+   * @param key
+   * @param pair mapping of a field to value
+   * @param pairs additional pairs
+   * @return number of fields added
+   */
+  final def hSet(key: String, pair: (String, String), pairs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
+    HSet.run((key, (pair, pairs.toList)))
 
-  final def hSetNx(a: String, b: String, c: String): ZIO[RedisExecutor, RedisError, Boolean] =
-    HSetNx.run((a, b, c))
+  /**
+   * Sets `field` in the hash stored at `key` to `value`, only if `field` does not yet exist
+   * @param key
+   * @param field
+   * @param value
+   * @return true if `field` is a new field and value was set, otherwise false
+   */
+  final def hSetNx(key: String, field: String, value: String): ZIO[RedisExecutor, RedisError, Boolean] =
+    HSetNx.run((key, field, value))
 
-  final def hStrLen(a: String, b: String): ZIO[RedisExecutor, RedisError, Long] = HStrLen.run((a, b))
+  /**
+   * Returns the string length of the value associated with `field` in the hash stored at `key`.
+   * @param key
+   * @param field
+   * @return string length of the value in field, or zero if either field or key do not exist.
+   */
+  final def hStrLen(key: String, field: String): ZIO[RedisExecutor, RedisError, Long] = HStrLen.run((key, field))
 
-  final def hVals(a: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HVals.run(a)
+  /**
+   * Returns all values in the hash stored at `key`.
+   * @param key
+   * @return list of values in the hash, or an empty list when `key` does not exist.
+   */
+  final def hVals(key: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HVals.run(key)
 }
 
 private[redis] object Hashes {
@@ -89,7 +181,7 @@ private[redis] object Hashes {
   final val HScan =
     RedisCommand(
       "HSCAN",
-      Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+      Tuple5(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
       ScanOutput
     )
 
