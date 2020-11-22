@@ -3,6 +3,7 @@ package zio.redis
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test._
+import Assertion._
 
 object ApiSpec
     extends ClusterSpec
@@ -19,7 +20,14 @@ object ApiSpec
     suite("Redis commands")(
       suite("Cluster")(
         clusterSuite,
-        keysSuite
+        testM("get and set a key") {
+          for {
+            key <- uuid
+            a   <- uuid
+            _   <- sAdd(key, a)
+            res <- sCard(key)
+          } yield assert(res)(equalTo(1L))
+        }
       ).provideCustomLayerShared(Logging.console() >>> ClusterExecutor ++ Clock.live),
       suite("Single Node")(
         // keysSuite,
