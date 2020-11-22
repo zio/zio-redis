@@ -787,6 +787,6 @@ trait SetsSpec extends BaseSpec {
             scan  <- sScan(key, 0L).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ testExecutorUnsupported
+      )
     )
 }

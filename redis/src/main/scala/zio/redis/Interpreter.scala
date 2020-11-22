@@ -239,6 +239,36 @@ trait Interpreter {
               },
               STM.succeedNow(Replies.WrongType)
             )
+          case api.Sets.SScan.name       =>
+            def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
+              key.asString match {
+                case "COUNT" => Some(value.asString.toInt)
+                case _       => None
+              }
+            val key                                                                                = input.head.asString
+            STM.ifM(isSet(key))(
+              {
+                val start      = input(1).asString.toInt
+                val maybeRegex = if (input.size > 2) input(2).asString match {
+                  case "MATCH" => Some(input(3).asString.r)
+                  case _       => None
+                }
+                else None
+                val maybeCount =
+                  if (input.size > 4) maybeGetCount(input(4), input(5))
+                  else if (input.size > 2) maybeGetCount(input(2), input(3))
+                  else None
+                val end        = start + maybeCount.getOrElse(10)
+                for {
+                  set      <- sets.getOrElse(key, Set.empty)
+                  filtered  = maybeRegex.map(regex => set.filter(s => regex.pattern.matcher(s).matches)).getOrElse(set)
+                  resultSet = filtered.slice(start, end)
+                  nextIndex = if (filtered.size <= end) 0 else end
+                  results   = Replies.array(resultSet)
+                } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
+              },
+              STM.succeedNow(Replies.WrongType)
+            )
           case api.Strings.Set.name      =>
             // not a full implementation. Just enough to make set tests work
             val key   = input.head.asString
