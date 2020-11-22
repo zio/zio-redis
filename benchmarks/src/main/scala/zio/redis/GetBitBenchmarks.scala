@@ -27,7 +27,7 @@ class GetBitBenchmarks extends BenchmarkRuntime {
   @Benchmark
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
-    import _root_.laserdisc.{all => cmd, _}
+    import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
     unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))

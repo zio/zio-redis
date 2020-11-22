@@ -1,7 +1,7 @@
 package zio.redis
 
-import cats.effect.{IO => CatsIO}
-import zio.{BootstrapRuntime, ZIO}
+import cats.effect.{ IO => CatsIO }
+import zio.{ BootstrapRuntime, ZIO }
 import zio.logging.Logging
 
 trait BenchmarksUtils {
