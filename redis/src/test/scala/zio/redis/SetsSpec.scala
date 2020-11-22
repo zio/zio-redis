@@ -1,13 +1,32 @@
 package zio.redis
 
+import scala.util.matching.Regex
+
 import zio.Chunk
+import zio.ZIO
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
-import zio.ZIO
-import scala.util.matching.Regex
+import zio.NonEmptyChunk
 
 trait SetsSpec extends BaseSpec {
+
+  // This is used by tests of SSCAN to enable repeated calls to get the entire data set. You should be careful not
+  // to do this in production code if the data set is very large since it brings it all into memory.
+  def scanAll(
+    key: String,
+    cursor: Long,
+    regex: Option[Regex],
+    count: Option[Count],
+    members: Set[String]
+  ): ZIO[RedisExecutor, RedisError, Set[String]] =
+    sScan(key, cursor, regex, count).flatMap {
+      case (nextCursor, newMembers) =>
+        val updatedMembers = members ++ newMembers.toSet
+        if (nextCursor == 0) ZIO.succeed(updatedMembers)
+        else scanAll(key, nextCursor, regex, count, updatedMembers)
+    }
+
   val setsSuite =
     suite("sets")(
       suite("sAdd")(
@@ -761,26 +780,12 @@ trait SetsSpec extends BaseSpec {
             assert(members)(isNonEmpty)
         },
         testM("with count over non-empty possibly multiple iterations") {
-
-          // Repeatedly call SCAN until the cursor returns 0. Warning: this brings the entire
-          // set into memory which may not be what you want. It is only done here for test
-          // purposes and we know the Set size.
-          def scanAll(key: String, cursor: Long, regex: Option[Regex], count: Option[Count], members: Set[String])
-            : ZIO[RedisExecutor, RedisError, Set[String]] =
-            sScan(key, cursor, regex, count).flatMap {
-              case (nextCursor, newMembers) =>
-                val updatedMembers = members ++ newMembers.toSet
-                if (nextCursor == 0) ZIO.succeed(updatedMembers)
-                else scanAll(key, nextCursor, regex, count, updatedMembers)
-            }
-
-          val testSet = Set("a", "b", "c", "d", "e")
-
+          val addedMembers = NonEmptyChunk("a", "b", "c", "d", "e")
           for {
             key     <- uuid
-            _       <- sAdd(key, "a", "b", "c", "d", "e")
+            _       <- sAdd(key, addedMembers.head, addedMembers.tail: _*)
             members <- scanAll(key, 0L, None, Some(Count(3L)), Set.empty)
-          } yield assert(members)(equalTo(testSet))
+          } yield assert(members)(equalTo(addedMembers.toSet))
         },
         testM("with count over non-empty set") {
           for {
