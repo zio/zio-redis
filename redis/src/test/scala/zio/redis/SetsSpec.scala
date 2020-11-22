@@ -8,24 +8,22 @@ import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
 import zio.NonEmptyChunk
+import zio.stream.ZStream
 
 trait SetsSpec extends BaseSpec {
-
-  // This is used by tests of SSCAN to enable repeated calls to get the entire data set. You should be careful not
-  // to do this in production code if the data set is very large since it brings it all into memory.
   def scanAll(
     key: String,
-    cursor: Long,
-    regex: Option[Regex],
-    count: Option[Count],
-    members: Set[String]
-  ): ZIO[RedisExecutor, RedisError, Set[String]] =
-    sScan(key, cursor, regex, count).flatMap {
-      case (nextCursor, newMembers) =>
-        val updatedMembers = members ++ newMembers.toSet
-        if (nextCursor == 0) ZIO.succeed(updatedMembers)
-        else scanAll(key, nextCursor, regex, count, updatedMembers)
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+   ZStream
+    .paginateChunkM(0L) { cursor =>
+      sScan(key, cursor, regex, count).map {
+        case (nc, nm) if nc == 0 => (nm, None)
+        case (nc, nm)           => (nm, Some(nc))
+      }
     }
+    .runCollect
 
   val setsSuite =
     suite("sets")(
@@ -754,13 +752,12 @@ trait SetsSpec extends BaseSpec {
       ) @@ testExecutorUnsupported,
       suite("sScan")(
         testM("non-empty set") {
+          val testData = NonEmptyChunk("a", "b", "c")
           for {
-            key              <- uuid
-            _                <- sAdd(key, "a", "b", "c")
-            scan             <- sScan(key, 0L)
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) &&
-            assert(members)(isNonEmpty)
+            key     <- uuid
+            _       <- sAdd(key, testData.head, testData.tail: _*)
+            members <- scanAll(key)
+          } yield assert(members.toSet)(equalTo(testData.toSet))
         },
         testM("empty set") {
           for {
@@ -771,30 +768,20 @@ trait SetsSpec extends BaseSpec {
             assert(members)(isEmpty)
         },
         testM("with match over non-empty set") {
+          val testData = NonEmptyChunk("one", "two", "three")
           for {
             key              <- uuid
-            _                <- sAdd(key, "one", "two", "three")
-            scan             <- sScan(key, 0L, Some("t[a-z]*".r))
-            (cursor, members) = scan
-          } yield assert(cursor)(isZero) &&
-            assert(members)(isNonEmpty)
-        },
-        testM("with count over non-empty possibly multiple iterations") {
-          val addedMembers = NonEmptyChunk("a", "b", "c", "d", "e")
-          for {
-            key     <- uuid
-            _       <- sAdd(key, addedMembers.head, addedMembers.tail: _*)
-            members <- scanAll(key, 0L, None, Some(Count(3L)), Set.empty)
-          } yield assert(members)(equalTo(addedMembers.toSet))
+            _                <- sAdd(key, testData.head, testData.tail: _*)
+            members          <- scanAll(key, Some("t[a-z]*".r))
+          } yield assert(members.toSet)(equalTo(Set("two", "three")))
         },
         testM("with count over non-empty set") {
+          val testData = NonEmptyChunk("a", "b", "c", "d", "e")
           for {
-            key              <- uuid
-            _                <- sAdd(key, "a", "b", "c", "d", "e")
-            scan             <- sScan(key, 0L, count = Some(Count(3L)))
-            (cursor, members) = scan
-          } yield assert(cursor)(isGreaterThan(0L)) &&
-            assert(members)(isNonEmpty)
+            key     <- uuid
+            _       <- sAdd(key, testData.head, testData.tail: _*)
+            members <- scanAll(key, None, Some(Count(3L)))
+          } yield assert(members.toSet)(equalTo(testData.toSet))
         },
         testM("error when not set") {
           for {
