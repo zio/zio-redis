@@ -58,6 +58,63 @@ trait HashSpec extends BaseSpec {
           } yield assert(deleted)(equalTo(2L))
         }
       ),
+      suite("hmSet and hmGet")(
+        testM("set followed by get") {
+          for {
+            hash   <- uuid
+            field  <- uuid
+            value  <- uuid
+            _      <- hmSet(hash, field -> value)
+            result <- hmGet(hash, field)
+          } yield assert(result)(hasSameElements(Chunk(Some(value))))
+        },
+        testM("set multiple fields for hash") {
+          for {
+            hash    <- uuid
+            field1  <- uuid
+            field2  <- uuid
+            value   <- uuid
+            _       <- hmSet(hash, field1 -> value, field2 -> value)
+            result1 <- hmGet(hash, field1)
+            result2 <- hmGet(hash, field2)
+          } yield assert(result1)(hasSameElements(Chunk(Some(value)))) &&
+            assert(result2)(hasSameElements(Chunk(Some(value))))
+        },
+        testM("get multiple fields for hash") {
+          for {
+            hash   <- uuid
+            field1 <- uuid
+            field2 <- uuid
+            value1 <- uuid
+            value2 <- uuid
+            _      <- hmSet(hash, field1 -> value1, field2 -> value2)
+            result <- hmGet(hash, field1, field2)
+          } yield assert(result)(hasSameElements(Chunk(Some(value1), Some(value2))))
+        },
+        testM("delete field for hash") {
+          for {
+            hash    <- uuid
+            field   <- uuid
+            value   <- uuid
+            _       <- hmSet(hash, field -> value)
+            deleted <- hDel(hash, field)
+            result  <- hmGet(hash, field)
+          } yield assert(deleted)(equalTo(1L)) && assert(result)(hasSameElements(Chunk(None)))
+        },
+        testM("delete multiple fields for hash") {
+          for {
+            hash    <- uuid
+            field1  <- uuid
+            field2  <- uuid
+            field3  <- uuid
+            value   <- uuid
+            _       <- hmSet(hash, field1 -> value, field2 -> value, field3 -> value)
+            deleted <- hDel(hash, field1, field3)
+            result  <- hmGet(hash, field1, field2, field3)
+          } yield assert(deleted)(equalTo(2L)) &&
+            assert(result)(hasSameElements(Chunk(None, Some(value), None)))
+        }
+      ),
       suite("hExists")(
         testM("field should exist") {
           for {
