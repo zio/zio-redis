@@ -37,7 +37,6 @@ trait Geo {
     radiusUnit: Option[RadiusUnit] = None
   ): ZIO[RedisExecutor, RedisError, Option[Double]] = GeoDist.run((key, member1, member2, radiusUnit))
 
-  final def geoHash(key: String, member: String, members: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
   /**
    *  Return valid Geohash strings representing the position of one or more elements in a sorted set value representing
    *  a geospatial index.
@@ -46,9 +45,13 @@ trait Geo {
    *  @param members additional members
    *  @return chunk of geohashes, where value is `None` if a member is not in the set
    */
+  final def geoHash(
+    key: String,
+    member: String,
+    members: String*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
     GeoHash.run((key, (member, members.toList)))
 
-  final def geoPos(key: String, member: String, members: String*): ZIO[RedisExecutor, RedisError, Chunk[LongLat]] =
   /**
    *  Return the positions (longitude, latitude) of all the specified members of the geospatial index represented by the
    *  sorted set at `key`.
@@ -57,6 +60,11 @@ trait Geo {
    *  @param members additional members
    *  @return chunk of positions, where value is `None` if a member is not in the set
    */
+  final def geoPos(
+    key: String,
+    member: String,
+    members: String*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[LongLat]]] =
     GeoPos.run((key, (member, members.toList)))
 
   /**
@@ -137,7 +145,8 @@ private object Geo {
       OptionalOutput(DoubleOutput)
     )
 
-  final val GeoHash = RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOutput)
+  final val GeoHash =
+    RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
 
   final val GeoPos = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
 
