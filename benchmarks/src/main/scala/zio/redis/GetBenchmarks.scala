@@ -32,7 +32,7 @@ class GetBenchmarks {
     import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[LaserDiskClient](c => items.traverse_(i => c.send(cmd.get[String](Key.unsafeFrom(i)))))
+    unsafeClientRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.get[String](Key.unsafeFrom(i)))))
   }
 
   @Benchmark

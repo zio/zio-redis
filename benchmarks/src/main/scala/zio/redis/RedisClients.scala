@@ -16,15 +16,15 @@ object RedisClients {
   type RedisIO[A] = Redis[CatsIO, A]
 
   type Redis4CatsClient[V] = RedisCommands[CatsIO, String, V]
-  type LaserDiskClient     = RedisClient[CatsIO]
+  type LaserDiscClient     = RedisClient[CatsIO]
   type RediculousClient    = RedisConnection[CatsIO]
 
   trait QueryUnsafeRunner[F] {
     def unsafeRun(f: F => CatsIO[Unit]): Unit
   }
 
-  implicit object LaserDiskClientRunner extends QueryUnsafeRunner[LaserDiskClient] {
-    override def unsafeRun(f: LaserDiskClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
+  implicit object LaserDiskClientRunner extends QueryUnsafeRunner[LaserDiscClient] {
+    override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
   }
 
   implicit object RedicoulusClientRunner extends QueryUnsafeRunner[RediculousClient] {
@@ -49,7 +49,7 @@ object RedisClients {
     } yield c
 
   import _root_.laserdisc.auto.autoRefine
-  private val laserDiskConnection: Resource[CatsIO, LaserDiskClient] = RedisClient.to(RedisHost, RedisPort)
+  private val laserDiskConnection: Resource[CatsIO, LaserDiscClient] = RedisClient.to(RedisHost, RedisPort)
 
   import dev.profunktor.redis4cats.Redis
   import dev.profunktor.redis4cats.effect.Log.NoOp.instance

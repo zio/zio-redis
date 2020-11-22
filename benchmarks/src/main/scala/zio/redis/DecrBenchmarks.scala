@@ -35,7 +35,7 @@ class DecrBenchmarks {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeClientRun[LaserDiskClient](c => items.traverse_(i => c.send(cmd.decr[Long](Key.unsafeFrom(i)))))
+    unsafeClientRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.decr[Long](Key.unsafeFrom(i)))))
   }
 
   @Benchmark

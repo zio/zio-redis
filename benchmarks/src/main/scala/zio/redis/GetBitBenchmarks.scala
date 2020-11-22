@@ -33,7 +33,7 @@ class GetBitBenchmarks {
     import _root_.laserdisc.{all => cmd, _}
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeClientRun[LaserDiskClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
+    unsafeClientRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
   }
 
   @Benchmark
