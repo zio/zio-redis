@@ -211,7 +211,7 @@ trait Strings {
     expireTime: Option[Duration] = None,
     update: Option[Update] = None,
     keepTtl: Option[KeepTtl] = None
-  ): ZIO[RedisExecutor, RedisError, Option[Unit]] = Set.run((key, value, expireTime, update, keepTtl))
+  ): ZIO[RedisExecutor, RedisError, Boolean] = Set.run((key, value, expireTime, update, keepTtl))
 
   /**
    * Sets or clears the bit at offset in the string value stored at key
@@ -304,7 +304,7 @@ private[redis] object Strings {
         OptionalInput(UpdateInput),
         OptionalInput(KeepTtlInput)
       ),
-      OptionalOutput(UnitOutput)
+      SetOutput
     )
 
   final val SetBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
