@@ -2,11 +2,11 @@ package zio.redis
 
 import scala.concurrent.ExecutionContext
 
-import cats.effect.{Blocker, ContextShift, Resource, Timer, IO => CatsIO}
+import cats.effect.{ Blocker, ContextShift, Resource, Timer, IO => CatsIO }
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.data.RedisCodec
 import fs2.io.tcp.SocketGroup
-import io.chrisdavenport.rediculous.{Redis, RedisConnection}
+import io.chrisdavenport.rediculous.{ Redis, RedisConnection }
 import io.lettuce.core.ClientOptions
 import laserdisc.fs2.RedisClient
 
