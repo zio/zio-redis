@@ -4,6 +4,7 @@ import zio.ZIO
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
+import zio.redis.Key.NoKey
 
 trait Connection {
   import Connection._
@@ -18,8 +19,8 @@ trait Connection {
 }
 
 private object Connection {
-  final val Auth   = RedisCommand("AUTH", StringInput, UnitOutput)
-  final val Echo   = RedisCommand("ECHO", StringInput, MultiStringOutput)
-  final val Ping   = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
-  final val Select = RedisCommand("SELECT", LongInput, UnitOutput)
+  final val Auth   = RedisCommand("AUTH", StringInput, UnitOutput, NoKey)
+  final val Echo   = RedisCommand("ECHO", StringInput, MultiStringOutput, NoKey)
+  final val Ping   = RedisCommand("PING", Varargs(StringInput), MultiStringOutput, NoKey)
+  final val Select = RedisCommand("SELECT", LongInput, UnitOutput, NoKey)
 }

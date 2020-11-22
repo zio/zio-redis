@@ -8,6 +8,54 @@ import scala.util.matching.Regex
 import zio.Chunk
 import zio.duration.Duration
 
+sealed trait Key[-A] {
+  private[redis] def keyOf(data: A): Option[String]
+}
+
+object Key {
+  case object NoKey        extends Key[Any]                {
+    private[redis] def keyOf(data: Any): Option[String] = None
+  }
+  final case object One    extends Key[String]             {
+    private[redis] def keyOf(data: String): Option[String] = Some(data)
+  }
+  final case object Tuple2 extends Key[(String, Any)]      {
+    private[redis] def keyOf(data: (String, Any)): Option[String] = Some(data._1)
+  }
+  final case object Tuple3 extends Key[(String, Any, Any)] {
+    private[redis] def keyOf(data: (String, Any, Any)): Option[String] = Some(data._1)
+  }
+
+  final case object Tuple4 extends Key[(String, Any, Any, Any)] {
+    private[redis] def keyOf(data: (String, Any, Any, Any)): Option[String] = Some(data._1)
+  }
+
+  final case object Tuple5  extends Key[(String, Any, Any, Any, Any)]                               {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any)): Option[String] = Some(data._1)
+  }
+  final case object Tuple6  extends Key[(String, Any, Any, Any, Any, Any)]                          {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any, Any)): Option[String] = Some(data._1)
+  }
+  final case object Tuple7  extends Key[(String, Any, Any, Any, Any, Any, Any)]                     {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any, Any, Any)): Option[String] = Some(data._1)
+  }
+  final case object Tuple8  extends Key[(String, Any, Any, Any, Any, Any, Any, Any)]                {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any, Any, Any, Any)): Option[String] = Some(data._1)
+  }
+  final case object Tuple9  extends Key[(String, Any, Any, Any, Any, Any, Any, Any, Any)]           {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any, Any, Any, Any, Any)): Option[String] = Some(data._1)
+  }
+  final case object Tuple10 extends Key[(String, Any, Any, Any, Any, Any, Any, Any, Any, Any)]      {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any, Any, Any, Any, Any, Any)): Option[String] =
+      Some(data._1)
+  }
+  final case object Tuple11 extends Key[(String, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any)] {
+    private[redis] def keyOf(data: (String, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any)): Option[String] =
+      Some(data._1)
+  }
+
+}
+
 sealed trait Input[-A] {
   private[redis] def encode(data: A): Chunk[RespValue.BulkString]
 }
@@ -142,6 +190,10 @@ object Input {
 
   case object NoInput extends Input[Unit] {
     def encode(data: Unit): Chunk[RespValue.BulkString] = Chunk.empty
+  }
+
+  case object NodesInput extends Input[Nodes] {
+    def encode(data: Nodes): Chunk[RespValue.BulkString] = Chunk.single(stringEncode((data.stringify)))
   }
 
   final case class NonEmptyList[-A](input: Input[A]) extends Input[(A, List[A])] {

@@ -18,7 +18,7 @@ trait HyperLogLog {
 }
 
 private object HyperLogLog {
-  final val PfAdd   = RedisCommand("PFADD", Tuple2(StringInput, NonEmptyList(StringInput)), BoolOutput)
-  final val PfCount = RedisCommand("PFCOUNT", NonEmptyList(StringInput), LongOutput)
-  final val PfMerge = RedisCommand("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput)
+  final val PfAdd   = RedisCommand("PFADD", Tuple2(StringInput, NonEmptyList(StringInput)), BoolOutput, Key.NoKey)
+  final val PfCount = RedisCommand("PFCOUNT", NonEmptyList(StringInput), LongOutput, Key.NoKey)
+  final val PfMerge = RedisCommand("PFMERGE", Tuple2(StringInput, NonEmptyList(StringInput)), UnitOutput, Key.NoKey)
 }

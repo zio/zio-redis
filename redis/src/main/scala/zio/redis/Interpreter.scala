@@ -21,7 +21,7 @@ trait Interpreter {
 
     trait Service {
 
-      def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
+      def execute(command: Chunk[RespValue.BulkString], key: Option[String]): IO[RedisError, RespValue]
 
     }
 
@@ -34,7 +34,7 @@ trait Interpreter {
       logger: Logger[String]
     ) extends Service {
 
-      override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+      override def execute(command: Chunk[RespValue.BulkString], key: Option[String]): IO[RedisError, RespValue] =
         Promise
           .make[RedisError, RespValue]
           .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
@@ -94,6 +94,77 @@ trait Interpreter {
 
     def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       (ZLayer.identity[Logging] ++ ByteStream.socketLoopback(port).mapError(RedisError.IOError)) >>> fromBytestream
+
+    private[redis] val DefaultClusterPort: Int = 7000
+
+    private final class LiveCluster(
+      executors: NonEmptyChunk[(ClusterNode, RedisExecutor)],
+      logger: Logger[String]
+    ) extends Service {
+
+      private val RedisClusterHashSlots: Int = 16384
+
+      override def execute(
+        command: Chunk[RespValue.BulkString],
+        key: Option[String]
+      ): zio.IO[RedisError, RespValue] = {
+        val _        = (executors, logger, key, RedisClusterHashSlots)
+        val executor = key.flatMap { k =>
+          val slot = Crc16.crc16(k.getBytes()) % RedisClusterHashSlots
+          executors.collectFirst {
+            case (node, executor) if node.slots.find(_.covers(slot)).nonEmpty => executor
+          }
+        }.getOrElse(executors.head._2)
+        executor.get
+          .execute(command, None)
+          .tapError(
+            ZIO.whenCase(_) {
+              // FIXME handle retry for Moved
+              case RedisError.Moved(err) => logger.error(s"slot moved $err")
+            }
+          )
+      }
+    }
+    // builds a ClusterExecutor from startup nodes
+    // fetches topology and build the connected nodes
+    // issue here is it ignores unconnected nodes
+    // this need to be refreshed also during the lifetime of the ClusterExecutor
+    def fromStartupNodes(first: SocketAddress, rest: SocketAddress*): ZLayer[Logging, RedisError, RedisExecutor] =
+      ZLayer.fromFunctionManaged { logger =>
+        def sequence[R, E, A](c: NonEmptyChunk[ZLayer[R, E, A]]) =
+          c.tail
+            .foldLeft(c.head.map(NonEmptyChunk.single))((r, l) => r.zipWithPar(l)(_ :+ _))
+
+        val loggerLayer  = ZLayer.succeed(logger.get)
+        val startupNodes = NonEmptyChunk(first, rest: _*).map {
+          loggerLayer >>> zio.redis.RedisExecutor.live(_)
+        }
+
+        for {
+          _                <- logger.get.info(s"trying to connect to: ${first}").toManaged_
+          topologyFetchers <- sequence(startupNodes).build.map(_.map(e => clusterNodes().provide(e)))
+          // FIXME these ones above will be kept until the service is stopped we need them temporarily
+          topology         <- ZIO.firstSuccessOf(topologyFetchers.head, topologyFetchers.tail).toManaged_
+          connected        <- topology
+                         .filter(_.isConnected)
+                         .nonEmptyOrElse[Managed[RedisError, NonEmptyChunk[ClusterNode]]](
+                           ZManaged.fail(RedisError.ProtocolError("unable to reach cluster from startup nodes"))
+                         )(ZManaged.succeed(_))
+          layers            = connected
+                     .map(cn => (loggerLayer >>> RedisExecutor.live(cn.ip, cn.port)).map(cn -> _))
+          _                <- logger.get.info(s"cluster topology $connected").toManaged_
+          nodes            <- sequence(layers).build
+
+        } yield new LiveCluster(nodes, logger.get)
+      }
+
+    def localCluster(port: Int = DefaultClusterPort): ZLayer[Logging, RedisError, RedisExecutor] =
+      ZLayer.fromFunctionManaged(logging =>
+        for {
+          socket <- IO.effectTotal(new InetSocketAddress(InetAddress.getLoopbackAddress, port)).toManaged_
+          res    <- fromStartupNodes(socket).build.provide(logging)
+        } yield res.get
+      )
 
   }
 

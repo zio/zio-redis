@@ -9,6 +9,7 @@ sealed trait RedisError extends NoStackTrace
 object RedisError {
   final case class ProtocolError(message: String)  extends RedisError
   final case class WrongType(message: String)      extends RedisError
+  final case class Moved(message: String)          extends RedisError
   final case class IOError(exception: IOException) extends RedisError
 
 }

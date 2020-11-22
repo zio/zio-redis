@@ -3,7 +3,7 @@ services:
   redis-node-0:
     image: docker.io/bitnami/redis-cluster:6.0-debian-10
     ports:
-      - "6379:6379"
+      - "7000:6379"
     volumes:
       - redis-cluster_data-0:/bitnami/redis/data
     environment:

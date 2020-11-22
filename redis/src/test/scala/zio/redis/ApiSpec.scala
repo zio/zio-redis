@@ -17,16 +17,22 @@ object ApiSpec
 
   def spec =
     suite("Redis commands")(
-      clusterSuite,
-      keysSuite,
-      listSuite,
-      setsSuite,
-      sortedSetsSuite,
-      stringsSuite,
-      geoSuite,
-      hyperLogLogSuite,
-      hashSuite
-    ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live)
+      suite("Cluster")(
+        clusterSuite,
+        keysSuite
+      ).provideCustomLayerShared(Logging.console() >>> ClusterExecutor ++ Clock.live),
+      suite("Single Node")(
+        // keysSuite,
+        // listSuite,
+        // setsSuite,
+        // sortedSetsSuite,
+        // stringsSuite,
+        // geoSuite,
+        // hyperLogLogSuite,
+        // hashSuite
+      ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live)
+    )
 
-  private val Executor = RedisExecutor.loopback().orDie
+  private val Executor        = RedisExecutor.loopback().orDie
+  private val ClusterExecutor = RedisExecutor.localCluster().orDie
 }

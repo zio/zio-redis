@@ -58,28 +58,32 @@ private object Lists {
     RedisCommand(
       "BRPOPLPUSH",
       Tuple3(StringInput, StringInput, DurationSecondsInput),
-      OptionalOutput(MultiStringOutput)
+      OptionalOutput(MultiStringOutput),
+      Key.Tuple3
     )
 
-  final val LIndex = RedisCommand("LINDEX", Tuple2(StringInput, LongInput), OptionalOutput(MultiStringOutput))
-  final val LLen   = RedisCommand("LLEN", StringInput, LongOutput)
-  final val LPop   = RedisCommand("LPOP", StringInput, OptionalOutput(MultiStringOutput))
-  final val LPush  = RedisCommand("LPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val LPushX = RedisCommand("LPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val LRange = RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput)
-  final val LRem   = RedisCommand("LREM", Tuple3(StringInput, LongInput, StringInput), LongOutput)
-  final val LSet   = RedisCommand("LSET", Tuple3(StringInput, LongInput, StringInput), UnitOutput)
-  final val LTrim  = RedisCommand("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput)
-  final val RPop   = RedisCommand("RPOP", StringInput, OptionalOutput(MultiStringOutput))
+  final val LIndex =
+    RedisCommand("LINDEX", Tuple2(StringInput, LongInput), OptionalOutput(MultiStringOutput), Key.Tuple2)
+  final val LLen   = RedisCommand("LLEN", StringInput, LongOutput, Key.One)
+  final val LPop   = RedisCommand("LPOP", StringInput, OptionalOutput(MultiStringOutput), Key.One)
+  final val LPush  = RedisCommand("LPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput, Key.Tuple2)
+  final val LPushX = RedisCommand("LPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput, Key.Tuple2)
+  final val LRange = RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput, Key.Tuple2)
+  final val LRem   = RedisCommand("LREM", Tuple3(StringInput, LongInput, StringInput), LongOutput, Key.Tuple3)
+  final val LSet   = RedisCommand("LSET", Tuple3(StringInput, LongInput, StringInput), UnitOutput, Key.Tuple3)
+  final val LTrim  = RedisCommand("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput, Key.Tuple2)
+  final val RPop   = RedisCommand("RPOP", StringInput, OptionalOutput(MultiStringOutput), Key.One)
 
   final val RPopLPush =
-    RedisCommand("RPOPLPUSH", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
+    RedisCommand("RPOPLPUSH", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput), Key.Tuple2)
 
-  final val RPush  = RedisCommand("RPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val RPushX = RedisCommand("RPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val BlPop  = RedisCommand("BLPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
-  final val BrPop  = RedisCommand("BRPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
+  final val RPush  = RedisCommand("RPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput, Key.Tuple2)
+  final val RPushX = RedisCommand("RPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput, Key.Tuple2)
+  final val BlPop  =
+    RedisCommand("BLPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput, Key.NoKey)
+  final val BrPop  =
+    RedisCommand("BRPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput, Key.NoKey)
 
   final val LInsert =
-    RedisCommand("LINSERT", Tuple4(StringInput, PositionInput, StringInput, StringInput), LongOutput)
+    RedisCommand("LINSERT", Tuple4(StringInput, PositionInput, StringInput, StringInput), LongOutput, Key.Tuple4)
 }
