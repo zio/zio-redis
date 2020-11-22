@@ -1,12 +1,13 @@
 package zio.redis
 
-import zio.redis.RedisError.{ ProtocolError, WrongType }
-import zio.test.Assertion._
-import zio.test._
 import scala.util.matching.Regex
+
 import zio.Chunk
 import zio.ZIO
+import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.stream.ZStream
+import zio.test.Assertion._
+import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
   private def scanAll(
