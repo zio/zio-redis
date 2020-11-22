@@ -11,19 +11,19 @@ import zio.NonEmptyChunk
 import zio.stream.ZStream
 
 trait SetsSpec extends BaseSpec {
-  def scanAll(
+  private def scanAll(
     key: String,
     regex: Option[Regex] = None,
     count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-   ZStream
-    .paginateChunkM(0L) { cursor =>
-      sScan(key, cursor, regex, count).map {
-        case (nc, nm) if nc == 0 => (nm, None)
-        case (nc, nm)           => (nm, Some(nc))
+    ZStream
+      .paginateChunkM(0L) { cursor =>
+        sScan(key, cursor, regex, count).map {
+          case (nc, nm) if nc == 0 => (nm, None)
+          case (nc, nm)            => (nm, Some(nc))
+        }
       }
-    }
-    .runCollect
+      .runCollect
 
   val setsSuite =
     suite("sets")(
@@ -770,9 +770,9 @@ trait SetsSpec extends BaseSpec {
         testM("with match over non-empty set") {
           val testData = NonEmptyChunk("one", "two", "three")
           for {
-            key              <- uuid
-            _                <- sAdd(key, testData.head, testData.tail: _*)
-            members          <- scanAll(key, Some("t[a-z]*".r))
+            key     <- uuid
+            _       <- sAdd(key, testData.head, testData.tail: _*)
+            members <- scanAll(key, Some("t[a-z]*".r))
           } yield assert(members.toSet)(equalTo(Set("two", "three")))
         },
         testM("with count over non-empty set") {
