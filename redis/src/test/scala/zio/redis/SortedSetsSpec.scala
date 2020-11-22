@@ -10,7 +10,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
-  val sortedSetsSuite =
+  val sortedSetsSuite                              =
     suite("sorted sets")(
       suite("zAdd")(
         testM("to empty set") {
