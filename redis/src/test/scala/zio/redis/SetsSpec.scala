@@ -11,20 +11,6 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SetsSpec extends BaseSpec {
-  private def scanAll(
-    key: String,
-    regex: Option[Regex] = None,
-    count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZStream
-      .paginateChunkM(0L) { cursor =>
-        sScan(key, cursor, regex, count).map {
-          case (nc, nm) if nc == 0 => (nm, None)
-          case (nc, nm)            => (nm, Some(nc))
-        }
-      }
-      .runCollect
-
   val setsSuite =
     suite("sets")(
       suite("sAdd")(
@@ -793,4 +779,17 @@ trait SetsSpec extends BaseSpec {
         }
       ) @@ testExecutorUnsupported
     )
+  private def scanAll(
+    key: String,
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZStream
+      .paginateChunkM(0L) { cursor =>
+        sScan(key, cursor, regex, count).map {
+          case (nc, nm) if nc == 0 => (nm, None)
+          case (nc, nm)            => (nm, Some(nc))
+        }
+      }
+      .runCollect
 }

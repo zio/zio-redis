@@ -10,20 +10,6 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
-  private def scanAll(
-    key: String,
-    regex: Option[Regex] = None,
-    count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
-    ZStream
-      .paginateChunkM(0L) { cursor =>
-        zScan(key, cursor, regex, count).map {
-          case (nc, nm) if nc == 0 => (nm, None)
-          case (nc, nm)            => (nm, Some(nc))
-        }
-      }
-      .runCollect
-
   val sortedSetsSuite =
     suite("sorted sets")(
       suite("zAdd")(
@@ -1007,4 +993,17 @@ trait SortedSetsSpec extends BaseSpec {
         }
       )
     )
+  private def scanAll(
+    key: String,
+    regex: Option[Regex] = None,
+    count: Option[Count] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    ZStream
+      .paginateChunkM(0L) { cursor =>
+        zScan(key, cursor, regex, count).map {
+          case (nc, nm) if nc == 0 => (nm, None)
+          case (nc, nm)            => (nm, Some(nc))
+        }
+      }
+      .runCollect
 }
