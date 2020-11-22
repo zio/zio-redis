@@ -1,3 +1,3 @@
-package github.contributors.domain
+package example.domain
 
 final case class GithubUnavailable(message: String) extends Throwable

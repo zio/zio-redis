@@ -33,7 +33,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(skip in publish := true)
-    .aggregate(redis, benchmarks, examples)
+    .aggregate(redis, benchmarks, example)
 
 lazy val redis =
   project
@@ -67,10 +67,10 @@ lazy val benchmarks =
       scalacOptions in Compile := Seq("-Xlint:unused")
     )
 
-lazy val examples =
+lazy val example =
   project
-    .in(file("examples"))
-    .settings(stdSettings("examples"))
+    .in(file("example"))
+    .settings(stdSettings("example"))
     .dependsOn(redis)
     .settings(
       skip in publish := true,
@@ -82,7 +82,6 @@ lazy val examples =
         "io.circe" %% "circe-core" % "0.12.3",
         "io.circe" %% "circe-generic" % "0.12.3",
         "de.heikoseeberger" %% "akka-http-circe" % "1.31.0",
-        "dev.zio" %% "zio-json" % "0.0.1",
         "dev.zio" %% "zio-config" % "1.0.0-RC29-1",
         "dev.zio" %% "zio-config-magnolia" % "1.0.0-RC29-1",
         "dev.zio" %% "zio-config-typesafe" % "1.0.0-RC29-1"

@@ -1,10 +1,12 @@
-package github.contributors.api
+package example.api
 
 import akka.http.interop.{HttpServer, ZIOSupport}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import github.contributors.domain.ContributorService
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import example.config.RedisConfig
+import example.domain.ContributorService
+import example.domain.ContributorService.SttpClient
 import zio._
 import zio.config.ZConfig
 
@@ -16,7 +18,7 @@ object Api {
     def routes: Route
   }
 
-  val live: ZLayer[ZConfig[HttpServer.Config] with SttpClient, Nothing, Api] =
+  val live: ZLayer[ZConfig[HttpServer.Config] with ZConfig[RedisConfig] with SttpClient, Nothing, Api] =
     ZLayer.fromFunction { env =>
       new Service with ZIOSupport {
 

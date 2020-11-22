@@ -1,4 +1,4 @@
-package github.contributors.config
+package example.config
 
 import zio.config.magnolia.DeriveConfigDescriptor
 import akka.http.interop.HttpServer

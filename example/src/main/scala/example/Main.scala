@@ -1,19 +1,18 @@
-package github.contributors
+package example
 
 import akka.actor.ActorSystem
 import akka.http.interop._
 import akka.http.scaladsl.server.Route
 import com.typesafe.config.{Config, ConfigFactory}
-import github.contributors.api.{Api, SttpClient}
-import github.contributors.config.AppConfig
-import sttp.client.SttpBackend
-import sttp.client.asynchttpclient.WebSocketHandler
+import example.api.Api
+import example.config.AppConfig
+import example.domain.ContributorService.SttpClient
 import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zio._
 import zio.console._
 import zio.redis._
+import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
-import zio.logging.{LogAnnotation, Logging}
 
 object Main extends App {
 
@@ -24,7 +23,6 @@ object Main extends App {
 
   private val program: RIO[HttpServer with ZEnv, Unit] = {
     val startHttpServer = HttpServer.start.tapM(_ => putStrLn("Server online."))
-    val redisExecutor = RedisExecutor.live("localhost", 1)
 
     startHttpServer.useForever
   }
@@ -36,12 +34,14 @@ object Main extends App {
       ZManaged.make(ZIO(ActorSystem("zio-redis-example")))(system => ZIO.fromFuture(_ => system.terminate()).either)
     }
 
-    val apiConfigLayer = configLayer.map(config => Has(config.get.api))
-    val redisConfigLayer = configLayer.map(config => Has(config.get.redis))
+    val apiConfigLayer = configLayer.narrow(_.api)
+    val redisConfigLayer = configLayer.narrow(_.redis) // ???
 
     val sttpLayer: TaskLayer[SttpClient] = AsyncHttpClientZioBackend().toLayer
-    val apiLayer: TaskLayer[Api] = (apiConfigLayer ++ sttpLayer) >>> Api.live
+    val apiLayer: TaskLayer[Api] = (apiConfigLayer ++ redisConfigLayer ++ sttpLayer) >>> Api.live
     val routesLayer: URLayer[Api, Has[Route]] = ZLayer.fromService(_.routes)
+
+    val redisLayer = RedisExecutor.live("localhost", 1)
 
     val serverEnv: TaskLayer[HttpServer] =
       (actorSystemLayer ++ apiConfigLayer ++ (apiLayer >>> routesLayer)) >>> HttpServer.live

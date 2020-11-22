@@ -1,14 +1,15 @@
-package github.contributors.domain
+package example.domain
 
 import zio._
 import sttp.client._
-import github.contributors.api.SttpClient
 import sttp.client.basicRequest
 import sttp.client.circe.asJson
 
 object ContributorService {
 
-  def getContributors(url: String): ZIO[SttpClient, Throwable, List[Contributor]] = {
+  type SttpClient = Has[SttpBackend[Task, Nothing, NothingT]]
+
+  def getContributors(url: String): ZIO[SttpClient, Throwable, List[Contributor]] =
     ZIO.accessM[SttpClient] { sttpClient =>
       val request = basicRequest
         .get(uri"$url")
@@ -22,5 +23,4 @@ object ContributorService {
           case Left(error) => ZIO.fail(GithubUnavailable(error.body))
         }
     }
-  }
 }

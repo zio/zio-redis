@@ -1,4 +1,4 @@
-package github.contributors.domain
+package example.domain
 
 import io.circe.Decoder
 import io.circe._
