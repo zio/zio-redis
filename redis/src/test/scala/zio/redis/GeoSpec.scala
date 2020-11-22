@@ -10,10 +10,11 @@ trait GeoSpec extends BaseSpec {
     suite("geo")(
       testM("geoAdd followed by geoPos") {
         import GeoSpec.Serbia._
+        val nonExistentMember = "Tokyo"
         for {
           _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-          locations <- geoPos(key, member1, member2)
-        } yield assert(locations)(hasSameElements(Chunk(member1LongLat, member2LongLat)))
+          locations <- geoPos(key, member1, nonExistentMember, member2)
+        } yield assert(locations)(hasSameElements(Chunk(Some(member1LongLat), None, Some(member2LongLat))))
       },
       testM("calculate distance between geospatial items") {
         val key     = "key"
@@ -27,10 +28,12 @@ trait GeoSpec extends BaseSpec {
       },
       testM("get geoHash") {
         import GeoSpec.Sicily._
+        val nonExistentMember = "Tokyo"
         for {
           _      <- geoAdd(key, member1LongLat -> member1)
-          result <- geoHash(key, member1)
-        } yield assert(result)(hasSize(equalTo(1)))
+          _      <- geoAdd(key, member2LongLat -> member2)
+          result <- geoHash(key, member1, nonExistentMember, member2)
+        } yield assert(result)(hasSameElements(Chunk(Some(member1GeoHash), None, Some(member2GeoHash))))
       },
       suite("geoRadius")(
         testM("without details") {
@@ -288,6 +291,14 @@ trait GeoSpec extends BaseSpec {
               )
             )
           )
+        },
+        testM("with a non-existent member") {
+          import GeoSpec.Sicily._
+          val nonExistentMember = "Tokyo"
+          for {
+            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- geoRadiusByMember(key, nonExistentMember, 200d, RadiusUnit.Kilometers).either
+          } yield assert(response)(isLeft)
         }
       )
     )
@@ -307,10 +318,12 @@ object GeoSpec {
     val member1         = "Palermo"
     val member1Distance = 190.4424
     val member1Hash     = 3479099956230698L
+    val member1GeoHash  = "sqc8b49rny0"
     val member1LongLat  = LongLat(13.361389338970184, 38.1155563954963)
     val member2         = "Catania"
     val member2Distance = 56.4413
     val member2Hash     = 3479447370796909L
+    val member2GeoHash  = "sqdtr74hyu0"
     val member2LongLat  = LongLat(15.087267458438873, 37.50266842333162)
   }
 }
