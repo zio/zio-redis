@@ -350,7 +350,7 @@ object Output {
     protected def tryDecode(respValue: RespValue): PendingInfo =
       respValue match {
         case RespValue.Array(
-              Chunk(
+              Seq(
                 RespValue.Integer(total),
                 first @ RespValue.BulkString(_),
                 last @ RespValue.BulkString(_),
@@ -359,9 +359,9 @@ object Output {
             ) =>
           val consumers = collection.mutable.Map.empty[String, Long]
           pairs.foreach {
-            case RespValue.Array(Chunk(consumer @ RespValue.BulkString(_), RespValue.Integer(total))) =>
+            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), RespValue.Integer(total))) =>
               consumers += (consumer.asString -> total)
-            case _                                                                                    =>
+            case _                                                                                  =>
               throw ProtocolError(s"Consumer doesn't have 2 elements")
           }
 
@@ -379,7 +379,7 @@ object Output {
         case RespValue.Array(messages) =>
           messages.collect {
             case RespValue.Array(
-                  Chunk(
+                  Seq(
                     id @ RespValue.BulkString(_),
                     owner @ RespValue.BulkString(_),
                     RespValue.Integer(lastDelivered),
