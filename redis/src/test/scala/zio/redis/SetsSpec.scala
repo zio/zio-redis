@@ -730,7 +730,7 @@ trait SetsSpec extends BaseSpec {
             card   <- sUnionStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ testExecutorUnsupported,
+      ),
       suite("sScan")(
         testM("non-empty set") {
           for {
