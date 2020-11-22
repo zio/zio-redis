@@ -239,6 +239,18 @@ trait Interpreter {
               },
               STM.succeedNow(Replies.WrongType)
             )
+          case api.Sets.SUnion.name      =>
+            val keys = input.map(_.asString)
+            STM.ifM(forAll(keys)(isSet))(
+              STM
+                .foldLeft(keys)(Set.empty[String]) { (unionSoFar, nextKey) =>
+                  sets.getOrElse(nextKey, Set.empty[String]).map { currentSet =>
+                    unionSoFar ++ currentSet
+                  }
+                }
+                .map(unionSet => Replies.array(unionSet)),
+              STM.succeedNow(Replies.WrongType)
+            )
           case api.Sets.SScan.name       =>
             def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
               key.asString match {

@@ -668,7 +668,7 @@ trait SetsSpec extends BaseSpec {
             union  <- sUnion(first, second).either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ testExecutorUnsupported,
+      ),
       suite("sUnionStore")(
         testM("two non-empty sets") {
           for {
