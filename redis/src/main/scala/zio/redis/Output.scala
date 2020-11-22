@@ -243,13 +243,14 @@ object Output {
       }
   }
 
-  case object GeoOutput extends Output[Chunk[LongLat]] {
-    protected def tryDecode(respValue: RespValue): Chunk[LongLat] =
+  case object GeoOutput extends Output[Chunk[Option[LongLat]]] {
+    protected def tryDecode(respValue: RespValue): Chunk[Option[LongLat]] =
       respValue match {
         case RespValue.Array(elements) =>
           elements.map {
             case RespValue.ArrayValues(RespValue.BulkString(long), RespValue.BulkString(lat)) =>
-              LongLat(decodeDouble(long), decodeDouble(lat))
+              Some(LongLat(decodeDouble(long), decodeDouble(lat)))
+            case RespValue.NullValue                                                          => None
             case other                                                                        =>
               throw ProtocolError(s"$other was not a longitude,latitude pair")
           }
