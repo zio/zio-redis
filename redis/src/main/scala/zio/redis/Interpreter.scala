@@ -225,6 +225,20 @@ trait Interpreter {
               sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_))),
               STM.succeedNow(Replies.WrongType)
             )
+          case api.Sets.SRem.name        =>
+            val key = input.head.asString
+            STM.ifM(isSet(key))(
+              {
+                val values = input.tail.map(_.asString)
+                for {
+                  oldSet <- sets.getOrElse(key, Set.empty)
+                  newSet  = oldSet -- values
+                  removed = oldSet.size - newSet.size
+                  _      <- sets.put(key, newSet)
+                } yield RespValue.Integer(removed.toLong)
+              },
+              STM.succeedNow(Replies.WrongType)
+            )
           case api.Strings.Set.name      =>
             // not a full implementation. Just enough to make set tests work
             val key   = input.head.asString

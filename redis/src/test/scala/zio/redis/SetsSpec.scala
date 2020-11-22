@@ -612,7 +612,7 @@ trait SetsSpec extends BaseSpec {
             removed <- sRem(key, "a", "b").either
           } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ testExecutorUnsupported,
+      ),
       suite("sUnion")(
         testM("two non-empty sets") {
           for {
