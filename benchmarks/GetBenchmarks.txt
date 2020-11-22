@@ -1,0 +1,537 @@
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: zio.redis.SetBenchmarks.laserdisc
+# Parameters: (count = 500)
+
+# Run progress: 0,00% complete, ETA 00:53:20
+# Fork: 1 of 2
+# Warmup Iteration   1: 0,554 ops/s
+# Warmup Iteration   2: 0,698 ops/s
+# Warmup Iteration   3: 0,666 ops/s
+# Warmup Iteration   4: 0,710 ops/s
+# Warmup Iteration   5: 0,703 ops/s
+# Warmup Iteration   6: 0,739 ops/s
+# Warmup Iteration   7: 0,778 ops/s
+# Warmup Iteration   8: 0,871 ops/s
+# Warmup Iteration   9: 1,463 ops/s
+# Warmup Iteration  10: 1,541 ops/s
+Iteration   1: 1,676 ops/s
+Iteration   2: 1,608 ops/s
+Iteration   3: 1,573 ops/s
+Iteration   4: 1,742 ops/s
+Iteration   5: 1,637 ops/s
+Iteration   6: 1,573 ops/s
+Iteration   7: 1,593 ops/s
+Iteration   8: 1,618 ops/s
+Iteration   9: 1,570 ops/s
+Iteration  10: 1,598 ops/s
+
+# Run progress: 6,25% complete, ETA 00:52:27
+# Fork: 2 of 2
+# Warmup Iteration   1: 0,995 ops/s
+# Warmup Iteration   2: 1,397 ops/s
+# Warmup Iteration   3: 1,563 ops/s
+# Warmup Iteration   4: 1,544 ops/s
+# Warmup Iteration   5: 1,617 ops/s
+# Warmup Iteration   6: 1,590 ops/s
+# Warmup Iteration   7: 1,603 ops/s
+# Warmup Iteration   8: 1,524 ops/s
+# Warmup Iteration   9: 1,536 ops/s
+# Warmup Iteration  10: 1,537 ops/s
+Iteration   1: 1,582 ops/s
+Iteration   2: 1,530 ops/s
+Iteration   3: 1,483 ops/s
+Iteration   4: 1,484 ops/s
+Iteration   5: 1,520 ops/s
+Iteration   6: 1,673 ops/s
+Iteration   7: 1,662 ops/s
+Iteration   8: 1,674 ops/s
+Iteration   9: 1,600 ops/s
+Iteration  10: 1,560 ops/s
+
+
+Result "zio.redis.SetBenchmarks.laserdisc":
+  1,598 ±(99.9%) 0,058 ops/s [Average]
+  (min, avg, max) = (1,483, 1,598, 1,742), stdev = 0,067
+  CI (99.9%): [1,540, 1,656] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: zio.redis.SetBenchmarks.rediculous
+# Parameters: (count = 500)
+
+# Run progress: 12,50% complete, ETA 00:48:35
+# Fork: 1 of 2
+# Warmup Iteration   1: 0,971 ops/s
+# Warmup Iteration   2: 1,461 ops/s
+# Warmup Iteration   3: 1,536 ops/s
+# Warmup Iteration   4: 1,581 ops/s
+# Warmup Iteration   5: 1,598 ops/s
+# Warmup Iteration   6: 1,576 ops/s
+# Warmup Iteration   7: 1,576 ops/s
+# Warmup Iteration   8: 1,640 ops/s
+# Warmup Iteration   9: 1,595 ops/s
+# Warmup Iteration  10: 1,654 ops/s
+Iteration   1: 1,694 ops/s
+Iteration   2: 1,557 ops/s
+Iteration   3: 1,572 ops/s
+Iteration   4: 1,640 ops/s
+Iteration   5: 1,660 ops/s
+Iteration   6: 1,606 ops/s
+Iteration   7: 1,561 ops/s
+Iteration   8: 1,530 ops/s
+Iteration   9: 1,572 ops/s
+Iteration  10: 1,626 ops/s
+
+# Run progress: 18,75% complete, ETA 00:44:56
+# Fork: 2 of 2
+# Warmup Iteration   1: 0,981 ops/s
+# Warmup Iteration   2: 1,274 ops/s
+# Warmup Iteration   3: 1,533 ops/s
+# Warmup Iteration   4: 1,512 ops/s
+# Warmup Iteration   5: 1,577 ops/s
+# Warmup Iteration   6: 1,578 ops/s
+# Warmup Iteration   7: 1,637 ops/s
+# Warmup Iteration   8: 1,596 ops/s
+# Warmup Iteration   9: 0,842 ops/s
+# Warmup Iteration  10: 1,136 ops/s
+Iteration   1: 1,200 ops/s
+Iteration   2: 1,181 ops/s
+Iteration   3: 1,265 ops/s
+Iteration   4: 1,229 ops/s
+Iteration   5: 1,152 ops/s
+Iteration   6: 1,167 ops/s
+Iteration   7: 1,186 ops/s
+Iteration   8: 1,182 ops/s
+Iteration   9: 1,176 ops/s
+Iteration  10: 1,116 ops/s
+
+
+Result "zio.redis.SetBenchmarks.rediculous":
+  1,393 ±(99.9%) 0,190 ops/s [Average]
+  (min, avg, max) = (1,116, 1,393, 1,694), stdev = 0,218
+  CI (99.9%): [1,204, 1,583] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: zio.redis.SetBenchmarks.redis4cats
+# Parameters: (count = 500)
+
+# Run progress: 25,00% complete, ETA 00:41:27
+# Fork: 1 of 2
+# Warmup Iteration   1: 0,899 ops/s
+# Warmup Iteration   2: 1,347 ops/s
+# Warmup Iteration   3: 1,314 ops/s
+# Warmup Iteration   4: 1,488 ops/s
+# Warmup Iteration   5: 1,386 ops/s
+# Warmup Iteration   6: 1,363 ops/s
+# Warmup Iteration   7: 1,335 ops/s
+# Warmup Iteration   8: 1,362 ops/s
+# Warmup Iteration   9: 1,338 ops/s
+# Warmup Iteration  10: 1,382 ops/s
+Iteration   1: 1,458 ops/s
+Iteration   2: 1,388 ops/s
+Iteration   3: 1,236 ops/s
+Iteration   4: 1,347 ops/s
+Iteration   5: 1,355 ops/s
+Iteration   6: 1,090 ops/s
+Iteration   7: 0,916 ops/s
+Iteration   8: 1,052 ops/s
+Iteration   9: 1,142 ops/s
+Iteration  10: 1,058 ops/s
+
+# Run progress: 31,25% complete, ETA 00:38:02
+# Fork: 2 of 2
+# Warmup Iteration   1: 0,887 ops/s
+# Warmup Iteration   2: 1,097 ops/s
+# Warmup Iteration   3: 1,100 ops/s
+# Warmup Iteration   4: 1,107 ops/s
+# Warmup Iteration   5: 1,073 ops/s
+# Warmup Iteration   6: 1,069 ops/s
+# Warmup Iteration   7: 1,119 ops/s
+# Warmup Iteration   8: 1,127 ops/s
+# Warmup Iteration   9: 0,966 ops/s
+# Warmup Iteration  10: 1,174 ops/s
+Iteration   1: 1,044 ops/s
+Iteration   2: 0,924 ops/s
+Iteration   3: 0,773 ops/s
+Iteration   4: 0,954 ops/s
+Iteration   5: 0,731 ops/s
+Iteration   6: 1,025 ops/s
+Iteration   7: 1,094 ops/s
+Iteration   8: 0,913 ops/s
+Iteration   9: 0,879 ops/s
+Iteration  10: 0,940 ops/s
+
+
+Result "zio.redis.SetBenchmarks.redis4cats":
+  1,066 ±(99.9%) 0,177 ops/s [Average]
+  (min, avg, max) = (0,731, 1,066, 1,458), stdev = 0,203
+  CI (99.9%): [0,889, 1,243] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: zio.redis.SetBenchmarks.zio
+# Parameters: (count = 500)
+
+# Run progress: 37,50% complete, ETA 00:34:40
+# Fork: 1 of 2
+# Warmup Iteration   1: 0,659 ops/s
+# Warmup Iteration   2: 0,992 ops/s
+# Warmup Iteration   3: 1,020 ops/s
+# Warmup Iteration   4: 1,028 ops/s
+# Warmup Iteration   5: 1,068 ops/s
+# Warmup Iteration   6: 1,044 ops/s
+# Warmup Iteration   7: 1,041 ops/s
+# Warmup Iteration   8: 0,897 ops/s
+# Warmup Iteration   9: 0,960 ops/s
+# Warmup Iteration  10: 1,055 ops/s
+Iteration   1: 1,027 ops/s
+Iteration   2: 1,061 ops/s
+Iteration   3: 1,046 ops/s
+Iteration   4: 1,003 ops/s
+Iteration   5: 1,040 ops/s
+Iteration   6: 1,075 ops/s
+Iteration   7: 1,092 ops/s
+Iteration   8: 1,031 ops/s
+Iteration   9: 1,028 ops/s
+Iteration  10: 1,008 ops/s
+
+# Run progress: 43,75% complete, ETA 00:31:18
+# Fork: 2 of 2
+# Warmup Iteration   1: 0,665 ops/s
+# Warmup Iteration   2: 1,061 ops/s
+# Warmup Iteration   3: 0,957 ops/s
+# Warmup Iteration   4: 1,075 ops/s
+# Warmup Iteration   5: 1,282 ops/s
+# Warmup Iteration   6: 1,117 ops/s
+# Warmup Iteration   7: 1,374 ops/s
+# Warmup Iteration   8: 1,363 ops/s
+# Warmup Iteration   9: 1,395 ops/s
+# Warmup Iteration  10: 1,320 ops/s
+Iteration   1: 1,201 ops/s
+Iteration   2: 0,922 ops/s
+Iteration   3: 0,962 ops/s
+Iteration   4: 0,899 ops/s
+Iteration   5: 0,934 ops/s
+Iteration   6: 1,068 ops/s
+Iteration   7: 1,054 ops/s
+Iteration   8: 1,047 ops/s
+Iteration   9: 1,066 ops/s
+Iteration  10: 1,119 ops/s
+
+
+Result "zio.redis.SetBenchmarks.zio":
+  1,034 ±(99.9%) 0,060 ops/s [Average]
+  (min, avg, max) = (0,899, 1,034, 1,201), stdev = 0,069
+  CI (99.9%): [0,974, 1,094] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: zio.redis.SetBenchmarks.laserdisc
+# Parameters: (count = 500)
+
+# Run progress: 50,00% complete, ETA 00:27:50
+# Fork: 1 of 2
+# Warmup Iteration   1: 1,576 s/op
+# Warmup Iteration   2: 1,095 s/op
+# Warmup Iteration   3: 1,045 s/op
+# Warmup Iteration   4: 1,257 s/op
+# Warmup Iteration   5: 1,058 s/op
+# Warmup Iteration   6: 1,058 s/op
+# Warmup Iteration   7: 1,038 s/op
+# Warmup Iteration   8: 1,015 s/op
+# Warmup Iteration   9: 1,054 s/op
+# Warmup Iteration  10: 1,087 s/op
+Iteration   1: 1,037 s/op
+Iteration   2: 1,182 s/op
+Iteration   3: 1,113 s/op
+Iteration   4: 1,003 s/op
+Iteration   5: 1,051 s/op
+Iteration   6: 1,035 s/op
+Iteration   7: 1,065 s/op
+Iteration   8: 0,984 s/op
+Iteration   9: 1,002 s/op
+Iteration  10: 1,009 s/op
+
+# Run progress: 56,25% complete, ETA 00:24:22
+# Fork: 2 of 2
+# Warmup Iteration   1: 1,589 s/op
+# Warmup Iteration   2: 1,151 s/op
+# Warmup Iteration   3: 1,071 s/op
+# Warmup Iteration   4: 1,079 s/op
+# Warmup Iteration   5: 1,052 s/op
+# Warmup Iteration   6: 1,018 s/op
+# Warmup Iteration   7: 0,995 s/op
+# Warmup Iteration   8: 1,095 s/op
+# Warmup Iteration   9: 1,051 s/op
+# Warmup Iteration  10: 1,002 s/op
+Iteration   1: 1,053 s/op
+Iteration   2: 1,052 s/op
+Iteration   3: 1,004 s/op
+Iteration   4: 1,028 s/op
+Iteration   5: 0,985 s/op
+Iteration   6: 1,031 s/op
+Iteration   7: 1,021 s/op
+Iteration   8: 1,015 s/op
+Iteration   9: 1,015 s/op
+Iteration  10: 1,075 s/op
+
+
+Result "zio.redis.SetBenchmarks.laserdisc":
+  1,038 ±(99.9%) 0,040 s/op [Average]
+  (min, avg, max) = (0,984, 1,038, 1,182), stdev = 0,046
+  CI (99.9%): [0,998, 1,078] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: zio.redis.SetBenchmarks.rediculous
+# Parameters: (count = 500)
+
+# Run progress: 62,50% complete, ETA 00:20:55
+# Fork: 1 of 2
+# Warmup Iteration   1: 1,578 s/op
+# Warmup Iteration   2: 1,318 s/op
+# Warmup Iteration   3: 1,269 s/op
+# Warmup Iteration   4: 1,799 s/op
+# Warmup Iteration   5: 2,136 s/op
+# Warmup Iteration   6: 1,127 s/op
+# Warmup Iteration   7: 1,154 s/op
+# Warmup Iteration   8: 1,644 s/op
+# Warmup Iteration   9: 1,180 s/op
+# Warmup Iteration  10: 1,269 s/op
+Iteration   1: 1,236 s/op
+Iteration   2: 1,196 s/op
+Iteration   3: 1,192 s/op
+Iteration   4: 1,069 s/op
+Iteration   5: 1,005 s/op
+Iteration   6: 1,044 s/op
+Iteration   7: 0,997 s/op
+Iteration   8: 0,878 s/op
+Iteration   9: 0,895 s/op
+Iteration  10: 0,958 s/op
+
+# Run progress: 68,75% complete, ETA 00:17:28
+# Fork: 2 of 2
+# Warmup Iteration   1: 1,602 s/op
+# Warmup Iteration   2: 1,256 s/op
+# Warmup Iteration   3: 1,576 s/op
+# Warmup Iteration   4: 1,197 s/op
+# Warmup Iteration   5: 1,802 s/op
+# Warmup Iteration   6: 1,493 s/op
+# Warmup Iteration   7: 1,325 s/op
+# Warmup Iteration   8: 1,694 s/op
+# Warmup Iteration   9: 1,568 s/op
+# Warmup Iteration  10: 1,411 s/op
+Iteration   1: 1,312 s/op
+Iteration   2: 1,183 s/op
+Iteration   3: 1,332 s/op
+Iteration   4: 1,125 s/op
+Iteration   5: 0,991 s/op
+Iteration   6: 1,287 s/op
+Iteration   7: 1,660 s/op
+Iteration   8: 1,491 s/op
+Iteration   9: 1,526 s/op
+Iteration  10: 1,157 s/op
+
+
+Result "zio.redis.SetBenchmarks.rediculous":
+  1,177 ±(99.9%) 0,185 s/op [Average]
+  (min, avg, max) = (0,878, 1,177, 1,660), stdev = 0,213
+  CI (99.9%): [0,992, 1,361] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: zio.redis.SetBenchmarks.redis4cats
+# Parameters: (count = 500)
+
+# Run progress: 75,00% complete, ETA 00:14:01
+# Fork: 1 of 2
+# Warmup Iteration   1: 1,286 s/op
+# Warmup Iteration   2: 1,208 s/op
+# Warmup Iteration   3: 1,007 s/op
+# Warmup Iteration   4: 1,353 s/op
+# Warmup Iteration   5: 1,048 s/op
+# Warmup Iteration   6: 1,063 s/op
+# Warmup Iteration   7: 0,994 s/op
+# Warmup Iteration   8: 0,910 s/op
+# Warmup Iteration   9: 0,869 s/op
+# Warmup Iteration  10: 1,008 s/op
+Iteration   1: 0,985 s/op
+Iteration   2: 0,962 s/op
+Iteration   3: 1,010 s/op
+Iteration   4: 0,942 s/op
+Iteration   5: 1,037 s/op
+Iteration   6: 0,952 s/op
+Iteration   7: 0,900 s/op
+Iteration   8: 0,968 s/op
+Iteration   9: 0,870 s/op
+Iteration  10: 0,898 s/op
+
+# Run progress: 81,25% complete, ETA 00:10:31
+# Fork: 2 of 2
+# Warmup Iteration   1: 1,144 s/op
+# Warmup Iteration   2: 1,051 s/op
+# Warmup Iteration   3: 0,881 s/op
+# Warmup Iteration   4: 0,934 s/op
+# Warmup Iteration   5: 0,863 s/op
+# Warmup Iteration   6: 1,223 s/op
+# Warmup Iteration   7: 1,021 s/op
+# Warmup Iteration   8: 1,029 s/op
+# Warmup Iteration   9: 1,535 s/op
+# Warmup Iteration  10: 1,458 s/op
+Iteration   1: 0,932 s/op
+Iteration   2: 1,315 s/op
+Iteration   3: 1,054 s/op
+Iteration   4: 1,080 s/op
+Iteration   5: 1,030 s/op
+Iteration   6: 1,008 s/op
+Iteration   7: 0,960 s/op
+Iteration   8: 1,057 s/op
+Iteration   9: 1,001 s/op
+Iteration  10: 0,969 s/op
+
+
+Result "zio.redis.SetBenchmarks.redis4cats":
+  0,997 ±(99.9%) 0,081 s/op [Average]
+  (min, avg, max) = (0,870, 0,997, 1,315), stdev = 0,094
+  CI (99.9%): [0,915, 1,078] (assumes normal distribution)
+
+
+# JMH version: 1.25
+# VM version: JDK 1.8.0_275, OpenJDK 64-Bit Server VM, 25.275-b01
+# VM invoker: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/bin/java
+# VM options: <none>
+# Warmup: 10 iterations, 10 s each
+# Measurement: 10 iterations, 10 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: zio.redis.SetBenchmarks.zio
+# Parameters: (count = 500)
+
+# Run progress: 87,50% complete, ETA 00:07:00
+# Fork: 1 of 2
+# Warmup Iteration   1: 1,283 s/op
+# Warmup Iteration   2: 0,992 s/op
+# Warmup Iteration   3: 0,942 s/op
+# Warmup Iteration   4: 0,935 s/op
+# Warmup Iteration   5: 0,934 s/op
+# Warmup Iteration   6: 0,956 s/op
+# Warmup Iteration   7: 0,936 s/op
+# Warmup Iteration   8: 0,966 s/op
+# Warmup Iteration   9: 0,942 s/op
+# Warmup Iteration  10: 0,920 s/op
+Iteration   1: 0,943 s/op
+Iteration   2: 0,959 s/op
+Iteration   3: 0,970 s/op
+Iteration   4: 0,960 s/op
+Iteration   5: 0,913 s/op
+Iteration   6: 0,891 s/op
+Iteration   7: 0,948 s/op
+Iteration   8: 0,892 s/op
+Iteration   9: 0,988 s/op
+Iteration  10: 1,151 s/op
+
+# Run progress: 93,75% complete, ETA 00:03:30
+# Fork: 2 of 2
+# Warmup Iteration   1: 1,383 s/op
+# Warmup Iteration   2: 1,100 s/op
+# Warmup Iteration   3: 1,098 s/op
+# Warmup Iteration   4: 0,985 s/op
+# Warmup Iteration   5: 0,986 s/op
+# Warmup Iteration   6: 0,960 s/op
+# Warmup Iteration   7: 0,951 s/op
+# Warmup Iteration   8: 0,948 s/op
+# Warmup Iteration   9: 0,900 s/op
+# Warmup Iteration  10: 1,029 s/op
+Iteration   1: 1,216 s/op
+Iteration   2: 1,579 s/op
+Iteration   3: 1,253 s/op
+Iteration   4: 1,093 s/op
+Iteration   5: 1,120 s/op
+Iteration   6: 0,962 s/op
+Iteration   7: 0,998 s/op
+Iteration   8: 1,341 s/op
+Iteration   9: 1,014 s/op
+Iteration  10: 1,125 s/op
+
+
+Result "zio.redis.SetBenchmarks.zio":
+  1,066 ±(99.9%) 0,152 s/op [Average]
+  (min, avg, max) = (0,891, 1,066, 1,579), stdev = 0,175
+  CI (99.9%): [0,914, 1,217] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:56:11
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+Benchmark                 (count)   Mode  Cnt  Score   Error  Units
+SetBenchmarks.laserdisc       500  thrpt   20  1,598 ± 0,058  ops/s
+SetBenchmarks.rediculous      500  thrpt   20  1,393 ± 0,190  ops/s
+SetBenchmarks.redis4cats      500  thrpt   20  1,066 ± 0,177  ops/s
+SetBenchmarks.zio             500  thrpt   20  1,034 ± 0,060  ops/s
+SetBenchmarks.laserdisc       500   avgt   20  1,038 ± 0,040   s/op
+SetBenchmarks.rediculous      500   avgt   20  1,177 ± 0,185   s/op
+SetBenchmarks.redis4cats      500   avgt   20  0,997 ± 0,081   s/op
+SetBenchmarks.zio             500   avgt   20  1,066 ± 0,152   s/op
