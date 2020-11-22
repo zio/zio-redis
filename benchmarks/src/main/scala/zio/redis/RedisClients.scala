@@ -7,11 +7,13 @@ import fs2.io.tcp.SocketGroup
 import io.chrisdavenport.rediculous.{Redis, RedisConnection}
 import io.lettuce.core.ClientOptions
 import laserdisc.fs2.RedisClient
-import zio.redis.BenchmarkRuntime.{RedisHost, RedisPort}
 
 trait RedisClients {
 
   self: EffectContexts =>
+
+  final val RedisHost = "127.0.0.1"
+  final val RedisPort = 6379
 
   type RedisIO[A] = Redis[CatsIO, A]
 

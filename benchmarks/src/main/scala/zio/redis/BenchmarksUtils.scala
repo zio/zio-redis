@@ -1,16 +1,11 @@
 package zio.redis
 
-import cats.effect.{ IO => CatsIO }
-import zio.ZIO
+import cats.effect.{IO => CatsIO}
+import zio.{BootstrapRuntime, ZIO}
 import zio.logging.Logging
 
 trait BenchmarksUtils {
-
-  self: RedisClients =>
-
-  import BenchmarkRuntime.RedisHost
-  import BenchmarkRuntime.RedisPort
-  import BenchmarkRuntime.unsafeRun
+  self: RedisClients with BootstrapRuntime =>
 
   def unsafeClientRun[CL](f: CL => CatsIO[Unit])(implicit unsafeRunner: QueryUnsafeRunner[CL]): Unit =
     unsafeRunner.unsafeRun(f)
