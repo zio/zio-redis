@@ -66,7 +66,7 @@ trait HashSpec extends BaseSpec {
             value  <- uuid
             _      <- hmSet(hash, field -> value)
             result <- hmGet(hash, field)
-          } yield assert(result.head)(isSome(equalTo(value)))
+          } yield assert(result)(hasSameElements(Chunk(Some(value))))
         },
         testM("set multiple fields for hash") {
           for {
@@ -77,8 +77,8 @@ trait HashSpec extends BaseSpec {
             _       <- hmSet(hash, field1 -> value, field2 -> value)
             result1 <- hmGet(hash, field1)
             result2 <- hmGet(hash, field2)
-          } yield assert(result1.head)(isSome(equalTo(value))) &&
-            assert(result2.head)(isSome(equalTo(value)))
+          } yield assert(result1)(hasSameElements(Chunk(Some(value)))) &&
+            assert(result2)(hasSameElements(Chunk(Some(value))))
         },
         testM("get multiple fields for hash") {
           for {
