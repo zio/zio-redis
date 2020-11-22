@@ -1,5 +1,6 @@
 package zio.redis.api
 
+import zio.duration.Duration
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
@@ -24,6 +25,12 @@ trait Connection {
 
   final def clientGetName: ZIO[RedisExecutor, RedisError, Option[String]] = ClientGetName.run(())
 
+  final def clientGetRedir: ZIO[RedisExecutor, RedisError, ClientTrackingRedirect] = ClientRedirect.run(())
+
+  final def clientPause(duration: Duration): ZIO[RedisExecutor, RedisError, Unit] = ClientPause.run(duration)
+
+  final def clientSetName(name: String): ZIO[RedisExecutor, RedisError, Unit] = ClientSetName.run(name)
+
   final def echo(a: String): ZIO[RedisExecutor, RedisError, String] = Echo.run(a)
 
   final def ping(as: String*): ZIO[RedisExecutor, RedisError, String] = Ping.run(as)
@@ -32,13 +39,16 @@ trait Connection {
 }
 
 private object Connection {
-  final val Auth          = RedisCommand("AUTH", StringInput, UnitOutput)
-  final val ClientCaching = RedisCommand(Chunk("CLIENT", "CACHING"), YesNoInput, UnitOutput)
-  final val ClientId      = RedisCommand(Chunk("CLIENT", "ID"), NoInput, LongOutput)
-  final val ClientKill    = RedisCommand(Chunk("CLIENT", "KILL"), ClientKillInput, LongOutput)
-  final val ClientList    = RedisCommand(Chunk("CLIENT", "LIST"), ClientTypeInput, ClientInfoOutput)
-  final val ClientGetName = RedisCommand(Chunk("CLIENT", "GETNAME"), NoInput, OptionalOutput(MultiStringOutput))
-  final val Echo          = RedisCommand("ECHO", StringInput, MultiStringOutput)
-  final val Ping          = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
-  final val Select        = RedisCommand("SELECT", LongInput, UnitOutput)
+  final val Auth           = RedisCommand("AUTH", StringInput, UnitOutput)
+  final val ClientCaching  = RedisCommand(Chunk("CLIENT", "CACHING"), YesNoInput, UnitOutput)
+  final val ClientId       = RedisCommand(Chunk("CLIENT", "ID"), NoInput, LongOutput)
+  final val ClientKill     = RedisCommand(Chunk("CLIENT", "KILL"), ClientKillInput, LongOutput)
+  final val ClientList     = RedisCommand(Chunk("CLIENT", "LIST"), ClientTypeInput, ClientInfoOutput)
+  final val ClientGetName  = RedisCommand(Chunk("CLIENT", "GETNAME"), NoInput, OptionalOutput(MultiStringOutput))
+  final val ClientRedirect = RedisCommand(Chunk("CLIENT", "GETREDIR"), NoInput, ClientTrackingRedirectOutput)
+  final val ClientPause    = RedisCommand(Chunk("CLIENT", "PAUSE"), DurationMillisecondsInput, UnitOutput)
+  final val ClientSetName  = RedisCommand(Chunk("CLIENT", "SETNAME"), StringInput, UnitOutput)
+  final val Echo           = RedisCommand("ECHO", StringInput, MultiStringOutput)
+  final val Ping           = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
+  final val Select         = RedisCommand("SELECT", LongInput, UnitOutput)
 }

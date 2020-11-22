@@ -89,24 +89,6 @@ object Output {
               }
             }.toMap
           }
-
-          // A: connection to be closed ASAP
-          //b: the client is waiting in a blocking operation
-          //c: connection to be closed after writing entire reply
-          //d: a watched keys has been modified - EXEC will fail
-          //i: the client is waiting for a VM I/O (deprecated)
-          //M: the client is a master
-          //N: no specific flag set
-          //O: the client is a client in MONITOR mode
-          //P: the client is a Pub/Sub subscriber
-          //r: the client is in readonly mode against a cluster node
-          //S: the client is a replica node connection to this instance
-          //u: the client is unblocked
-          //U: the client is connected via a Unix domain socket
-          //x: the client is in a MULTI/EXEC context
-          //t: the client enabled keys tracking in order to perform client side caching
-          //R: the client tracking target client is invalid
-          //B: the client enabled broadcast tracking mode
           Chunk.fromIterable(clients).map { client =>
             val flags: Set[ClientFlag] = client
               .get("flags")
@@ -163,6 +145,16 @@ object Output {
             )
           }
         case other                          => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
+
+  case object ClientTrackingRedirectOutput extends Output[ClientTrackingRedirect] {
+    override protected def tryDecode(respValue: RespValue): ClientTrackingRedirect =
+      respValue match {
+        case RespValue.Integer(-1L) => ClientTrackingRedirect.NotEnabled
+        case RespValue.Integer(0L)  => ClientTrackingRedirect.NotRedirected
+        case RespValue.Integer(v)   => ClientTrackingRedirect.RedirectedTo(v)
+        case other                  => throw ProtocolError(s"$other isn't an integer >= -1")
       }
   }
 

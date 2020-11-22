@@ -86,4 +86,12 @@ trait Connection {
     user: Option[String]
   )
 
+  sealed abstract class ClientTrackingRedirect
+
+  object ClientTrackingRedirect {
+    case object NotEnabled                         extends ClientTrackingRedirect
+    case object NotRedirected                      extends ClientTrackingRedirect
+    sealed case class RedirectedTo(clientId: Long) extends ClientTrackingRedirect
+  }
+
 }
