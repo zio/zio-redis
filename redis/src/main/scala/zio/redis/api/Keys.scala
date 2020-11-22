@@ -15,14 +15,12 @@ trait Keys {
 
   /**
    * Removes the specified keys. A key is ignored if it does not exist.
-
    *
    * @param key one required key
    * @param keys maybe rest of the keys
    * @return The number of keys that were removed.
    *
    * @see [[unlink]]
-   * @see <a href="https://redis.io/commands/del">https://redis.io/commands/del</a>
    */
   final def del(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] = Del.run((key, keys.toList))
 
@@ -31,8 +29,6 @@ trait Keys {
    *
    * @param key key
    * @return bytes for value stored at key
-   *
-   * @see <a href="https://redis.io/commands/dump">https://redis.io/commands/dump</a>
    */
   final def dump(key: String): ZIO[RedisExecutor, RedisError, Chunk[Byte]] = Dump.run(key)
 
@@ -43,8 +39,6 @@ trait Keys {
    * @param key one required key
    * @param keys maybe rest of the keys
    * @return The number of keys existing.
-   *
-   * @see <a href="https://redis.io/commands/exists">https://redis.io/commands/exists</a>
    */
   final def exists(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Boolean] = Exists.run((key, keys.toList))
 
@@ -56,7 +50,6 @@ trait Keys {
    * @return true, if the timeout was set, false if the key didn't exist
    *
    * @see [[expireAt]]
-   * @see <a href="https://redis.io/commands/expire">https://redis.io/commands/expire</a>
    */
   final def expire(key: String, timeout: Duration): ZIO[RedisExecutor, RedisError, Boolean] = Expire.run((key, timeout))
 
@@ -68,7 +61,6 @@ trait Keys {
    * @return true, if the timeout was set, false if the key didn't exist
    *
    * @see [[expire]]
-   * @see <a href="https://redis.io/commands/expireat">https://redis.io/commands/expireat</a>
    */
   final def expireAt(key: String, timestamp: Instant): ZIO[RedisExecutor, RedisError, Boolean] =
     ExpireAt.run((key, timestamp))
@@ -78,8 +70,6 @@ trait Keys {
    *
    * @param pattern string pattern
    * @return keys matching pattern
-   *
-   * @see <a href="https://redis.io/commands/keys">https://redis.io/commands/keys</a>
    */
   final def keys(pattern: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = Keys.Keys.run(pattern)
 
@@ -97,8 +87,6 @@ trait Keys {
    * @param replace replace option, to replace existing key on the remote instance
    * @param keys keys option, to migrate multiple keys, non empty list of keys
    * @return string OK on success, or NOKEY if no keys were found in the source instance
-   *
-   * @see <a href="https://redis.io/commands/migrate">https://redis.io/commands/migrate</a>
    */
   final def migrate(
     host: String,
@@ -120,8 +108,6 @@ trait Keys {
    * @param key key
    * @param destination_db destination database id
    * @return true if the key was moved
-   *
-   * @see <a href="https://redis.io/commands/move">https://redis.io/commands/move</a>
    */
   final def move(key: String, destination_db: Long): ZIO[RedisExecutor, RedisError, Boolean] =
     Move.run((key, destination_db))
@@ -131,8 +117,6 @@ trait Keys {
    *
    * @param key key
    * @return true if timeout was removed, false if key does not exist or does not have an associated timeout
-   *
-   * @see <a href="https://redis.io/commands/persist">https://redis.io/commands/persist</a>
    */
   final def persist(key: String): ZIO[RedisExecutor, RedisError, Boolean] = Persist.run(key)
 
@@ -144,7 +128,6 @@ trait Keys {
    * @return true, if the timeout was set, false if the key didn't exist
    *
    * @see [[pExpireAt]]
-   * @see <a href="https://redis.io/commands/pexpire">https://redis.io/commands/pexpire</a>
    */
   final def pExpire(key: String, timeout: Duration): ZIO[RedisExecutor, RedisError, Boolean] =
     PExpire.run((key, timeout))
@@ -157,7 +140,6 @@ trait Keys {
    * @return true, if the timeout was set, false if the key didn't exist
    *
    * @see [[pExpire]]
-   * @see <a href="https://redis.io/commands/pexpireat">https://redis.io/commands/pexpireat</a>
    */
   final def pExpireAt(key: String, timestamp: Instant): ZIO[RedisExecutor, RedisError, Boolean] =
     PExpireAt.run((key, timestamp))
@@ -167,16 +149,12 @@ trait Keys {
    *
    * @param key key
    * @return remaining time to live of a key that has a timeout, error otherwise
-   *
-   * @see <a href="https://redis.io/commands/pttl">https://redis.io/commands/pttl</a>
    */
   final def pTtl(key: String): ZIO[RedisExecutor, RedisError, Duration] = PTtl.run(key)
 
   /**
    * Return a random key from the currently selected database.
    * @return key or None when the database is empty.
-   *
-   * @see <a href="https://redis.io/commands/randomkey">https://redis.io/commands/randomkey</a>
    */
   final def randomKey(): ZIO[RedisExecutor, RedisError, Option[String]] = RandomKey.run(())
 
@@ -186,8 +164,6 @@ trait Keys {
    * @param key key to be renamed
    * @param newKey new name
    * @return unit if successful, error otherwise
-   *
-   * @see <a href="https://redis.io/commands/rename">https://redis.io/commands/rename</a>
    */
   final def rename(key: String, newKey: String): ZIO[RedisExecutor, RedisError, Unit] = Rename.run((key, newKey))
 
@@ -197,8 +173,6 @@ trait Keys {
    * @param key key to be renamed
    * @param newKey new name
    * @return true if key was renamed to newKey, false if newKey already exists
-   *
-   * @see <a href="https://redis.io/commands/renamenx">https://redis.io/commands/renamenx</a>
    */
   final def renameNx(key: String, newKey: String): ZIO[RedisExecutor, RedisError, Boolean] = RenameNx.run((key, newKey))
 
@@ -214,8 +188,6 @@ trait Keys {
    * @param idleTime idle time based eviction policy
    * @param freq frequency based eviction policy
    * @return unit on success
-   *
-   * @see <a href="https://redis.io/commands/restore">https://redis.io/commands/restore</a>
    */
   final def restore(
     key: String,
@@ -236,8 +208,6 @@ trait Keys {
    * @param count count option, specifies number of returned elements per call
    * @param `type` type option, filter to only return objects that match a given type
    * @return returns an updated cursor that the user needs to use as the cursor argument in the next call along with the values
-   *
-   * @see <a href="https://redis.io/commands/scan">https://redis.io/commands/scan</a>
    */
   final def scan(
     cursor: Long,
@@ -252,7 +222,6 @@ trait Keys {
    * @param key one required key
    * @param keys maybe rest of the keys
    * @return The number of keys that were touched.
-   * @see <a href="https://redis.io/commands/touch">https://redis.io/commands/touch</a>
    */
   final def touch(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] = Touch.run((key, keys.toList))
 
@@ -261,8 +230,6 @@ trait Keys {
    *
    * @param key key
    * @return remaining time to live of a key that has a timeout, error otherwise
-   *
-   * @see <a href="https://redis.io/commands/ttl">https://redis.io/commands/ttl</a>
    */
   final def ttl(key: String): ZIO[RedisExecutor, RedisError, Duration] = Ttl.run(key)
 
@@ -271,8 +238,6 @@ trait Keys {
    *
    * @param key key
    * @return type of the value stored at key
-   *
-   * @see <a href="https://redis.io/commands/type">https://redis.io/commands/type</a>
    */
   final def typeOf(key: String): ZIO[RedisExecutor, RedisError, RedisType] = TypeOf.run(key)
 
@@ -285,7 +250,6 @@ trait Keys {
    * @return The number of keys that were unlinked.
    *
    * @see [[del]]
-   * @see <a href="https://redis.io/commands/unlink">https://redis.io/commands/unlink</a>
    */
   final def unlink(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] = Unlink.run((key, keys.toList))
 
@@ -296,8 +260,6 @@ trait Keys {
    * @param replicas minimum replicas to reach
    * @param timeout specified in milliseconds, 0 means to block forever
    * @return the number of replicas reached both in case of failure and success
-   *
-   * @see <a href="https://redis.io/commands/wait">https://redis.io/commands/wait</a>
    */
   final def wait_(replicas: Long, timeout: Long): ZIO[RedisExecutor, RedisError, Long] = Wait.run((replicas, timeout))
 }
