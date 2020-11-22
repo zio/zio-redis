@@ -1162,7 +1162,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             result <- set(key, value)
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("override existing string") {
           for {
@@ -1170,7 +1170,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, "value")
             result <- set(key, value)
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("override not string") {
           for {
@@ -1178,21 +1178,21 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- sAdd(key, "a")
             result <- set(key, value)
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("new value with ttl 1 second") {
           for {
             key    <- uuid
             value  <- uuid
             result <- set(key, value, Some(1.second))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("new value with ttl 100 milliseconds") {
           for {
             key    <- uuid
             value  <- uuid
             result <- set(key, value, Some(100.milliseconds))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("error when negative ttl") {
           for {
@@ -1206,7 +1206,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             result <- set(key, value, update = Some(Update.SetNew))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("existing value with SetNew parameter") {
           for {
@@ -1214,14 +1214,14 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, "value")
             result <- set(key, value, update = Some(Update.SetNew))
-          } yield assert(result)(isNone)
+          } yield assert(result)(isFalse)
         },
         testM("new value with SetExisting parameter") {
           for {
             key    <- uuid
             value  <- uuid
             result <- set(key, value, update = Some(Update.SetExisting))
-          } yield assert(result)(isNone)
+          } yield assert(result)(isFalse)
         },
         testM("existing value with SetExisting parameter") {
           for {
@@ -1229,7 +1229,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, "value")
             result <- set(key, value, update = Some(Update.SetExisting))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         testM("existing not string value with SetExisting parameter") {
           for {
@@ -1237,7 +1237,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- sAdd(key, "a")
             result <- set(key, value, update = Some(Update.SetExisting))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         },
         // next three tests include KEEPTTL parameter that is valid for Redis version >= 6
         testM("new value with KeepTtl parameter") {
@@ -1245,7 +1245,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             result <- set(key, value, keepTtl = Some(KeepTtl))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         } @@ ignore,
         testM("existing value with KeepTtl parameter") {
           for {
@@ -1253,7 +1253,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, "value", Some(1.second))
             result <- set(key, value, keepTtl = Some(KeepTtl))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         } @@ ignore,
         testM("existing value with both ttl and KeepTtl parameters") {
           for {
@@ -1261,7 +1261,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, "value", Some(1.second))
             result <- set(key, value, Some(1.second), keepTtl = Some(KeepTtl))
-          } yield assert(result)(isSome)
+          } yield assert(result)(isTrue)
         } @@ ignore
       ),
       suite("setBit")(
