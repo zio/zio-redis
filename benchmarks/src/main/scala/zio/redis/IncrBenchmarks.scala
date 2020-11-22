@@ -12,10 +12,7 @@ import zio.ZIO
 @Warmup(iterations = 15)
 @Fork(2)
 class IncrBenchmarks {
-
   import BenchmarkRuntime._
-  import BenchmarksUtils._
-  import RedisClients._
 
   @Param(Array("500"))
   private var count: Int = _

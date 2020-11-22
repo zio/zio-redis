@@ -3,9 +3,10 @@ package zio.redis
 import cats.effect.{ IO => CatsIO }
 import zio.ZIO
 import zio.logging.Logging
-import zio.redis.RedisClients.QueryUnsafeRunner
 
-object BenchmarksUtils {
+trait BenchmarksUtils {
+
+  self: RedisClients =>
 
   import BenchmarkRuntime.RedisHost
   import BenchmarkRuntime.RedisPort

@@ -12,10 +12,7 @@ import zio.ZIO
 @Warmup(iterations = 15)
 @Fork(2)
 class DecrBenchmarks {
-
   import BenchmarkRuntime._
-  import BenchmarksUtils._
-  import RedisClients._
 
   @Param(Array("500"))
   private var count: Int = _
@@ -34,7 +31,6 @@ class DecrBenchmarks {
     import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
-
     unsafeClientRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.decr[Long](Key.unsafeFrom(i)))))
   }
 

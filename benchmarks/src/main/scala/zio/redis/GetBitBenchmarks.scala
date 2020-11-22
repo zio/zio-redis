@@ -13,8 +13,6 @@ import zio.ZIO
 @Fork(2)
 class GetBitBenchmarks {
   import BenchmarkRuntime._
-  import BenchmarksUtils._
-  import RedisClients._
 
   @Param(Array("500"))
   private var count: Int = _
