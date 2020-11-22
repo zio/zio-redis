@@ -3,12 +3,6 @@ package zio.redis.options
 import zio.duration._
 
 trait Streams {
-  sealed case class Idle(millis: Long)
-
-  sealed case class Time(millis: Long)
-
-  sealed case class RetryCount(count: Long)
-
   case object WithForce {
     private[redis] def stringify = "FORCE"
   }
@@ -50,8 +44,6 @@ trait Streams {
     lastDelivered: Duration,
     counter: Long
   )
-
-  case class Block(value: Duration)
 
   case class Group(group: String, consumer: String)
 

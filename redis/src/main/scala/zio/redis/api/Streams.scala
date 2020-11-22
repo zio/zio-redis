@@ -45,9 +45,9 @@ trait Streams {
         consumer,
         minIdleTime,
         (id, ids.toList),
-        idle.map(i => Idle(i.toMillis)),
-        time.map(t => Time(t.toMillis)),
-        retryCount.map(RetryCount),
+        idle,
+        time,
+        retryCount,
         if (force) Some(WithForce) else None
       )
     )
@@ -72,9 +72,9 @@ trait Streams {
         consumer,
         minIdleTime,
         (id, ids.toList),
-        idle.map(i => Idle(i.toMillis)),
-        time.map(t => Time(t.toMillis)),
-        retryCount.map(RetryCount),
+        idle,
+        time,
+        retryCount,
         if (force) Some(WithForce) else None,
         WithJustId
       )
@@ -110,7 +110,7 @@ trait Streams {
     XPending.run((key, group, None))
 
   final def xPending(key: String, group: String, idle: Duration): ZIO[RedisExecutor, RedisError, PendingInfo] =
-    XPending.run((key, group, Some(Idle(idle.toMillis))))
+    XPending.run((key, group, Some(idle)))
 
   final def xPending(
     key: String,
@@ -121,7 +121,7 @@ trait Streams {
     consumer: Option[String] = None,
     idle: Option[Duration] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[PendingMessage]] =
-    XPendingMessages.run((key, group, start, end, count, consumer, idle.map(i => Idle(i.toMillis))))
+    XPendingMessages.run((key, group, start, end, count, consumer, idle))
 
   final def xRange(
     key: String,
@@ -142,7 +142,7 @@ trait Streams {
     stream: (String, String),
     streams: (String, String)*
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, Map[String, String]]]] =
-    XRead.run((count.map(Count), block.map(Block), (stream, Chunk.fromIterable(streams))))
+    XRead.run((count.map(Count), block, (stream, Chunk.fromIterable(streams))))
 
   final def xReadGroup(group: String, consumer: String)(
     count: Option[Long] = None,
@@ -156,7 +156,7 @@ trait Streams {
       (
         Group(group, consumer),
         count.map(Count),
-        block.map(Block),
+        block,
         if (noAck) Some(NoAck) else None,
         (stream, Chunk.fromIterable(streams))
       )

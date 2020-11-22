@@ -211,19 +211,19 @@ object Input {
       )
   }
 
-  case object IdleInput extends Input[Idle] {
-    def encode(data: Idle): Chunk[RespValue.BulkString] =
-      Chunk(stringEncode("IDLE"), stringEncode(data.millis.toString))
+  case object IdleInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("IDLE"), stringEncode(data.toMillis.toString))
   }
 
-  case object TimeInput extends Input[Time] {
-    def encode(data: Time): Chunk[RespValue.BulkString] =
-      Chunk(stringEncode("TIME"), stringEncode(data.millis.toString))
+  case object TimeInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("TIME"), stringEncode(data.toMillis.toString))
   }
 
-  case object RetryCountInput extends Input[RetryCount] {
-    def encode(data: RetryCount): Chunk[RespValue.BulkString] =
-      Chunk(stringEncode("RETRYCOUNT"), stringEncode(data.count.toString))
+  case object RetryCountInput extends Input[Long] {
+    def encode(data: Long): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("RETRYCOUNT"), stringEncode(data.toString))
   }
 
   case object XGroupCreateInput extends Input[XGroupCommand.Create] {
@@ -268,9 +268,9 @@ object Input {
       Chunk(stringEncode("DELCONSUMER"), stringEncode(data.key), stringEncode(data.group), stringEncode(data.consumer))
   }
 
-  case object BlockInput extends Input[Block] {
-    def encode(data: Block): Chunk[RespValue.BulkString] =
-      Chunk(stringEncode("BLOCK"), stringEncode(data.value.toMillis.toString))
+  case object BlockInput extends Input[Duration] {
+    def encode(data: Duration): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("BLOCK"), stringEncode(data.toMillis.toString))
   }
 
   case object StreamsInput extends Input[((String, String), Chunk[(String, String)])] {
