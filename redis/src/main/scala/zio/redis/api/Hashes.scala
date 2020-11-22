@@ -105,12 +105,12 @@ trait Hashes {
     HmSet.run((key, (pair, pairs.toList)))
 
   /**
-   * Iterates `fields` of Hash types and their associated values.
+   * Iterates `fields` of Hash types and their associated values using a cursor-based iterator.
    * @param key
-   * @param cursor
-   * @param pattern
-   * @param count
-   * @return
+   * @param cursor integer representing iterator
+   * @param pattern regular expression matching keys to scan
+   * @param count approximate number of elements to return (see https://redis.io/commands/scan#the-count-option)
+   * @return pair containing the next cursor and list of elements scanned
    */
   final def hScan(
     key: String,
@@ -123,9 +123,9 @@ trait Hashes {
   /**
    * Sets `field -> value` pairs in the hash stored at `key`.
    * @param key
-   * @param pair
-   * @param pairs
-   * @return
+   * @param pair mapping of a field to value
+   * @param pairs additional pairs
+   * @return number of fields added
    */
   final def hSet(key: String, pair: (String, String), pairs: (String, String)*): ZIO[RedisExecutor, RedisError, Long] =
     HSet.run((key, (pair, pairs.toList)))
@@ -135,7 +135,7 @@ trait Hashes {
    * @param key
    * @param field
    * @param value
-   * @return
+   * @return true if `field` is a new field and value was set, otherwise false
    */
   final def hSetNx(key: String, field: String, value: String): ZIO[RedisExecutor, RedisError, Boolean] =
     HSetNx.run((key, field, value))
@@ -144,14 +144,14 @@ trait Hashes {
    * Returns the string length of the value associated with `field` in the hash stored at `key`.
    * @param key
    * @param field
-   * @return
+   * @return string length of the value in field, or zero if either field or key do not exist.
    */
   final def hStrLen(key: String, field: String): ZIO[RedisExecutor, RedisError, Long] = HStrLen.run((key, field))
 
   /**
    * Returns all values in the hash stored at `key`.
    * @param key
-   * @return
+   * @return list of values in the hash, or an empty list when `key` does not exist.
    */
   final def hVals(key: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = HVals.run(key)
 }
