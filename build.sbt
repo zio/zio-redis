@@ -76,9 +76,9 @@ lazy val example =
       skip in publish := true,
       libraryDependencies ++= Seq(
         "io.scalac" %% "zio-akka-http-interop" % "0.4.0",
-        "com.softwaremill.sttp.client" %% "core" % "2.0.3",
-        "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.0.3",
-        "com.softwaremill.sttp.client" %% "circe" % "2.0.3",
+        "com.softwaremill.sttp.client" %% "core" % "2.2.9",
+        "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
+        "com.softwaremill.sttp.client" %% "circe" % "2.2.9",
         "io.circe" %% "circe-core" % "0.12.3",
         "io.circe" %% "circe-generic" % "0.12.3",
         "de.heikoseeberger" %% "akka-http-circe" % "1.31.0",

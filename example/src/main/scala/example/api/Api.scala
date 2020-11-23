@@ -6,9 +6,12 @@ import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import example.config.RedisConfig
 import example.domain.ContributorService
-import example.domain.ContributorService.SttpClient
+import sttp.client.asynchttpclient.zio.SttpClient
 import zio._
+import zio.clock.Clock
+import zio.redis.RedisExecutor
 import zio.config.ZConfig
+import zio.logging.Logging
 
 object Api {
 
@@ -18,19 +21,14 @@ object Api {
     def routes: Route
   }
 
-  val live: ZLayer[ZConfig[HttpServer.Config] with ZConfig[RedisConfig] with SttpClient, Nothing, Api] =
-    ZLayer.fromFunction { env =>
+  val live: ZLayer[ContributorService, Nothing, Api] =
+    ZLayer.fromService { contributorService =>
       new Service with ZIOSupport {
-
-        def routes = contributorRoutes
-
-        val contributorRoutes: Route =
+        def routes =
           pathPrefix("contributors") {
             get {
               complete {
-                ContributorService
-                  .getContributors(url)
-                  .provide(env)
+                  contributorService.getContributors(url)
               }
             }
           }

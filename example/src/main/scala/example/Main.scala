@@ -6,13 +6,14 @@ import akka.http.scaladsl.server.Route
 import com.typesafe.config.{Config, ConfigFactory}
 import example.api.Api
 import example.config.AppConfig
-import example.domain.ContributorService.SttpClient
+import example.domain.ContributorService
 import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zio._
+import zio.redis.RedisExecutor
 import zio.console._
-import zio.redis._
 import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
+import zio.logging.Logging
 
 object Main extends App {
 
@@ -21,31 +22,26 @@ object Main extends App {
       .flatMap(rawConfig => program.provideCustomLayer(prepareEnvironment(rawConfig)))
       .exitCode
 
-  private val program: RIO[HttpServer with ZEnv, Unit] = {
-    val startHttpServer = HttpServer.start.tapM(_ => putStrLn("Server online."))
-
-    startHttpServer.useForever
-  }
+  private val program: RIO[HttpServer with ZEnv, Unit] =
+    HttpServer.start.tapM(_ => putStrLn("Server online.")).useForever
 
   private def prepareEnvironment(rawConfig: Config): TaskLayer[HttpServer] = {
     val configLayer = TypesafeConfig.fromTypesafeConfig(rawConfig, AppConfig.descriptor)
 
-    val actorSystemLayer: TaskLayer[Has[ActorSystem]] = ZLayer.fromManaged {
-      ZManaged.make(ZIO(ActorSystem("zio-redis-example")))(system => ZIO.fromFuture(_ => system.terminate()).either)
-    }
+    val actorSystemLayer =
+      ZManaged.make(ZIO(ActorSystem("zio-redis-example")))(system => ZIO.fromFuture(_ => system.terminate()).either).toLayer
 
     val apiConfigLayer = configLayer.narrow(_.api)
-    val redisConfigLayer = configLayer.narrow(_.redis) // ???
+    val redisConfigLayer = configLayer.narrow(_.redis)
 
-    val sttpLayer: TaskLayer[SttpClient] = AsyncHttpClientZioBackend().toLayer
-    val apiLayer: TaskLayer[Api] = (apiConfigLayer ++ redisConfigLayer ++ sttpLayer) >>> Api.live
-    val routesLayer: URLayer[Api, Has[Route]] = ZLayer.fromService(_.routes)
+    val redisLayer = Logging.ignore >>> RedisExecutor.loopback().orDie
+    val sttpLayer = AsyncHttpClientZioBackend.layer()
 
-    val redisLayer = RedisExecutor.live("localhost", 1)
+    val contributorLayer = redisLayer ++ sttpLayer >>> ContributorService.live
+    val apiLayer = contributorLayer >>> Api.live
+    val routesLayer = ZLayer.fromService[Api.Service, Route](_.routes)
 
-    val serverEnv: TaskLayer[HttpServer] =
-      (actorSystemLayer ++ apiConfigLayer ++ (apiLayer >>> routesLayer)) >>> HttpServer.live
 
-    serverEnv
+    (actorSystemLayer ++ apiConfigLayer ++ (apiLayer >>> routesLayer)) >>> HttpServer.live
   }
 }
