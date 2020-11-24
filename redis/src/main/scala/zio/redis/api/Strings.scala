@@ -255,6 +255,18 @@ trait Strings {
     SetRange.run((key, offset, value))
 
   /**
+   * Implements complex algorithms that operate on strings. Right now the only algorithm implemented is
+   * the longest common subsequence.
+   *
+   * @param key Key of the string to get the length of
+   * @return Returns the length of the string
+   */
+  final def strAlgo(command: StrAlgoCommand): ZIO[RedisExecutor, RedisError, LongestCommonSubsequenceResult] =
+    command match {
+      case args: StrAlgoCommand.LongestCommonSubsequence => StrAlgoLcs.run(args)
+    }
+
+  /**
    * Get the length of a value stored in a key
    *
    * @param key Key of the string to get the length of
@@ -307,9 +319,10 @@ private[redis] object Strings {
       SetOutput
     )
 
-  final val SetBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
-  final val SetEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
-  final val SetNx    = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
-  final val SetRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
-  final val StrLen   = RedisCommand("STRLEN", StringInput, LongOutput)
+  final val SetBit     = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
+  final val SetEx      = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
+  final val SetNx      = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
+  final val SetRange   = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+  final val StrAlgoLcs = RedisCommand("STRALGO", StrAlgoCommandInput, StrAlgoLcsOutput)
+  final val StrLen     = RedisCommand("STRLEN", StringInput, LongOutput)
 }

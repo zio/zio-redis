@@ -352,6 +352,20 @@ object Input {
         _6.encode(data._6) ++ _7.encode(data._7)
   }
 
+  final case class Tuple8[-A, -B, -C, -D, -E, -F, -G, -H](
+    _1: Input[A],
+    _2: Input[B],
+    _3: Input[C],
+    _4: Input[D],
+    _5: Input[E],
+    _6: Input[F],
+    _7: Input[G],
+    _8: Input[H]
+  ) extends Input[(A, B, C, D, E, F, G, H)]    {
+    def encode(data: (A, B, C, D, E, F, G, H)): Chunk[RespValue.BulkString] =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
+        _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8)
+  }
   final case class Tuple9[-A, -B, -C, -D, -E, -F, -G, -H, -I](
     _1: Input[A],
     _2: Input[B],
@@ -437,4 +451,19 @@ object Input {
   case object WithJustIdInput extends Input[WithJustId] {
     def encode(data: WithJustId): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
+
+  case object StrAlgoCommandInput extends Input[StrAlgoCommand] {
+    def encode(data: StrAlgoCommand): Chunk[RespValue.BulkString] = {
+      import StrAlgoCommand._
+      data match {
+        case LongestCommonSubsequence(lcsType, input1, input2, queryType, minMatchLen, withMatchLen) =>
+          val empty = Chunk.empty[RespValue.BulkString]
+          Chunk(stringEncode("LCS"), stringEncode(lcsType.stringify), stringEncode(input1), stringEncode(input2)) ++
+            queryType.fold(empty)(v => Chunk.single(stringEncode(v.stringify))) ++
+            minMatchLen.fold(empty)(v => Chunk(stringEncode("MINMATCHLEN"), stringEncode(v.length.toString))) ++
+            withMatchLen.fold(empty)(v => Chunk.single(stringEncode(v.stringify)))
+      }
+    }
+  }
+
 }

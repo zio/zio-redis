@@ -427,4 +427,14 @@ object Output {
       }
   }
 
+  case object StrAlgoLcsOutput extends Output[LongestCommonSubsequenceResult] {
+    protected def tryDecode(respValue: RespValue): LongestCommonSubsequenceResult =
+      respValue match {
+        case result @ RespValue.BulkString(_) => LongestCommonSubsequenceResult(Some(result.asString), None, None)
+        case RespValue.Integer(length)        => LongestCommonSubsequenceResult(None, Some(length), None)
+        // TODO Parse output of "IDX" option
+        // TODO Parse output when using "KEYS" option with non-existent keys
+        case other                            => throw ProtocolError(s"$other isn't a valid set response")
+      }
+  }
 }
