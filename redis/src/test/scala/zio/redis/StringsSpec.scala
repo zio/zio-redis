@@ -1408,6 +1408,35 @@ trait StringsSpec extends BaseSpec {
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
+      suite("strAlgo")(
+        testM("query for longest common subsequence") {
+          import StrAlgoCommand._
+          for {
+            result <- strAlgo(LongestCommonSubsequence(LcsType.Strings, "ohmytext", "mynewtext"))
+          } yield assert(result)(equalTo(LongestCommonSubsequenceResult(Some("mytext"), None, None)))
+        },
+        testM("query for LCS length") {
+          import StrAlgoCommand._
+          for {
+            result <- strAlgo(LongestCommonSubsequence(LcsType.Strings, "ohmytext", "mynewtext", Some(QueryType.Len)))
+          } yield assert(result)(equalTo(LongestCommonSubsequenceResult(None, Some(6L), None)))
+        },
+        testM("query for index matches") {
+          import StrAlgoCommand._
+          for {
+            result <- strAlgo(
+                        LongestCommonSubsequence(
+                          LcsType.Strings,
+                          "ohmytext",
+                          "mynewtext",
+                          Some(QueryType.Idx),
+                          Some(MinMatchLen(4)),
+                          Some(WithMatchLen)
+                        )
+                      )
+          } yield assert(result.length)(isSome(equalTo(6L)))
+        }
+      ),
       suite("strLen")(
         testM("for non-empty string") {
           for {
