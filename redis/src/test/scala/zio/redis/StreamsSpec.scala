@@ -1,5 +1,6 @@
 package zio.redis
 
+import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test._
 
@@ -13,7 +14,7 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             consumer <- uuid
             _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "name" -> "Sara", "surname" -> "OConnor")
+            id       <- xAdd(stream, "*", "name" -> "Sara")
             _        <- xReadGroup(group, consumer)(stream -> ">")
             result   <- xAck(stream, group, id)
           } yield assert(result)(equalTo(1L))
@@ -24,8 +25,8 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             consumer <- uuid
             _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- xAdd(stream, "*", "name" -> "Sara", "surname" -> "OConnor")
-            second   <- xAdd(stream, "*", "name" -> "Sara", "surname" -> "OConnor")
+            first    <- xAdd(stream, "*", "name" -> "Sara")
+            second   <- xAdd(stream, "*", "name" -> "Sara")
             _        <- xReadGroup(group, consumer)(stream -> ">")
             result   <- xAck(stream, group, first, second)
           } yield assert(result)(equalTo(2L))
@@ -42,7 +43,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            id     <- xAdd(stream, "*", "name" -> "Sara", "surname" -> "OConnor")
+            id     <- xAdd(stream, "*", "name" -> "Sara")
             result <- xAck(stream, group, id)
           } yield assert(result)(equalTo(0L))
         },
@@ -52,7 +53,7 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             consumer <- uuid
             _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xAdd(stream, "*", "name" -> "Sara", "surname" -> "OConnor")
+            _        <- xAdd(stream, "*", "name" -> "Sara")
             _        <- xReadGroup(group, consumer)(stream -> ">")
             result   <- xAck(stream, group, "0-0")
           } yield assert(result)(equalTo(0L))
@@ -64,7 +65,54 @@ trait StreamsSpec extends BaseSpec {
             id     <- uuid
             _      <- xGroupCreate(stream, group, "$", mkStream = true)
             result <- xAck(stream, group, id).either
-          } yield assert(result)(isLeft)
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            nonStream <- uuid
+            group     <- uuid
+            id        <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xAck(nonStream, group, id).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xAdd")(
+        testM("object with one field") {
+          for {
+            stream <- uuid
+            id      = "1-0"
+            result <- xAdd(stream, id, "name" -> "Sara")
+          } yield assert(result)(equalTo(id))
+        },
+        testM("object with multiple fields") {
+          for {
+            stream <- uuid
+            id      = "1-0"
+            result <- xAdd(stream, id, "name" -> "Sara", "surname" -> "OConnor")
+          } yield assert(result)(equalTo(id))
+        },
+        testM("error when ID should be greater") {
+          for {
+            stream <- uuid
+            id      = "0-0"
+            result <- xAdd(stream, id, "name" -> "Sara").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when invalid ID format") {
+          for {
+            stream <- uuid
+            id     <- uuid
+            result <- xAdd(stream, id, "name" -> "Sara").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            nonStream <- uuid
+            id         = "1-0"
+            _         <- set(nonStream, "value")
+            result    <- xAdd(nonStream, id, "name" -> "Sara").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       )
     )
