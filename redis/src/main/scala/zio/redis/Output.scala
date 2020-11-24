@@ -315,33 +315,15 @@ object Output {
   case object StreamOutput extends Output[Map[String, Map[String, String]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, String]] =
       respValue match {
-        case RespValue.Array(entities) if entities.length % 2 == 0 =>
+        case RespValue.Array(entities) =>
           val output = collection.mutable.Map.empty[String, Map[String, String]]
-          val len    = entities.length
-          var pos    = 0
-          while (pos < len) {
-            (entities(pos), entities(pos + 1)) match {
-              case (id @ RespValue.BulkString(_), RespValue.Array(elements)) if elements.length % 2 == 0 =>
-                val entity = collection.mutable.Map.empty[String, String]
-                val elen   = elements.length
-                var epos   = 0
-                while (epos < elen) {
-                  (elements(epos), elements(epos + 1)) match {
-                    case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-                      entity += key.asString -> value.asString
-                    case _                                                                =>
-                  }
-                  epos += 2
-                }
-                output += id.asString -> entity.toMap
-              case _ =>
-            }
-            pos += 2
+          entities.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
           }
+
           output.toMap
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have an even number of elements")
-        case other =>
+        case other                     =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -396,24 +378,15 @@ object Output {
   case object XReadOutput extends Output[Map[String, Map[String, Map[String, String]]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, Map[String, String]]] =
       respValue match {
-        case RespValue.Array(streams) if streams.length % 2 == 0 =>
+        case RespValue.Array(streams) =>
           val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
-          val len    = streams.length
-          var pos    = 0
-          while (pos < len) {
-            streams(pos) match {
-              case stream @ RespValue.BulkString(_) =>
-                output += (stream.asString -> StreamOutput.unsafeDecode(streams(pos + 1)))
-              case _                                =>
-            }
-
-            pos += 2
+          streams.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> StreamOutput.unsafeDecode(value))
           }
 
           output.toMap
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have valid format")
-        case other =>
+        case other                    =>
           throw ProtocolError(s"$other isn't an array")
       }
   }

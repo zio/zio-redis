@@ -144,7 +144,9 @@ trait Streams {
   ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, Map[String, String]]]] =
     XRead.run((count.map(Count), block, (stream, Chunk.fromIterable(streams))))
 
-  final def xReadGroup(group: String, consumer: String)(
+  final def xReadGroup(
+    group: String,
+    consumer: String,
     count: Option[Long] = None,
     block: Option[Duration] = None,
     noAck: Boolean = false
