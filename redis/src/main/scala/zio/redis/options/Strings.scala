@@ -64,4 +64,53 @@ trait Strings {
   }
 
   type KeepTtl = KeepTtl.type
+
+  sealed trait StrAlgoCommand
+
+  object StrAlgoCommand {
+    case class LongestCommonSubsequence(
+      lcsType: LcsType,
+      input1: String,
+      input2: String,
+      len: Option[QueryType] = None,
+      minMatchLen: Option[MinMatchLen] = None,
+      withMatchLen: Option[WithMatchLen] = None
+    ) extends StrAlgoCommand
+
+    sealed trait LcsType { self =>
+      private[redis] final def stringify: String =
+        self match {
+          case LcsType.Keys    => "KEYS"
+          case LcsType.Strings => "STRINGS"
+        }
+    }
+
+    object LcsType {
+      case object Keys    extends LcsType
+      case object Strings extends LcsType
+    }
+
+    sealed trait QueryType { self =>
+      private[redis] final def stringify: String =
+        self match {
+          case QueryType.Len => "LEN"
+          case QueryType.Idx => "IDX"
+        }
+    }
+
+    object QueryType {
+      case object Len extends QueryType
+      case object Idx extends QueryType
+    }
+
+    sealed case class MinMatchLen(length: Integer)
+
+    case object WithMatchLen {
+      private[redis] def stringify: String = "WITHMATCHLEN"
+    }
+
+    type WithMatchLen = WithMatchLen.type
+  }
+
+  case class LongestCommonSubsequenceResult(lcs: Option[String], length: Option[Long], matches: Option[String])
 }
