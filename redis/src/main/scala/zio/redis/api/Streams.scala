@@ -28,12 +28,16 @@ trait Streams {
   ): ZIO[RedisExecutor, RedisError, String] =
     XAdd.run((key, Some(MaxLen(approximate, count)), id, (pair, pairs.toList)))
 
-  final def xClaim(key: String, group: String, consumer: String, minIdleTime: Duration, id: String, ids: String*)(
+  final def xClaim(
+    key: String,
+    group: String,
+    consumer: String,
+    minIdleTime: Duration,
     idle: Option[Duration] = None,
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
     force: Boolean = false
-  ): ZIO[RedisExecutor, RedisError, Map[String, Map[String, String]]] =
+  )(id: String, ids: String*): ZIO[RedisExecutor, RedisError, Map[String, Map[String, String]]] =
     XClaim.run(
       (
         key,
@@ -53,14 +57,11 @@ trait Streams {
     group: String,
     consumer: String,
     minIdleTime: Duration,
-    id: String,
-    ids: String*
-  )(
     idle: Option[Duration] = None,
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
     force: Boolean = false
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+  )(id: String, ids: String*): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     XClaimWithJustId.run(
       (
         key,

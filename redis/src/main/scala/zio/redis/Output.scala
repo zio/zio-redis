@@ -15,6 +15,8 @@ sealed trait Output[+A] {
         throw RedisError.WrongType(msg.drop(9).trim)
       case RespValue.Error(msg) if msg.startsWith("BUSYGROUP") =>
         throw RedisError.WrongType(msg.drop(9).trim)
+      case RespValue.Error(msg) if msg.startsWith("NOGROUP")   =>
+        throw RedisError.NoGroup(msg.drop(7).trim)
       case RespValue.Error(msg)                                =>
         throw RedisError.ProtocolError(msg.trim)
       case success                                             =>
