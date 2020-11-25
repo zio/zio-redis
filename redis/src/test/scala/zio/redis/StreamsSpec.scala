@@ -484,6 +484,35 @@ trait StreamsSpec extends BaseSpec {
             result   <- xClaimWithJustId(stream, group, consumer, 0.millis, force = true)("1-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("xDel")(
+        testM("an existing message") {
+          for {
+            stream <- uuid
+            id     <- xAdd(stream, "*", "a" -> "b")
+            result <- xDel(stream, id)
+          } yield assert(result)(equalTo(1L))
+        },
+        testM("non-existent message") {
+          for {
+            stream <- uuid
+            result <- xDel(stream, "1-0")
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("with an invalid message id") {
+          for {
+            stream <- uuid
+            id     <- uuid
+            result <- xDel(stream, id)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("error when not stream") {
+          for {
+            stream <- uuid
+            _      <- set(stream, "value")
+            result <- xDel(stream, "1-0").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
