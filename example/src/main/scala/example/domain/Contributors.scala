@@ -10,6 +10,7 @@ import sttp.client.{UriContext, basicRequest}
 import sttp.client.circe.asJson
 import sttp.model.Uri
 import Contributor._
+import zio.duration._
 
 object Contributors {
 
@@ -26,6 +27,7 @@ object Contributors {
                 for {
                   contributors <- fetchContributors(organization, repository)
                   _ <- sAdd(repository, contributors.asJson.toString, contributors.map(_.asJson.toString):_*)
+                  _ <- pExpire(repository, 1.minute)
                 } yield contributors
               else
                 deserialize(response).orElseFail(GithubUnavailable("Github Client Unavailable"))
