@@ -1,19 +1,19 @@
 package example
 
-import akka.actor.ActorSystem
-import akka.http.interop._
-import akka.http.scaladsl.server.Route
-import com.typesafe.config.{Config, ConfigFactory}
-import example.api.Api
-import example.config.AppConfig
-import example.domain.ContributorService
-import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zio._
 import zio.redis.RedisExecutor
 import zio.console._
 import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
 import zio.logging.Logging
+import akka.actor.ActorSystem
+import akka.http.interop._
+import akka.http.scaladsl.server.Route
+import com.typesafe.config.{Config, ConfigFactory}
+import example.api.Api
+import example.config.AppConfig
+import example.domain.Contributors
+import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 
 object Main extends App {
 
@@ -29,18 +29,22 @@ object Main extends App {
     val configLayer = TypesafeConfig.fromTypesafeConfig(rawConfig, AppConfig.descriptor)
 
     val actorSystemLayer =
-      ZManaged.make(ZIO(ActorSystem("zio-redis-example")))(system => ZIO.fromFuture(_ => system.terminate()).either).toLayer
+      ZManaged.make {
+        ZIO(ActorSystem("zio-redis-example"))
+      } { system =>
+        ZIO.fromFuture(_ => system.terminate()).either
+      }.toLayer
 
     val apiConfigLayer = configLayer.narrow(_.api)
     val redisConfigLayer = configLayer.narrow(_.redis)
 
-    val redisLayer = Logging.ignore >>> RedisExecutor.loopback().orDie
+    val redisLayer = Logging.ignore >>> RedisExecutor.live("localhost", 6379).orDie
     val sttpLayer = AsyncHttpClientZioBackend.layer()
 
-    val contributorLayer = redisLayer ++ sttpLayer >>> ContributorService.live
-    val apiLayer = contributorLayer >>> Api.live
-    val routesLayer = ZLayer.fromService[Api.Service, Route](_.routes)
 
+    val contributorsLayer = redisLayer ++ sttpLayer >>> Contributors.live
+    val apiLayer = contributorsLayer >>> Api.live
+    val routesLayer = ZLayer.fromService[Api.Service, Route](_.routes)
 
     (actorSystemLayer ++ apiConfigLayer ++ (apiLayer >>> routesLayer)) >>> HttpServer.live
   }

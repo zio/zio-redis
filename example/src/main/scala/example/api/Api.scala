@@ -1,34 +1,34 @@
 package example.api
 
-import akka.http.interop.{HttpServer, ZIOSupport}
+import zio._
+import akka.http.interop.{ErrorResponse, ZIOSupport}
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import example.config.RedisConfig
-import example.domain.ContributorService
-import sttp.client.asynchttpclient.zio.SttpClient
-import zio._
-import zio.clock.Clock
-import zio.redis.RedisExecutor
-import zio.config.ZConfig
-import zio.logging.Logging
-
+import example.domain.{ApiError, Contributors, GithubUnavailable, NoContributors}
 object Api {
-
-  private val url = "https://api.github.com/repos/zio/zio-redis/contributors"
 
   trait Service {
     def routes: Route
   }
 
-  val live: ZLayer[ContributorService, Nothing, Api] =
+  lazy val live: ZLayer[Contributors, Nothing, Api] =
     ZLayer.fromService { contributorService =>
       new Service with ZIOSupport {
+
+        implicit val apiErrorResponse: ErrorResponse[ApiError] = {
+          case GithubUnavailable(_) => HttpResponse(StatusCodes.InternalServerError)
+          case NoContributors(_) => HttpResponse(StatusCodes.BadRequest)
+        }
+
         def routes =
           pathPrefix("contributors") {
-            get {
-              complete {
-                  contributorService.getContributors(url)
+            path(Segment / Segment) { (organization, repository) =>
+              get {
+                complete {
+                  contributorService.getContributors(organization, repository)
+                }
               }
             }
           }
