@@ -114,6 +114,36 @@ trait StreamsSpec extends BaseSpec {
             result    <- xAdd(nonStream, id, "name" -> "Sara").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("xAddWithMaxLen")(
+        testM("with positive count and without approximate") {
+          for {
+            stream <- uuid
+            id      = "1-0"
+            result <- xAddWithMaxLen(stream, id, 10)("name" -> "Sara")
+          } yield assert(result)(equalTo(id))
+        },
+        testM("with positive count and with approximate") {
+          for {
+            stream <- uuid
+            id      = "1-0"
+            result <- xAddWithMaxLen(stream, id, 10, approximate = true)("name" -> "Sara")
+          } yield assert(result)(equalTo(id))
+        },
+        testM("error with negative count and without approximate") {
+          for {
+            stream <- uuid
+            id      = "1-0"
+            result <- xAddWithMaxLen(stream, id, -10)("name" -> "Sara").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error with negative count and with approximate") {
+          for {
+            stream <- uuid
+            id      = "1-0"
+            result <- xAddWithMaxLen(stream, id, -10, approximate = true)("name" -> "Sara").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 }

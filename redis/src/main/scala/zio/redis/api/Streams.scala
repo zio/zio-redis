@@ -22,11 +22,7 @@ trait Streams {
   ): ZIO[RedisExecutor, RedisError, String] =
     XAdd.run((key, None, id, (pair, pairs.toList)))
 
-  final def xAddWithMaxLen(
-    key: String,
-    id: String,
-    count: Long,
-    approximate: Boolean,
+  final def xAddWithMaxLen(key: String, id: String, count: Long, approximate: Boolean = false)(
     pair: (String, String),
     pairs: (String, String)*
   ): ZIO[RedisExecutor, RedisError, String] =
