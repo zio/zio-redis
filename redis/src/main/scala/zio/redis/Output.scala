@@ -182,6 +182,14 @@ object Output {
 
   val DurationSecondsOutput: Output[Duration] = DurationOutput.map(_.seconds)
 
+  sealed case class ExpectedString(expect: String) extends Output[Unit] {
+    protected def tryDecode(respValue: RespValue): Unit =
+      respValue match {
+        case RespValue.SimpleString("OK") => ()
+        case other                        => throw ProtocolError(s"$other isn't unit.")
+      }
+  }
+
   case object LongOutput extends Output[Long] {
 
     override protected def tryDecode(respValue: RespValue): Long =
@@ -308,13 +316,9 @@ object Output {
       }
   }
 
-  case object UnitOutput extends Output[Unit] {
-    protected def tryDecode(respValue: RespValue): Unit =
-      respValue match {
-        case RespValue.SimpleString("OK") => ()
-        case other                        => throw ProtocolError(s"$other isn't unit.")
-      }
-  }
+  val UnitOutput: Output[Unit] = ExpectedString("OK")
+
+  val ResetOutput: Output[Unit] = ExpectedString("RESET")
 
   case object GeoOutput extends Output[Chunk[LongLat]] {
     protected def tryDecode(respValue: RespValue): Chunk[LongLat] =

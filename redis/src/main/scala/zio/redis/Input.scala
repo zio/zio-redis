@@ -82,6 +82,32 @@ object Input {
       }.map(stringEncode)
   }
 
+  case object ClientTrackingInput
+      extends Input[Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]] {
+    override private[redis] def encode(
+      data: Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]
+    ): Chunk[RespValue.BulkString] = {
+      val strings = data match {
+        case Some((clientRedir, mode, noLoop, prefixes)) =>
+          val modeChunk = mode match {
+            case Some(ClientTrackingMode.OptIn)     => Chunk("OPTIN")
+            case Some(ClientTrackingMode.OptOut)    => Chunk("OPTOUT")
+            case Some(ClientTrackingMode.Broadcast) => Chunk("BCAST")
+            case None                               => Chunk.empty
+          }
+          val loopChunk = if (noLoop) Chunk("NOLOOP") else Chunk.empty
+          Chunk("ON") ++
+            clientRedir.map(id => Chunk("REDIRECT", id.toString)).getOrElse(Chunk.empty) ++
+            prefixes.flatMap(Chunk("PREFIX", _)) ++
+            modeChunk ++
+            loopChunk
+        case None                                        =>
+          Chunk("OFF")
+      }
+      strings.map(stringEncode)
+    }
+  }
+
   case object CopyInput extends Input[Copy] {
     def encode(data: Copy): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
@@ -298,6 +324,13 @@ object Input {
   case object ClientTypeInput extends Input[Option[ClientType]] {
     override private[redis] def encode(data: Option[ClientType]): Chunk[RespValue.BulkString] =
       data.map(t => Chunk("TYPE", t.name).map(stringEncode)).getOrElse(Chunk.empty)
+  }
+
+  case object UnblockInput extends Input[Boolean] {
+    override private[redis] def encode(data: Boolean) = {
+      val value = if (data) "ERROR" else "TIMEOUT"
+      Chunk.single(stringEncode(value))
+    }
   }
 
   case object UpdateInput extends Input[Update] {

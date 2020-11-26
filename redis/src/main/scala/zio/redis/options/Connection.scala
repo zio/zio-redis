@@ -94,4 +94,12 @@ trait Connection {
     sealed case class RedirectedTo(clientId: Long) extends ClientTrackingRedirect
   }
 
+  sealed abstract class ClientTrackingMode
+
+  object ClientTrackingMode {
+    case object OptIn     extends ClientTrackingMode
+    case object OptOut    extends ClientTrackingMode
+    case object Broadcast extends ClientTrackingMode
+  }
+
 }

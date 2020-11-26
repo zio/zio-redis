@@ -31,9 +31,26 @@ trait Connection {
 
   final def clientSetName(name: String): ZIO[RedisExecutor, RedisError, Unit] = ClientSetName.run(name)
 
+  final def clientTrackingOn(
+    redirect: Option[Long] = None,
+    trackingMode: Option[ClientTrackingMode] = None,
+    noLoop: Boolean = false,
+    prefixes: Set[String]
+  ): ZIO[RedisExecutor, RedisError, Unit] =
+    ClientTracking.run(Some((redirect, trackingMode, noLoop, Chunk.fromIterable(prefixes))))
+
+  final def clientTrackingOff: ZIO[RedisExecutor, RedisError, Unit] = ClientTracking.run(None)
+
+  final def clientUnblock(clientId: Long, error: Boolean = false): ZIO[RedisExecutor, RedisError, Boolean] =
+    ClientUnblock.run((clientId, error))
+
   final def echo(a: String): ZIO[RedisExecutor, RedisError, String] = Echo.run(a)
 
   final def ping(as: String*): ZIO[RedisExecutor, RedisError, String] = Ping.run(as)
+
+  final def quit: ZIO[RedisExecutor, RedisError, Unit] = Quit.run(())
+
+  final def reset: ZIO[RedisExecutor, RedisError, Unit] = Reset.run(())
 
   final def select(a: Long): ZIO[RedisExecutor, RedisError, Unit] = Select.run(a)
 }
@@ -48,7 +65,11 @@ private object Connection {
   final val ClientRedirect = RedisCommand(Chunk("CLIENT", "GETREDIR"), NoInput, ClientTrackingRedirectOutput)
   final val ClientPause    = RedisCommand(Chunk("CLIENT", "PAUSE"), DurationMillisecondsInput, UnitOutput)
   final val ClientSetName  = RedisCommand(Chunk("CLIENT", "SETNAME"), StringInput, UnitOutput)
+  final val ClientTracking = RedisCommand(Chunk("CLIENT", "TRACKING"), ClientTrackingInput, UnitOutput)
+  final val ClientUnblock  = RedisCommand(Chunk("CLIENT", "UNBLOCK"), Tuple2(LongInput, UnblockInput), BoolOutput)
   final val Echo           = RedisCommand("ECHO", StringInput, MultiStringOutput)
   final val Ping           = RedisCommand("PING", Varargs(StringInput), MultiStringOutput)
+  final val Quit           = RedisCommand("QUIT", NoInput, UnitOutput)
+  final val Reset          = RedisCommand("RESET", NoInput, ResetOutput)
   final val Select         = RedisCommand("SELECT", LongInput, UnitOutput)
 }
