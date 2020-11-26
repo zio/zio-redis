@@ -710,6 +710,30 @@ trait StreamsSpec extends BaseSpec {
             result   <- xGroupDelConsumer(stream, group, consumer).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("xLen")(
+        testM("empty stream") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            result <- xLen(stream)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("non-empty stream") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xLen(stream)
+          } yield assert(result)(equalTo(1L))
+        },
+        testM("error when not stream") {
+          for {
+            stream <- uuid
+            _      <- set(stream, "value")
+            result <- xLen(stream).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
