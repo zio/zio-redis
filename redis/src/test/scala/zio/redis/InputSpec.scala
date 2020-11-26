@@ -1,5 +1,6 @@
 package zio.redis
 
+import java.net.InetAddress
 import java.time.Instant
 
 import BitFieldCommand._
@@ -7,7 +8,6 @@ import BitFieldType._
 import BitOperation._
 import Order._
 import RadiusUnit._
-
 import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
@@ -194,6 +194,90 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(CountInput.encode(Count(0L)))
           } yield assert(result)(equalTo(respArgs("COUNT", "0")))
+        }
+      ),
+      suite("ClientKill")(
+        testM("address") {
+          val address = InetAddress.getByName("127.0.0.1")
+          val port    = 42
+          for {
+            result <- Task(ClientKillInput.encode(Chunk.single(ClientKillFilter.Address(address, port))))
+          } yield assert(result)(equalTo(respArgs("ADDR", s"${address.getHostAddress}:$port")))
+        },
+        testM("local address") {
+          val address = InetAddress.getByName("127.0.0.1")
+          val port    = 42
+          for {
+            result <- Task(ClientKillInput.encode(Chunk.single(ClientKillFilter.LocalAddress(address, port))))
+          } yield assert(result)(equalTo(respArgs("LADDR", s"${address.getHostAddress}:$port")))
+        },
+        testM("client ID") {
+          val id = 42L
+          for {
+            result <- Task(ClientKillInput.encode(Chunk.single(ClientKillFilter.Id(id))))
+          } yield assert(result)(equalTo(respArgs("ID", 42.toString)))
+        },
+        testM("type") {
+          val clientType = ClientType.PubSub
+          for {
+            result <- Task(ClientKillInput.encode(Chunk.single(ClientKillFilter.Type(clientType))))
+          } yield assert(result)(equalTo(respArgs("TYPE", clientType.name)))
+        },
+        testM("user") {
+          val user = "Redisy McRedisFace"
+          for {
+            result <- Task(ClientKillInput.encode(Chunk.single(ClientKillFilter.User(user))))
+          } yield assert(result)(equalTo(respArgs("USER", user)))
+        },
+        testM("skip me") {
+          for {
+            result <- Task(ClientKillInput.encode(Chunk.single(ClientKillFilter.SkipMe(true))))
+          } yield assert(result)(equalTo(respArgs("SKIPME", "yes")))
+        },
+        testM("multiple") {
+          val clientType = ClientType.Master
+          for {
+            result <-
+              Task(ClientKillInput.encode(Chunk(ClientKillFilter.Type(clientType), ClientKillFilter.SkipMe(true))))
+          } yield assert(result)(equalTo(respArgs("TYPE", clientType.name, "SKIPME", "yes")))
+        }
+      ),
+      suite("ClientTracking")(
+        testM("off") {
+          for {
+            result <- Task(ClientTrackingInput.encode(None))
+          } yield assert(result)(equalTo(respArgs("OFF")))
+        },
+        testM("client redirect with noloop and prefiexes") {
+          val clientId = 42L
+          val prefixes = Chunk("prefix1", "prefix2", "prefix3")
+          for {
+            result <- Task(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
+          } yield assert(result)(
+            equalTo(
+              respArgs("ON", "REDIRECT", clientId.toString) ++ prefixes
+                .flatMap(respArgs("PREFIX", _)) ++ respArgs("NOLOOP")
+            )
+          )
+        },
+        testM("broadcast mode") {
+          for {
+            result <-
+              Task(ClientTrackingInput.encode(Some((None, Some(ClientTrackingMode.Broadcast), false, Chunk.empty))))
+          } yield assert(result)(equalTo(respArgs("ON", "BCAST")))
+        }
+      ),
+      suite("ClientType")(
+        testM("present") {
+          val clientType = ClientType.Replica
+          for {
+            result <- Task(ClientTypeInput.encode(Some(clientType)))
+          } yield assert(result)(equalTo(respArgs("TYPE", clientType.name)))
+        },
+        testM("absent") {
+          for {
+            result <- Task(ClientTypeInput.encode(None))
+          } yield assert(result)(equalTo(Chunk.empty))
         }
       ),
       suite("Position")(
@@ -782,6 +866,18 @@ object InputSpec extends BaseSpec {
           )
         }
       ),
+      suite("Unblock")(
+        testM("timeout")(
+          for {
+            result <- Task(UnblockInput.encode(false))
+          } yield assert(result)(equalTo(respArgs("TIMEOUT")))
+        ),
+        testM("error")(
+          for {
+            result <- Task(UnblockInput.encode(true))
+          } yield assert(result)(equalTo(respArgs("ERROR")))
+        )
+      ),
       suite("Update")(
         testM("set existing") {
           for {
@@ -832,6 +928,18 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(WithHashInput.encode(WithHash))
           } yield assert(result)(equalTo(respArgs("WITHHASH")))
+        }
+      ),
+      suite("YesNo")(
+        testM("yes") {
+          for {
+            result <- Task(YesNoInput.encode(true))
+          } yield assert(result)(equalTo(respArgs("YES")))
+        },
+        testM("no") {
+          for {
+            result <- Task(YesNoInput.encode(false))
+          } yield assert(result)(equalTo(respArgs("NO")))
         }
       )
     )

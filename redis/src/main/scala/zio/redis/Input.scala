@@ -70,7 +70,7 @@ object Input {
         case ClientKillFilter.Address(ip, port)      =>
           Chunk("ADDR", s"${ip.getHostAddress}:$port")
         case ClientKillFilter.LocalAddress(ip, port) =>
-          Chunk("LADDR ", s"${ip.getHostAddress}:$port")
+          Chunk("LADDR", s"${ip.getHostAddress}:$port")
         case ClientKillFilter.Id(id)                 =>
           Chunk("ID", id.toString)
         case ClientKillFilter.Type(clientType)       =>
