@@ -91,7 +91,7 @@ trait Streams {
   final def xGroupSetId(key: String, group: String, id: String): ZIO[RedisExecutor, RedisError, Unit] =
     XGroupSetId.run(SetId(key, group, id))
 
-  final def xGroupDestroy(key: String, group: String): ZIO[RedisExecutor, RedisError, Long] =
+  final def xGroupDestroy(key: String, group: String): ZIO[RedisExecutor, RedisError, Boolean] =
     XGroupDestroy.run(Destroy(key, group))
 
   final def xGroupCreateConsumer(key: String, group: String, consumer: String): ZIO[RedisExecutor, RedisError, Unit] =
@@ -229,7 +229,7 @@ private object Streams {
 
   final val XGroupSetId = RedisCommand("XGROUP", XGroupSetIdInput, UnitOutput)
 
-  final val XGroupDestroy = RedisCommand("XGROUP", XGroupDestroyInput, LongOutput)
+  final val XGroupDestroy = RedisCommand("XGROUP", XGroupDestroyInput, BoolOutput)
 
   final val XGroupCreateConsumer = RedisCommand("XGROUP", XGroupCreateConsumerInput, UnitOutput)
 
