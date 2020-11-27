@@ -1,7 +1,7 @@
 package zio.redis
 
 import zio.Chunk
-import zio.redis.RedisError.{ BusyGroup, NoGroup, ProtocolError, WrongType }
+import zio.redis.RedisError._
 import zio.test.Assertion._
 import zio.test._
 import zio.duration._
@@ -733,6 +733,140 @@ trait StreamsSpec extends BaseSpec {
             _      <- set(stream, "value")
             result <- xLen(stream).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xPending")(
+        testM("with an empty stream") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            result <- xPending(stream, group)
+          } yield assert(result)(equalTo(PendingInfo(0L, None, None, Map.empty[String, Long])))
+        },
+        testM("with one consumer") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            id       <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, consumer)(stream -> ">")
+            result   <- xPending(stream, group)
+          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map[String, Long](consumer -> 1L))))
+        },
+        testM("with multiple consumers and multiple messages") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            first    <- uuid
+            second   <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            firstMsg <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, first)(stream -> ">")
+            lastMsg  <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, second)(stream -> ">")
+            result   <- xPending(stream, group)
+          } yield assert(result)(
+            equalTo(PendingInfo(2L, Some(firstMsg), Some(lastMsg), Map[String, Long](first -> 1L, second -> 1L)))
+          )
+        },
+        // TODO: unignore when redis docker image version 6.2 comes out
+        testM("with 0ms idle time") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            id       <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, consumer)(stream -> ">")
+            result   <- xPending(stream, group, 0.millis)
+          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map[String, Long](consumer -> 1L))))
+        } @@ ignore,
+        testM("with 60s idle time") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            _        <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, consumer)(stream -> ">")
+            result   <- xPending(stream, group, 1.minute)
+          } yield assert(result)(equalTo(PendingInfo(1L, None, None, Map.empty[String, Long])))
+        } @@ ignore,
+        testM("error when group doesn't exist") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xPending(stream, group).either
+          } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            _      <- set(stream, "value")
+            result <- xPending(stream, group).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("with one message unlimited start, unlimited end and count with value 10") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            id       <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, consumer)(stream -> ">")
+            messages <- xPending(stream, group, "-", "+", 10L)
+            result    = messages.head
+          } yield assert(messages)(hasSize(equalTo(1))) &&
+            assert(result.id)(equalTo(id)) &&
+            assert(result.owner)(equalTo(consumer)) &&
+            assert(result.lastDelivered)(isGreaterThan(0.millis)) &&
+            assert(result.counter)(equalTo(1L))
+        },
+        testM("with multiple message, unlimited start, unlimited end and count with value 10") {
+          for {
+            stream                     <- uuid
+            group                      <- uuid
+            first                      <- uuid
+            second                     <- uuid
+            _                          <- xGroupCreate(stream, group, "$", mkStream = true)
+            firstMsg                   <- xAdd(stream, "*", "a" -> "b")
+            _                          <- xReadGroup(group, first)(stream -> ">")
+            secondMsg                  <- xAdd(stream, "*", "a" -> "b")
+            _                          <- xReadGroup(group, second)(stream -> ">")
+            messages                   <- xPending(stream, group, "-", "+", 10L)
+            (firstResult, secondResult) = (messages(0), messages(1))
+          } yield assert(messages)(hasSize(equalTo(2))) &&
+            assert(firstResult.id)(equalTo(firstMsg)) &&
+            assert(firstResult.owner)(equalTo(first)) &&
+            assert(firstResult.lastDelivered)(isGreaterThan(0.millis)) &&
+            assert(firstResult.counter)(equalTo(1L)) &&
+            assert(secondResult.id)(equalTo(secondMsg)) &&
+            assert(secondResult.owner)(equalTo(second)) &&
+            assert(secondResult.lastDelivered)(isGreaterThan(0.millis)) &&
+            assert(secondResult.counter)(equalTo(1L))
+        },
+        testM("with unlimited start, unlimited end, count with value 10, and the specified consumer") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            first    <- uuid
+            second   <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            id       <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, first)(stream -> ">")
+            _        <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, second)(stream -> ">")
+            messages <- xPending(stream, group, "-", "+", 10L, Some(first))
+            result    = messages.head
+          } yield assert(messages)(hasSize(equalTo(1))) &&
+            assert(result.id)(equalTo(id)) &&
+            assert(result.owner)(equalTo(first)) &&
+            assert(result.lastDelivered)(isGreaterThan(0.millis)) &&
+            assert(result.counter)(equalTo(1L))
         }
       )
     )

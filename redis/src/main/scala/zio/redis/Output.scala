@@ -334,22 +334,28 @@ object Output {
     protected def tryDecode(respValue: RespValue): PendingInfo =
       respValue match {
         case RespValue.Array(
-              Seq(
-                RespValue.Integer(total),
-                first @ RespValue.BulkString(_),
-                last @ RespValue.BulkString(_),
-                RespValue.Array(pairs)
-              )
+              Seq(RespValue.Integer(total), f, l, ps)
             ) =>
-          val consumers = collection.mutable.Map.empty[String, Long]
-          pairs.foreach {
-            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), RespValue.Integer(total))) =>
-              consumers += (consumer.asString -> total)
-            case _                                                                                  =>
-              throw ProtocolError(s"Consumer doesn't have 2 elements")
+          val first = OptionalOutput(MultiStringOutput).unsafeDecode(f)
+          val last  = OptionalOutput(MultiStringOutput).unsafeDecode(l)
+          val pairs = ps match {
+            case RespValue.Array(value) =>
+              value
+            case RespValue.NullValue    =>
+              Chunk.empty
+            case other                  =>
+              throw ProtocolError(s"$other isn't an array")
           }
 
-          PendingInfo(total, first.asString, last.asString, consumers.toMap)
+          val consumers = collection.mutable.Map.empty[String, Long]
+          pairs.foreach {
+            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
+              consumers += (consumer.asString -> total.asString.toLong)
+            case _                                                                                         =>
+              throw ProtocolError(s"Consumers doesn't have 2 elements")
+          }
+
+          PendingInfo(total, first, last, consumers.toMap)
         case array @ RespValue.Array(_) =>
           throw ProtocolError(s"$array doesn't have valid format")
         case other                      =>
