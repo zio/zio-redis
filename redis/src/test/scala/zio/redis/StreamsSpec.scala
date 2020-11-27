@@ -309,11 +309,11 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("when not stream") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- set(stream, "value")
-            result   <- xClaim(stream, group, consumer, 0.millis, force = true)("1-0").either
+            nonStream <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xClaim(nonStream, group, consumer, 0.millis, force = true)("1-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -478,11 +478,11 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("when not stream") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- set(stream, "value")
-            result   <- xClaimWithJustId(stream, group, consumer, 0.millis, force = true)("1-0").either
+            nonStream <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xClaimWithJustId(nonStream, group, consumer, 0.millis, force = true)("1-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -509,9 +509,9 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream <- uuid
-            _      <- set(stream, "value")
-            result <- xDel(stream, "1-0").either
+            nonStream <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xDel(nonStream, "1-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -548,10 +548,10 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream <- uuid
-            group  <- uuid
-            _      <- set(stream, "value")
-            result <- xGroupCreate(stream, group, "$").either
+            nonStream <- uuid
+            group     <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xGroupCreate(nonStream, group, "$").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -583,9 +583,9 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream <- uuid
-            group  <- uuid
-            result <- xGroupSetId(stream, group, "1-0").either
+            nonStream <- uuid
+            group     <- uuid
+            result    <- xGroupSetId(nonStream, group, "1-0").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -615,10 +615,10 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream <- uuid
-            group  <- uuid
-            _      <- set(stream, "value")
-            result <- xGroupDestroy(stream, group).either
+            nonStream <- uuid
+            group     <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xGroupDestroy(nonStream, group).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -643,11 +643,11 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- set(stream, "value")
-            result   <- xGroupCreateConsumer(stream, group, consumer).either
+            nonStream <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xGroupCreateConsumer(nonStream, group, consumer).either
           } yield assert(result)(isLeft)
         }
       ) @@ ignore,
@@ -703,11 +703,11 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- set(stream, "value")
-            result   <- xGroupDelConsumer(stream, group, consumer).either
+            nonStream <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xGroupDelConsumer(nonStream, group, consumer).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -729,9 +729,9 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream <- uuid
-            _      <- set(stream, "value")
-            result <- xLen(stream).either
+            nonStream <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xLen(nonStream).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -753,7 +753,7 @@ trait StreamsSpec extends BaseSpec {
             id       <- xAdd(stream, "*", "a" -> "b")
             _        <- xReadGroup(group, consumer)(stream -> ">")
             result   <- xPending(stream, group)
-          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map[String, Long](consumer -> 1L))))
+          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
         },
         testM("with multiple consumers and multiple messages") {
           for {
@@ -768,7 +768,7 @@ trait StreamsSpec extends BaseSpec {
             _        <- xReadGroup(group, second)(stream -> ">")
             result   <- xPending(stream, group)
           } yield assert(result)(
-            equalTo(PendingInfo(2L, Some(firstMsg), Some(lastMsg), Map[String, Long](first -> 1L, second -> 1L)))
+            equalTo(PendingInfo(2L, Some(firstMsg), Some(lastMsg), Map(first -> 1L, second -> 1L)))
           )
         },
         // TODO: unignore when redis docker image version 6.2 comes out
@@ -781,7 +781,7 @@ trait StreamsSpec extends BaseSpec {
             id       <- xAdd(stream, "*", "a" -> "b")
             _        <- xReadGroup(group, consumer)(stream -> ">")
             result   <- xPending(stream, group, 0.millis)
-          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map[String, Long](consumer -> 1L))))
+          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
         } @@ ignore,
         testM("with 60s idle time") {
           for {
@@ -804,10 +804,10 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("error when not stream") {
           for {
-            stream <- uuid
-            group  <- uuid
-            _      <- set(stream, "value")
-            result <- xPending(stream, group).either
+            nonStream <- uuid
+            group     <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xPending(nonStream, group).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("with one message unlimited start, unlimited end and count with value 10") {
@@ -867,6 +867,65 @@ trait StreamsSpec extends BaseSpec {
             assert(result.owner)(equalTo(first)) &&
             assert(result.lastDelivered)(isGreaterThan(0.millis)) &&
             assert(result.counter)(equalTo(1L))
+        },
+        testM("error when invalid ID") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            result <- xPending(stream, group, "-", "invalid", 10L).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
+      suite("xRange")(
+        testM("with an unlimited start and an unlimited end") {
+          for {
+            stream <- uuid
+            id     <- xAdd(stream, "*", "a" -> "b")
+            result <- xRange(stream, "-", "+")
+          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+        },
+        testM("with the positive count") {
+          for {
+            stream <- uuid
+            first  <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRange(stream, "-", "+", 1L)
+          } yield assert(result)(equalTo(Map(first -> Map("a" -> "b"))))
+        },
+        testM("with the negative count") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRange(stream, "-", "+", -1L)
+          } yield assert(result)(isEmpty)
+        },
+        testM("with the zero count") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRange(stream, "-", "+", 0L)
+          } yield assert(result)(isEmpty)
+        },
+        testM("when stream doesn't exist") {
+          for {
+            stream <- uuid
+            result <- xRange(stream, "-", "+")
+          } yield assert(result)(isEmpty)
+        },
+        testM("error when invalid ID") {
+          for {
+            stream <- uuid
+            result <- xRange(stream, "invalid", "+").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            nonStream <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xRange(nonStream, "-", "+").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       )
     )

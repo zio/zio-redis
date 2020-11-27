@@ -325,6 +325,8 @@ object Output {
           }
 
           output.toMap
+        case RespValue.NullValue       =>
+          Map.empty[String, Map[String, String]]
         case other                     =>
           throw ProtocolError(s"$other isn't an array")
       }
@@ -394,6 +396,8 @@ object Output {
           }
 
           output.toMap
+        case RespValue.NullValue      =>
+          Map.empty[String, Map[String, Map[String, String]]]
         case other                    =>
           throw ProtocolError(s"$other isn't an array")
       }
