@@ -1410,29 +1410,24 @@ trait StringsSpec extends BaseSpec {
       ),
       suite("strAlgo")(
         testM("query for longest common subsequence") {
-          import StrAlgoCommand._
           for {
-            result <- strAlgo(LongestCommonSubsequence(LcsType.Strings, "ohmytext", "mynewtext"))
-          } yield assert(result)(equalTo(LongestCommonSubsequenceResult(Some("mytext"), None, None)))
+            result <- strAlgoLcs(LcsType.Strings, "ohmytext", "mynewtext")
+          } yield assert(result)(equalTo(LongestCommonSubsequence(Some("mytext"), None, None)))
         },
         testM("query for LCS length") {
-          import StrAlgoCommand._
           for {
-            result <- strAlgo(LongestCommonSubsequence(LcsType.Strings, "ohmytext", "mynewtext", Some(QueryType.Len)))
-          } yield assert(result)(equalTo(LongestCommonSubsequenceResult(None, Some(6L), None)))
+            result <- strAlgoLcs(LcsType.Strings, "ohmytext", "mynewtext", Some(LcsQueryType.Len))
+          } yield assert(result)(equalTo(LongestCommonSubsequence(None, Some(6L), None)))
         },
         testM("query for index matches") {
-          import StrAlgoCommand._
           for {
-            result <- strAlgo(
-                        LongestCommonSubsequence(
-                          LcsType.Strings,
-                          "ohmytext",
-                          "mynewtext",
-                          Some(QueryType.Idx),
-                          Some(MinMatchLen(4)),
-                          Some(WithMatchLen)
-                        )
+            result <- strAlgoLcs(
+                        LcsType.Strings,
+                        "ohmytext",
+                        "mynewtext",
+                        Some(LcsQueryType.Idx),
+                        Some(MinMatchLen(4)),
+                        Some(WithMatchLen)
                       )
           } yield assert(result.length)(isSome(equalTo(6L)))
         }

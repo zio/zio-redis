@@ -452,18 +452,26 @@ object Input {
     def encode(data: WithJustId): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
   }
 
-  case object StrAlgoCommandInput extends Input[StrAlgoCommand] {
-    def encode(data: StrAlgoCommand): Chunk[RespValue.BulkString] = {
-      import StrAlgoCommand._
-      data match {
-        case LongestCommonSubsequence(lcsType, input1, input2, queryType, minMatchLen, withMatchLen) =>
-          val empty = Chunk.empty[RespValue.BulkString]
-          Chunk(stringEncode("LCS"), stringEncode(lcsType.stringify), stringEncode(input1), stringEncode(input2)) ++
-            queryType.fold(empty)(v => Chunk.single(stringEncode(v.stringify))) ++
-            minMatchLen.fold(empty)(v => Chunk(stringEncode("MINMATCHLEN"), stringEncode(v.length.toString))) ++
-            withMatchLen.fold(empty)(v => Chunk.single(stringEncode(v.stringify)))
-      }
-    }
+  case object StrAlgoTypeInput extends Input[StrAlgoType] {
+    def encode(data: StrAlgoType): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object LcsTypeInput extends Input[LcsType] {
+    def encode(data: LcsType): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object LcsQueryTypeInput extends Input[LcsQueryType] {
+    def encode(data: LcsQueryType): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
+  }
+
+  case object MinMatchLenInput extends Input[MinMatchLen] {
+    def encode(data: MinMatchLen): Chunk[RespValue.BulkString] =
+      Chunk(stringEncode("MINMATCHLEN"), stringEncode(data.length.toString))
+  }
+
+  case object WithMatchLenInput extends Input[WithMatchLen] {
+    def encode(data: WithMatchLen): Chunk[RespValue.BulkString] =
+      Chunk.single(stringEncode(data.stringify))
   }
 
 }

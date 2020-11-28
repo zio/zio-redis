@@ -261,10 +261,17 @@ trait Strings {
    * @param key Key of the string to get the length of
    * @return Returns the length of the string
    */
-  final def strAlgo(command: StrAlgoCommand): ZIO[RedisExecutor, RedisError, LongestCommonSubsequenceResult] =
-    command match {
-      case args: StrAlgoCommand.LongestCommonSubsequence => StrAlgoLcs.run(args)
-    }
+  final def strAlgoLcs(
+    lcsType: LcsType,
+    input1: String,
+    input2: String,
+    queryType: Option[LcsQueryType] = None,
+    minMatchLen: Option[MinMatchLen] = None,
+    withMatchLen: Option[WithMatchLen] = None
+  ): ZIO[RedisExecutor, RedisError, LongestCommonSubsequence] =
+    StrAlgoLcs.run(
+      (StrAlgoType.LCS, lcsType, input1, input2, queryType, minMatchLen, withMatchLen)
+    )
 
   /**
    * Get the length of a value stored in a key
@@ -319,10 +326,24 @@ private[redis] object Strings {
       SetOutput
     )
 
-  final val SetBit     = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
-  final val SetEx      = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
-  final val SetNx      = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
-  final val SetRange   = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
-  final val StrAlgoLcs = RedisCommand("STRALGO", StrAlgoCommandInput, StrAlgoLcsOutput)
-  final val StrLen     = RedisCommand("STRLEN", StringInput, LongOutput)
+  final val SetBit   = RedisCommand("SETBIT", Tuple3(StringInput, LongInput, BoolInput), BoolOutput)
+  final val SetEx    = RedisCommand("SETEX", Tuple3(StringInput, DurationSecondsInput, StringInput), UnitOutput)
+  final val SetNx    = RedisCommand("SETNX", Tuple2(StringInput, StringInput), BoolOutput)
+  final val SetRange = RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+
+  final val StrAlgoLcs = RedisCommand(
+    "STRALGO",
+    Tuple7(
+      StrAlgoTypeInput,
+      LcsTypeInput,
+      StringInput,
+      StringInput,
+      OptionalInput(LcsQueryTypeInput),
+      OptionalInput(MinMatchLenInput),
+      OptionalInput(WithMatchLenInput)
+    ),
+    StrAlgoLcsOutput
+  )
+
+  final val StrLen = RedisCommand("STRLEN", StringInput, LongOutput)
 }
