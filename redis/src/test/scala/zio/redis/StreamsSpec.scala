@@ -1013,6 +1013,122 @@ trait StreamsSpec extends BaseSpec {
             result    <- xRead()(nonStream -> "0-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("xReadGroup")(
+        testM("when stream has only one message") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            id       <- xAdd(stream, "*", "a" -> "b")
+            result   <- xReadGroup(group, consumer)(stream -> ">")
+          } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
+        },
+        testM("when stream has multiple messages") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            first    <- xAdd(stream, "*", "a" -> "b")
+            second   <- xAdd(stream, "*", "a" -> "b")
+            result   <- xReadGroup(group, consumer)(stream -> ">")
+          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
+        },
+        testM("when empty stream") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            result   <- xReadGroup(group, consumer)(stream -> ">")
+          } yield assert(result)(isEmpty)
+        },
+        testM("when multiple streams") {
+          for {
+            first     <- uuid
+            second    <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- xGroupCreate(first, group, "$", mkStream = true)
+            _         <- xGroupCreate(second, group, "$", mkStream = true)
+            firstMsg  <- xAdd(first, "*", "a" -> "b")
+            secondMsg <- xAdd(second, "*", "a" -> "b")
+            result    <- xReadGroup(group, consumer)(first -> ">", second -> ">")
+          } yield assert(result)(
+            equalTo(Map(first -> Map(firstMsg -> Map("a" -> "b")), second -> Map(secondMsg -> Map("a" -> "b"))))
+          )
+        },
+        testM("with positive count") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            first    <- xAdd(stream, "*", "a" -> "b")
+            _        <- xAdd(stream, "*", "a" -> "b")
+            result   <- xReadGroup(group, consumer, Some(1L))(stream -> ">")
+          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b")))))
+        },
+        testM("with zero count") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            first    <- xAdd(stream, "*", "a" -> "b")
+            second   <- xAdd(stream, "*", "a" -> "b")
+            result   <- xReadGroup(group, consumer, Some(0L))(stream -> ">")
+          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
+        },
+        testM("with negative count") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            first    <- xAdd(stream, "*", "a" -> "b")
+            second   <- xAdd(stream, "*", "a" -> "b")
+            result   <- xReadGroup(group, consumer, Some(-1L))(stream -> ">")
+          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
+        },
+        testM("with NOACK flag") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            _        <- xReadGroup(group, consumer, noAck = true)(stream -> ">")
+            result   <- xPending(stream, group)
+          } yield assert(result.total)(equalTo(0L))
+        },
+        testM("error when group doesn't exist") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            result   <- xReadGroup(group, consumer)(stream -> ">").either
+          } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
+        },
+        testM("error when invalid ID") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            result   <- xReadGroup(group, consumer)(stream -> "invalid").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- set(stream, "value")
+            result   <- xReadGroup(group, consumer)(stream -> ">").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }
