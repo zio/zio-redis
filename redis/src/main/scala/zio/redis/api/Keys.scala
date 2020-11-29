@@ -81,7 +81,7 @@ trait Keys {
    * @param port remote redis instance port
    * @param key key to be transferred or empty string if using the keys option
    * @param destinationDb remote database id
-   * @param timeout timeout in milliseconds
+   * @param timeout specifies the longest period without blocking which is allowed during the transfer
    * @param auth optionally provide password for the remote instance
    * @param copy copy option, to not remove the key from the local instance
    * @param replace replace option, to replace existing key on the remote instance
@@ -93,13 +93,13 @@ trait Keys {
     port: Long,
     key: String,
     destinationDb: Long,
-    timeout: Long,
+    timeout: Duration,
     auth: Option[Auth] = None,
     copy: Option[Copy] = None,
     replace: Option[Replace] = None,
     keys: Option[(String, List[String])]
   ): ZIO[RedisExecutor, RedisError, String] =
-    Migrate.run((host, port, key, destinationDb, timeout, copy, replace, auth, keys))
+    Migrate.run((host, port, key, destinationDb, timeout.toMillis, copy, replace, auth, keys))
 
   /**
    * Move key from the currently selected database to the specified destination database. When key already
@@ -286,7 +286,7 @@ private[redis] object Keys {
         OptionalInput(AuthInput),
         OptionalInput(NonEmptyList(StringInput))
       ),
-      MultiStringOutput
+      StringOutput
     )
 
   final val Move      = RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)

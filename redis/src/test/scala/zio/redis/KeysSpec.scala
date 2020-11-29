@@ -5,6 +5,7 @@ import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 import zio.{ Chunk, ZIO }
+import java.time.{Duration => JavaDuration}
 
 trait KeysSpec extends BaseSpec {
 
@@ -106,6 +107,24 @@ trait KeysSpec extends BaseSpec {
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
       },
+      suite("migrate")(
+        testM("migrate key to another redis server") {
+          for {
+            key       <- uuid
+            value     <- uuid
+            _         <- set(key, value)
+            response  <- migrate("redis2",
+                                  6379,
+                                  key,
+                                  0L,
+                                  JavaDuration.ofMillis(5000),
+                                  copy = Option(Copy),
+                                  replace = Option(Replace),
+                                  keys = None)
+            //value2 <- get(key)
+          } yield assert(response)(equalTo("OK"))
+        }
+      ),
       suite("ttl")(
         testM("check ttl for existing key") {
           for {
