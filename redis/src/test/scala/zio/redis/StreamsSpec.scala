@@ -914,6 +914,12 @@ trait StreamsSpec extends BaseSpec {
             result <- xRange(stream, "-", "+")
           } yield assert(result)(isEmpty)
         },
+        testM("when start is greater than an end") {
+          for {
+            stream <- uuid
+            result <- xRange(stream, "+", "-")
+          } yield assert(result)(isEmpty)
+        },
         testM("error when invalid ID") {
           for {
             stream <- uuid
@@ -1127,6 +1133,100 @@ trait StreamsSpec extends BaseSpec {
             consumer <- uuid
             _        <- set(stream, "value")
             result   <- xReadGroup(group, consumer)(stream -> ">").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xRevRange")(
+        testM("with an unlimited start and an unlimited end") {
+          for {
+            stream <- uuid
+            id     <- xAdd(stream, "*", "a" -> "b")
+            result <- xRevRange(stream, "+", "-")
+          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+        },
+        testM("with the positive count") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            second <- xAdd(stream, "*", "a" -> "b")
+            result <- xRevRange(stream, "+", "-", 1L)
+          } yield assert(result)(equalTo(Map(second -> Map("a" -> "b"))))
+        },
+        testM("with the negative count") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRevRange(stream, "+", "-", -1L)
+          } yield assert(result)(isEmpty)
+        },
+        testM("with the zero count") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRevRange(stream, "+", "-", 0L)
+          } yield assert(result)(isEmpty)
+        },
+        testM("when stream doesn't exist") {
+          for {
+            stream <- uuid
+            result <- xRevRange(stream, "+", "-")
+          } yield assert(result)(isEmpty)
+        },
+        testM("when start is greater than an end") {
+          for {
+            stream <- uuid
+            result <- xRevRange(stream, "-", "+")
+          } yield assert(result)(isEmpty)
+        },
+        testM("error when invalid ID") {
+          for {
+            stream <- uuid
+            result <- xRevRange(stream, "invalid", "-").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            nonStream <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xRevRange(nonStream, "+", "-").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xTrim")(
+        testM("an empty stream") {
+          for {
+            stream <- uuid
+            result <- xTrim(stream, 1000L)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("a non-empty stream") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b").repeatN(3)
+            result <- xTrim(stream, 2L)
+          } yield assert(result)(equalTo(2L))
+        },
+        testM("a non-empty stream with an approximate") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xTrim(stream, 1000L, approximate = true)
+          } yield assert(result)(equalTo(0L))
+        },
+        testM("error when negative count") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xTrim(stream, -1000L).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            stream <- uuid
+            _      <- set(stream, "value")
+            result <- xTrim(stream, 1000L).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       )
