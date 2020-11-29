@@ -13,7 +13,8 @@ object ApiSpec
     with StringsSpec
     with GeoSpec
     with HyperLogLogSpec
-    with HashSpec {
+    with HashSpec
+    with StreamsSpec {
 
   def spec =
     suite("Redis commands")(
@@ -26,7 +27,8 @@ object ApiSpec
         stringsSuite,
         geoSuite,
         hyperLogLogSuite,
-        hashSuite
+        hashSuite,
+        streamsSuite
       ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live),
       suite("Test Executor")(
         connectionSuite,

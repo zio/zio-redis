@@ -276,7 +276,7 @@ object Input {
   case object StreamsInput extends Input[((String, String), Chunk[(String, String)])] {
     def encode(data: ((String, String), Chunk[(String, String)])): Chunk[RespValue.BulkString] = {
       val (keys, ids) =
-        Chunk.fromIterable(data._1 +: data._2).map(pair => (stringEncode(pair._1), stringEncode(pair._2))).unzip
+        (data._1 +: data._2).map(pair => (stringEncode(pair._1), stringEncode(pair._2))).unzip
 
       Chunk.single(stringEncode("STREAMS")) ++ keys ++ ids
     }
