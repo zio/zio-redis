@@ -33,8 +33,8 @@ trait Streams {
 
   case class PendingInfo(
     total: Long,
-    first: String,
-    last: String,
+    first: Option[String],
+    last: Option[String],
     consumers: Map[String, Long]
   )
 

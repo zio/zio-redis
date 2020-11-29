@@ -14,7 +14,9 @@ sealed trait Output[+A] {
       case RespValue.Error(msg) if msg.startsWith("WRONGTYPE") =>
         throw RedisError.WrongType(msg.drop(9).trim)
       case RespValue.Error(msg) if msg.startsWith("BUSYGROUP") =>
-        throw RedisError.WrongType(msg.drop(9).trim)
+        throw RedisError.BusyGroup(msg.drop(9).trim)
+      case RespValue.Error(msg) if msg.startsWith("NOGROUP")   =>
+        throw RedisError.NoGroup(msg.drop(7).trim)
       case RespValue.Error(msg)                                =>
         throw RedisError.ProtocolError(msg.trim)
       case success                                             =>
@@ -315,33 +317,17 @@ object Output {
   case object StreamOutput extends Output[Map[String, Map[String, String]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, String]] =
       respValue match {
-        case RespValue.Array(entities) if entities.length % 2 == 0 =>
+        case RespValue.Array(entities) =>
           val output = collection.mutable.Map.empty[String, Map[String, String]]
-          val len    = entities.length
-          var pos    = 0
-          while (pos < len) {
-            (entities(pos), entities(pos + 1)) match {
-              case (id @ RespValue.BulkString(_), RespValue.Array(elements)) if elements.length % 2 == 0 =>
-                val entity = collection.mutable.Map.empty[String, String]
-                val elen   = elements.length
-                var epos   = 0
-                while (epos < elen) {
-                  (elements(epos), elements(epos + 1)) match {
-                    case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-                      entity += key.asString -> value.asString
-                    case _                                                                =>
-                  }
-                  epos += 2
-                }
-                output += id.asString -> entity.toMap
-              case _ =>
-            }
-            pos += 2
+          entities.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
           }
+
           output.toMap
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have an even number of elements")
-        case other =>
+        case RespValue.NullValue       =>
+          Map.empty[String, Map[String, String]]
+        case other                     =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -350,22 +336,28 @@ object Output {
     protected def tryDecode(respValue: RespValue): PendingInfo =
       respValue match {
         case RespValue.Array(
-              Seq(
-                RespValue.Integer(total),
-                first @ RespValue.BulkString(_),
-                last @ RespValue.BulkString(_),
-                RespValue.Array(pairs)
-              )
+              Seq(RespValue.Integer(total), f, l, ps)
             ) =>
-          val consumers = collection.mutable.Map.empty[String, Long]
-          pairs.foreach {
-            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), RespValue.Integer(total))) =>
-              consumers += (consumer.asString -> total)
-            case _                                                                                  =>
-              throw ProtocolError(s"Consumer doesn't have 2 elements")
+          val first = OptionalOutput(MultiStringOutput).unsafeDecode(f)
+          val last  = OptionalOutput(MultiStringOutput).unsafeDecode(l)
+          val pairs = ps match {
+            case RespValue.Array(value) =>
+              value
+            case RespValue.NullValue    =>
+              Chunk.empty
+            case other                  =>
+              throw ProtocolError(s"$other isn't an array")
           }
 
-          PendingInfo(total, first.asString, last.asString, consumers.toMap)
+          val consumers = collection.mutable.Map.empty[String, Long]
+          pairs.foreach {
+            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
+              consumers += (consumer.asString -> total.asString.toLong)
+            case _                                                                                         =>
+              throw ProtocolError(s"Consumers doesn't have 2 elements")
+          }
+
+          PendingInfo(total, first, last, consumers.toMap)
         case array @ RespValue.Array(_) =>
           throw ProtocolError(s"$array doesn't have valid format")
         case other                      =>
@@ -396,24 +388,17 @@ object Output {
   case object XReadOutput extends Output[Map[String, Map[String, Map[String, String]]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, Map[String, String]]] =
       respValue match {
-        case RespValue.Array(streams) if streams.length % 2 == 0 =>
+        case RespValue.Array(streams) =>
           val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
-          val len    = streams.length
-          var pos    = 0
-          while (pos < len) {
-            streams(pos) match {
-              case stream @ RespValue.BulkString(_) =>
-                output += (stream.asString -> StreamOutput.unsafeDecode(streams(pos + 1)))
-              case _                                =>
-            }
-
-            pos += 2
+          streams.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> StreamOutput.unsafeDecode(value))
           }
 
           output.toMap
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have valid format")
-        case other =>
+        case RespValue.NullValue      =>
+          Map.empty[String, Map[String, Map[String, String]]]
+        case other                    =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
