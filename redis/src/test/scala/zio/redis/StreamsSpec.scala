@@ -500,7 +500,7 @@ trait StreamsSpec extends BaseSpec {
             result <- xDel(stream, "1-0")
           } yield assert(result)(equalTo(0L))
         },
-        testM("with an invalid message id") {
+        testM("with an invalid message ID") {
           for {
             stream <- uuid
             id     <- uuid
@@ -573,7 +573,7 @@ trait StreamsSpec extends BaseSpec {
             result <- xGroupSetId(stream, group, id).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
-        testM("error when an invalid id") {
+        testM("error when an invalid ID") {
           for {
             stream <- uuid
             group  <- uuid
@@ -925,6 +925,92 @@ trait StreamsSpec extends BaseSpec {
             nonStream <- uuid
             _         <- set(nonStream, "value")
             result    <- xRange(nonStream, "-", "+").either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xRead")(
+        testM("from the non-empty stream") {
+          for {
+            stream <- uuid
+            id     <- xAdd(stream, "*", "a" -> "b")
+            result <- xRead()(stream -> "0-0")
+          } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
+        },
+        testM("from the stream that doesn't exist") {
+          for {
+            stream <- uuid
+            result <- xRead()(stream -> "0-0")
+          } yield assert(result)(isEmpty)
+        },
+        testM("from the multiple streams") {
+          for {
+            first     <- uuid
+            second    <- uuid
+            firstMsg  <- xAdd(first, "*", "a" -> "b")
+            secondMsg <- xAdd(second, "*", "a" -> "b")
+            result    <- xRead()(first -> "0-0", second -> "0-0")
+          } yield assert(result)(
+            equalTo(Map(first -> Map(firstMsg -> Map("a" -> "b")), second -> Map(secondMsg -> Map("a" -> "b"))))
+          )
+        },
+        testM("with the positive count") {
+          for {
+            stream <- uuid
+            id     <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRead(Some(1L))(stream -> "0-0")
+          } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
+        },
+        testM("with the zero count") {
+          for {
+            stream    <- uuid
+            firstMsg  <- xAdd(stream, "*", "a" -> "b")
+            secondMsg <- xAdd(stream, "*", "a" -> "b")
+            result    <- xRead(Some(0L))(stream -> "0-0")
+          } yield assert(result)(equalTo(Map(stream -> Map(firstMsg -> Map("a" -> "b"), secondMsg -> Map("a" -> "b")))))
+        },
+        testM("with the negative count") {
+          for {
+            stream    <- uuid
+            firstMsg  <- xAdd(stream, "*", "a" -> "b")
+            secondMsg <- xAdd(stream, "*", "a" -> "b")
+            result    <- xRead(Some(-1L))(stream -> "0-0")
+          } yield assert(result)(equalTo(Map(stream -> Map(firstMsg -> Map("a" -> "b"), secondMsg -> Map("a" -> "b")))))
+        },
+        // TODO: can be unignored when connection pool is introduced
+        testM("with the 1 second block") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRead(block = Some(1.second))(stream -> "$")
+          } yield assert(result)(isEmpty)
+        } @@ ignore,
+        testM("with the 0 second block") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRead(block = Some(0.second))(stream -> "$")
+          } yield assert(result)(isEmpty)
+        } @@ ignore,
+        testM("with the -1 second block") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRead(block = Some((-1).second))(stream -> "$")
+          } yield assert(result)(isEmpty)
+        } @@ ignore,
+        testM("error when an invalid ID") {
+          for {
+            stream <- uuid
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xRead()(stream -> "invalid").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not stream") {
+          for {
+            nonStream <- uuid
+            _         <- set(nonStream, "value")
+            result    <- xRead()(nonStream -> "0-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       )
