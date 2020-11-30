@@ -265,6 +265,15 @@ trait KeysSpec extends BaseSpec {
             _     <- hSet(key, (field, value))
             hash  <- typeOf(key)
           } yield assert(hash)(equalTo(RedisType.Hash))
+        },
+        testM("stream type") {
+          for {
+            key    <- uuid
+            field  <- uuid
+            value  <- uuid
+            _      <- xAdd(key, "*", (field, value))
+            stream <- typeOf(key)
+          } yield assert(stream)(equalTo(RedisType.Stream))
         }
       )
     )
