@@ -1,5 +1,7 @@
 package zio.redis
 
+import java.net.InetAddress
+
 import zio.duration._
 import zio.redis.Output._
 import zio.redis.RedisError._
@@ -16,6 +18,8 @@ object OutputSpec extends BaseSpec {
   private def respArray(xs: String*) = RespValue.Array(Chunk.fromIterable(xs.map(respBulkString)))
 
   private def respArrayVals(xs: RespValue*) = RespValue.Array(Chunk.fromIterable(xs))
+
+  private def respInt(i: Long) = RespValue.Integer(i)
 
   def spec =
     suite("Output decoders")(
@@ -242,6 +246,79 @@ object OutputSpec extends BaseSpec {
           for {
             res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
+        }
+      ),
+      suite("ClientInfo")(
+        testM("addresses") {
+          val id          = 42L
+          val inetAddress = InetAddress.getByName("127.0.0.1")
+          val input       = respBulkString(s"addr=${inetAddress.getHostAddress} id=$id laddr=${inetAddress.getHostAddress}")
+          for {
+            res <- Task(ClientInfoOutput.unsafeDecode(input))
+          } yield assert(res)(
+            equalTo(Chunk.single(ClientInfo(id = id, address = Some(inetAddress), localAddress = Some(inetAddress))))
+          )
+        },
+        testM("flags") {
+          import ClientFlag._
+          val id                             = 42L
+          val input                          = respBulkString(s"flags=bOPSRt id=$id")
+          val expectedFlags: Set[ClientFlag] = Set(
+            Blocked,
+            MonitorMode,
+            PubSub,
+            Replica,
+            TrackingTargetClientInvalid,
+            KeysTrackingEnabled
+          )
+          for {
+            res <- Task(ClientInfoOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(Chunk.single(ClientInfo(id = id, flags = expectedFlags))))
+        },
+        testM("ignores unknown flags") {
+          val id    = 42L
+          val input = respBulkString(s"flags=XYZ id=$id")
+          for {
+            res <- Task(ClientInfoOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(Chunk.single(ClientInfo(id = id, flags = Set.empty))))
+        },
+        testM("multiple") {
+          val input = respBulkString(
+            s"""sub=4 id=42 idle=6 fd=9234
+               |id=99 events=r db=33
+               |id=1 cmd=foo""".stripMargin
+          )
+          for {
+            res <- Task(ClientInfoOutput.unsafeDecode(input))
+          } yield assert(res)(
+            equalTo(
+              Chunk(
+                ClientInfo(id = 42L, idle = Some(6.seconds), subscriptions = 4, fileDescriptor = Some(9234L)),
+                ClientInfo(id = 99, events = ClientEvents(readable = true), databaseId = Some(33L)),
+                ClientInfo(id = 1, lastCommand = Some("foo"))
+              )
+            )
+          )
+        }
+      ),
+      suite("ClientTrackingRedirect")(
+        testM("Not enabled") {
+          val input = respInt(-1L)
+          for {
+            res <- Task(ClientTrackingRedirectOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.NotEnabled))
+        },
+        testM("Not redirected") {
+          val input = respInt(0L)
+          for {
+            res <- Task(ClientTrackingRedirectOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.NotRedirected))
+        },
+        testM("redirected") {
+          val input = respInt(42L)
+          for {
+            res <- Task(ClientTrackingRedirectOutput.unsafeDecode(input))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.RedirectedTo(input.value)))
         }
       )
     )

@@ -58,32 +58,32 @@ trait Connection {
     case object BroadcastTrackingMode       extends ClientFlag
   }
 
-  sealed case class ClientEvents(readable: Boolean, writable: Boolean)
+  sealed case class ClientEvents(readable: Boolean = false, writable: Boolean = false)
 
   sealed case class ClientInfo(
     id: Long,
-    name: Option[String],
-    address: Option[InetAddress],
-    localAddress: Option[InetAddress],
-    fileDescriptor: Option[Long],
-    age: Option[Duration],
-    idle: Option[Duration],
-    flags: Set[ClientFlag],
-    databaseId: Option[Long],
-    subscriptions: Int,
-    patternSubscriptions: Int,
-    multiCommands: Int,
-    queryBufferLength: Option[Int],
-    queryBufferFree: Option[Int],
-    outputBufferLength: Option[Int],
-    outputListLength: Option[Int],
-    outputBufferMem: Option[Long],
-    events: ClientEvents,
-    lastCommand: Option[String],
-    argvMemory: Option[Long],
-    totalMemory: Option[Long],
-    redirectionClientId: Option[Long],
-    user: Option[String]
+    name: Option[String] = None,
+    address: Option[InetAddress] = None,
+    localAddress: Option[InetAddress] = None,
+    fileDescriptor: Option[Long] = None,
+    age: Option[Duration] = None,
+    idle: Option[Duration] = None,
+    flags: Set[ClientFlag] = Set.empty,
+    databaseId: Option[Long] = None,
+    subscriptions: Int = 0,
+    patternSubscriptions: Int = 0,
+    multiCommands: Int = 0,
+    queryBufferLength: Option[Int] = None,
+    queryBufferFree: Option[Int] = None,
+    outputBufferLength: Option[Int] = None,
+    outputListLength: Option[Int] = None,
+    outputBufferMem: Option[Long] = None,
+    events: ClientEvents = ClientEvents(),
+    lastCommand: Option[String] = None,
+    argvMemory: Option[Long] = None,
+    totalMemory: Option[Long] = None,
+    redirectionClientId: Option[Long] = None,
+    user: Option[String] = None
   )
 
   sealed abstract class ClientTrackingRedirect
