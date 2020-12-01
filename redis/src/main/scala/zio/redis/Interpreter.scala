@@ -1,7 +1,6 @@
 package zio.redis
 
 import java.io.IOException
-// import java.net.SocketAddress
 
 import scala.collection.compat.immutable.LazyList
 
@@ -28,7 +27,7 @@ trait Interpreter {
     lazy val default: ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       ZLayer.identity[Logging] ++ ByteStream.default >>> StreamedExecutor
 
-    lazy val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
+    lazy val test: URLayer[zio.random.Random, RedisExecutor] = {
       val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
         for {
           seed   <- random.nextInt

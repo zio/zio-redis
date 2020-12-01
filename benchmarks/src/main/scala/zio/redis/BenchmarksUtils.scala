@@ -3,8 +3,7 @@ package zio.redis
 import cats.effect.{ IO => CatsIO }
 
 import zio.logging.Logging
-import zio.{ BootstrapRuntime, ZIO }
-import zio.ZLayer
+import zio.{ BootstrapRuntime, ZIO, ZLayer }
 
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>
