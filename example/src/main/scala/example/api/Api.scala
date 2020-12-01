@@ -1,12 +1,13 @@
 package example.api
 
 import zio._
-import akka.http.interop.{ErrorResponse, ZIOSupport}
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.interop.{ ErrorResponse, ZIOSupport }
+import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import example.domain.{ApiError, Contributors, GithubUnavailable, NoContributors}
+import example.domain.{ ApiError, Contributors, GithubUnavailable, NoContributors }
+
 object Api {
 
   trait Service {
@@ -19,7 +20,7 @@ object Api {
 
         implicit val apiErrorResponse: ErrorResponse[ApiError] = {
           case GithubUnavailable(_) => HttpResponse(StatusCodes.InternalServerError)
-          case NoContributors(_) => HttpResponse(StatusCodes.BadRequest)
+          case NoContributors(_)    => HttpResponse(StatusCodes.BadRequest)
         }
 
         def routes =

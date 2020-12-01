@@ -9,7 +9,7 @@ import zio.logging.Logging
 import akka.actor.ActorSystem
 import akka.http.interop._
 import akka.http.scaladsl.server.Route
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import example.api.Api
 import example.config.AppConfig
 import example.domain.Contributors
@@ -35,16 +35,15 @@ object Main extends App {
         ZIO.fromFuture(_ => system.terminate()).either
       }.toLayer
 
-    val apiConfigLayer = configLayer.narrow(_.api)
+    val apiConfigLayer   = configLayer.narrow(_.api)
     val redisConfigLayer = configLayer.narrow(_.redis)
 
     val redisLayer = Logging.ignore >>> RedisExecutor.live("localhost", 6379).orDie
-    val sttpLayer = AsyncHttpClientZioBackend.layer()
-
+    val sttpLayer  = AsyncHttpClientZioBackend.layer()
 
     val contributorsLayer = redisLayer ++ sttpLayer >>> Contributors.live
-    val apiLayer = contributorsLayer >>> Api.live
-    val routesLayer = ZLayer.fromService[Api.Service, Route](_.routes)
+    val apiLayer          = contributorsLayer >>> Api.live
+    val routesLayer       = ZLayer.fromService[Api.Service, Route](_.routes)
 
     (actorSystemLayer ++ apiConfigLayer ++ (apiLayer >>> routesLayer)) >>> HttpServer.live
   }
