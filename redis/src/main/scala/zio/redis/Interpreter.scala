@@ -26,7 +26,7 @@ trait Interpreter {
 
     lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, RedisExecutor] =
       ZLayer.identity[Logging] ++ ByteStream.live >>> StreamedExecutor
-  
+
     lazy val test: URLayer[zio.random.Random, RedisExecutor] = {
       val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
         for {
