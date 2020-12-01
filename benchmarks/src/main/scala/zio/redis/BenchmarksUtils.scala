@@ -4,6 +4,7 @@ import cats.effect.{ IO => CatsIO }
 
 import zio.logging.Logging
 import zio.{ BootstrapRuntime, ZIO }
+import zio.ZLayer
 
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>
@@ -12,5 +13,13 @@ trait BenchmarksUtils {
     unsafeRunner.unsafeRun(f)
 
   def zioUnsafeRun(source: ZIO[RedisExecutor, RedisError, Unit]): Unit =
-    unsafeRun(source.provideLayer(Logging.ignore >>> RedisExecutor.live(RedisHost, RedisPort).orDie))
+    unsafeRun(source.provideLayer(BenchmarksUtils.Layer))
+}
+
+object BenchmarksUtils {
+  final val RedisHost = "127.0.0.1"
+  final val RedisPort = 6379
+
+  private final val Layer =
+    Logging.ignore ++ ZLayer.succeed(RedisConfig(RedisHost, RedisPort)) >>> RedisExecutor.live.orDie
 }

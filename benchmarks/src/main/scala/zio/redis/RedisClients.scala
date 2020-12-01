@@ -11,12 +11,10 @@ import io.lettuce.core.ClientOptions
 import laserdisc.fs2.RedisClient
 
 trait RedisClients {
+  import BenchmarksUtils._
 
   implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)
   implicit val timer: Timer[CatsIO]     = CatsIO.timer(ExecutionContext.global)
-
-  final val RedisHost = "127.0.0.1"
-  final val RedisPort = 6379
 
   type RedisIO[A] = Redis[CatsIO, A]
 

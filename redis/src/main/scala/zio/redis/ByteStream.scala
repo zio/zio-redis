@@ -1,7 +1,7 @@
 package zio.redis
 
 import java.io.{ EOFException, IOException }
-import java.net.{ InetAddress, InetSocketAddress, SocketAddress, StandardSocketOptions }
+import java.net.{ InetSocketAddress, SocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousSocketChannel, Channel, CompletionHandler }
 
@@ -15,22 +15,19 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
-  def live(host: String, port: Int): ZLayer[Logging, RedisError.IOError, Has[Service]] =
-    live(new InetSocketAddress(host, port))
+  lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, Has[Service]] =
+    ZLayer.fromServiceManaged[RedisConfig, Logging, RedisError.IOError, Service] { config =>
+      connect(new InetSocketAddress(config.host, config.port))
+    }
 
-  def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, Has[Service]] = connect(address)
-
-  def loopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, RedisError.IOError, Has[Service]] =
-    live(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
-
-  private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, Has[Service]] =
+  private[this] def connect(address: => SocketAddress): ZManaged[Logging, RedisError.IOError, Service] =
     (for {
       address     <- UIO(address).toManaged_
       makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
       readBuffer  <- makeBuffer.toManaged_
       writeBuffer <- makeBuffer.toManaged_
       channel     <- openChannel(address)
-    } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError).toLayer
+    } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
 
   private[this] final val ResponseBufferSize = 1024
 

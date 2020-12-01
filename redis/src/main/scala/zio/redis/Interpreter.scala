@@ -1,7 +1,7 @@
 package zio.redis
 
 import java.io.IOException
-import java.net.SocketAddress
+// import java.net.SocketAddress
 
 import scala.collection.compat.immutable.LazyList
 
@@ -22,14 +22,8 @@ trait Interpreter {
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
     }
 
-    def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.live(address)) >>> StreamedExecutor
-
-    def live(host: String, port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.live(host, port)) >>> StreamedExecutor
-
-    def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.loopback(port)) >>> StreamedExecutor
+    lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, RedisExecutor] =
+      (ZLayer.identity[Logging] ++ ZLayer.identity[Has[RedisConfig]] ++ ByteStream.live) >>> StreamedExecutor
 
     lazy val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
       val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
