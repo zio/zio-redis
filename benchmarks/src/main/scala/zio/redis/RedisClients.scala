@@ -11,7 +11,7 @@ import io.lettuce.core.ClientOptions
 import laserdisc.fs2.RedisClient
 
 trait RedisClients {
-  import BenchmarksUtils._
+  import RedisClients._
 
   implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)
   implicit val timer: Timer[CatsIO]     = CatsIO.timer(ExecutionContext.global)
@@ -66,4 +66,9 @@ trait RedisClients {
     val longCodec: RedisCodec[String, Long] = Codecs.derive(RedisCodec.Utf8, stringLongEpi)
     Redis[CatsIO].withOptions(s"redis://$RedisHost:$RedisPort", ClientOptions.create(), longCodec)
   }
+}
+
+object RedisClients {
+  private final val RedisHost = "127.0.0.1"
+  private final val RedisPort = 6379
 }

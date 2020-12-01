@@ -3,7 +3,7 @@ package zio.redis
 import cats.effect.{ IO => CatsIO }
 
 import zio.logging.Logging
-import zio.{ BootstrapRuntime, ZIO, ZLayer }
+import zio.{ BootstrapRuntime, ZIO }
 
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>
@@ -16,9 +16,5 @@ trait BenchmarksUtils {
 }
 
 object BenchmarksUtils {
-  final val RedisHost = "127.0.0.1"
-  final val RedisPort = 6379
-
-  private final val Layer =
-    Logging.ignore ++ ZLayer.succeed(RedisConfig(RedisHost, RedisPort)) >>> RedisExecutor.live.orDie
+  private final val Layer = Logging.ignore >>> RedisExecutor.default.orDie
 }
