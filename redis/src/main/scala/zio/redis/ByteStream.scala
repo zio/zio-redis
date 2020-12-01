@@ -15,13 +15,13 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
+  lazy val default: ZLayer[Logging, RedisError.IOError, Has[ByteStream.Service]] =
+    ZLayer.succeed(RedisConfig.Default) ++ ZLayer.identity[Logging] >>> live
+
   lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, Has[ByteStream.Service]] =
     ZLayer.fromServiceManaged[RedisConfig, Logging, RedisError.IOError, Service] { config =>
       connect(new InetSocketAddress(config.host, config.port))
     }
-
-  lazy val default: ZLayer[Logging, RedisError.IOError, Has[ByteStream.Service]] =
-    ZLayer.succeed(RedisConfig.Default) ++ ZLayer.identity[Logging] >>> live
 
   private[this] def connect(address: => SocketAddress): ZManaged[Logging, RedisError.IOError, ByteStream.Service] =
     (for {
