@@ -23,7 +23,10 @@ trait Interpreter {
     }
 
     lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ZLayer.identity[Has[RedisConfig]] ++ ByteStream.live) >>> StreamedExecutor
+      ZLayer.identity[Logging] ++ ByteStream.live >>> StreamedExecutor
+
+    lazy val default: ZLayer[Logging, RedisError.IOError, RedisExecutor] =
+      ZLayer.identity[Logging] ++ ByteStream.default >>> StreamedExecutor
 
     lazy val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
       val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
@@ -45,8 +48,6 @@ trait Interpreter {
         } yield executor
       }
     }
-
-    private[redis] final val DefaultPort = 6379
 
     private[this] final val RequestQueueSize = 16
 

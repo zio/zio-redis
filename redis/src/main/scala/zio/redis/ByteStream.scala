@@ -20,6 +20,9 @@ private[redis] object ByteStream {
       connect(new InetSocketAddress(config.host, config.port))
     }
 
+  lazy val default: ZLayer[Logging, RedisError.IOError, Has[ByteStream.Service]] =
+    ZLayer.succeed(RedisConfig.Default) ++ ZLayer.identity[Logging] >>> live
+
   private[this] def connect(address: => SocketAddress): ZManaged[Logging, RedisError.IOError, ByteStream.Service] =
     (for {
       address     <- UIO(address).toManaged_
