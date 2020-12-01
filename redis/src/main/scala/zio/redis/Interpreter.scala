@@ -31,7 +31,7 @@ trait Interpreter {
     def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
       (ZLayer.identity[Logging] ++ ByteStream.loopback(port)) >>> StreamedExecutor
 
-    val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
+    lazy val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
       val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
         for {
           seed   <- random.nextInt
