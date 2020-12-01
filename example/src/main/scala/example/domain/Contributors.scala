@@ -1,16 +1,17 @@
 package example.domain
 
-import io.circe
-import io.circe.syntax._
-import zio._
-import zio.redis._
-import io.circe.parser.decode
-import sttp.client.asynchttpclient.zio.SttpClient
-import sttp.client.{ basicRequest, UriContext }
-import sttp.client.circe.asJson
-import sttp.model.Uri
 import Contributor._
+import io.circe
+import io.circe.parser.decode
+import io.circe.syntax._
+import sttp.client.asynchttpclient.zio.SttpClient
+import sttp.client.circe.asJson
+import sttp.client.{ basicRequest, UriContext }
+import sttp.model.Uri
+
+import zio._
 import zio.duration._
+import zio.redis._
 
 object Contributors {
 

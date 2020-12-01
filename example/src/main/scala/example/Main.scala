@@ -1,11 +1,5 @@
 package example
 
-import zio._
-import zio.redis.RedisExecutor
-import zio.console._
-import zio.config.syntax._
-import zio.config.typesafe.TypesafeConfig
-import zio.logging.Logging
 import akka.actor.ActorSystem
 import akka.http.interop._
 import akka.http.scaladsl.server.Route
@@ -14,6 +8,13 @@ import example.api.Api
 import example.config.AppConfig
 import example.domain.Contributors
 import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
+
+import zio._
+import zio.config.syntax._
+import zio.config.typesafe.TypesafeConfig
+import zio.console._
+import zio.logging.Logging
+import zio.redis.RedisExecutor
 
 object Main extends App {
 
@@ -35,8 +36,8 @@ object Main extends App {
         ZIO.fromFuture(_ => system.terminate()).either
       }.toLayer
 
-    val apiConfigLayer   = configLayer.narrow(_.api)
-    val redisConfigLayer = configLayer.narrow(_.redis)
+    val apiConfigLayer = configLayer.narrow(_.api)
+    configLayer.narrow(_.redis)
 
     val redisLayer = Logging.ignore >>> RedisExecutor.live("localhost", 6379).orDie
     val sttpLayer  = AsyncHttpClientZioBackend.layer()
