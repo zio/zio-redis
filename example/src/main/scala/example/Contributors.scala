@@ -2,7 +2,7 @@ package example
 
 import example.Contributor._
 import example.ApiError._
-import io.circe
+import io.circe.Error
 import io.circe.parser.decode
 import io.circe.syntax._
 import sttp.client.asynchttpclient.zio.SttpClient
@@ -35,7 +35,7 @@ object Contributors {
               deserialize(response).orElseFail(GithubUnavailable)
           }.orElseFail(GithubUnavailable).provide(env)
 
-        private def deserialize(response: Chunk[String]): IO[circe.Error, Chunk[Contributor]] =
+        private def deserialize(response: Chunk[String]): IO[Error, Chunk[Contributor]] =
           response.mapM(contributor => ZIO.fromEither(decode[Contributor](contributor)))
 
         private def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] = {
