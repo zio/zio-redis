@@ -12,7 +12,7 @@ object ApiError {
   case object GithubUnreachable extends ApiError
   case object UnknownProject    extends ApiError
 
-  implicit val apiErrorResponse: ErrorResponse[ApiError] = {
+  implicit val errorResponse: ErrorResponse[ApiError] = {
     case CorruptedData | GithubUnreachable => HttpResponse(StatusCodes.InternalServerError)
     case UnknownProject                    => HttpResponse(StatusCodes.NotFound)
   }
