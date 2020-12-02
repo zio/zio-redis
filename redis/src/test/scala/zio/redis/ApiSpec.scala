@@ -29,7 +29,7 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live),
+      ).provideCustomLayerShared(Clock.live ++ Logging.ignore >>> RedisExecutor.default.orDie),
       suite("Test Executor")(
         connectionSuite,
         setsSuite
@@ -37,6 +37,4 @@ object ApiSpec
         .get
         .provideCustomLayerShared(RedisExecutor.test)
     )
-
-  private val Executor = RedisExecutor.loopback().orDie
 }
