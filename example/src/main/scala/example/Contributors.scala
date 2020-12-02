@@ -22,20 +22,21 @@ object Contributors {
   lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, Contributors] =
     ZLayer.fromFunction { env =>
       new Service {
-        def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
-          sMembers(repository).flatMap { response => // key should be unique combination of org + repo
+        def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] = {
+          val key = s"$organization:$repository"
+          sMembers(key).flatMap { response =>
             if (response.isEmpty)
               for {
                 contributors <- retrieveContributors(organization, repository)
-                _            <- sAdd(repository, contributors.asJson.toString, contributors.map(_.asJson.toString): _*)
-                _            <- pExpire(repository, 1.minute)
+                _            <- sAdd(key, contributors.asJson.toString, contributors.map(_.asJson.toString): _*)
+                _            <- pExpire(key, 1.minute)
               } yield contributors
             else
               response
                 .mapM(contributor => ZIO.fromEither(decode[Contributor](contributor)))
                 .orElseFail(GithubUnavailable)
           }.orElseFail(GithubUnavailable).provide(env)
-
+        }
       }
     }
 
