@@ -9,7 +9,6 @@ import example._
 import zio._
 
 object Api {
-
   trait Service {
     def routes: Route
   }
@@ -18,17 +17,15 @@ object Api {
     ZLayer.fromService { contributorCache =>
       new Service with ZIOSupport {
         def routes =
-          pathPrefix("contributors") {
-            path(Segment / Segment) { (organization, repository) =>
-              get {
-                complete {
-                  contributorCache.fetch(Organization(organization), Repository(repository))
-                }
+          path("organizations" / Segment / "repositories" / Segment / "contributors") { (organization, repository) =>
+            get {
+              complete {
+                contributorCache.fetch(Organization(organization), Repository(repository))
               }
             }
           }
       }
     }
 
-  val routes: URIO[Api, Route] = ZIO.access[Api](api => Route.seal(api.get.routes))
+  val routes: URIO[Api, Route] = ZIO.access(api => Route.seal(api.get.routes))
 }
