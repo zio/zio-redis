@@ -22,7 +22,7 @@ object Api {
             path(Segment / Segment) { (organization, repository) =>
               get {
                 complete {
-                  contributorService.getContributors(organization, repository)
+                  contributorService.fetchContributors(organization, repository)
                 }
               }
             }

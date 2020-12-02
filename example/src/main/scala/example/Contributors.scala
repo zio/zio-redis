@@ -17,17 +17,17 @@ import zio.redis._
 object Contributors {
 
   trait Service {
-    def getContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]]
+    def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]]
   }
 
   lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, Contributors] =
     ZLayer.fromFunction { env =>
       new Service {
-        def getContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
+        def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
           sMembers(repository).flatMap { response => // key should be unique combination of org + repo
             if (response.isEmpty)
               for {
-                contributors <- fetchContributors(organization, repository)
+                contributors <- getContributors(organization, repository)
                 _            <- sAdd(repository, contributors.asJson.toString, contributors.map(_.asJson.toString): _*)
                 _            <- pExpire(repository, 1.minute)
               } yield contributors
@@ -38,7 +38,7 @@ object Contributors {
         private def deserialize(response: Chunk[String]): IO[Error, Chunk[Contributor]] =
           response.mapM(contributor => ZIO.fromEither(decode[Contributor](contributor)))
 
-        private def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
+        private def getContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
           SttpClient
             .send(basicRequest.get(urlOf(organization, repository)).response(asJson[Chunk[Contributor]]))
             .flatMap(_.body.fold(_ => ZIO.fail(UnknownProject), ZIO.succeed(_)))
