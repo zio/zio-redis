@@ -13,13 +13,7 @@ inThisBuild(
     ),
     pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
-    pgpSecretRing := file("/tmp/secret.asc"),
-    scmInfo := Some(
-      ScmInfo(url("https://github.com/zio/zio-redis/"), "scm:git:git@github.com:zio/zio-redis.git")
-    ),
-    semanticdbEnabled := true,
-    semanticdbVersion := scalafixSemanticdb.revision,
-    scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.5.5"
+    pgpSecretRing := file("/tmp/secret.asc")
   )
 )
 
@@ -28,7 +22,7 @@ addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheckAll")
 addCommandAlias("fix", "scalafixAll")
 addCommandAlias("fixCheck", "scalafixAll --check")
-addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
+addCommandAlias("testJVM", "test:compile")
 addCommandAlias("testJVM211", ";redis/test")
 
 lazy val root =
@@ -75,6 +69,7 @@ lazy val example =
     .settings(stdSettings("example"))
     .dependsOn(redis)
     .settings(
+      crossScalaVersions -= Scala211,
       skip in publish := true,
       libraryDependencies ++= Seq(
         "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0",
