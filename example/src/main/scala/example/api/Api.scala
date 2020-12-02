@@ -16,7 +16,7 @@ object Api {
   lazy val live: ZLayer[ContributorsCache, Nothing, Api] =
     ZLayer.fromService { contributorCache =>
       new Service with ZIOSupport {
-        def routes =
+        val routes =
           path("organizations" / Segment / "repositories" / Segment / "contributors") { (organization, repository) =>
             get {
               complete {
