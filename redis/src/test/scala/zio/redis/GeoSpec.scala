@@ -76,7 +76,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates, distance and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -112,7 +112,7 @@ trait GeoSpec extends BaseSpec {
         testM("with distance and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -147,7 +147,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
               geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), withHash = Some(WithHash))
           } yield assert(response)(
@@ -205,7 +205,7 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -243,7 +243,7 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- geoRadiusByMember(
                           key,
                           member1,
@@ -280,7 +280,7 @@ trait GeoSpec extends BaseSpec {
         testM("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
               geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), withHash = Some(WithHash))
           } yield assert(response)(

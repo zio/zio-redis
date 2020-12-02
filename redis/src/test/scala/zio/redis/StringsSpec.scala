@@ -242,8 +242,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("increment with overflow saturation") {
           for {
-            key    <- uuid
-            _      <- set(key, "value")
+            key <- uuid
+            _   <- set(key, "value")
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Sat,
@@ -253,8 +253,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("increment with overflow fail") {
           for {
-            key    <- uuid
-            _      <- set(key, "value")
+            key <- uuid
+            _   <- set(key, "value")
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Fail,
@@ -264,8 +264,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("increment first with overflow wrap and then overflow fail") {
           for {
-            key    <- uuid
-            _      <- set(key, "value")
+            key <- uuid
+            _   <- set(key, "value")
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Wrap,
@@ -277,8 +277,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("first set, then increment and then get same bits") {
           for {
-            key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 98L),

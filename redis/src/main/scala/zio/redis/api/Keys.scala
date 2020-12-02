@@ -264,15 +264,15 @@ trait Keys {
 }
 
 private[redis] object Keys {
-  final val Del: RedisCommand[(String, List[String]), Long]       = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
-  final val Dump: RedisCommand[String, Chunk[Byte]]               = RedisCommand("DUMP", StringInput, BulkStringOutput)
+  final val Del: RedisCommand[(String, List[String]), Long] = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
+  final val Dump: RedisCommand[String, Chunk[Byte]]         = RedisCommand("DUMP", StringInput, BulkStringOutput)
   final val Exists: RedisCommand[(String, List[String]), Boolean] =
     RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
-  final val Expire: RedisCommand[(String, Duration), Boolean]     =
+  final val Expire: RedisCommand[(String, Duration), Boolean] =
     RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
-  final val ExpireAt: RedisCommand[(String, Instant), Boolean]    =
+  final val ExpireAt: RedisCommand[(String, Instant), Boolean] =
     RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
-  final val Keys: RedisCommand[String, Chunk[String]]             = RedisCommand("KEYS", StringInput, ChunkOutput)
+  final val Keys: RedisCommand[String, Chunk[String]] = RedisCommand("KEYS", StringInput, ChunkOutput)
 
   final val Migrate: RedisCommand[
     (String, Long, String, Long, Long, Option[Copy], Option[Replace], Option[Auth], Option[(String, List[String])]),
@@ -294,19 +294,19 @@ private[redis] object Keys {
       MultiStringOutput
     )
 
-  final val Move: RedisCommand[(String, Long), Boolean]         =
+  final val Move: RedisCommand[(String, Long), Boolean] =
     RedisCommand("MOVE", Tuple2(StringInput, LongInput), BoolOutput)
-  final val Persist: RedisCommand[String, Boolean]              = RedisCommand("PERSIST", StringInput, BoolOutput)
-  final val PExpire: RedisCommand[(String, Duration), Boolean]  =
+  final val Persist: RedisCommand[String, Boolean] = RedisCommand("PERSIST", StringInput, BoolOutput)
+  final val PExpire: RedisCommand[(String, Duration), Boolean] =
     RedisCommand("PEXPIRE", Tuple2(StringInput, DurationMillisecondsInput), BoolOutput)
   final val PExpireAt: RedisCommand[(String, Instant), Boolean] =
     RedisCommand("PEXPIREAT", Tuple2(StringInput, TimeMillisecondsInput), BoolOutput)
-  final val PTtl: RedisCommand[String, Duration]                = RedisCommand("PTTL", StringInput, DurationMillisecondsOutput)
-  final val RandomKey: RedisCommand[Unit, Option[String]]       =
+  final val PTtl: RedisCommand[String, Duration] = RedisCommand("PTTL", StringInput, DurationMillisecondsOutput)
+  final val RandomKey: RedisCommand[Unit, Option[String]] =
     RedisCommand("RANDOMKEY", NoInput, OptionalOutput(MultiStringOutput))
-  final val Rename: RedisCommand[(String, String), Unit]        =
+  final val Rename: RedisCommand[(String, String), Unit] =
     RedisCommand("RENAME", Tuple2(StringInput, StringInput), UnitOutput)
-  final val RenameNx: RedisCommand[(String, String), Boolean]   =
+  final val RenameNx: RedisCommand[(String, String), Boolean] =
     RedisCommand("RENAMENX", Tuple2(StringInput, StringInput), BoolOutput)
 
   final val Restore
@@ -332,11 +332,11 @@ private[redis] object Keys {
       ScanOutput
     )
 
-  final val Touch: RedisCommand[(String, List[String]), Long]  =
+  final val Touch: RedisCommand[(String, List[String]), Long] =
     RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
-  final val Ttl: RedisCommand[String, Duration]                = RedisCommand("TTL", StringInput, DurationSecondsOutput)
-  final val TypeOf: RedisCommand[String, RedisType]            = RedisCommand("TYPE", StringInput, TypeOutput)
+  final val Ttl: RedisCommand[String, Duration]     = RedisCommand("TTL", StringInput, DurationSecondsOutput)
+  final val TypeOf: RedisCommand[String, RedisType] = RedisCommand("TYPE", StringInput, TypeOutput)
   final val Unlink: RedisCommand[(String, List[String]), Long] =
     RedisCommand("UNLINK", NonEmptyList(StringInput), LongOutput)
-  final val Wait: RedisCommand[(Long, Long), Long]             = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
+  final val Wait: RedisCommand[(Long, Long), Long] = RedisCommand("WAIT", Tuple2(LongInput, LongInput), LongOutput)
 }

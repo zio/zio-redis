@@ -781,7 +781,7 @@ trait SetsSpec extends BaseSpec {
     key: String,
     regex: Option[Regex] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]]                         =
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
         sScan(key, cursor, regex, count).map {

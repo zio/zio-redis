@@ -19,7 +19,7 @@ private[redis] final class TestExecutor private (
 
   private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): STM[RedisError, RespValue] =
     name match {
-      case api.Connection.Ping.name  =>
+      case api.Connection.Ping.name =>
         STM.succeedNow {
           if (input.isEmpty)
             RespValue.bulkString("PONG")
@@ -27,7 +27,7 @@ private[redis] final class TestExecutor private (
             input.head
         }
 
-      case api.Sets.SAdd.name        =>
+      case api.Sets.SAdd.name =>
         val key = input.head.asString
         STM.ifM(isSet(key))(
           {
@@ -42,14 +42,14 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SCard.name       =>
+      case api.Sets.SCard.name =>
         val key = input.head.asString
         STM.ifM(isSet(key))(
           sets.get(key).map(_.fold(RespValue.Integer(0))(s => RespValue.Integer(s.size.toLong))),
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SDiff.name       =>
+      case api.Sets.SDiff.name =>
         val allkeys = input.map(_.asString)
         val mainKey = allkeys.head
         val others  = allkeys.tail
@@ -61,7 +61,7 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SDiffStore.name  =>
+      case api.Sets.SDiffStore.name =>
         val allkeys = input.map(_.asString)
         val distkey = allkeys.head
         val mainKey = allkeys(1)
@@ -75,7 +75,7 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SInter.name      =>
+      case api.Sets.SInter.name =>
         val keys      = input.map(_.asString)
         val mainKey   = keys.head
         val otherKeys = keys.tail
@@ -94,7 +94,7 @@ private[redis] final class TestExecutor private (
             } yield RespValue.Integer(s.size.toLong)
         )
 
-      case api.Sets.SIsMember.name   =>
+      case api.Sets.SIsMember.name =>
         val key    = input.head.asString
         val member = input(1).asString
         STM.ifM(isSet(key))(
@@ -105,7 +105,7 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SMove.name       =>
+      case api.Sets.SMove.name =>
         val sourceKey      = input.head.asString
         val destinationKey = input(1).asString
         val member         = input(2).asString
@@ -125,7 +125,7 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SPop.name        =>
+      case api.Sets.SPop.name =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
         STM.ifM(isSet(key))(
@@ -137,7 +137,7 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SMembers.name    =>
+      case api.Sets.SMembers.name =>
         val key = input.head.asString
         STM.ifM(isSet(key))(
           sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_))),
@@ -152,22 +152,22 @@ private[redis] final class TestExecutor private (
             for {
               set     <- sets.getOrElse(key, Set.empty[String])
               asVector = set.toVector
-              res     <- maybeCount match {
-                       case None             =>
+              res <- maybeCount match {
+                       case None =>
                          selectOne[String](asVector, randomPick).map(maybeValue =>
                            maybeValue.map(RespValue.bulkString).getOrElse(RespValue.NullValue)
                          )
                        case Some(n) if n > 0 => selectN(asVector, n, randomPick).map(Replies.array)
                        case Some(n) if n < 0 =>
                          selectNWithReplacement(asVector, -1 * n, randomPick).map(Replies.array)
-                       case Some(0)          => STM.succeedNow(RespValue.NullValue)
+                       case Some(0) => STM.succeedNow(RespValue.NullValue)
                      }
             } yield res
           },
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SRem.name        =>
+      case api.Sets.SRem.name =>
         val key = input.head.asString
         STM.ifM(isSet(key))(
           {
@@ -182,7 +182,7 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SUnion.name      =>
+      case api.Sets.SUnion.name =>
         val keys = input.map(_.asString)
         STM.ifM(forAll(keys)(isSet))(
           STM
@@ -206,21 +206,21 @@ private[redis] final class TestExecutor private (
                            unionSoFar ++ currentSet
                          }
                        }
-            _     <- sets.put(destination, union)
+            _ <- sets.put(destination, union)
           } yield RespValue.Integer(union.size.toLong),
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Sets.SScan.name       =>
+      case api.Sets.SScan.name =>
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
             case _       => None
           }
-        val key                                                                                = input.head.asString
+        val key = input.head.asString
         STM.ifM(isSet(key))(
           {
-            val start      = input(1).asString.toInt
+            val start = input(1).asString.toInt
             val maybeRegex = if (input.size > 2) input(2).asString match {
               case "MATCH" => Some(input(3).asString.r)
               case _       => None
@@ -230,7 +230,7 @@ private[redis] final class TestExecutor private (
               if (input.size > 4) maybeGetCount(input(4), input(5))
               else if (input.size > 2) maybeGetCount(input(2), input(3))
               else None
-            val end        = start + maybeCount.getOrElse(10)
+            val end = start + maybeCount.getOrElse(10)
             for {
               set      <- sets.getOrElse(key, Set.empty)
               filtered  = maybeRegex.map(regex => set.filter(s => regex.pattern.matcher(s).matches)).getOrElse(set)
@@ -242,13 +242,13 @@ private[redis] final class TestExecutor private (
           STM.succeedNow(Replies.WrongType)
         )
 
-      case api.Strings.Set.name      =>
+      case api.Strings.Set.name =>
         // not a full implementation. Just enough to make set tests work
         val key   = input.head.asString
         val value = input(1).asString
         strings.put(key, value).as(Replies.Ok)
 
-      case _                         => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
+      case _ => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
     }
 
   // check whether the key is a set or unused.
@@ -261,7 +261,7 @@ private[redis] final class TestExecutor private (
     def go(remaining: Vector[A], toPick: Long, acc: List[A]): USTM[List[A]] =
       (remaining, toPick) match {
         case (Vector(), _) | (_, 0) => STM.succeed(acc)
-        case _                      =>
+        case _ =>
           pickRandom(remaining.size).flatMap { index =>
             val x  = remaining(index)
             val xs = remaining.patch(index, Nil, 1)
@@ -299,20 +299,20 @@ private[redis] final class TestExecutor private (
 
     def step(state: State, next: String): STM[Nothing, State] =
       state match {
-        case State.Empty            => STM.succeedNow(State.Empty)
-        case State.WrongType        => STM.succeedNow(State.WrongType)
+        case State.Empty     => STM.succeedNow(State.Empty)
+        case State.WrongType => STM.succeedNow(State.WrongType)
         case State.Continue(values) =>
           get(next).map {
             case State.Continue(otherValues) =>
               val intersection = values.intersect(otherValues)
               if (intersection.isEmpty) State.Empty else State.Continue(intersection)
-            case s                           => s
+            case s => s
           }
       }
 
     for {
-      init   <- get(mainKey)
-      state  <- STM.foldLeft(otherKeys)(init)(step)
+      init  <- get(mainKey)
+      state <- STM.foldLeft(otherKeys)(init)(step)
       result <- state match {
                   case State.Continue(values) => STM.succeedNow(values)
                   case State.Empty            => STM.succeedNow(Set.empty[String])
@@ -325,11 +325,11 @@ private[redis] final class TestExecutor private (
     STM.foldLeft(chunk)(true) { case (b, a) => f(a).map(b && _) }
 
   private[this] object Replies {
-    val Ok: RespValue.SimpleString                       = RespValue.SimpleString("OK")
-    val WrongType: RespValue.Error                       = RespValue.Error("WRONGTYPE")
+    val Ok: RespValue.SimpleString = RespValue.SimpleString("OK")
+    val WrongType: RespValue.Error = RespValue.Error("WRONGTYPE")
     def array(values: Iterable[String]): RespValue.Array =
       RespValue.array(values.map(RespValue.bulkString(_)).toList: _*)
-    val EmptyArray: RespValue.Array                      = RespValue.array()
+    val EmptyArray: RespValue.Array = RespValue.array()
   }
 }
 

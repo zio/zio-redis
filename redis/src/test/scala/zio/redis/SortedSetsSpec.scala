@@ -114,8 +114,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zCount")(
         testM("non-empty set") {
           for {
-            key   <- uuid
-            _     <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "a"),
                    MemberScore(2d, "b"),
                    MemberScore(3d, "c"),
@@ -135,8 +135,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zIncrBy")(
         testM("non-empty set") {
           for {
-            key     <- uuid
-            _       <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "a"),
                    MemberScore(2d, "b"),
                    MemberScore(3d, "c"),
@@ -280,8 +280,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zLexCount")(
         testM("non-empty set") {
           for {
-            key   <- uuid
-            _     <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -301,8 +301,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zPopMax")(
         testM("non-empty set")(
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -314,8 +314,8 @@ trait SortedSetsSpec extends BaseSpec {
         ),
         testM("non-empty set with count param")(
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -333,8 +333,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zPopMin")(
         testM("non-empty set")(
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -346,8 +346,8 @@ trait SortedSetsSpec extends BaseSpec {
         ),
         testM("non-empty set with count param")(
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -365,8 +365,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRange")(
         testM("non-empty set") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -378,8 +378,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set, with scores") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "London"),
@@ -401,8 +401,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRangeByLex")(
         testM("non-empty set") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "London"),
                    MemberScore(3d, "Paris"),
@@ -415,8 +415,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set with limit") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "London"),
                    MemberScore(3d, "Paris"),
@@ -438,8 +438,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRangeByScore")(
         testM("non-empty set") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
                    MemberScore(1800d, "Micromax"),
@@ -452,8 +452,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set, with scores") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
                    MemberScore(1800d, "Micromax"),
@@ -470,8 +470,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set, with limit") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
                    MemberScore(1800d, "Micromax"),
@@ -548,15 +548,15 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRemRangeByLex")(
         testM("non-empty set") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(0d, "Delhi"),
                    MemberScore(0d, "Mumbai"),
                    MemberScore(0d, "Hyderabad"),
                    MemberScore(0d, "Kolkata"),
                    MemberScore(0d, "Chennai")
                  )
-            remResult   <-
+            remResult <-
               zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
             rangeResult <- zRangeByLex(key, LexRange(min = LexMinimum.Unbounded, max = LexMaximum.Unbounded))
           } yield assert(rangeResult.toList)(equalTo(List("Chennai", "Delhi", "Hyderabad"))) &&
@@ -564,7 +564,7 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("empty set") {
           for {
-            key       <- uuid
+            key <- uuid
             remResult <-
               zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(remResult)(equalTo(0L))
@@ -573,8 +573,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRemRangeByRank")(
         testM("non-empty set") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "Delhi"),
                    MemberScore(2d, "Mumbai"),
                    MemberScore(3d, "Hyderabad"),
@@ -596,8 +596,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRemRangeByScore")(
         testM("non-empty set") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(80d, "Delhi"),
                    MemberScore(60d, "Mumbai"),
                    MemberScore(70d, "Hyderabad"),
@@ -618,8 +618,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRevRange")(
         testM("non-empty set") {
           for {
-            key       <- uuid
-            _         <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(80d, "Delhi"),
                    MemberScore(60d, "Mumbai"),
                    MemberScore(70d, "Hyderabad"),
@@ -631,8 +631,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set with scores") {
           for {
-            key       <- uuid
-            _         <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(80d, "Delhi"),
                    MemberScore(60d, "Mumbai"),
                    MemberScore(70d, "Hyderabad"),
@@ -652,8 +652,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRevRangeByLex")(
         testM("non-empty set") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(0d, "Delhi"),
                    MemberScore(0d, "London"),
                    MemberScore(0d, "Paris"),
@@ -667,8 +667,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set with limit") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(0d, "Delhi"),
                    MemberScore(0d, "London"),
                    MemberScore(0d, "Paris"),
@@ -685,7 +685,7 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("empty set") {
           for {
-            key         <- uuid
+            key <- uuid
             rangeResult <-
               zRevRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(rangeResult)(isEmpty)
@@ -694,8 +694,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRevRangeByScore")(
         testM("non-empty set") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
                    MemberScore(1800d, "Micromax"),
@@ -715,8 +715,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set with scores") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
                    MemberScore(1800d, "Micromax"),
@@ -737,8 +737,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("non-empty set with limit") {
           for {
-            key         <- uuid
-            _           <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
                    MemberScore(1800d, "Micromax"),
@@ -759,7 +759,7 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("empty set") {
           for {
-            key         <- uuid
+            key <- uuid
             rangeResult <- zRevRangeByScore(
                              key,
                              ScoreRange(
@@ -773,8 +773,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zRevRank")(
         testM("non-empty set") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(10d, "Delhi"),
                    MemberScore(20d, "Mumbai"),
                    MemberScore(30d, "Hyderabad"),
@@ -815,8 +815,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("with count over non-empty set") {
           for {
-            key     <- uuid
-            _       <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "a"),
                    MemberScore(2d, "b"),
                    MemberScore(3d, "c"),
@@ -828,8 +828,8 @@ trait SortedSetsSpec extends BaseSpec {
         },
         testM("match with count over non-empty set") {
           for {
-            key     <- uuid
-            _       <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(1d, "testa"),
                    MemberScore(2d, "testb"),
                    MemberScore(3d, "testc"),
@@ -851,8 +851,8 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zScore")(
         testM("non-empty set") {
           for {
-            key    <- uuid
-            _      <- zAdd(key)(
+            key <- uuid
+            _ <- zAdd(key)(
                    MemberScore(10d, "Delhi"),
                    MemberScore(20d, "Mumbai"),
                    MemberScore(30d, "Hyderabad"),
@@ -996,7 +996,7 @@ trait SortedSetsSpec extends BaseSpec {
     key: String,
     regex: Option[Regex] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]]                               =
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
         zScan(key, cursor, regex, count).map {

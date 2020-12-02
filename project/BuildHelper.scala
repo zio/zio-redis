@@ -84,7 +84,7 @@ object BuildHelper {
           "-Xmax-classfile-name",
           "242"
         ) ++ std2xOptions
-      case _             => Seq.empty
+      case _ => Seq.empty
     }
 
   def stdSettings(prjName: String) =

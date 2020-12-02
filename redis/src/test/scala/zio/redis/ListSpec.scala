@@ -2,7 +2,7 @@ package zio.redis
 
 import java.util.concurrent.TimeUnit
 
-import zio.clock.{Clock, currentTime}
+import zio.clock.{ Clock, currentTime }
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._

@@ -9,17 +9,17 @@ sealed trait Output[+A] {
 
   private[redis] final def unsafeDecode(respValue: RespValue): A =
     respValue match {
-      case RespValue.Error(msg) if msg.startsWith("ERR")       =>
+      case RespValue.Error(msg) if msg.startsWith("ERR") =>
         throw RedisError.ProtocolError(msg.drop(3).trim)
       case RespValue.Error(msg) if msg.startsWith("WRONGTYPE") =>
         throw RedisError.WrongType(msg.drop(9).trim)
       case RespValue.Error(msg) if msg.startsWith("BUSYGROUP") =>
         throw RedisError.BusyGroup(msg.drop(9).trim)
-      case RespValue.Error(msg) if msg.startsWith("NOGROUP")   =>
+      case RespValue.Error(msg) if msg.startsWith("NOGROUP") =>
         throw RedisError.NoGroup(msg.drop(7).trim)
-      case RespValue.Error(msg)                                =>
+      case RespValue.Error(msg) =>
         throw RedisError.ProtocolError(msg.trim)
-      case success                                             =>
+      case success =>
         tryDecode(success)
     }
 
@@ -64,7 +64,7 @@ object Output {
             case s @ RespValue.BulkString(_) => s.asString
             case other                       => throw ProtocolError(s"$other is not a bulk string")
           }
-        case other                   =>
+        case other =>
           throw ProtocolError(s"$other isn't an array")
       }
 
@@ -124,7 +124,7 @@ object Output {
             case other                       => s"$other is not a bulk string"
           }
           (cursor.asString.toLong, strings)
-        case other                                                                           =>
+        case other =>
           throw ProtocolError(s"$other isn't scan output")
       }
 
@@ -134,11 +134,11 @@ object Output {
 
     override protected def tryDecode(respValue: RespValue): Option[(String, String)] =
       respValue match {
-        case RespValue.NullValue                                                             =>
+        case RespValue.NullValue =>
           None
         case RespValue.ArrayValues(a @ RespValue.BulkString(_), b @ RespValue.BulkString(_)) =>
           Some((a.asString, b.asString))
-        case other                                                                           => throw ProtocolError(s"$other isn't blPop output")
+        case other => throw ProtocolError(s"$other isn't blPop output")
       }
 
   }
@@ -186,16 +186,16 @@ object Output {
 
     override protected def tryDecode(respValue: RespValue): Chunk[String] =
       respValue match {
-        case RespValue.NullValue         =>
+        case RespValue.NullValue =>
           Chunk.empty
         case s @ RespValue.BulkString(_) =>
           Chunk.single(s.asString)
-        case RespValue.Array(elements)   =>
+        case RespValue.Array(elements) =>
           elements.map {
             case s @ RespValue.BulkString(_) => s.asString
             case other                       => throw ProtocolError(s"$other isn't a bulk string")
           }
-        case other                       => throw ProtocolError(s"$other isn't a string nor an array")
+        case other => throw ProtocolError(s"$other isn't a string nor an array")
       }
 
   }
@@ -203,14 +203,14 @@ object Output {
   case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[String]] =
       respValue match {
-        case RespValue.NullValue       => Chunk.empty
+        case RespValue.NullValue => Chunk.empty
         case RespValue.Array(elements) =>
           elements.map {
             case s @ RespValue.BulkString(_) => Some(s.asString)
             case RespValue.NullValue         => None
             case other                       => throw ProtocolError(s"$other isn't null or a bulk string")
           }
-        case other                     => throw ProtocolError(s"$other isn't an array")
+        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -223,7 +223,7 @@ object Output {
             case RespValue.NullValue        => None
             case other                      => throw ProtocolError(s"$other isn't an integer")
           }
-        case other                     => throw ProtocolError(s"$other isn't an array")
+        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -254,13 +254,13 @@ object Output {
           elements.map {
             case RespValue.ArrayValues(RespValue.BulkString(long), RespValue.BulkString(lat)) =>
               Some(LongLat(decodeDouble(long), decodeDouble(lat)))
-            case RespValue.NullValue                                                          => None
-            case other                                                                        =>
+            case RespValue.NullValue => None
+            case other =>
               throw ProtocolError(s"$other was not a longitude,latitude pair")
           }
-        case RespValue.NullValue       =>
+        case RespValue.NullValue =>
           Chunk.empty
-        case other                     =>
+        case other =>
           throw ProtocolError(s"$other isn't geo output")
       }
   }
@@ -270,24 +270,24 @@ object Output {
       respValue match {
         case RespValue.Array(elements) =>
           elements.map {
-            case s @ RespValue.BulkString(_)                                       =>
+            case s @ RespValue.BulkString(_) =>
               GeoView(s.asString, None, None, None)
             case RespValue.ArrayValues(name @ RespValue.BulkString(_), infos @ _*) =>
-              val distance = infos.collectFirst {
-                case RespValue.BulkString(bytes) => decodeDouble(bytes)
+              val distance = infos.collectFirst { case RespValue.BulkString(bytes) =>
+                decodeDouble(bytes)
               }
-              val hash     = infos.collectFirst {
-                case RespValue.Integer(i) => i
+              val hash = infos.collectFirst { case RespValue.Integer(i) =>
+                i
               }
               val position = infos.collectFirst {
                 case RespValue.ArrayValues(RespValue.BulkString(long), RespValue.BulkString(lat)) =>
                   LongLat(decodeDouble(long), decodeDouble(lat))
               }
               GeoView(name.asString, distance, hash, position)
-            case other                                                             =>
+            case other =>
               throw ProtocolError(s"$other is not a geo radious output")
           }
-        case other                     => throw ProtocolError(s"$other is not an array")
+        case other => throw ProtocolError(s"$other is not an array")
       }
   }
 
@@ -302,7 +302,7 @@ object Output {
             (elements(pos), elements(pos + 1)) match {
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
                 output += key.asString -> value.asString
-              case _                                                                =>
+              case _ =>
             }
             pos += 2
           }
@@ -319,15 +319,14 @@ object Output {
       respValue match {
         case RespValue.Array(entities) =>
           val output = collection.mutable.Map.empty[String, Map[String, String]]
-          entities.foreach {
-            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+          entities.foreach { case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+            output += (id.asString -> KeyValueOutput.unsafeDecode(value))
           }
 
           output.toMap
-        case RespValue.NullValue       =>
+        case RespValue.NullValue =>
           Map.empty[String, Map[String, String]]
-        case other                     =>
+        case other =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -343,9 +342,9 @@ object Output {
           val pairs = ps match {
             case RespValue.Array(value) =>
               value
-            case RespValue.NullValue    =>
+            case RespValue.NullValue =>
               Chunk.empty
-            case other                  =>
+            case other =>
               throw ProtocolError(s"$other isn't an array")
           }
 
@@ -353,14 +352,14 @@ object Output {
           pairs.foreach {
             case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
               consumers += (consumer.asString -> total.asString.toLong)
-            case _                                                                                         =>
+            case _ =>
               throw ProtocolError(s"Consumers doesn't have 2 elements")
           }
 
           PendingInfo(total, first, last, consumers.toMap)
         case array @ RespValue.Array(_) =>
           throw ProtocolError(s"$array doesn't have valid format")
-        case other                      =>
+        case other =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -380,7 +379,7 @@ object Output {
                 ) =>
               PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
           }
-        case other                     =>
+        case other =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -390,15 +389,14 @@ object Output {
       respValue match {
         case RespValue.Array(streams) =>
           val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
-          streams.foreach {
-            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-              output += (id.asString -> StreamOutput.unsafeDecode(value))
+          streams.foreach { case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+            output += (id.asString -> StreamOutput.unsafeDecode(value))
           }
 
           output.toMap
-        case RespValue.NullValue      =>
+        case RespValue.NullValue =>
           Map.empty[String, Map[String, Map[String, String]]]
-        case other                    =>
+        case other =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
