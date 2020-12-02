@@ -14,15 +14,14 @@ import zio.duration._
 import zio.redis._
 
 object ContributorsCache {
-
   trait Service {
-    def fetch(organization: Organization, repository: Repository): IO[ApiError, Contributors]
+    def fetchAll(organization: Organization, repository: Repository): IO[ApiError, Contributors]
   }
 
   lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, ContributorsCache] =
     ZLayer.fromFunction { env =>
       new Service {
-        def fetch(organization: Organization, repository: Repository): IO[ApiError, Contributors] = {
+        def fetchAll(organization: Organization, repository: Repository): IO[ApiError, Contributors] = {
           val key = s"$organization:$repository"
 
           sMembers(key).flatMap { data =>

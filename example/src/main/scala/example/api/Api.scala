@@ -20,7 +20,7 @@ object Api {
           path("organizations" / Segment / "repositories" / Segment / "contributors") { (organization, repository) =>
             get {
               complete {
-                contributorCache.fetch(Organization(organization), Repository(repository))
+                contributorCache.fetchAll(Organization(organization), Repository(repository))
               }
             }
           }
