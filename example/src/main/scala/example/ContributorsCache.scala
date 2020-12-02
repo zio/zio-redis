@@ -21,34 +21,41 @@ object ContributorsCache {
   lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, ContributorsCache] =
     ZLayer.fromFunction { env =>
       new Service {
-        def fetchAll(organization: Organization, repository: Repository): IO[ApiError, Contributors] = {
-          val key = s"$organization:$repository"
-
-          sMembers(key).flatMap { data =>
-            if (data.isEmpty)
-              for {
-                contributors <- retrieveContributors(organization, repository)
-                _            <- sAdd(key, contributors.asJson.toString, contributors.map(_.asJson.toString): _*)
-                _            <- pExpire(key, 1.minute)
-              } yield Contributors(contributors)
-            else
-              data
-                .mapM(contributor => ZIO.fromEither(decode[Contributor](contributor)))
-                .map(Contributors(_))
-                .orElseFail(GithubUnavailable)
-          }.orElseFail(GithubUnavailable).provide(env)
-        }
+        def fetchAll(organization: Organization, repository: Repository): IO[ApiError, Contributors] =
+          (read(organization, repository) <> retrieve(organization, repository))
+            .refineToOrDie[ApiError]
+            .provide(env)
       }
     }
 
-  private[this] def retrieveContributors(
+  private[this] def read(organization: Organization, repository: Repository) =
+    sMembers(keyOf(organization, repository)).flatMap(decodeCached)
+
+  private[this] def decodeCached(data: Chunk[String]) =
+    data.mapM(c => ZIO.fromEither(decode[Contributor](c)).orElseFail(CorruptedData)).map(Contributors(_))
+
+  private[this] def retrieve(
     organization: Organization,
     repository: Repository
-  ): ZIO[SttpClient, ApiError, Chunk[Contributor]] =
-    SttpClient
-      .send(basicRequest.get(urlOf(organization, repository)).response(asJson[Chunk[Contributor]]))
-      .flatMap(_.body.fold(_ => ZIO.fail(UnknownProject), ZIO.succeed(_)))
-      .orElseFail(GithubUnavailable)
+  ): ZIO[RedisExecutor with SttpClient, ApiError, Contributors] =
+    for {
+      req          <- ZIO.succeed(basicRequest.get(urlOf(organization, repository)).response(asJson[Chunk[Contributor]]))
+      res          <- SttpClient.send(req).orElseFail(GithubUnreachable)
+      contributors <- res.body.fold(_ => ZIO.fail(UnknownProject), ZIO.succeed(_))
+      key           = keyOf(organization, repository)
+      _            <- cache(key, contributors)
+    } yield Contributors(contributors)
+
+  private def cache(key: String, contributors: Chunk[Contributor]): URIO[RedisExecutor, Any] =
+    ZIO
+      .fromOption(NonEmptyChunk.fromChunk(contributors))
+      .flatMap { contributors =>
+        val json = contributors.map(_.asJson.noSpaces)
+        (sAdd(key, json.head, json.tail: _*) *> pExpire(key, 1.minute)).orDie
+      }
+      .orElse(ZIO.unit)
+
+  private def keyOf(organization: Organization, repository: Repository): String = s"$organization:$repository"
 
   private[this] def urlOf(organization: Organization, repository: Repository): Uri =
     uri"https://api.github.com/repos/$organization/$repository/contributors"
