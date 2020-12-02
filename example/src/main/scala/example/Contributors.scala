@@ -38,23 +38,14 @@ object Contributors {
         private def deserialize(response: Chunk[String]): IO[Error, Chunk[Contributor]] =
           response.mapM(contributor => ZIO.fromEither(decode[Contributor](contributor)))
 
-        private def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] = {
-          val request = basicRequest
-            .get(buildUrl(organization, repository))
-            .response(asJson[List[Contributor]])
-
+        private def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
           SttpClient
-            .send(request)
-            .map(_.body)
-            .flatMap {
-              case Right(value) => ZIO.succeed(Chunk.fromIterable(value))
-              case _            => ZIO.fail(UnknownProject)
-            }
+            .send(basicRequest.get(urlOf(organization, repository)).response(asJson[List[Contributor]]))
+            .flatMap(_.body.fold(_ => ZIO.fail(UnknownProject), vals => ZIO.succeed(Chunk.fromIterable(vals))))
             .orElseFail(GithubUnavailable)
             .provide(env)
-        }
 
-        private def buildUrl(organization: String, repository: String): Uri =
+        private def urlOf(organization: String, repository: String): Uri =
           uri"https://api.github.com/repos/$organization/$repository/contributors"
       }
     }
