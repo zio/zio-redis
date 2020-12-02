@@ -43,7 +43,7 @@ object ContributorsCache {
       .flatMap { contributors =>
         (sAdd(repository.key, contributors.head, contributors.tail: _*) *> pExpire(repository.key, 1.minute)).orDie
       }
-      .orElse(ZIO.unit)
+      .ignore
 
   private[this] def urlOf(repository: Repository): Uri =
     uri"https://api.github.com/repos/${repository.organization}/${repository.name}/contributors"
