@@ -325,11 +325,11 @@ private[redis] final class TestExecutor private (
     STM.foldLeft(chunk)(true) { case (b, a) => f(a).map(b && _) }
 
   private[this] object Replies {
-    val Ok                              = RespValue.SimpleString("OK")
-    val WrongType                       = RespValue.Error("WRONGTYPE")
-    def array(values: Iterable[String]) =
+    val Ok: RespValue.SimpleString                       = RespValue.SimpleString("OK")
+    val WrongType: RespValue.Error                       = RespValue.Error("WRONGTYPE")
+    def array(values: Iterable[String]): RespValue.Array =
       RespValue.array(values.map(RespValue.bulkString(_)).toList: _*)
-    val EmptyArray                      = RespValue.array()
+    val EmptyArray: RespValue.Array                      = RespValue.array()
   }
 }
 

@@ -1,8 +1,7 @@
 package example
 
-import io.circe.Decoder
-import io.circe._
 import io.circe.generic.semiauto._
+import io.circe.{ Decoder, _ }
 
 final case class Contributor(login: String, contributions: Int)
 

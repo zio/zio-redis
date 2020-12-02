@@ -2,15 +2,14 @@ package zio.redis
 
 import scala.util.matching.Regex
 
-import zio.Chunk
-import zio.ZIO
 import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
+import zio.{ Chunk, ZIO }
 
 trait SortedSetsSpec extends BaseSpec {
-  val sortedSetsSuite                              =
+  val sortedSetsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("sorted sets")(
       suite("zAdd")(
         testM("to empty set") {
@@ -997,7 +996,7 @@ trait SortedSetsSpec extends BaseSpec {
     key: String,
     regex: Option[Regex] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]]                               =
     ZStream
       .paginateChunkM(0L) { cursor =>
         zScan(key, cursor, regex, count).map {

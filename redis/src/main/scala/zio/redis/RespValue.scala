@@ -32,11 +32,11 @@ sealed trait RespValue extends Any {
 object RespValue {
 
   private object Header {
-    val simpleString = '+'.toByte
-    val error        = '-'.toByte
-    val integer      = ':'.toByte
-    val bulkString   = '$'.toByte
-    val array        = '*'.toByte
+    val simpleString: Byte = '+'.toByte
+    val error: Byte        = '-'.toByte
+    val integer: Byte      = ':'.toByte
+    val bulkString: Byte   = '$'.toByte
+    val array: Byte        = '*'.toByte
   }
 
   private[redis] final val Cr = '\r'.toByte

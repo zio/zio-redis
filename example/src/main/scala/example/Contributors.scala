@@ -1,6 +1,6 @@
 package example
 
-import Contributor._
+import example.Contributor._
 import io.circe
 import io.circe.parser.decode
 import io.circe.syntax._
