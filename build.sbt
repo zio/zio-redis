@@ -68,7 +68,6 @@ lazy val example =
     .settings(
       skip in publish := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client" %% "core"                          % "2.2.9",
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
         "de.heikoseeberger"            %% "akka-http-circe"               % "1.31.0",
