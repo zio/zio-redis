@@ -6,7 +6,7 @@ import io.circe.parser.decode
 import io.circe.syntax._
 import sttp.client.asynchttpclient.zio.SttpClient
 import sttp.client.circe.asJson
-import sttp.client.{ basicRequest, UriContext }
+import sttp.client.{UriContext, basicRequest}
 import sttp.model.Uri
 
 import zio._
