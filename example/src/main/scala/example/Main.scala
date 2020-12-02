@@ -19,15 +19,15 @@ object Main extends App {
 
   def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO
-      .effect(ConfigFactory.load())
+      .effect(ConfigFactory.load().getConfig("example"))
       .map(makeLayer)
       .flatMap(runServer)
       .exitCode
 
   private def makeLayer(rawConfig: Config): TaskLayer[HttpServer] = {
-    val config      = TypesafeConfig.fromTypesafeConfig(rawConfig, AppConfig.descriptor)
-    val apiConfig   = config.narrow(_.api)
-    val redisConfig = config.narrow(_.redis)
+    val config       = TypesafeConfig.fromTypesafeConfig(rawConfig, AppConfig.descriptor)
+    val serverConfig = config.narrow(_.server)
+    val redisConfig  = config.narrow(_.redis)
 
     val actorSystem =
       ZManaged
@@ -40,7 +40,7 @@ object Main extends App {
     val api    = cache >>> Api.live
     val routes = ZLayer.fromService[Api.Service, Route](_.routes)
 
-    (actorSystem ++ apiConfig ++ (api >>> routes)) >>> HttpServer.live
+    (actorSystem ++ serverConfig ++ (api >>> routes)) >>> HttpServer.live
   }
 
   private def runServer(layer: TaskLayer[HttpServer]): RIO[ZEnv, Nothing] =
