@@ -17,8 +17,7 @@ object RedisExecutor {
   lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, RedisExecutor] =
     ZLayer.identity[Logging] ++ ByteStream.live >>> StreamedExecutor
 
-  lazy val test: URLayer[zio.random.Random, RedisExecutor] =
-    TestInterpreter.make.toLayer
+  lazy val test: URLayer[zio.random.Random, RedisExecutor] = TestExecutor.live
 
   private[this] final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 

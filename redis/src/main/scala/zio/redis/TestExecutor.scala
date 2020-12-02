@@ -6,7 +6,7 @@ import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.stm._
 
-private[redis] final class TestInterpreter(
+private[redis] final class TestExecutor private (
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int]
@@ -333,23 +333,16 @@ private[redis] final class TestInterpreter(
   }
 }
 
-private[redis] object TestInterpreter {
-  lazy val make: URIO[zio.random.Random, RedisExecutor.Service] = {
-    val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
+private[redis] object TestExecutor {
+  lazy val live: URLayer[zio.random.Random, RedisExecutor] =
+    ZLayer.fromEffect {
       for {
-        seed   <- random.nextInt
-        sRandom = new scala.util.Random(seed)
-        ref    <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
-      } yield (i: Int) => ref.modify(s => (s.head(i), s.tail))
-
-    for {
-      randomPick <- makePickRandom
-      executor   <- STM.atomically {
-                    for {
-                      sets    <- TMap.empty[String, Set[String]]
-                      strings <- TMap.empty[String, String]
-                    } yield new TestInterpreter(sets, strings, randomPick)
-                  }
-    } yield executor
-  }
+        seed      <- random.nextInt
+        sRandom    = new scala.util.Random(seed)
+        ref       <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
+        randomPick = (i: Int) => ref.modify(s => (s.head(i), s.tail))
+        sets      <- TMap.empty[String, Set[String]].commit
+        strings   <- TMap.empty[String, String].commit
+      } yield new TestExecutor(sets, strings, randomPick)
+    }
 }
