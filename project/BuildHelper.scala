@@ -29,14 +29,6 @@ object BuildHelper {
       "-Ywarn-value-discard"
     )
 
-  private def optimizerOptions(optimize: Boolean) =
-    if (optimize)
-      Seq(
-        "-opt:l:inline",
-        "-opt-inline-from:zio.internal.**"
-      )
-    else Nil
-
   def buildInfoSettings(packageName: String) =
     Seq(
       buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
@@ -44,12 +36,10 @@ object BuildHelper {
       buildInfoObject := "BuildInfo"
     )
 
-  def extraOptions(scalaVersion: String, optimize: Boolean) =
+  def extraOptions(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
       case Some((2, 13)) =>
-        Seq(
-          "-Ywarn-unused:params,-implicits"
-        ) ++ std2xOptions ++ optimizerOptions(optimize)
+        Seq("-Ywarn-unused:params,-implicits") ++ std2xOptions
       case Some((2, 12)) =>
         Seq(
           "-opt-warnings",
@@ -67,7 +57,7 @@ object BuildHelper {
           "-Xsource:2.13",
           "-Xmax-classfile-name",
           "242"
-        ) ++ std2xOptions ++ optimizerOptions(optimize)
+        ) ++ std2xOptions
       case _ => Seq.empty
     }
 
@@ -75,11 +65,11 @@ object BuildHelper {
     Seq(
       name := s"$prjName",
       crossScalaVersions := Seq(Scala212, Scala213),
-      ThisBuild / scalaVersion := Scala213,
-      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
+      ThisBuild / scalaVersion := Scala212,
+      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value),
       ThisBuild / semanticdbEnabled := true,
       ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on",
-      ThisBuild / semanticdbVersion := scalafixSemanticdb.revision, // use Scalafix compatible version
+      ThisBuild / semanticdbVersion := scalafixSemanticdb.revision,
       ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
       ThisBuild / scalafixDependencies ++= List(
         "com.github.liancheng" %% "organize-imports" % "0.4.4",
