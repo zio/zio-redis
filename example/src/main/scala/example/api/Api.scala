@@ -1,7 +1,6 @@
 package example.api
 
-import akka.http.interop.{ ErrorResponse, ZIOSupport }
-import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
+import akka.http.interop.ZIOSupport
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
@@ -18,12 +17,6 @@ object Api {
   lazy val live: ZLayer[Contributors, Nothing, Api] =
     ZLayer.fromService { contributorService =>
       new Service with ZIOSupport {
-
-        implicit val apiErrorResponse: ErrorResponse[ApiError] = {
-          case GithubUnavailable(_) => HttpResponse(StatusCodes.InternalServerError)
-          case NoContributors(_)    => HttpResponse(StatusCodes.BadRequest)
-        }
-
         def routes =
           pathPrefix("contributors") {
             path(Segment / Segment) { (organization, repository) =>

@@ -1,12 +1,19 @@
 package example
 
-sealed trait ApiError {
-  def asThrowable: Throwable =
-    this match {
-      case GithubUnavailable(msg) => new Throwable(msg)
-      case NoContributors(msg)    => new Throwable(msg)
-    }
-}
+import akka.http.interop.ErrorResponse
+import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 
-final case class GithubUnavailable(msg: String) extends ApiError
-final case class NoContributors(msg: String)    extends ApiError
+import scala.util.control.NoStackTrace
+
+sealed trait ApiError extends NoStackTrace
+
+object ApiError {
+  case object GithubUnavailable extends ApiError
+  case object UnknownProject    extends ApiError
+
+  implicit val apiErrorResponse: ErrorResponse[ApiError] = {
+    case GithubUnavailable => HttpResponse(StatusCodes.InternalServerError)
+    case UnknownProject    => HttpResponse(StatusCodes.NotFound)
+  }
+
+}

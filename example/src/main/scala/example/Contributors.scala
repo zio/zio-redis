@@ -1,6 +1,7 @@
 package example
 
 import example.Contributor._
+import example.ApiError._
 import io.circe
 import io.circe.parser.decode
 import io.circe.syntax._
@@ -31,8 +32,8 @@ object Contributors {
                 _            <- pExpire(repository, 1.minute)
               } yield contributors
             else
-              deserialize(response).orElseFail(GithubUnavailable("Github Client Unavailable"))
-          }.orElseFail(GithubUnavailable("Github Client Unavailable")).provide(env)
+              deserialize(response).orElseFail(GithubUnavailable)
+          }.orElseFail(GithubUnavailable).provide(env)
 
         private def deserialize(response: Chunk[String]): IO[circe.Error, Chunk[Contributor]] =
           response.mapM(contributor => ZIO.fromEither(decode[Contributor](contributor)))
@@ -46,7 +47,7 @@ object Contributors {
             .send(request)
             .map(_.body)
             .flatMap { case Right(value) => ZIO.succeed(Chunk.fromIterable(value)) }
-            .orElseFail(GithubUnavailable("Github Client Unavailable"))
+            .orElseFail(GithubUnavailable)
             .provide(env)
         }
 
