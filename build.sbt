@@ -51,7 +51,6 @@ lazy val benchmarks =
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
-      crossScalaVersions -= Scala211,
       skip in publish := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.10.3",
@@ -67,7 +66,6 @@ lazy val example =
     .settings(stdSettings("example"))
     .dependsOn(redis)
     .settings(
-      crossScalaVersions -= Scala211,
       skip in publish := true,
       libraryDependencies ++= Seq(
         "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0",
