@@ -22,17 +22,15 @@ object ContributorsCache {
     ZLayer.fromFunction { env =>
       new Service {
         def fetchAll(repository: Repository): IO[ApiError, Contributors] =
-          (read(repository) <> retrieve(repository))
-            .refineToOrDie[ApiError]
-            .provide(env)
+          (read(repository) <> retrieve(repository)).provide(env)
       }
     }
 
-  private[this] def read(repository: Repository) =
-    sMembers(repository.key).flatMap(decodeCached)
-
-  private[this] def decodeCached(data: Chunk[String]) =
-    data.mapM(c => ZIO.fromEither(decode[Contributor](c)).orElseFail(CorruptedData)).map(Contributors(_))
+  private[this] def read(repository: Repository): ZIO[RedisExecutor, ApiError, Contributors] =
+    sMembers(repository.key)
+      .flatMap(_.mapM(c => ZIO.fromEither(decode[Contributor](c)).orElseFail(CorruptedData)))
+      .map(Contributors(_))
+      .refineToOrDie[ApiError]
 
   private[this] def retrieve(repository: Repository): ZIO[RedisExecutor with SttpClient, ApiError, Contributors] =
     for {
