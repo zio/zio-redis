@@ -39,8 +39,8 @@ object Input {
       import BitFieldCommand._
 
       data match {
-        case BitFieldGet(t, o)     => Chunk(stringEncode("GET"), stringEncode(t.stringify), stringEncode(o.toString))
-        case BitFieldSet(t, o, v)  =>
+        case BitFieldGet(t, o) => Chunk(stringEncode("GET"), stringEncode(t.stringify), stringEncode(o.toString))
+        case BitFieldSet(t, o, v) =>
           Chunk(stringEncode("SET"), stringEncode(t.stringify), stringEncode(o.toString), stringEncode(v.toString))
         case BitFieldIncr(t, o, i) =>
           Chunk(stringEncode("INCRBY"), stringEncode(t.stringify), stringEncode(o.toString), stringEncode(i.toString))

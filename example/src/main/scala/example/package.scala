@@ -1,7 +1,5 @@
-package example
-
 import zio.Has
 
-package object domain {
+package object example {
   type Contributors = Has[Contributors.Service]
 }

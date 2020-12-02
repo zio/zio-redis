@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import example.domain.{ ApiError, Contributors, GithubUnavailable, NoContributors }
+import example._
 
 import zio._
 

@@ -6,7 +6,6 @@ import akka.http.scaladsl.server.Route
 import com.typesafe.config.{ Config, ConfigFactory }
 import example.api.Api
 import example.config.AppConfig
-import example.domain.Contributors
 import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 
 import zio._

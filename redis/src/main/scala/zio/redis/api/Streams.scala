@@ -382,15 +382,30 @@ trait Streams {
 
 private object Streams {
 
-  final val XAck = RedisCommand("XACK", Tuple3(StringInput, StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val XAck: RedisCommand[(String, String, (String, List[String])), Long] =
+    RedisCommand("XACK", Tuple3(StringInput, StringInput, NonEmptyList(StringInput)), LongOutput)
 
-  final val XAdd = RedisCommand(
-    "XADD",
-    Tuple4(StringInput, OptionalInput(MaxLenInput), StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
-    MultiStringOutput
-  )
+  final val XAdd: RedisCommand[(String, Option[MaxLen], String, ((String, String), List[(String, String)])), String] =
+    RedisCommand(
+      "XADD",
+      Tuple4(StringInput, OptionalInput(MaxLenInput), StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
+      MultiStringOutput
+    )
 
-  final val XClaim = RedisCommand(
+  final val XClaim: RedisCommand[
+    (
+      String,
+      String,
+      String,
+      Duration,
+      (String, List[String]),
+      Option[Duration],
+      Option[Duration],
+      Option[Long],
+      Option[WithForce]
+    ),
+    Map[String, Map[String, String]]
+  ] = RedisCommand(
     "XCLAIM",
     Tuple9(
       StringInput,
@@ -406,7 +421,21 @@ private object Streams {
     StreamOutput
   )
 
-  final val XClaimWithJustId = RedisCommand(
+  final val XClaimWithJustId: RedisCommand[
+    (
+      String,
+      String,
+      String,
+      Duration,
+      (String, List[String]),
+      Option[Duration],
+      Option[Duration],
+      Option[Long],
+      Option[WithForce],
+      WithJustId
+    ),
+    Chunk[String]
+  ] = RedisCommand(
     "XCLAIM",
     Tuple10(
       StringInput,
@@ -423,26 +452,32 @@ private object Streams {
     ChunkOutput
   )
 
-  final val XDel = RedisCommand("XDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val XDel: RedisCommand[(String, (String, List[String])), Long] =
+    RedisCommand("XDEL", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 
-  final val XGroupCreate = RedisCommand("XGROUP", XGroupCreateInput, UnitOutput)
+  final val XGroupCreate: RedisCommand[XGroupCommand.Create, Unit] =
+    RedisCommand("XGROUP", XGroupCreateInput, UnitOutput)
 
-  final val XGroupSetId = RedisCommand("XGROUP", XGroupSetIdInput, UnitOutput)
+  final val XGroupSetId: RedisCommand[XGroupCommand.SetId, Unit] = RedisCommand("XGROUP", XGroupSetIdInput, UnitOutput)
 
-  final val XGroupDestroy = RedisCommand("XGROUP", XGroupDestroyInput, BoolOutput)
+  final val XGroupDestroy: RedisCommand[XGroupCommand.Destroy, Boolean] =
+    RedisCommand("XGROUP", XGroupDestroyInput, BoolOutput)
 
-  final val XGroupCreateConsumer = RedisCommand("XGROUP", XGroupCreateConsumerInput, UnitOutput)
+  final val XGroupCreateConsumer: RedisCommand[XGroupCommand.CreateConsumer, Unit] =
+    RedisCommand("XGROUP", XGroupCreateConsumerInput, UnitOutput)
 
-  final val XGroupDelConsumer = RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
+  final val XGroupDelConsumer: RedisCommand[XGroupCommand.DelConsumer, Long] =
+    RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
 
   // TODO: implement XINFO command
 
-  final val XLen = RedisCommand("XLEN", StringInput, LongOutput)
+  final val XLen: RedisCommand[String, Long] = RedisCommand("XLEN", StringInput, LongOutput)
 
-  final val XPending =
+  final val XPending: RedisCommand[(String, String, Option[Duration]), PendingInfo] =
     RedisCommand("XPENDING", Tuple3(StringInput, StringInput, OptionalInput(IdleInput)), XPendingOutput)
 
-  final val XPendingMessages =
+  final val XPendingMessages
+    : RedisCommand[(String, String, String, String, Long, Option[String], Option[Duration]), Chunk[PendingMessage]] =
     RedisCommand(
       "XPENDING",
       Tuple7(
@@ -457,20 +492,27 @@ private object Streams {
       PendingMessagesOutput
     )
 
-  final val XRange =
+  final val XRange: RedisCommand[(String, String, String, Option[Count]), Map[String, Map[String, String]]] =
     RedisCommand("XRANGE", Tuple4(StringInput, StringInput, StringInput, OptionalInput(CountInput)), StreamOutput)
 
-  final val XRead =
+  final val XRead: RedisCommand[(Option[Count], Option[Duration], ((String, String), Chunk[(String, String)])), Map[
+    String,
+    Map[String, Map[String, String]]
+  ]] =
     RedisCommand("XREAD", Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput), XReadOutput)
 
-  final val XReadGroup = RedisCommand(
+  final val XReadGroup: RedisCommand[
+    (Group, Option[Count], Option[Duration], Option[NoAck], ((String, String), Chunk[(String, String)])),
+    Map[String, Map[String, Map[String, String]]]
+  ] = RedisCommand(
     "XREADGROUP",
     Tuple5(GroupInput, OptionalInput(CountInput), OptionalInput(BlockInput), OptionalInput(NoAckInput), StreamsInput),
     XReadOutput
   )
 
-  final val XRevRange =
+  final val XRevRange: RedisCommand[(String, String, String, Option[Count]), Map[String, Map[String, String]]] =
     RedisCommand("XREVRANGE", Tuple4(StringInput, StringInput, StringInput, OptionalInput(CountInput)), StreamOutput)
 
-  final val XTrim = RedisCommand("XTRIM", Tuple2(StringInput, MaxLenInput), LongOutput)
+  final val XTrim: RedisCommand[(String, MaxLen), Long] =
+    RedisCommand("XTRIM", Tuple2(StringInput, MaxLenInput), LongOutput)
 }

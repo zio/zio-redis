@@ -2,16 +2,14 @@ package zio.redis
 
 import scala.util.matching.Regex
 
-import zio.Chunk
-import zio.NonEmptyChunk
-import zio.ZIO
 import zio.redis.RedisError.WrongType
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
+import zio.{ Chunk, NonEmptyChunk, ZIO }
 
 trait SetsSpec extends BaseSpec {
-  val setsSuite                                    =
+  val setsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("sets")(
       suite("sAdd")(
         testM("to empty set") {

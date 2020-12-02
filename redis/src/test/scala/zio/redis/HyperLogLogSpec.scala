@@ -5,7 +5,7 @@ import zio.test._
 
 trait HyperLogLogSpec extends BaseSpec {
 
-  val hyperLogLogSuite =
+  val hyperLogLogSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("hyperloglog")(
       suite("add elements")(
         testM("pfAdd elements to key") {

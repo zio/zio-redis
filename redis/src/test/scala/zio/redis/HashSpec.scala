@@ -6,7 +6,7 @@ import zio.test._
 
 trait HashSpec extends BaseSpec {
 
-  val hashSuite =
+  val hashSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
     suite("hash")(
       suite("hSet, hGet, hGetAll and hDel")(
         testM("set followed by get") {

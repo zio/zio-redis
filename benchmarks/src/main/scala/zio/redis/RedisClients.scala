@@ -2,7 +2,7 @@ package zio.redis
 
 import scala.concurrent.ExecutionContext
 
-import cats.effect.{ Blocker, ContextShift, Resource, Timer, IO => CatsIO }
+import cats.effect.{ Blocker, ContextShift, IO => CatsIO, Resource, Timer }
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.data.RedisCodec
 import fs2.io.tcp.SocketGroup

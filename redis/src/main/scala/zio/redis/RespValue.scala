@@ -15,15 +15,15 @@ sealed trait RespValue extends Any {
     def simpleString(s: String) = Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
 
     self match {
-      case SimpleString(s)   => Header.simpleString +: simpleString(s)
-      case Error(s)          => Header.error +: simpleString(s)
-      case Integer(i)        => Header.integer +: simpleString(i.toString)
+      case SimpleString(s) => Header.simpleString +: simpleString(s)
+      case Error(s)        => Header.error +: simpleString(s)
+      case Integer(i)      => Header.integer +: simpleString(i.toString)
       case BulkString(bytes) =>
         Header.bulkString +: (simpleString(bytes.length.toString) ++ bytes ++ CrLf)
-      case Array(elements)   =>
+      case Array(elements) =>
         val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.serialize)
         Header.array +: (simpleString(elements.size.toString) ++ data)
-      case NullValue         => NullString
+      case NullValue => NullString
     }
   }
 
@@ -32,11 +32,11 @@ sealed trait RespValue extends Any {
 object RespValue {
 
   private object Header {
-    val simpleString = '+'.toByte
-    val error        = '-'.toByte
-    val integer      = ':'.toByte
-    val bulkString   = '$'.toByte
-    val array        = '*'.toByte
+    val simpleString: Byte = '+'.toByte
+    val error: Byte        = '-'.toByte
+    val integer: Byte      = ':'.toByte
+    val bulkString: Byte   = '$'.toByte
+    val array: Byte        = '*'.toByte
   }
 
   private[redis] final val Cr = '\r'.toByte
@@ -108,8 +108,8 @@ object RespValue {
 
   val IntDeserializer: Sink[RedisError.ProtocolError, Byte, Byte, Long] =
     SimpleStringDeserializer.mapM { s =>
-      IO.effect(s.toLong).refineOrDie {
-        case _: NumberFormatException => RedisError.ProtocolError(s"'$s' is not a valid integer")
+      IO.effect(s.toLong).refineOrDie { case _: NumberFormatException =>
+        RedisError.ProtocolError(s"'$s' is not a valid integer")
       }
     }
 
@@ -120,9 +120,9 @@ object RespValue {
           bytes <- sinkTake[Byte](size.toInt)
           _     <- sinkTake[Byte](2) // crlf terminator
         } yield BulkString(bytes)
-      case -1                =>
+      case -1 =>
         Sink.succeed(NullValue)
-      case other             =>
+      case other =>
         Sink.fail(RedisError.ProtocolError(s"Invalid bulk string length: $other"))
     }
 
@@ -147,7 +147,7 @@ object RespValue {
         case Header.integer      => IntDeserializer.map(Integer)
         case Header.bulkString   => BulkStringDeserializer
         case Header.array        => ArrayDeserializer
-        case other               =>
+        case other =>
           Sink.fail[RedisError.ProtocolError, Byte](RedisError.ProtocolError(s"Invalid initial byte: $other"))
       }
     }
@@ -169,7 +169,7 @@ object RespValue {
     ZSink {
       for {
         state <- Ref.make[Chunk[I]](Chunk.empty).toManaged_
-        push   = (is: Option[Chunk[I]]) =>
+        push = (is: Option[Chunk[I]]) =>
                  state.get.flatMap { take =>
                    is match {
                      case Some(ch) =>
@@ -179,7 +179,7 @@ object RespValue {
                          state.set(Chunk.empty) *> ZSink.Push.emit(take ++ chunk, leftover)
                        } else
                          state.set(take ++ ch) *> ZSink.Push.more
-                     case None     =>
+                     case None =>
                        if (n >= 0) ZSink.Push.emit(take, Chunk.empty)
                        else ZSink.Push.emit(Chunk.empty, take)
                    }

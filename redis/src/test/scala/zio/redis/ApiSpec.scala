@@ -1,8 +1,12 @@
 package zio.redis
 
+import zio.Has
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.logging.Logging
+import zio.random.Random
 import zio.test._
+import zio.test.environment.{ Live, TestClock, TestConsole, TestRandom, TestSystem }
 
 object ApiSpec
     extends ConnectionSpec
@@ -16,7 +20,13 @@ object ApiSpec
     with HashSpec
     with StreamsSpec {
 
-  def spec =
+  def spec: Spec[Has[Annotations.Service] with Has[Live.Service] with Has[Sized.Service] with Has[
+    TestClock.Service
+  ] with Has[TestConfig.Service] with Has[TestConsole.Service] with Has[TestRandom.Service] with Has[
+    TestSystem.Service
+  ] with Has[Clock.Service] with Has[zio.console.Console.Service] with Has[zio.system.System.Service] with Has[
+    Random.Service
+  ] with Has[Blocking.Service], TestFailure[java.io.Serializable], TestSuccess] =
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite,

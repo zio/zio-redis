@@ -46,7 +46,8 @@ trait Lists {
    */
   final def lLen(key: String): ZIO[RedisExecutor, RedisError, Long] = LLen.run(key)
 
-  /** Removes and returns the first element of the list stored at key
+  /**
+   * Removes and returns the first element of the list stored at key
    *
    * @param key the key identifier
    * @return the value of the first element, or empty when key does not exist
@@ -223,32 +224,45 @@ trait Lists {
 }
 
 private[redis] object Lists {
-  final val BrPopLPush =
+  final val BrPopLPush: RedisCommand[(String, String, Duration), Option[String]] =
     RedisCommand(
       "BRPOPLPUSH",
       Tuple3(StringInput, StringInput, DurationSecondsInput),
       OptionalOutput(MultiStringOutput)
     )
 
-  final val LIndex = RedisCommand("LINDEX", Tuple2(StringInput, LongInput), OptionalOutput(MultiStringOutput))
-  final val LLen   = RedisCommand("LLEN", StringInput, LongOutput)
-  final val LPop   = RedisCommand("LPOP", StringInput, OptionalOutput(MultiStringOutput))
-  final val LPush  = RedisCommand("LPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val LPushX = RedisCommand("LPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val LRange = RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput)
-  final val LRem   = RedisCommand("LREM", Tuple3(StringInput, LongInput, StringInput), LongOutput)
-  final val LSet   = RedisCommand("LSET", Tuple3(StringInput, LongInput, StringInput), UnitOutput)
-  final val LTrim  = RedisCommand("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput)
-  final val RPop   = RedisCommand("RPOP", StringInput, OptionalOutput(MultiStringOutput))
+  final val LIndex: RedisCommand[(String, Long), Option[String]] =
+    RedisCommand("LINDEX", Tuple2(StringInput, LongInput), OptionalOutput(MultiStringOutput))
+  final val LLen: RedisCommand[String, Long] = RedisCommand("LLEN", StringInput, LongOutput)
+  final val LPop: RedisCommand[String, Option[String]] =
+    RedisCommand("LPOP", StringInput, OptionalOutput(MultiStringOutput))
+  final val LPush: RedisCommand[(String, (String, List[String])), Long] =
+    RedisCommand("LPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val LPushX: RedisCommand[(String, (String, List[String])), Long] =
+    RedisCommand("LPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val LRange: RedisCommand[(String, Range), Chunk[String]] =
+    RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput)
+  final val LRem: RedisCommand[(String, Long, String), Long] =
+    RedisCommand("LREM", Tuple3(StringInput, LongInput, StringInput), LongOutput)
+  final val LSet: RedisCommand[(String, Long, String), Unit] =
+    RedisCommand("LSET", Tuple3(StringInput, LongInput, StringInput), UnitOutput)
+  final val LTrim: RedisCommand[(String, Range), Unit] =
+    RedisCommand("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput)
+  final val RPop: RedisCommand[String, Option[String]] =
+    RedisCommand("RPOP", StringInput, OptionalOutput(MultiStringOutput))
 
-  final val RPopLPush =
+  final val RPopLPush: RedisCommand[(String, String), Option[String]] =
     RedisCommand("RPOPLPUSH", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
 
-  final val RPush  = RedisCommand("RPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val RPushX = RedisCommand("RPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-  final val BlPop  = RedisCommand("BLPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
-  final val BrPop  = RedisCommand("BRPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
+  final val RPush: RedisCommand[(String, (String, List[String])), Long] =
+    RedisCommand("RPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val RPushX: RedisCommand[(String, (String, List[String])), Long] =
+    RedisCommand("RPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+  final val BlPop: RedisCommand[((String, List[String]), Duration), Option[(String, String)]] =
+    RedisCommand("BLPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
+  final val BrPop: RedisCommand[((String, List[String]), Duration), Option[(String, String)]] =
+    RedisCommand("BRPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
 
-  final val LInsert =
+  final val LInsert: RedisCommand[(String, Position, String, String), Long] =
     RedisCommand("LINSERT", Tuple4(StringInput, PositionInput, StringInput, StringInput), LongOutput)
 }
