@@ -26,6 +26,4 @@ object Api {
           }
       }
     }
-
-  val routes: URIO[Api, Route] = ZIO.access(api => Route.seal(api.get.routes))
 }
