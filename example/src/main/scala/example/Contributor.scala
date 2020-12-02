@@ -1,4 +1,4 @@
-package example.domain
+package example
 
 import io.circe.Decoder
 import io.circe._

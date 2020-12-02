@@ -1,4 +1,4 @@
-package example.domain
+package example
 
 import Contributor._
 import io.circe
