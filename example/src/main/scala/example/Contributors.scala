@@ -23,7 +23,7 @@ object Contributors {
   lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, Contributors] =
     ZLayer.fromFunction { env =>
       new Service {
-        override def getContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
+        def getContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
           sMembers(repository).flatMap { response => // key should be unique combination of org + repo
             if (response.isEmpty)
               for {
@@ -46,7 +46,10 @@ object Contributors {
           SttpClient
             .send(request)
             .map(_.body)
-            .flatMap { case Right(value) => ZIO.succeed(Chunk.fromIterable(value)) }
+            .flatMap {
+              case Right(value) => ZIO.succeed(Chunk.fromIterable(value))
+              case _            => ZIO.fail(UnknownProject)
+            }
             .orElseFail(GithubUnavailable)
             .provide(env)
         }
