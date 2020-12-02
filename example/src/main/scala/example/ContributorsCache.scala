@@ -43,9 +43,9 @@ object ContributorsCache {
   private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[RedisExecutor, Any] =
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
+      .map(_.map(_.asJson.noSpaces))
       .flatMap { contributors =>
-        val json = contributors.map(_.asJson.noSpaces)
-        (sAdd(repository.key, json.head, json.tail: _*) *> pExpire(repository.key, 1.minute)).orDie
+        (sAdd(repository.key, contributors.head, contributors.tail: _*) *> pExpire(repository.key, 1.minute)).orDie
       }
       .orElse(ZIO.unit)
 
