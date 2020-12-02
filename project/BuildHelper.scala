@@ -8,27 +8,6 @@ object BuildHelper {
   val Scala212 = "2.12.12"
   val Scala213 = "2.13.3"
 
-  private val stdOptions =
-    Seq(
-      "-deprecation",
-      "-encoding",
-      "UTF-8",
-      "-feature",
-      "-unchecked",
-      "-Xfatal-warnings"
-    )
-
-  private val std2xOptions =
-    Seq(
-      "-language:higherKinds",
-      "-language:existentials",
-      "-explaintypes",
-      "-Yrangepos",
-      "-Xlint:_,-missing-interpolator,-type-parameter-shadow",
-      "-Ywarn-numeric-widen",
-      "-Ywarn-value-discard"
-    )
-
   def buildInfoSettings(packageName: String) =
     Seq(
       buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
@@ -36,37 +15,11 @@ object BuildHelper {
       buildInfoObject := "BuildInfo"
     )
 
-  def extraOptions(scalaVersion: String) =
-    CrossVersion.partialVersion(scalaVersion) match {
-      case Some((2, 13)) =>
-        Seq("-Ywarn-unused:params,-implicits") ++ std2xOptions
-      case Some((2, 12)) =>
-        Seq(
-          "-opt-warnings",
-          "-Ywarn-extra-implicit",
-          "-Ywarn-unused:_,imports",
-          "-Ywarn-unused:imports",
-          "-Ypartial-unification",
-          "-Yno-adapted-args",
-          "-Ywarn-inaccessible",
-          "-Ywarn-infer-any",
-          "-Ywarn-nullary-override",
-          "-Ywarn-nullary-unit",
-          "-Ywarn-unused:params,-implicits",
-          "-Xfuture",
-          "-Xsource:2.13",
-          "-Xmax-classfile-name",
-          "242"
-        ) ++ std2xOptions
-      case _ => Seq.empty
-    }
-
   def stdSettings(prjName: String) =
     Seq(
       name := s"$prjName",
       crossScalaVersions := Seq(Scala212, Scala213),
-      ThisBuild / scalaVersion := Scala212,
-      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value),
+      ThisBuild / scalaVersion := Scala213,
       ThisBuild / semanticdbEnabled := true,
       ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on",
       ThisBuild / semanticdbVersion := scalafixSemanticdb.revision,
