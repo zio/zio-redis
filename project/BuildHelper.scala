@@ -7,6 +7,7 @@ import scalafix.sbt.ScalafixPlugin.autoImport._
 object BuildHelper {
   val Scala212 = "2.12.12"
   val Scala213 = "2.13.3"
+  val Zio      = "1.0.3+90-84fbcdcb-SNAPSHOT"
 
   def buildInfoSettings(packageName: String) =
     Seq(
@@ -28,6 +29,7 @@ object BuildHelper {
         "com.github.liancheng" %% "organize-imports" % "0.4.4",
         "com.github.vovapolu"  %% "scaluzzi"         % "0.1.16"
       ),
+      resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       parallelExecution in Test := true,
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true
