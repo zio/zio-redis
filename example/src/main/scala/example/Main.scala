@@ -40,7 +40,7 @@ object Main extends App {
     val redisLayer = Logging.ignore ++ configLayer.narrow(_.redis) >>> RedisExecutor.live.orDie
     val sttpLayer  = AsyncHttpClientZioBackend.layer()
 
-    val contributorsLayer = redisLayer ++ sttpLayer >>> Contributors.live
+    val contributorsLayer = redisLayer ++ sttpLayer >>> ContributorsCache.live
     val apiLayer          = contributorsLayer >>> Api.live
     val routesLayer       = ZLayer.fromService[Api.Service, Route](_.routes)
 

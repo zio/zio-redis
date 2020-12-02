@@ -14,15 +14,15 @@ object Api {
     def routes: Route
   }
 
-  lazy val live: ZLayer[Contributors, Nothing, Api] =
-    ZLayer.fromService { contributorService =>
+  lazy val live: ZLayer[ContributorsCache, Nothing, Api] =
+    ZLayer.fromService { contributorCache =>
       new Service with ZIOSupport {
         def routes =
           pathPrefix("contributors") {
             path(Segment / Segment) { (organization, repository) =>
               get {
                 complete {
-                  contributorService.fetchContributors(organization, repository)
+                  contributorCache.fetch(organization, repository)
                 }
               }
             }
