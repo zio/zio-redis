@@ -5,7 +5,7 @@ import io.circe.generic.semiauto._
 import io.circe.parser.decode
 
 import zio.prelude._
-import zio.{Chunk, IO, NonEmptyChunk, ZIO}
+import zio.{ Chunk, IO, NonEmptyChunk, ZIO }
 
 final case class Contributors(contributors: Chunk[Contributor]) extends AnyVal
 

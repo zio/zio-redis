@@ -1,6 +1,6 @@
 package example
 
-import io.circe.{Decoder, Encoder}
+import io.circe.{ Decoder, Encoder }
 
 import zio.prelude.Newtype
 
