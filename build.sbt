@@ -22,8 +22,6 @@ addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheckAll")
 addCommandAlias("fix", "scalafixAll")
 addCommandAlias("fixCheck", "scalafixAll --check")
-addCommandAlias("testJVM", "test:compile")
-addCommandAlias("testJVM211", ";redis/test")
 
 lazy val root =
   project
