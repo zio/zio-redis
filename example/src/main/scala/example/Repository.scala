@@ -1,5 +1,5 @@
 package example
 
-import zio.prelude.Newtype
-
-object Repository extends Newtype[String]
+final case class Repository(organization: Organization, name: Name) {
+  lazy val key: String = s"$organization:$name"
+}

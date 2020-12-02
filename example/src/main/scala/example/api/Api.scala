@@ -17,10 +17,10 @@ object Api {
     ZLayer.fromService { contributorCache =>
       new Service with ZIOSupport {
         val routes =
-          path("repositories" / Segment / Segment / "contributors") { (organization, repository) =>
+          path("repositories" / Segment / Segment / "contributors") { (organization, name) =>
             get {
               complete {
-                contributorCache.fetchAll(Organization(organization), Repository(repository))
+                contributorCache.fetchAll(Repository(Organization(organization), Name(name)))
               }
             }
           }

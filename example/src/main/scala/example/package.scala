@@ -5,5 +5,5 @@ package object example {
   type Contributions     = Contributions.Type
   type Login             = Login.Type
   type Organization      = Organization.Type
-  type Repository        = Repository.Type
+  type Name              = Name.Type
 }
