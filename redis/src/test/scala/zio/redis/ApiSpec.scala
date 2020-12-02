@@ -29,7 +29,7 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared(Clock.live ++ Logging.ignore >>> RedisExecutor.default.orDie),
+      ).provideCustomLayerShared(Logging.ignore >>> RedisExecutor.local.orDie ++ Clock.live),
       suite("Test Executor")(
         connectionSuite,
         setsSuite

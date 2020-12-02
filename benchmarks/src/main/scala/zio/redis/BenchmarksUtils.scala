@@ -16,5 +16,5 @@ trait BenchmarksUtils {
 }
 
 object BenchmarksUtils {
-  private final val Layer = Logging.ignore >>> RedisExecutor.default.orDie
+  private final val Layer = Logging.ignore >>> RedisExecutor.local.orDie
 }
