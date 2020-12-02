@@ -40,8 +40,8 @@ object Contributors {
 
         private def fetchContributors(organization: String, repository: String): IO[ApiError, Chunk[Contributor]] =
           SttpClient
-            .send(basicRequest.get(urlOf(organization, repository)).response(asJson[List[Contributor]]))
-            .flatMap(_.body.fold(_ => ZIO.fail(UnknownProject), vals => ZIO.succeed(Chunk.fromIterable(vals))))
+            .send(basicRequest.get(urlOf(organization, repository)).response(asJson[Chunk[Contributor]]))
+            .flatMap(_.body.fold(_ => ZIO.fail(UnknownProject), ZIO.succeed(_)))
             .orElseFail(GithubUnavailable)
             .provide(env)
 
