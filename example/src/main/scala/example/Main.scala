@@ -37,9 +37,8 @@ object Main extends App {
       }.toLayer
 
     val apiConfigLayer = configLayer.narrow(_.api)
-    configLayer.narrow(_.redis)
 
-    val redisLayer = Logging.ignore >>> RedisExecutor.live("localhost", 6379).orDie
+    val redisLayer = Logging.ignore ++ configLayer.narrow(_.redis) >>> RedisExecutor.live.orDie
     val sttpLayer  = AsyncHttpClientZioBackend.layer()
 
     val contributorsLayer = redisLayer ++ sttpLayer >>> Contributors.live
