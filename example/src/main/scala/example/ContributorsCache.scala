@@ -28,6 +28,8 @@ object ContributorsCache {
 
   private[this] def read(repository: Repository): ZIO[RedisExecutor, ApiError, Contributors] =
     sMembers(repository.key)
+      .map(NonEmptyChunk.fromChunk)
+      .someOrFail(CacheMiss)
       .flatMap(_.mapM(c => ZIO.fromEither(decode[Contributor](c)).orElseFail(CorruptedData)))
       .map(Contributors(_))
       .refineToOrDie[ApiError]
