@@ -1,9 +1,9 @@
 package example
 
+import scala.util.control.NoStackTrace
+
 import akka.http.interop.ErrorResponse
 import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
-
-import scala.util.control.NoStackTrace
 
 sealed trait ApiError extends NoStackTrace
 

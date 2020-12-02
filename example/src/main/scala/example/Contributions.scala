@@ -1,6 +1,7 @@
 package example
 
-import io.circe.{ Encoder, Decoder }
+import io.circe.{Decoder, Encoder}
+
 import zio.prelude.Newtype
 
 object Contributions extends Newtype[Int] {
