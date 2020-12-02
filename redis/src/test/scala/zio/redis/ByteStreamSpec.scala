@@ -18,5 +18,5 @@ object ByteStreamSpec extends BaseSpec {
           res    <- stream.read.runHead
         } yield assert(res)(isSome(equalTo('*'.toByte)))
       }
-    ).provideCustomLayer(Logging.ignore >>> ByteStream.loopback().orDie)
+    ).provideCustomLayer(Logging.ignore >>> ByteStream.default.orDie)
 }

@@ -1,7 +1,6 @@
 package zio.redis
 
 import java.io.IOException
-import java.net.SocketAddress
 
 import scala.collection.compat.immutable.LazyList
 
@@ -22,16 +21,13 @@ trait Interpreter {
       def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
     }
 
-    def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.live(address)) >>> StreamedExecutor
+    lazy val default: ZLayer[Logging, RedisError.IOError, RedisExecutor] =
+      ZLayer.identity[Logging] ++ ByteStream.default >>> StreamedExecutor
 
-    def live(host: String, port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.live(host, port)) >>> StreamedExecutor
+    lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, RedisExecutor] =
+      ZLayer.identity[Logging] ++ ByteStream.live >>> StreamedExecutor
 
-    def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, RedisExecutor] =
-      (ZLayer.identity[Logging] ++ ByteStream.loopback(port)) >>> StreamedExecutor
-
-    val test: ZLayer[zio.random.Random, Nothing, RedisExecutor] = {
+    lazy val test: URLayer[zio.random.Random, RedisExecutor] = {
       val makePickRandom: URIO[zio.random.Random, Int => USTM[Int]] =
         for {
           seed   <- random.nextInt
@@ -51,8 +47,6 @@ trait Interpreter {
         } yield executor
       }
     }
-
-    private[redis] final val DefaultPort = 6379
 
     private[this] final val RequestQueueSize = 16
 
