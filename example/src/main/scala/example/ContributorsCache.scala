@@ -16,13 +16,13 @@ import zio.redis._
 object ContributorsCache {
 
   trait Service {
-    def fetch(organization: String, repository: String): IO[ApiError, Contributors]
+    def fetch(organization: Organization, repository: Repository): IO[ApiError, Contributors]
   }
 
   lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, ContributorsCache] =
     ZLayer.fromFunction { env =>
       new Service {
-        def fetch(organization: String, repository: String): IO[ApiError, Contributors] = {
+        def fetch(organization: Organization, repository: Repository): IO[ApiError, Contributors] = {
           val key = s"$organization:$repository"
 
           sMembers(key).flatMap { data =>
@@ -43,15 +43,15 @@ object ContributorsCache {
     }
 
   private[this] def retrieveContributors(
-    organization: String,
-    repository: String
+    organization: Organization,
+    repository: Repository
   ): ZIO[SttpClient, ApiError, Chunk[Contributor]] =
     SttpClient
       .send(basicRequest.get(urlOf(organization, repository)).response(asJson[Chunk[Contributor]]))
       .flatMap(_.body.fold(_ => ZIO.fail(UnknownProject), ZIO.succeed(_)))
       .orElseFail(GithubUnavailable)
 
-  private[this] def urlOf(organization: String, repository: String): Uri =
+  private[this] def urlOf(organization: Organization, repository: Repository): Uri =
     uri"https://api.github.com/repos/$organization/$repository/contributors"
 
 }
