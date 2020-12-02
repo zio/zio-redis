@@ -17,7 +17,7 @@ object OutputSpec extends BaseSpec {
 
   private def respArrayVals(xs: RespValue*) = RespValue.Array(Chunk.fromIterable(xs))
 
-  def spec =
+  def spec: Spec[Any, TestFailure[Throwable], TestSuccess] =
     suite("Output decoders")(
       suite("errors")(
         testM("protocol errors") {

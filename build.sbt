@@ -13,13 +13,7 @@ inThisBuild(
     ),
     pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
     pgpPublicRing := file("/tmp/public.asc"),
-    pgpSecretRing := file("/tmp/secret.asc"),
-    scmInfo := Some(
-      ScmInfo(url("https://github.com/zio/zio-redis/"), "scm:git:git@github.com:zio/zio-redis.git")
-    ),
-    semanticdbEnabled := true,
-    semanticdbVersion := scalafixSemanticdb.revision,
-    scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.5.5"
+    pgpSecretRing := file("/tmp/secret.asc")
   )
 )
 
@@ -28,8 +22,6 @@ addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheckAll")
 addCommandAlias("fix", "scalafixAll")
 addCommandAlias("fixCheck", "scalafixAll --check")
-addCommandAlias("testJVM", ";redis/test;benchmarks/test:compile")
-addCommandAlias("testJVM211", ";redis/test")
 
 lazy val root =
   project
@@ -59,7 +51,6 @@ lazy val benchmarks =
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
-      crossScalaVersions -= Scala211,
       skip in publish := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.10.3",
@@ -84,9 +75,8 @@ lazy val example =
         "io.circe"                     %% "circe-core"                    % "0.12.3",
         "io.circe"                     %% "circe-generic"                 % "0.12.3",
         "de.heikoseeberger"            %% "akka-http-circe"               % "1.31.0",
-        "dev.zio"                      %% "zio-config"                    % "1.0.0-RC29-1",
-        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC29-1",
-        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC29-1"
+        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC30-1",
+        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC30-1"
       ),
       scalacOptions in Compile := Seq("-Xlint:unused")
     )

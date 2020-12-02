@@ -54,15 +54,15 @@ private[redis] object ByteStream {
   private[this] def openChannel(address: SocketAddress): ZManaged[Logging, IOException, AsynchronousSocketChannel] =
     Managed.fromAutoCloseable {
       for {
-        logger  <- ZIO.service[Logger[String]]
+        logger <- ZIO.service[Logger[String]]
         channel <- IO.effect {
                      val channel = AsynchronousSocketChannel.open()
                      channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }
-        _       <- closeWith[Void](channel)(channel.connect(address, null, _))
-        _       <- logger.info("Connected to the redis server.")
+        _ <- closeWith[Void](channel)(channel.connect(address, null, _))
+        _ <- logger.info("Connected to the redis server.")
       } yield channel
     }.refineToOrDie[IOException]
 
@@ -75,8 +75,8 @@ private[redis] object ByteStream {
     val read: Stream[IOException, Byte] =
       Stream.repeatEffectChunkOption {
         (for {
-          _     <- IO.effectTotal(readBuffer.clear())
-          _     <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+          _ <- IO.effectTotal(readBuffer.clear())
+          _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
           chunk <- IO.effectTotal {
                      readBuffer.flip()
                      val count = readBuffer.remaining()

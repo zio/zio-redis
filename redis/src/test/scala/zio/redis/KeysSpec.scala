@@ -1,14 +1,20 @@
 package zio.redis
 
+import zio.clock.Clock
 import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ Chunk, ZIO }
+import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
+import zio.{ Chunk, Has, ZIO }
 
 trait KeysSpec extends BaseSpec {
 
-  val keysSuite =
+  val keysSuite: Spec[Has[Clock.Service] with Has[RedisExecutor.Service] with Has[TestClock.Service] with Has[
+    TestConsole.Service
+  ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
+    Annotations.Service
+  ], TestFailure[RedisError], TestSuccess] =
     suite("keys")(
       testM("set followed by get") {
         for {

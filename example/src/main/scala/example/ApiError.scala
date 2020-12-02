@@ -1,4 +1,4 @@
-package example.domain
+package example
 
 sealed trait ApiError {
   def asThrowable: Throwable =
