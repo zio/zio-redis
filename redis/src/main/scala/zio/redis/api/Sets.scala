@@ -183,20 +183,29 @@ trait Sets {
 private[redis] object Sets {
   final val SAdd: RedisCommand[(String, (String, List[String])), Long] =
     RedisCommand("SADD", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+
   final val SCard: RedisCommand[String, Long] = RedisCommand("SCARD", StringInput, LongOutput)
+
   final val SDiff: RedisCommand[(String, List[String]), Chunk[String]] =
     RedisCommand("SDIFF", NonEmptyList(StringInput), ChunkOutput)
+
   final val SDiffStore: RedisCommand[(String, (String, List[String])), Long] =
     RedisCommand("SDIFFSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+
   final val SInter: RedisCommand[(String, List[String]), Chunk[String]] =
     RedisCommand("SINTER", NonEmptyList(StringInput), ChunkOutput)
+
   final val SInterStore: RedisCommand[(String, (String, List[String])), Long] =
     RedisCommand("SINTERSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+
   final val SIsMember: RedisCommand[(String, String), Boolean] =
     RedisCommand("SISMEMBER", Tuple2(StringInput, StringInput), BoolOutput)
+
   final val SMembers: RedisCommand[String, Chunk[String]] = RedisCommand("SMEMBERS", StringInput, ChunkOutput)
+
   final val SMove: RedisCommand[(String, String, String), Boolean] =
     RedisCommand("SMOVE", Tuple3(StringInput, StringInput, StringInput), BoolOutput)
+
   final val SPop: RedisCommand[(String, Option[Long]), Chunk[String]] =
     RedisCommand("SPOP", Tuple2(StringInput, OptionalInput(LongInput)), MultiStringChunkOutput)
 
@@ -215,6 +224,7 @@ private[redis] object Sets {
 
   final val SUnion: RedisCommand[(String, List[String]), Chunk[String]] =
     RedisCommand("SUNION", NonEmptyList(StringInput), ChunkOutput)
+
   final val SUnionStore: RedisCommand[(String, (String, List[String])), Long] =
     RedisCommand("SUNIONSTORE", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 }
