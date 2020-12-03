@@ -44,10 +44,8 @@ object ContributorsCache {
   private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[RedisExecutor, Any] =
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
-      .map(Contributors(_))
-      .flatMap { contributors =>
-        set(repository.key, contributors.asJson.noSpaces, Some(1.minute)).orDie
-      }
+      .map(Contributors(_).asJson.noSpaces)
+      .flatMap(data => set(repository.key, data, Some(1.minute)).orDie)
       .ignore
 
   private[this] def urlOf(repository: Repository): Uri =
