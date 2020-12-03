@@ -4,7 +4,7 @@ import scala.collection.compat.immutable.LazyList
 
 import zio._
 import zio.redis.RedisError.ProtocolError
-import zio.stm.{ random => _, _ }
+import zio.stm._
 
 private[redis] final class TestExecutor private (
   sets: TMap[String, Set[String]],
