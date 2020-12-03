@@ -12,14 +12,14 @@ sealed trait RespValue extends Any { self =>
   final def serialize: Chunk[Byte] =
     self match {
       case NullValue       => NullString
-      case SimpleString(s) => Header.simpleString +: simpleString(s)
-      case Error(s)        => Header.error +: simpleString(s)
-      case Integer(i)      => Header.integer +: simpleString(i.toString)
+      case SimpleString(s) => Headers.SimpleString +: simpleString(s)
+      case Error(s)        => Headers.Error +: simpleString(s)
+      case Integer(i)      => Headers.Integer +: simpleString(i.toString)
       case BulkString(bytes) =>
-        Header.bulkString +: (simpleString(bytes.length.toString) ++ bytes ++ CrLf)
+        Headers.BulkString +: (simpleString(bytes.length.toString) ++ bytes ++ CrLf)
       case Array(elements) =>
         val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.serialize)
-        Header.array +: (simpleString(elements.size.toString) ++ data)
+        Headers.Array +: (simpleString(elements.size.toString) ++ data)
     }
 
   private[this] def simpleString(s: String): Chunk[Byte] =
@@ -47,12 +47,12 @@ object RespValue {
 
   def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
-  private object Header {
-    val simpleString: Byte = '+'.toByte
-    val error: Byte        = '-'.toByte
-    val integer: Byte      = ':'.toByte
-    val bulkString: Byte   = '$'.toByte
-    val array: Byte        = '*'.toByte
+  private object Headers {
+    val SimpleString = '+'.toByte
+    val Error        = '-'.toByte
+    val Integer      = ':'.toByte
+    val BulkString   = '$'.toByte
+    val Array        = '*'.toByte
   }
 
   private[redis] final val Cr = '\r'.toByte
@@ -63,17 +63,17 @@ object RespValue {
 
   private final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
-  sealed trait State { self =>
+  private sealed trait State { self =>
     import State._
 
-    final def finished: Boolean =
+    final def notFinished: Boolean =
       self match {
-        case InProgress(_) | CrSeen(_) => false
-        case Complete(_) | Failed      => true
+        case InProgress(_) | CrSeen(_) => true
+        case Complete(_) | Failed      => false
       }
   }
 
-  object State {
+  private object State {
     final case class InProgress(chunk: Chunk[Char]) extends State
     final case class CrSeen(chunk: Chunk[Char])     extends State
     final case class Complete(chunk: Chunk[Char])   extends State
@@ -83,7 +83,7 @@ object RespValue {
   val SimpleStringDeserializer: Sink[RedisError.ProtocolError, Byte, Byte, String] = {
     import State._
     Sink
-      .fold[Byte, State](InProgress(Chunk.empty))(!_.finished) { (acc, b) =>
+      .fold[Byte, State](InProgress(Chunk.empty))(_.notFinished) { (acc, b) =>
         acc match {
           case InProgress(chunk) if b == Cr => CrSeen(chunk)
           case InProgress(_) if b == Lf     => Failed
@@ -136,11 +136,11 @@ object RespValue {
   val Deserializer: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
     Sink.take[Byte](1).flatMap { header =>
       header.head match {
-        case Header.simpleString => SimpleStringDeserializer.map(SimpleString)
-        case Header.error        => SimpleStringDeserializer.map(Error)
-        case Header.integer      => IntDeserializer.map(Integer)
-        case Header.bulkString   => BulkStringDeserializer
-        case Header.array        => ArrayDeserializer
+        case Headers.SimpleString => SimpleStringDeserializer.map(SimpleString)
+        case Headers.Error        => SimpleStringDeserializer.map(Error)
+        case Headers.Integer      => IntDeserializer.map(Integer)
+        case Headers.BulkString   => BulkStringDeserializer
+        case Headers.Array        => ArrayDeserializer
         case other =>
           Sink.fail[RedisError.ProtocolError, Byte](RedisError.ProtocolError(s"Invalid initial byte: $other"))
       }
