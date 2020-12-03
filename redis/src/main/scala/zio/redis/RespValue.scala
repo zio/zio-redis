@@ -5,15 +5,11 @@ import java.nio.charset.StandardCharsets
 import zio.stream.Sink
 import zio.{ Chunk, IO }
 
-sealed trait RespValue extends Any {
-
-  self =>
+sealed trait RespValue extends Any { self =>
 
   import RespValue._
 
   final def serialize: Chunk[Byte] = {
-    def simpleString(s: String) = Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
-
     self match {
       case SimpleString(s) => Header.simpleString +: simpleString(s)
       case Error(s)        => Header.error +: simpleString(s)
@@ -26,10 +22,31 @@ sealed trait RespValue extends Any {
       case NullValue => NullString
     }
   }
-
+    
+  private[this] def simpleString(s: String): Chunk[Byte] = 
+    Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
 }
 
 object RespValue {
+  final case class SimpleString(value: String) extends AnyVal with RespValue
+
+  final case class Error(value: String) extends AnyVal with RespValue
+
+  final case class Integer(value: Long) extends AnyVal with RespValue
+
+  final case class BulkString(value: Chunk[Byte]) extends AnyVal with RespValue {
+    def asString: String = decodeString(value)
+  }
+
+  final case class Array(values: Chunk[RespValue]) extends AnyVal with RespValue
+
+  case object NullValue extends RespValue
+
+  def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
+
+  def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
+
+  def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   private object Header {
     val simpleString: Byte = '+'.toByte
@@ -46,28 +63,6 @@ object RespValue {
   private final val CrLf = Chunk(Cr, Lf)
 
   private final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
-
-  final case class SimpleString(value: String) extends AnyVal with RespValue
-
-  final case class Error(value: String) extends AnyVal with RespValue
-
-  final case class Integer(value: Long) extends AnyVal with RespValue
-
-  final case class BulkString(value: Chunk[Byte]) extends AnyVal with RespValue {
-
-    def asString: String = decodeString(value)
-
-  }
-
-  final case class Array(values: Chunk[RespValue]) extends AnyVal with RespValue
-
-  case object NullValue extends RespValue
-
-  def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
-
-  def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
-
-  def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   sealed trait State { self =>
     import State._
