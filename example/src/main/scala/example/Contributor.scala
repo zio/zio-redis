@@ -1,11 +1,10 @@
 package example
 
+import io.circe.Codec
 import io.circe.generic.semiauto._
-import io.circe.{ Decoder, _ }
 
-final case class Contributor(login: String, contributions: Int)
+final case class Contributor(login: Login, contributions: Contributions)
 
 object Contributor {
-  implicit val decoder: Decoder[Contributor] = deriveDecoder[Contributor]
-  implicit val encoder: Encoder[Contributor] = deriveEncoder[Contributor]
+  implicit val codec: Codec[Contributor] = deriveCodec[Contributor]
 }
