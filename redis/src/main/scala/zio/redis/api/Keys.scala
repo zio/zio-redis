@@ -266,7 +266,7 @@ trait Keys {
 private[redis] object Keys {
   final val Del: RedisCommand[(String, List[String]), Long] = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
 
-  final val Dump: RedisCommand[String, Chunk[Byte]]         = RedisCommand("DUMP", StringInput, BulkStringOutput)
+  final val Dump: RedisCommand[String, Chunk[Byte]] = RedisCommand("DUMP", StringInput, BulkStringOutput)
 
   final val Exists: RedisCommand[(String, List[String]), Boolean] =
     RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
@@ -347,7 +347,7 @@ private[redis] object Keys {
   final val Touch: RedisCommand[(String, List[String]), Long] =
     RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
 
-  final val Ttl: RedisCommand[String, Duration]     = RedisCommand("TTL", StringInput, DurationSecondsOutput)
+  final val Ttl: RedisCommand[String, Duration] = RedisCommand("TTL", StringInput, DurationSecondsOutput)
 
   final val TypeOf: RedisCommand[String, RedisType] = RedisCommand("TYPE", StringInput, TypeOutput)
 

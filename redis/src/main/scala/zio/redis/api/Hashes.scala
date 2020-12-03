@@ -176,7 +176,7 @@ private[redis] object Hashes {
 
   final val HKeys: RedisCommand[String, Chunk[String]] = RedisCommand("HKEYS", StringInput, ChunkOutput)
 
-  final val HLen: RedisCommand[String, Long]           = RedisCommand("HLEN", StringInput, LongOutput)
+  final val HLen: RedisCommand[String, Long] = RedisCommand("HLEN", StringInput, LongOutput)
 
   final val HmGet: RedisCommand[(String, (String, List[String])), Chunk[Option[String]]] =
     RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
