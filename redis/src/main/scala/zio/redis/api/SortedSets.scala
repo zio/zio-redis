@@ -360,6 +360,7 @@ trait SortedSets {
 private[redis] object SortedSets {
   final val BzPopMax: RedisCommand[(Duration, (String, List[String])), Chunk[String]] =
     RedisCommand("BZPOPMAX", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
+
   final val BzPopMin: RedisCommand[(Duration, (String, List[String])), Chunk[String]] =
     RedisCommand("BZPOPMIN", Tuple2(DurationSecondsInput, NonEmptyList(StringInput)), ChunkOutput)
 
@@ -392,8 +393,10 @@ private[redis] object SortedSets {
     )
 
   final val ZCard: RedisCommand[String, Long] = RedisCommand("ZCARD", StringInput, LongOutput)
+
   final val ZCount: RedisCommand[(String, Range), Long] =
     RedisCommand("ZCOUNT", Tuple2(StringInput, RangeInput), LongOutput)
+
   final val ZIncrBy: RedisCommand[(String, Long, String), Double] =
     RedisCommand("ZINCRBY", Tuple3(StringInput, LongInput, StringInput), DoubleOutput)
 
@@ -413,8 +416,10 @@ private[redis] object SortedSets {
 
   final val ZLexCount: RedisCommand[(String, LexRange), Long] =
     RedisCommand("ZLEXCOUNT", Tuple2(StringInput, LexRangeInput), LongOutput)
+
   final val ZPopMax: RedisCommand[(String, Option[Long]), Chunk[String]] =
     RedisCommand("ZPOPMAX", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
+
   final val ZPopMin: RedisCommand[(String, Option[Long]), Chunk[String]] =
     RedisCommand("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput)
 
@@ -433,12 +438,16 @@ private[redis] object SortedSets {
 
   final val ZRank: RedisCommand[(String, String), Option[Long]] =
     RedisCommand("ZRANK", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
+
   final val ZRem: RedisCommand[(String, (String, List[String])), Long] =
     RedisCommand("ZREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
+
   final val ZRemRangeByLex: RedisCommand[(String, LexRange), Long] =
     RedisCommand("ZREMRANGEBYLEX", Tuple2(StringInput, LexRangeInput), LongOutput)
+
   final val ZRemRangeByRank: RedisCommand[(String, Range), Long] =
     RedisCommand("ZREMRANGEBYRANK", Tuple2(StringInput, RangeInput), LongOutput)
+
   final val ZRemRangeByScore: RedisCommand[(String, ScoreRange), Long] =
     RedisCommand("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
 
