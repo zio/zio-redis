@@ -15,7 +15,7 @@ sealed trait Input[-A] {
 object Input {
 
   @inline
-  private[this] def stringEncode(s: String) = RespValue.bulkString(s)
+  private[this] def stringEncode(s: String): RespValue.BulkString = RespValue.bulkString(s)
 
   case object AbsTtlInput extends Input[AbsTtl] {
     def encode(data: AbsTtl): Chunk[RespValue.BulkString] = Chunk.single(stringEncode(data.stringify))
