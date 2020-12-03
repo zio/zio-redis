@@ -2,8 +2,8 @@ package zio.redis
 
 import java.nio.charset.StandardCharsets
 
-import zio.stream.{ Sink, ZSink }
-import zio.{ Chunk, IO, Ref }
+import zio.stream.Sink
+import zio.{ Chunk, IO }
 
 sealed trait RespValue extends Any {
 
@@ -117,8 +117,8 @@ object RespValue {
     IntDeserializer.flatMap {
       case size if size >= 0 =>
         for {
-          bytes <- sinkTake[Byte](size.toInt)
-          _     <- sinkTake[Byte](2) // crlf terminator
+          bytes <- Sink.take[Byte](size.toInt)
+          _     <- Sink.take[Byte](2)
         } yield BulkString(bytes)
       case -1 =>
         Sink.succeed(NullValue)
@@ -140,7 +140,7 @@ object RespValue {
   }
 
   val Deserializer: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
-    sinkTake[Byte](1).flatMap { header =>
+    Sink.take[Byte](1).flatMap { header =>
       header.head match {
         case Header.simpleString => SimpleStringDeserializer.map(SimpleString)
         case Header.error        => SimpleStringDeserializer.map(Error)
@@ -159,32 +159,4 @@ object RespValue {
         case _             => None
       }
   }
-
-  /**
-   * Fixed version of `ZSink.take`.
-   *
-   * This will be removed once https://github.com/zio/zio/pull/4342 is available.
-   */
-  private def sinkTake[I](n: Int): ZSink[Any, Nothing, I, I, Chunk[I]] =
-    ZSink {
-      for {
-        state <- Ref.make[Chunk[I]](Chunk.empty).toManaged_
-        push = (is: Option[Chunk[I]]) =>
-                 state.get.flatMap { take =>
-                   is match {
-                     case Some(ch) =>
-                       val idx = n - take.length
-                       if (idx <= ch.length) {
-                         val (chunk, leftover) = ch.splitAt(idx)
-                         state.set(Chunk.empty) *> ZSink.Push.emit(take ++ chunk, leftover)
-                       } else
-                         state.set(take ++ ch) *> ZSink.Push.more
-                     case None =>
-                       if (n >= 0) ZSink.Push.emit(take, Chunk.empty)
-                       else ZSink.Push.emit(Chunk.empty, take)
-                   }
-                 }
-      } yield push
-    }
-
 }

@@ -37,10 +37,10 @@ lazy val redis =
     .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-streams"  % "1.0.3",
+        "dev.zio" %% "zio-streams"  % Zio,
         "dev.zio" %% "zio-logging"  % "0.5.4",
-        "dev.zio" %% "zio-test"     % "1.0.3" % Test,
-        "dev.zio" %% "zio-test-sbt" % "1.0.3" % Test
+        "dev.zio" %% "zio-test"     % Zio % Test,
+        "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
@@ -68,15 +68,16 @@ lazy val example =
     .settings(
       skip in publish := true,
       libraryDependencies ++= Seq(
-        "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0",
-        "com.softwaremill.sttp.client" %% "core"                          % "2.2.9",
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
+        "de.heikoseeberger"            %% "akka-http-circe"               % "1.31.0",
+        "dev.zio"                      %% "zio-streams"                   % Zio,
+        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC30-1",
+        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC30-1",
+        "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC1",
         "io.circe"                     %% "circe-core"                    % "0.12.3",
         "io.circe"                     %% "circe-generic"                 % "0.12.3",
-        "de.heikoseeberger"            %% "akka-http-circe"               % "1.31.0",
-        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC30-1",
-        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC30-1"
+        "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0"
       ),
       scalacOptions in Compile := Seq("-Xlint:unused")
     )
