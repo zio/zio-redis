@@ -9,8 +9,9 @@ sealed trait RespValue extends Any { self =>
 
   import RespValue._
 
-  final def serialize: Chunk[Byte] = {
+  final def serialize: Chunk[Byte] =
     self match {
+      case NullValue       => NullString
       case SimpleString(s) => Header.simpleString +: simpleString(s)
       case Error(s)        => Header.error +: simpleString(s)
       case Integer(i)      => Header.integer +: simpleString(i.toString)
@@ -19,11 +20,9 @@ sealed trait RespValue extends Any { self =>
       case Array(elements) =>
         val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.serialize)
         Header.array +: (simpleString(elements.size.toString) ++ data)
-      case NullValue => NullString
     }
-  }
-    
-  private[this] def simpleString(s: String): Chunk[Byte] = 
+
+  private[this] def simpleString(s: String): Chunk[Byte] =
     Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
 }
 
