@@ -71,6 +71,7 @@ lazy val example =
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
         "de.heikoseeberger"            %% "akka-http-circe"               % "1.31.0",
+        "dev.zio"                      %% "zio-streams"                   % Zio,
         "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC30-1",
         "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC30-1",
         "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC1",

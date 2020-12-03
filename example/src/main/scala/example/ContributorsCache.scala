@@ -3,6 +3,7 @@ package example
 import example.ApiError._
 import example.Contributor._
 import io.circe.syntax._
+import io.circe.parser.decode
 import sttp.client.asynchttpclient.zio.SttpClient
 import sttp.client.circe.asJson
 import sttp.client.{ UriContext, basicRequest }
@@ -26,7 +27,11 @@ object ContributorsCache {
     }
 
   private[this] def read(repository: Repository): ZIO[RedisExecutor, ApiError, Contributors] =
-    sMembers(repository.key).flatMap(Contributors.make).refineToOrDie[ApiError]
+    get(repository.key)
+      .someOrFail(ApiError.CacheMiss)
+      .map(decode[Contributors])
+      .rightOrFail(ApiError.CorruptedData)
+      .refineToOrDie[ApiError]
 
   private[this] def retrieve(repository: Repository): ZIO[RedisExecutor with SttpClient, ApiError, Contributors] =
     for {
@@ -39,9 +44,9 @@ object ContributorsCache {
   private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[RedisExecutor, Any] =
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
-      .map(_.map(_.asJson.noSpaces))
+      .map(Contributors(_))
       .flatMap { contributors =>
-        (sAdd(repository.key, contributors.head, contributors.tail: _*) *> pExpire(repository.key, 1.minute)).orDie
+        set(repository.key, contributors.asJson.noSpaces, Some(1.minute)).orDie
       }
       .ignore
 
