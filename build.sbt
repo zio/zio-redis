@@ -75,8 +75,8 @@ lazy val example =
         "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC30-1",
         "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC30-1",
         "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC1",
-        "io.circe"                     %% "circe-core"                    % "0.12.3",
-        "io.circe"                     %% "circe-generic"                 % "0.12.3",
+        "io.circe"                     %% "circe-core"                    % "0.13.0",
+        "io.circe"                     %% "circe-generic"                 % "0.13.0",
         "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0"
       ),
       scalacOptions in Compile := Seq("-Xlint:unused")
