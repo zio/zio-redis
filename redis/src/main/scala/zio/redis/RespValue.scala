@@ -41,6 +41,14 @@ object RespValue {
 
   case object NullValue extends RespValue
 
+  object ArrayValues {
+    def unapplySeq(v: RespValue): Option[Seq[RespValue]] =
+      v match {
+        case Array(values) => Some(values)
+        case _             => None
+      }
+  }
+
   def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
 
   def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
@@ -146,11 +154,4 @@ object RespValue {
       }
     }
 
-  object ArrayValues {
-    def unapplySeq(v: RespValue): Option[Seq[RespValue]] =
-      v match {
-        case Array(values) => Some(values)
-        case _             => None
-      }
-  }
 }
