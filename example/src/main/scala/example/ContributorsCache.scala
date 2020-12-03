@@ -46,5 +46,5 @@ object ContributorsCache {
       .ignore
 
   private[this] def urlOf(repository: Repository): Uri =
-    uri"https://api.github.com/repos/${repository.organization}/${repository.name}/contributors"
+    uri"https://api.github.com/repos/${repository.owner}/${repository.name}/contributors"
 }
