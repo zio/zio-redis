@@ -1127,7 +1127,7 @@ trait StringsSpec extends BaseSpec {
             existsBefore <- exists(key)
             _            <- ZIO.sleep(1010.millis)
             existsAfter  <- exists(key)
-          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+          } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         } @@ eventually,
         testM("override existing string") {
           for {
@@ -1315,7 +1315,7 @@ trait StringsSpec extends BaseSpec {
             existsBefore <- exists(key)
             _            <- ZIO.sleep(1010.millis)
             existsAfter  <- exists(key)
-          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+          } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         } @@ eventually,
         testM("existing value with 1 second ttl") {
           for {
@@ -1326,7 +1326,7 @@ trait StringsSpec extends BaseSpec {
             existsBefore <- exists(key)
             _            <- ZIO.sleep(1010.millis)
             existsAfter  <- exists(key)
-          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+          } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         } @@ eventually,
         testM("override when not string") {
           for {
@@ -1337,7 +1337,7 @@ trait StringsSpec extends BaseSpec {
             existsBefore <- exists(key)
             _            <- ZIO.sleep(1010.millis)
             existsAfter  <- exists(key)
-          } yield assert(existsBefore)(isTrue) && assert(existsAfter)(isFalse)
+          } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         },
         testM("error when 0 seconds ttl") {
           for {

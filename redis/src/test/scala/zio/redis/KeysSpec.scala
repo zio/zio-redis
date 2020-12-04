@@ -44,7 +44,7 @@ trait KeysSpec extends BaseSpec {
           _     <- set(key, value)
           e1    <- exists(key)
           e2    <- exists("unknown")
-        } yield assert(e1)(isTrue) && assert(e2)(isFalse)
+        } yield assert(e1)(equalTo(1L)) && assert(e2)(equalTo(0L))
       },
       testM("delete existing key") {
         for {
@@ -152,7 +152,7 @@ trait KeysSpec extends BaseSpec {
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key)
-          } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
+          } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         } @@ eventually,
         testM("set key expiration with pExpireAt command") {
           for {
@@ -164,7 +164,7 @@ trait KeysSpec extends BaseSpec {
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key)
-          } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
+          } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         } @@ eventually,
         testM("expire followed by persist") {
           for {
@@ -185,7 +185,7 @@ trait KeysSpec extends BaseSpec {
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key)
-          } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
+          } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         } @@ eventually
       ),
       suite("renaming")(
