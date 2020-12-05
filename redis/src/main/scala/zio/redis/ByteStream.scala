@@ -11,7 +11,7 @@ import zio.stream.Stream
 
 private[redis] object ByteStream {
   trait Service {
-    def read: Stream[IOException, Byte]
+    def read: Stream[IOException, Chunk[Byte]]
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
@@ -72,19 +72,22 @@ private[redis] object ByteStream {
     channel: AsynchronousSocketChannel
   ) extends Service {
 
-    val read: Stream[IOException, Byte] =
-      Stream.repeatEffectChunkOption {
-        (for {
-          _ <- IO.effectTotal(readBuffer.clear())
-          _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
-          chunk <- IO.effectTotal {
-                     readBuffer.flip()
-                     val count = readBuffer.remaining()
-                     val array = Array.ofDim[Byte](count)
-                     readBuffer.get(array)
-                     Chunk.fromArray(array)
-                   }
-        } yield chunk).mapError {
+    val read: Stream[IOException, Chunk[Byte]] =
+      Stream.repeatEffectOption {
+        val receive =
+          for {
+            _ <- IO.effectTotal(readBuffer.clear())
+            _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+            chunk <- IO.effectTotal {
+                       readBuffer.flip()
+                       val count = readBuffer.remaining()
+                       val array = Array.ofDim[Byte](count)
+                       readBuffer.get(array)
+                       Chunk.fromArray(array)
+                     }
+          } yield chunk
+
+        receive.mapError {
           case _: EOFException => None
           case e: IOException  => Some(e)
         }
