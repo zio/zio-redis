@@ -95,15 +95,14 @@ private[redis] object ByteStream {
 
     def write(chunk: Chunk[Byte]): IO[IOException, Unit] =
       IO.when(chunk.nonEmpty) {
-        IO.effectTotal {
+        IO.effectSuspendTotal {
           writeBuffer.clear()
           val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
           writeBuffer.put(c.toArray)
           writeBuffer.flip()
-          remainder
-        }.flatMap { remainder =>
+
           closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
-            .repeatWhileM(_ => IO.effectTotal(writeBuffer.hasRemaining))
+            .repeatWhile(_ => writeBuffer.hasRemaining)
             .zipRight(write(remainder))
         }
       }
