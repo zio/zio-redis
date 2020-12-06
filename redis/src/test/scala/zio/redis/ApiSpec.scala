@@ -9,6 +9,7 @@ import zio.random.Random
 import zio.test._
 import SecondRedisExecutorLayer._
 import zio.test.environment.{ Live, TestClock, TestConsole, TestRandom, TestSystem }
+import zio.ZLayer
 
 object ApiSpec
     extends ConnectionSpec
@@ -41,7 +42,7 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live ++ SecondExecutor),
+      ).provideCustomLayerShared(Logging.ignore >>> RedisExecutor.local.orDie ++ Clock.live ++ (Logging.ignore ++ ZLayer.succeed(RedisConfig.Default) >>> SecondRedisExecutor.live.orDie)),
       suite("Test Executor")(
         connectionSuite,
         setsSuite
@@ -49,8 +50,4 @@ object ApiSpec
         .get
         .provideCustomLayerShared(RedisExecutor.test)
     )
-
-  val Executor = RedisExecutor.loopback(6379).orDie
-
-  val SecondExecutor = SecondRedisExecutor.loopback(6380).orDie
 }

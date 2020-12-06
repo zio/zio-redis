@@ -1,9 +1,9 @@
 package zio.redis
 
 import zio.Has
-import zio.ZLayer
+//import zio.ZLayer
 import zio.Chunk
-import zio.logging.Logging
+//import zio.logging.Logging
 
 object SecondRedisExecutorLayer {
       // Need a RedisExecutor of a different type so we can have two executors at the same time
@@ -15,8 +15,8 @@ object SecondRedisExecutorLayer {
 
       private final val DefaultPort = 6380
 
-      def loopback(port: Int = DefaultPort): ZLayer[Logging, RedisError.IOError, Has[SecondRedisExecutor.Service]] =
-        RedisExecutor.loopback(port).project {
+      lazy val live =
+        RedisExecutor.live.project {
           srv =>
             (command: Chunk[RespValue.BulkString]) => srv.execute(command)
         }
