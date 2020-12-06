@@ -1,14 +1,20 @@
 package zio.redis
 
+import zio.clock.Clock
 import zio.duration._
 import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.test.Assertion._
 import zio.test.TestAspect.{ eventually, ignore }
 import zio.test._
-import zio.{ Chunk, ZIO }
+import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
+import zio.{ Chunk, Has, ZIO }
 
 trait StringsSpec extends BaseSpec {
-  val stringsSuite =
+  val stringsSuite: Spec[Has[Clock.Service] with Has[RedisExecutor.Service] with Has[TestClock.Service] with Has[
+    TestConsole.Service
+  ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
+    Annotations.Service
+  ], TestFailure[RedisError], TestSuccess] =
     suite("strings")(
       suite("append")(
         testM("to the end of non-empty string") {
@@ -236,8 +242,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("increment with overflow saturation") {
           for {
-            key    <- uuid
-            _      <- set(key, "value")
+            key <- uuid
+            _   <- set(key, "value")
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Sat,
@@ -247,8 +253,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("increment with overflow fail") {
           for {
-            key    <- uuid
-            _      <- set(key, "value")
+            key <- uuid
+            _   <- set(key, "value")
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Fail,
@@ -258,8 +264,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("increment first with overflow wrap and then overflow fail") {
           for {
-            key    <- uuid
-            _      <- set(key, "value")
+            key <- uuid
+            _   <- set(key, "value")
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Wrap,
@@ -271,8 +277,8 @@ trait StringsSpec extends BaseSpec {
         },
         testM("first set, then increment and then get same bits") {
           for {
-            key    <- uuid
-            _      <- set(key, "value", None, None, None)
+            key <- uuid
+            _   <- set(key, "value", None, None, None)
             result <- bitField(
                         key,
                         BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 98L),

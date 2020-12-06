@@ -2,8 +2,8 @@ package zio.redis
 
 import java.nio.charset.StandardCharsets
 
-import zio.stream.{ Sink, ZSink }
-import zio.{ Chunk, IO, Ref }
+import zio.stream.Sink
+import zio.{ Chunk, IO }
 
 sealed trait RespValue extends Any {
 
@@ -15,15 +15,15 @@ sealed trait RespValue extends Any {
     def simpleString(s: String) = Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
 
     self match {
-      case SimpleString(s)   => Header.simpleString +: simpleString(s)
-      case Error(s)          => Header.error +: simpleString(s)
-      case Integer(i)        => Header.integer +: simpleString(i.toString)
+      case SimpleString(s) => Header.simpleString +: simpleString(s)
+      case Error(s)        => Header.error +: simpleString(s)
+      case Integer(i)      => Header.integer +: simpleString(i.toString)
       case BulkString(bytes) =>
         Header.bulkString +: (simpleString(bytes.length.toString) ++ bytes ++ CrLf)
-      case Array(elements)   =>
+      case Array(elements) =>
         val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.serialize)
         Header.array +: (simpleString(elements.size.toString) ++ data)
-      case NullValue         => NullString
+      case NullValue => NullString
     }
   }
 
@@ -32,11 +32,11 @@ sealed trait RespValue extends Any {
 object RespValue {
 
   private object Header {
-    val simpleString = '+'.toByte
-    val error        = '-'.toByte
-    val integer      = ':'.toByte
-    val bulkString   = '$'.toByte
-    val array        = '*'.toByte
+    val simpleString: Byte = '+'.toByte
+    val error: Byte        = '-'.toByte
+    val integer: Byte      = ':'.toByte
+    val bulkString: Byte   = '$'.toByte
+    val array: Byte        = '*'.toByte
   }
 
   private[redis] final val Cr = '\r'.toByte
@@ -108,8 +108,8 @@ object RespValue {
 
   val IntDeserializer: Sink[RedisError.ProtocolError, Byte, Byte, Long] =
     SimpleStringDeserializer.mapM { s =>
-      IO.effect(s.toLong).refineOrDie {
-        case _: NumberFormatException => RedisError.ProtocolError(s"'$s' is not a valid integer")
+      IO.effect(s.toLong).refineOrDie { case _: NumberFormatException =>
+        RedisError.ProtocolError(s"'$s' is not a valid integer")
       }
     }
 
@@ -117,12 +117,12 @@ object RespValue {
     IntDeserializer.flatMap {
       case size if size >= 0 =>
         for {
-          bytes <- sinkTake[Byte](size.toInt)
-          _     <- sinkTake[Byte](2) // crlf terminator
+          bytes <- Sink.take[Byte](size.toInt)
+          _     <- Sink.take[Byte](2)
         } yield BulkString(bytes)
-      case -1                =>
+      case -1 =>
         Sink.succeed(NullValue)
-      case other             =>
+      case other =>
         Sink.fail(RedisError.ProtocolError(s"Invalid bulk string length: $other"))
     }
 
@@ -140,14 +140,14 @@ object RespValue {
   }
 
   val Deserializer: Sink[RedisError.ProtocolError, Byte, Byte, RespValue] =
-    sinkTake[Byte](1).flatMap { header =>
+    Sink.take[Byte](1).flatMap { header =>
       header.head match {
         case Header.simpleString => SimpleStringDeserializer.map(SimpleString)
         case Header.error        => SimpleStringDeserializer.map(Error)
         case Header.integer      => IntDeserializer.map(Integer)
         case Header.bulkString   => BulkStringDeserializer
         case Header.array        => ArrayDeserializer
-        case other               =>
+        case other =>
           Sink.fail[RedisError.ProtocolError, Byte](RedisError.ProtocolError(s"Invalid initial byte: $other"))
       }
     }
@@ -159,32 +159,4 @@ object RespValue {
         case _             => None
       }
   }
-
-  /**
-   * Fixed version of `ZSink.take`.
-   *
-   * This will be removed once https://github.com/zio/zio/pull/4342 is available.
-   */
-  private def sinkTake[I](n: Int): ZSink[Any, Nothing, I, I, Chunk[I]] =
-    ZSink {
-      for {
-        state <- Ref.make[Chunk[I]](Chunk.empty).toManaged_
-        push   = (is: Option[Chunk[I]]) =>
-                 state.get.flatMap { take =>
-                   is match {
-                     case Some(ch) =>
-                       val idx = n - take.length
-                       if (idx <= ch.length) {
-                         val (chunk, leftover) = ch.splitAt(idx)
-                         state.set(Chunk.empty) *> ZSink.Push.emit(take ++ chunk, leftover)
-                       } else
-                         state.set(take ++ ch) *> ZSink.Push.more
-                     case None     =>
-                       if (n >= 0) ZSink.Push.emit(take, Chunk.empty)
-                       else ZSink.Push.emit(Chunk.empty, take)
-                   }
-                 }
-      } yield push
-    }
-
 }

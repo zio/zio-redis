@@ -135,22 +135,38 @@ trait Geo {
 }
 
 private[redis] object Geo {
-  final val GeoAdd =
+  final val GeoAdd: RedisCommand[(String, ((LongLat, String), List[(LongLat, String)])), Long] =
     RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
 
-  final val GeoDist =
+  final val GeoDist: RedisCommand[(String, String, String, Option[RadiusUnit]), Option[Double]] =
     RedisCommand(
       "GEODIST",
       Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
       OptionalOutput(DoubleOutput)
     )
 
-  final val GeoHash =
+  final val GeoHash: RedisCommand[(String, (String, List[String])), Chunk[Option[String]]] =
     RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
 
-  final val GeoPos = RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
+  final val GeoPos: RedisCommand[(String, (String, List[String])), Chunk[Option[LongLat]]] =
+    RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
 
-  final val GeoRadius =
+  final val GeoRadius: RedisCommand[
+    (
+      String,
+      LongLat,
+      Double,
+      RadiusUnit,
+      Option[WithCoord],
+      Option[WithDist],
+      Option[WithHash],
+      Option[Count],
+      Option[Order],
+      Option[Store],
+      Option[StoreDist]
+    ),
+    Chunk[GeoView]
+  ] =
     RedisCommand(
       "GEORADIUS",
       Tuple11(
@@ -169,7 +185,22 @@ private[redis] object Geo {
       GeoRadiusOutput
     )
 
-  final val GeoRadiusByMember =
+  final val GeoRadiusByMember: RedisCommand[
+    (
+      String,
+      String,
+      Double,
+      RadiusUnit,
+      Option[WithCoord],
+      Option[WithDist],
+      Option[WithHash],
+      Option[Count],
+      Option[Order],
+      Option[Store],
+      Option[StoreDist]
+    ),
+    Chunk[GeoView]
+  ] =
     RedisCommand(
       "GEORADIUSBYMEMBER",
       Tuple11(

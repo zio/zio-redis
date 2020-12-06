@@ -39,8 +39,8 @@ object Input {
       import BitFieldCommand._
 
       data match {
-        case BitFieldGet(t, o)     => Chunk(stringEncode("GET"), stringEncode(t.stringify), stringEncode(o.toString))
-        case BitFieldSet(t, o, v)  =>
+        case BitFieldGet(t, o) => Chunk(stringEncode("GET"), stringEncode(t.stringify), stringEncode(o.toString))
+        case BitFieldSet(t, o, v) =>
           Chunk(stringEncode("SET"), stringEncode(t.stringify), stringEncode(o.toString), stringEncode(v.toString))
         case BitFieldIncr(t, o, i) =>
           Chunk(stringEncode("INCRBY"), stringEncode(t.stringify), stringEncode(o.toString), stringEncode(i.toString))
@@ -276,7 +276,7 @@ object Input {
   case object StreamsInput extends Input[((String, String), Chunk[(String, String)])] {
     def encode(data: ((String, String), Chunk[(String, String)])): Chunk[RespValue.BulkString] = {
       val (keys, ids) =
-        Chunk.fromIterable(data._1 +: data._2).map(pair => (stringEncode(pair._1), stringEncode(pair._2))).unzip
+        (data._1 +: data._2).map(pair => (stringEncode(pair._1), stringEncode(pair._2))).unzip
 
       Chunk.single(stringEncode("STREAMS")) ++ keys ++ ids
     }

@@ -1,8 +1,5 @@
 version: 2.1
 
-scala_211: &scala_211
-  SCALA_VERSION: 2.11.12
-
 scala_212: &scala_212
   SCALA_VERSION: 2.12.11
 
@@ -90,21 +87,7 @@ testJVM: &testJVM
         background: true
     - run:
         name: Run tests
-        command: ./sbt ++${SCALA_VERSION}! testJVM
-    - <<: *save_cache
-
-testJVM211: &testJVM211
-  steps:
-    - checkout
-    - <<: *load_cache
-    - <<: *install_jdk
-    - run:
-        name: Run Redis
-        command: docker-compose up
-        background: true
-    - run:
-        name: Run tests
-        command: ./sbt ++${SCALA_VERSION}! testJVM211
+        command: ./sbt ++${SCALA_VERSION}! test
     - <<: *save_cache
 
 release: &release
@@ -135,13 +118,6 @@ jobs:
       - <<: *scala_213
       - <<: *jdk_8
 
-  test_211_jdk8:
-    <<: *testJVM211
-    <<: *machine_ubuntu
-    environment:
-      - <<: *scala_211
-      - <<: *jdk_8
-
   test_212_jdk8:
     <<: *testJVM
     <<: *machine_ubuntu
@@ -155,13 +131,6 @@ jobs:
     environment:
       - <<: *scala_213
       - <<: *jdk_8
-
-  test_211_jdk11:
-    <<: *testJVM211
-    <<: *machine_ubuntu
-    environment:
-      - <<: *scala_211
-      - <<: *jdk_11
 
   test_212_jdk11:
     <<: *testJVM
@@ -191,22 +160,12 @@ workflows:
       - lint:
           filters:
             <<: *filter_tags
-      - test_211_jdk8:
-          requires:
-            - lint
-          filters:
-            <<: *filter_tags
       - test_212_jdk8:
           requires:
             - lint
           filters:
             <<: *filter_tags
       - test_213_jdk8:
-          requires:
-            - lint
-          filters:
-            <<: *filter_tags
-      - test_211_jdk11:
           requires:
             - lint
           filters:
@@ -224,10 +183,8 @@ workflows:
       - release:
           context: Sonatype2
           requires:
-            - test_211_jdk8
             - test_212_jdk8
             - test_213_jdk8
-            - test_211_jdk11
             - test_212_jdk11
             - test_213_jdk11
           filters:

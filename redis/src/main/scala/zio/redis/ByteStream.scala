@@ -1,7 +1,7 @@
 package zio.redis
 
 import java.io.{ EOFException, IOException }
-import java.net.{ InetAddress, InetSocketAddress, SocketAddress, StandardSocketOptions }
+import java.net.{ InetSocketAddress, SocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousSocketChannel, Channel, CompletionHandler }
 
@@ -15,22 +15,22 @@ private[redis] object ByteStream {
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
-  def live(host: String, port: Int): ZLayer[Logging, RedisError.IOError, Has[Service]] =
-    live(new InetSocketAddress(host, port))
+  lazy val default: ZLayer[Logging, RedisError.IOError, Has[ByteStream.Service]] =
+    ZLayer.succeed(RedisConfig.Default) ++ ZLayer.identity[Logging] >>> live
 
-  def live(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, Has[Service]] = connect(address)
+  lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, Has[ByteStream.Service]] =
+    ZLayer.fromServiceManaged[RedisConfig, Logging, RedisError.IOError, Service] { config =>
+      connect(new InetSocketAddress(config.host, config.port))
+    }
 
-  def loopback(port: Int = RedisExecutor.DefaultPort): ZLayer[Logging, RedisError.IOError, Has[Service]] =
-    live(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
-
-  private[this] def connect(address: => SocketAddress): ZLayer[Logging, RedisError.IOError, Has[Service]] =
+  private[this] def connect(address: => SocketAddress): ZManaged[Logging, RedisError.IOError, ByteStream.Service] =
     (for {
       address     <- UIO(address).toManaged_
       makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
       readBuffer  <- makeBuffer.toManaged_
       writeBuffer <- makeBuffer.toManaged_
       channel     <- openChannel(address)
-    } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError).toLayer
+    } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
 
   private[this] final val ResponseBufferSize = 1024
 
@@ -54,15 +54,15 @@ private[redis] object ByteStream {
   private[this] def openChannel(address: SocketAddress): ZManaged[Logging, IOException, AsynchronousSocketChannel] =
     Managed.fromAutoCloseable {
       for {
-        logger  <- ZIO.service[Logger[String]]
+        logger <- ZIO.service[Logger[String]]
         channel <- IO.effect {
                      val channel = AsynchronousSocketChannel.open()
                      channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }
-        _       <- closeWith[Void](channel)(channel.connect(address, null, _))
-        _       <- logger.info("Connected to the redis server.")
+        _ <- closeWith[Void](channel)(channel.connect(address, null, _))
+        _ <- logger.info("Connected to the redis server.")
       } yield channel
     }.refineToOrDie[IOException]
 
@@ -75,8 +75,8 @@ private[redis] object ByteStream {
     val read: Stream[IOException, Byte] =
       Stream.repeatEffectChunkOption {
         (for {
-          _     <- IO.effectTotal(readBuffer.clear())
-          _     <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+          _ <- IO.effectTotal(readBuffer.clear())
+          _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
           chunk <- IO.effectTotal {
                      readBuffer.flip()
                      val count = readBuffer.remaining()

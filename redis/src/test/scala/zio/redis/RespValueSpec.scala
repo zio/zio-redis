@@ -10,7 +10,7 @@ object RespValueSpec extends BaseSpec {
 
   private def encode(s: String) = Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8))
 
-  override def spec =
+  override def spec: Spec[Any, TestFailure[RedisError.ProtocolError], TestSuccess] =
     suite("RespValue")(
       suite("serialization")(
         test("array") {
@@ -44,7 +44,7 @@ object RespValueSpec extends BaseSpec {
             RespValue.bulkString("test1"),
             RespValue.array(RespValue.Integer(42L), RespValue.bulkString("in array"))
           )
-          val bytes  = values.flatMap(_.serialize)
+          val bytes = values.flatMap(_.serialize)
           Stream
             .fromChunk(bytes)
             .transduce(RespValue.Deserializer.toTransducer)

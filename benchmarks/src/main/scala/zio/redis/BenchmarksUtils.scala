@@ -12,5 +12,9 @@ trait BenchmarksUtils {
     unsafeRunner.unsafeRun(f)
 
   def zioUnsafeRun(source: ZIO[RedisExecutor, RedisError, Unit]): Unit =
-    unsafeRun(source.provideLayer(Logging.ignore >>> RedisExecutor.live(RedisHost, RedisPort).orDie))
+    unsafeRun(source.provideLayer(BenchmarksUtils.Layer))
+}
+
+object BenchmarksUtils {
+  private final val Layer = Logging.ignore >>> RedisExecutor.local.orDie
 }

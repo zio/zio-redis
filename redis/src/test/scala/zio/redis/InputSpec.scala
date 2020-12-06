@@ -2,12 +2,6 @@ package zio.redis
 
 import java.time.Instant
 
-import BitFieldCommand._
-import BitFieldType._
-import BitOperation._
-import Order._
-import RadiusUnit._
-
 import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
@@ -15,9 +9,11 @@ import zio.test._
 import zio.{ Chunk, Task }
 
 object InputSpec extends BaseSpec {
-
-  private def respArgs(xs: String*) =
-    Chunk.fromIterable(xs.map(RespValue.bulkString))
+  import BitFieldCommand._
+  import BitFieldType._
+  import BitOperation._
+  import Order._
+  import RadiusUnit._
 
   def spec: ZSpec[environment.TestEnvironment, Any] =
     suite("Input encoders")(
@@ -835,4 +831,6 @@ object InputSpec extends BaseSpec {
         }
       )
     )
+
+  private def respArgs(xs: String*): Chunk[RespValue] = Chunk.fromIterable(xs.map(RespValue.bulkString))
 }
