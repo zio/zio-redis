@@ -1,8 +1,10 @@
 package zio.redis
 
+//import zio.{Chunk, Has, ZLayer}
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test._
+import SecondRedisExecutorLayer._
 
 object ApiSpec
     extends ConnectionSpec
@@ -27,7 +29,7 @@ object ApiSpec
         geoSuite,
         hyperLogLogSuite,
         hashSuite
-      ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live),
+      ).provideCustomLayerShared(Logging.ignore >>> Executor ++ Clock.live ++ SecondExecutor),
       suite("Test Executor")(
         connectionSuite,
         setsSuite
@@ -36,5 +38,7 @@ object ApiSpec
         .provideCustomLayerShared(RedisExecutor.test)
     )
 
-  private val Executor = RedisExecutor.loopback().orDie
+  val Executor = RedisExecutor.loopback(6379).orDie
+
+  val SecondExecutor = SecondRedisExecutor.loopback(6380).orDie
 }

@@ -4,8 +4,13 @@ import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, ZIO}
 import java.time.{Duration => JavaDuration}
+import SecondRedisExecutorLayer._
+import zio.redis.Output.OptionalOutput
+import zio.redis.Output.MultiStringOutput
+// import zio.redis.RedisError.ProtocolError
+//import zio.Has
 
 trait KeysSpec extends BaseSpec {
 
@@ -108,12 +113,12 @@ trait KeysSpec extends BaseSpec {
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
       },
       suite("migrate")(
-        testM("migrate key to another redis server") {
+        testM("migrate key to another redis server (copy and replace)") {
           for {
             key       <- uuid
             value     <- uuid
             _         <- set(key, value)
-            response  <- migrate("redis2",
+            response  <- migrate("redis1",
                                   6379,
                                   key,
                                   0L,
@@ -121,9 +126,33 @@ trait KeysSpec extends BaseSpec {
                                   copy = Option(Copy),
                                   replace = Option(Replace),
                                   keys = None)
-            //value2 <- get(key)
-          } yield assert(response)(equalTo("OK"))
-        }
+            out       <- ZIO.access[SecondRedisExecutor](_.get.execute(Input.StringInput.encode("GET") ++ Input.StringInput.encode(key)))
+            value2    <- out.map(respValue => OptionalOutput(MultiStringOutput).unsafeDecode(respValue))
+            value3    <- get(key)
+          } yield assert(response)(equalTo("OK")) &&
+              assert(value2)(isSome(equalTo(value))) &&
+              assert(value3)(isSome(equalTo(value)))
+        },
+        testM("migrate key to another redis server (move and replace)") {
+          for {
+            key       <- uuid
+            value     <- uuid
+            _         <- set(key, value)
+            response  <- migrate("redis1",
+                                  6379,
+                                  key,
+                                  0L,
+                                  JavaDuration.ofMillis(5000),
+                                  copy = None,
+                                  replace = Option(Replace),
+                                  keys = None)
+            out       <- ZIO.access[SecondRedisExecutor](_.get.execute(Input.StringInput.encode("GET") ++ Input.StringInput.encode(key)))
+            value2    <- out.map(respValue => OptionalOutput(MultiStringOutput).unsafeDecode(respValue))
+            value3    <- get(key)
+          } yield assert(response)(equalTo("OK")) &&
+              assert(value2)(isSome(equalTo(value))) &&
+              assert(value3)(isNone)
+        },
       ),
       suite("ttl")(
         testM("check ttl for existing key") {
