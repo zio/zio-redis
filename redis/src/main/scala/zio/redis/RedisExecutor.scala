@@ -25,7 +25,7 @@ object RedisExecutor {
 
   private[this] final val RequestQueueSize = 16
 
-  private[this] final val StreamedExecutor =
+  final val StreamedExecutor =
     ZLayer.fromServicesManaged[ByteStream.Service, Logger[String], Any, RedisError.IOError, RedisExecutor.Service] {
       (byteStream: ByteStream.Service, logging: Logger[String]) =>
         for {

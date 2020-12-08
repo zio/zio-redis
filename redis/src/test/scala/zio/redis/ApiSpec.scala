@@ -7,9 +7,10 @@ import zio.clock.Clock
 import zio.logging.Logging
 import zio.random.Random
 import zio.test._
-import SecondRedisExecutorLayer._
+//import SecondRedisExecutorLayer._
 import zio.test.environment.{ Live, TestClock, TestConsole, TestRandom, TestSystem }
 import zio.ZLayer
+//import zio.ZLayer
 
 object ApiSpec
     extends ConnectionSpec
@@ -22,6 +23,15 @@ object ApiSpec
     with HyperLogLogSpec
     with HashSpec
     with StreamsSpec {
+
+  case class RedisExecutorWrapper(re: RedisExecutor.Service)
+
+  val secondConfigLayer = ZLayer.succeed(RedisConfig("localhost", 6380))
+
+  lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, Has[RedisExecutor.Service]] =
+    ZLayer.identity[Logging] ++ ByteStream.live >>> RedisExecutor.StreamedExecutor
+
+  val secondRedisService = live.fresh.project(service => RedisExecutorWrapper(service))
 
   def spec: Spec[Has[Annotations.Service] with Has[Live.Service] with Has[Sized.Service] with Has[
     TestClock.Service
@@ -42,7 +52,10 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared(Logging.ignore >>> RedisExecutor.local.orDie ++ Clock.live ++ (Logging.ignore ++ ZLayer.succeed(RedisConfig.Default) >>> SecondRedisExecutor.live.orDie)),
+      ).provideCustomLayerShared(
+        ((Logging.ignore ++ secondConfigLayer) >>> secondRedisService.orDie) ++
+        (Logging.ignore >>> RedisExecutor.local.orDie) ++ Clock.live
+      ),
       suite("Test Executor")(
         connectionSuite,
         setsSuite
