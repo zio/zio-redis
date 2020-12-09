@@ -832,32 +832,50 @@ object InputSpec extends BaseSpec {
       ),
       suite("Idle")(
         testM("with 1 second") {
-          Task(IdleInput.encode(1.second)).map(assert(_)(equalTo(respArgs("IDLE", "1000"))))
+          Task(IdleInput.encode(1.second))
+            .map(assert(_)(equalTo(respArgs("IDLE", "1000"))))
         },
         testM("with 100 milliseconds") {
-          Task(IdleInput.encode(100.millis)).map(assert(_)(equalTo(respArgs("IDLE", "100"))))
+          Task(IdleInput.encode(100.millis))
+            .map(assert(_)(equalTo(respArgs("IDLE", "100"))))
         },
         testM("with negative duration") {
-          Task(IdleInput.encode((-1).second)).map(assert(_)(equalTo(respArgs("IDLE", "0"))))
+          Task(IdleInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("IDLE", "0"))))
         }
       ),
       suite("Time")(
         testM("with 1 second") {
-          Task(TimeInput.encode(1.second)).map(assert(_)(equalTo(respArgs("TIME", "1000"))))
+          Task(TimeInput.encode(1.second))
+            .map(assert(_)(equalTo(respArgs("TIME", "1000"))))
         },
         testM("with 100 milliseconds") {
-          Task(TimeInput.encode(100.millis)).map(assert(_)(equalTo(respArgs("TIME", "100"))))
+          Task(TimeInput.encode(100.millis))
+            .map(assert(_)(equalTo(respArgs("TIME", "100"))))
         },
         testM("with negative duration") {
-          Task(TimeInput.encode((-1).second)).map(assert(_)(equalTo(respArgs("TIME", "0"))))
+          Task(TimeInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("TIME", "0"))))
         }
       ),
       suite("RetryCount")(
         testM("with positive count") {
-          Task(RetryCountInput.encode(100)).map(assert(_)(equalTo(respArgs("RETRYCOUNT", "100"))))
+          Task(RetryCountInput.encode(100))
+            .map(assert(_)(equalTo(respArgs("RETRYCOUNT", "100"))))
         },
         testM("with negative count") {
-          Task(RetryCountInput.encode(-100)).map(assert(_)(equalTo(respArgs("RETRYCOUNT", "-100"))))
+          Task(RetryCountInput.encode(-100))
+            .map(assert(_)(equalTo(respArgs("RETRYCOUNT", "-100"))))
+        }
+      ),
+      suite("XGroupCreate")(
+        testM("without mkStream") {
+          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = false)))
+            .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id"))))
+        },
+        testM("with mkStream") {
+          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = true)))
+            .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id", "MKSTREAM"))))
         }
       )
     )
