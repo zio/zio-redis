@@ -39,7 +39,7 @@ trait Keys {
    * @param keys maybe rest of the keys
    * @return The number of keys existing.
    */
-  final def exists(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Boolean] = Exists.run((key, keys.toList))
+  final def exists(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] = Exists.run((key, keys.toList))
 
   /**
    * Set a timeout on key. After the timeout has expired, the key will automatically be deleted.
@@ -268,8 +268,8 @@ private[redis] object Keys {
 
   final val Dump: RedisCommand[String, Chunk[Byte]] = RedisCommand("DUMP", StringInput, BulkStringOutput)
 
-  final val Exists: RedisCommand[(String, List[String]), Boolean] =
-    RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
+  final val Exists: RedisCommand[(String, List[String]), Long] =
+    RedisCommand("EXISTS", NonEmptyList(StringInput), LongOutput)
 
   final val Expire: RedisCommand[(String, Duration), Boolean] =
     RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
