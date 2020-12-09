@@ -320,8 +320,11 @@ object Output {
       respValue match {
         case RespValue.Array(entities) =>
           val output = collection.mutable.Map.empty[String, Map[String, String]]
-          entities.foreach { case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-            output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+          entities.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+            case other =>
+              throw ProtocolError(s"$other isn't a valid array")
           }
 
           output.toMap

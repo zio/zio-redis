@@ -243,6 +243,45 @@ object OutputSpec extends BaseSpec {
             res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
         }
+      ),
+      suite("stream")(
+        testM("extract valid input") {
+          val input =
+            respArrayVals(
+              respArrayVals(
+                respBulkString("id"),
+                respArrayVals(respBulkString("field"), respBulkString("value"))
+              )
+            )
+
+          Task(StreamOutput.unsafeDecode(input)).map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
+        },
+        testM("extract empty map") {
+          Task(StreamOutput.unsafeDecode(respArrayVals())).map(assert(_)(isEmpty))
+        },
+        testM("error when array of field-value pairs has odd length") {
+          val input =
+            respArrayVals(
+              respArrayVals(
+                respBulkString("id"),
+                respArrayVals(respBulkString("field"), respBulkString("value")),
+                RespValue.NullValue
+              )
+            )
+
+          Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        },
+        testM("error when message has more then two elements") {
+          val input =
+            respArrayVals(
+              respArrayVals(
+                respBulkString("id"),
+                respArrayVals(respBulkString("a"), respBulkString("b"), respBulkString("c"))
+              )
+            )
+
+          Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        }
       )
     )
 
