@@ -931,6 +931,11 @@ object InputSpec extends BaseSpec {
           Task(GroupInput.encode(Group("group", "consumer")))
             .map(assert(_)(equalTo(respArgs("GROUP", "group", "consumer"))))
         }
+      ),
+      suite("NoAck")(
+        testM("valid value") {
+          Task(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(respArgs("NOACK"))))
+        }
       )
     )
 
