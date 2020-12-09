@@ -915,6 +915,16 @@ object InputSpec extends BaseSpec {
           Task(BlockInput.encode((-1).second))
             .map(assert(_)(equalTo(respArgs("BLOCK", "0"))))
         }
+      ),
+      suite("Streams")(
+        testM("with one pair") {
+          Task(StreamsInput.encode(("a" -> "b", Chunk.empty)))
+            .map(assert(_)(equalTo(respArgs("STREAMS", "a", "b"))))
+        },
+        testM("with multiple pairs") {
+          Task(StreamsInput.encode(("a" -> "b", Chunk.single("c" -> "d"))))
+            .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
+        }
       )
     )
 
