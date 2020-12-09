@@ -889,6 +889,12 @@ object InputSpec extends BaseSpec {
           Task(XGroupDestroyInput.encode(XGroupCommand.Destroy("key", "group")))
             .map(assert(_)(equalTo(respArgs("DESTROY", "key", "group"))))
         }
+      ),
+      suite("XGroupCreateConsumer")(
+        testM("valid value") {
+          Task(XGroupCreateConsumerInput.encode(XGroupCommand.CreateConsumer("key", "group", "consumer")))
+            .map(assert(_)(equalTo(respArgs("CREATECONSUMER", "key", "group", "consumer"))))
+        }
       )
     )
 
