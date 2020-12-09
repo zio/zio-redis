@@ -17,6 +17,9 @@ import zio.{ Chunk, Has, ZIO }
 import zio.redis.ApiSpec.RedisExecutorWrapper
 import zio.redis.Output.OptionalOutput
 import zio.redis.Output.MultiStringOutput
+// import zio.redis.ApiSpec.RedisExecutorWrapper
+// import zio.redis.Output.OptionalOutput
+// import zio.redis.Output.MultiStringOutput
 
 trait KeysSpec extends BaseSpec {
 
@@ -136,10 +139,9 @@ trait KeysSpec extends BaseSpec {
                                   copy = Option(Copy),
                                   replace = Option(Replace),
                                   keys = None)
-            // out       = ZIO.access[RedisExecutorWrapper](_.re.execute(Input.StringInput.encode("GET") ++ Input.StringInput.encode(key)))
-            // what      <- out.flatMap(respValue => OptionalOutput(MultiStringOutput).unsafeDecode(respValue))
-            //value2    <- out.flatMap(respValue => OptionalOutput(MultiStringOutput).unsafeDecode(respValue))
-            // value3    <- get(key)
+            out       =  ZIO.accessM[RedisExecutorWrapper](_.re.execute(Input.StringInput.encode("GET") ++ Input.StringInput.encode(key)))
+            value2    <- out.flatMap(respValue => OptionalOutput(MultiStringOutput).unsafeDecode(respValue))
+            value3    <- get(key)
           } yield
               assert(response)(equalTo("OK")) //&& assert(what)(isSome)
               // assert(value2)(isSome(equalTo(value))) &&

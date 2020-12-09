@@ -9,6 +9,7 @@ import zio.stream.Stream
 object RedisExecutor {
   trait Service {
     def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
+    def test(n: Int) = n + 1
   }
 
   lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, RedisExecutor] =
