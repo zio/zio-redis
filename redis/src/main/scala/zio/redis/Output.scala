@@ -235,6 +235,7 @@ object Output {
         case RespValue.SimpleString("set")    => RedisType.Set
         case RespValue.SimpleString("zset")   => RedisType.SortedSet
         case RespValue.SimpleString("hash")   => RedisType.Hash
+        case RespValue.SimpleString("stream") => RedisType.Stream
         case other                            => throw ProtocolError(s"$other isn't redis type.")
       }
   }
