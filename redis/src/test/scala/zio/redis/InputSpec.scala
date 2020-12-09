@@ -936,6 +936,16 @@ object InputSpec extends BaseSpec {
         testM("valid value") {
           Task(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(respArgs("NOACK"))))
         }
+      ),
+      suite("MaxLen")(
+        testM("with approximate") {
+          Task(MaxLenInput.encode(MaxLen(approximate = true, 10)))
+            .map(assert(_)(equalTo(respArgs("MAXLEN", "~", "10"))))
+        },
+        testM("without approximate") {
+          Task(MaxLenInput.encode(MaxLen(approximate = false, 10)))
+            .map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
+        }
       )
     )
 
