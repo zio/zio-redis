@@ -851,6 +851,14 @@ object InputSpec extends BaseSpec {
         testM("with negative duration") {
           Task(TimeInput.encode((-1).second)).map(assert(_)(equalTo(respArgs("TIME", "0"))))
         }
+      ),
+      suite("RetryCount")(
+        testM("with positive count") {
+          Task(RetryCountInput.encode(100)).map(assert(_)(equalTo(respArgs("RETRYCOUNT", "100"))))
+        },
+        testM("with negative count") {
+          Task(RetryCountInput.encode(-100)).map(assert(_)(equalTo(respArgs("RETRYCOUNT", "-100"))))
+        }
       )
     )
 
