@@ -282,6 +282,70 @@ object OutputSpec extends BaseSpec {
 
           Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
+      ),
+      suite("XPending")(
+        testM("extract valid value") {
+          val input = respArrayVals(
+            RespValue.Integer(1),
+            respBulkString("a"),
+            respBulkString("b"),
+            respArrayVals(
+              respArrayVals(respBulkString("consumer1"), respBulkString("1")),
+              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            )
+          )
+          Task(XPendingOutput.unsafeDecode(input))
+            .map(assert(_)(equalTo(PendingInfo(1L, Some("a"), Some("b"), Map("consumer1" -> 1L, "consumer2" -> 2L)))))
+        },
+        testM("extract when the smallest ID is null") {
+          val input = respArrayVals(
+            RespValue.Integer(1),
+            RespValue.NullValue,
+            respBulkString("b"),
+            respArrayVals(
+              respArrayVals(respBulkString("consumer1"), respBulkString("1")),
+              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            )
+          )
+          Task(XPendingOutput.unsafeDecode(input))
+            .map(assert(_)(equalTo(PendingInfo(1L, None, Some("b"), Map("consumer1" -> 1L, "consumer2" -> 2L)))))
+        },
+        testM("extract when the greatest ID is null") {
+          val input = respArrayVals(
+            RespValue.Integer(1),
+            respBulkString("a"),
+            RespValue.NullValue,
+            respArrayVals(
+              respArrayVals(respBulkString("consumer1"), respBulkString("1")),
+              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            )
+          )
+          Task(XPendingOutput.unsafeDecode(input))
+            .map(assert(_)(equalTo(PendingInfo(1L, Some("a"), None, Map("consumer1" -> 1L, "consumer2" -> 2L)))))
+        },
+        testM("extract when total number of pending messages is zero") {
+          val input = respArrayVals(
+            RespValue.Integer(0),
+            RespValue.NullValue,
+            RespValue.NullValue,
+            RespValue.NullValue
+          )
+          Task(XPendingOutput.unsafeDecode(input))
+            .map(assert(_)(equalTo(PendingInfo(0L, None, None, Map.empty))))
+        },
+        testM("error when consumer array doesn't have two elements") {
+          val input = respArrayVals(
+            RespValue.Integer(1),
+            respBulkString("a"),
+            respBulkString("b"),
+            respArrayVals(
+              respArrayVals(respBulkString("consumer1")),
+              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            )
+          )
+          Task(XPendingOutput.unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        }
       )
     )
 
