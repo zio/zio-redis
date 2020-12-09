@@ -901,6 +901,20 @@ object InputSpec extends BaseSpec {
           Task(XGroupDelConsumerInput.encode(XGroupCommand.DelConsumer("key", "group", "consumer")))
             .map(assert(_)(equalTo(respArgs("DELCONSUMER", "key", "group", "consumer"))))
         }
+      ),
+      suite("Block")(
+        testM("with 1 second") {
+          Task(BlockInput.encode(1.second))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "1000"))))
+        },
+        testM("with 100 milliseconds") {
+          Task(BlockInput.encode(100.millis))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "100"))))
+        },
+        testM("with negative duration") {
+          Task(BlockInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "0"))))
+        }
       )
     )
 
