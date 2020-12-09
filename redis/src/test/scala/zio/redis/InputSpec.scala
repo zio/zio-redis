@@ -946,6 +946,16 @@ object InputSpec extends BaseSpec {
           Task(MaxLenInput.encode(MaxLen(approximate = false, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
         }
+      ),
+      suite("WithForce")(
+        testM("valid value") {
+          Task(WithForceInput.encode(WithForce)).map(assert(_)(equalTo(respArgs("FORCE"))))
+        }
+      ),
+      suite("WithJustId")(
+        testM("valid value") {
+          Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
+        }
       )
     )
 
