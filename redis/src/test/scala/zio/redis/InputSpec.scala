@@ -925,6 +925,12 @@ object InputSpec extends BaseSpec {
           Task(StreamsInput.encode(("a" -> "b", Chunk.single("c" -> "d"))))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
         }
+      ),
+      suite("Group")(
+        testM("valid value") {
+          Task(GroupInput.encode(Group("group", "consumer")))
+            .map(assert(_)(equalTo(respArgs("GROUP", "group", "consumer"))))
+        }
       )
     )
 
