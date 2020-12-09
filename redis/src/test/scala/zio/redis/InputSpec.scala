@@ -829,6 +829,28 @@ object InputSpec extends BaseSpec {
             result <- Task(WithHashInput.encode(WithHash))
           } yield assert(result)(equalTo(respArgs("WITHHASH")))
         }
+      ),
+      suite("Idle")(
+        testM("with 1 second") {
+          Task(IdleInput.encode(1.second)).map(assert(_)(equalTo(respArgs("IDLE", "1000"))))
+        },
+        testM("with 100 milliseconds") {
+          Task(IdleInput.encode(100.millis)).map(assert(_)(equalTo(respArgs("IDLE", "100"))))
+        },
+        testM("with negative duration") {
+          Task(IdleInput.encode((-1).second)).map(assert(_)(equalTo(respArgs("IDLE", "0"))))
+        }
+      ),
+      suite("Time")(
+        testM("with 1 second") {
+          Task(TimeInput.encode(1.second)).map(assert(_)(equalTo(respArgs("TIME", "1000"))))
+        },
+        testM("with 100 milliseconds") {
+          Task(TimeInput.encode(100.millis)).map(assert(_)(equalTo(respArgs("TIME", "100"))))
+        },
+        testM("with negative duration") {
+          Task(TimeInput.encode((-1).second)).map(assert(_)(equalTo(respArgs("TIME", "0"))))
+        }
       )
     )
 
