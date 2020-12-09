@@ -877,6 +877,12 @@ object InputSpec extends BaseSpec {
           Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = true)))
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id", "MKSTREAM"))))
         }
+      ),
+      suite("XGroupSetId")(
+        testM("valid value") {
+          Task(XGroupSetIdInput.encode(XGroupCommand.SetId("key", "group", "id")))
+            .map(assert(_)(equalTo(respArgs("SETID", "key", "group", "id"))))
+        }
       )
     )
 
