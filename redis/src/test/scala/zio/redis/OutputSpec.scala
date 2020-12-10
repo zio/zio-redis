@@ -371,7 +371,7 @@ object OutputSpec extends BaseSpec {
             )
           )
         },
-        testM("extract when message has more than four fields") {
+        testM("error when message has more than four fields") {
           val input = respArrayVals(
             respArrayVals(
               respBulkString("id"),
@@ -390,7 +390,7 @@ object OutputSpec extends BaseSpec {
           Task(PendingMessagesOutput.unsafeDecode(input)).either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
-        testM("extract when message has less than four fields") {
+        testM("error when message has less than four fields") {
           val input = respArrayVals(
             respArrayVals(
               respBulkString("id"),
@@ -406,6 +406,101 @@ object OutputSpec extends BaseSpec {
           )
           Task(PendingMessagesOutput.unsafeDecode(input)).either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        }
+      ),
+      suite("xRead")(
+        testM("extract valid value") {
+          val input = respArrayVals(
+            respArrayVals(
+              respBulkString("str1"),
+              respArrayVals(
+                respArrayVals(
+                  respBulkString("id1"),
+                  respArrayVals(
+                    respBulkString("a"),
+                    respBulkString("b")
+                  )
+                )
+              )
+            ),
+            respArrayVals(
+              respBulkString("str2"),
+              respArrayVals(
+                respArrayVals(
+                  respBulkString("id2"),
+                  respArrayVals(
+                    respBulkString("c"),
+                    respBulkString("d")
+                  )
+                ),
+                respArrayVals(
+                  respBulkString("id3"),
+                  respArrayVals(
+                    respBulkString("e"),
+                    respBulkString("f")
+                  )
+                )
+              )
+            )
+          )
+          Task(XReadOutput.unsafeDecode(input)).map(
+            assert(_)(
+              equalTo(
+                Map(
+                  "str1" -> Map("id1" -> Map("a" -> "b")),
+                  "str2" -> Map("id2" -> Map("c" -> "d"), "id3" -> Map("e" -> "f"))
+                )
+              )
+            )
+          )
+        },
+        testM("error when message content has odd number of fields") {
+          val input = respArrayVals(
+            respArrayVals(
+              respBulkString("str1"),
+              respArrayVals(
+                respArrayVals(
+                  respBulkString("id1"),
+                  respArrayVals(
+                    respBulkString("a")
+                  )
+                )
+              )
+            )
+          )
+          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        },
+        testM("error when message doesn't have an ID") {
+          val input = respArrayVals(
+            respArrayVals(
+              respBulkString("str1"),
+              respArrayVals(
+                respArrayVals(
+                  respArrayVals(
+                    respBulkString("a"),
+                    respBulkString("b")
+                  )
+                )
+              )
+            )
+          )
+          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        },
+        testM("error when stream doesn't have an ID") {
+          val input = respArrayVals(
+            respArrayVals(
+              respArrayVals(
+                respArrayVals(
+                  respBulkString("id1"),
+                  respArrayVals(
+                    respBulkString("a"),
+                    respBulkString("b")
+                  )
+                )
+              )
+            )
+          )
+          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       )
     )

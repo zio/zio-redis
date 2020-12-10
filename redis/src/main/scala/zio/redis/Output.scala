@@ -395,8 +395,11 @@ object Output {
       respValue match {
         case RespValue.Array(streams) =>
           val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
-          streams.foreach { case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-            output += (id.asString -> StreamOutput.unsafeDecode(value))
+          streams.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> StreamOutput.unsafeDecode(value))
+            case other =>
+              throw ProtocolError(s"$other isn't an array with two elements")
           }
 
           output.toMap
