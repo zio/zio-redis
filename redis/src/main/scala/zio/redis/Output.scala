@@ -382,6 +382,8 @@ object Output {
                   )
                 ) =>
               PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
+            case other =>
+              throw ProtocolError(s"$other isn't an array with four elements")
           }
         case other =>
           throw ProtocolError(s"$other isn't an array")

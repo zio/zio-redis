@@ -246,13 +246,12 @@ object OutputSpec extends BaseSpec {
       ),
       suite("stream")(
         testM("extract valid input") {
-          val input =
+          val input = respArrayVals(
             respArrayVals(
-              respArrayVals(
-                respBulkString("id"),
-                respArrayVals(respBulkString("field"), respBulkString("value"))
-              )
+              respBulkString("id"),
+              respArrayVals(respBulkString("field"), respBulkString("value"))
             )
+          )
 
           Task(StreamOutput.unsafeDecode(input)).map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
         },
@@ -260,30 +259,28 @@ object OutputSpec extends BaseSpec {
           Task(StreamOutput.unsafeDecode(respArrayVals())).map(assert(_)(isEmpty))
         },
         testM("error when array of field-value pairs has odd length") {
-          val input =
+          val input = respArrayVals(
             respArrayVals(
-              respArrayVals(
-                respBulkString("id"),
-                respArrayVals(respBulkString("field"), respBulkString("value")),
-                RespValue.NullValue
-              )
+              respBulkString("id"),
+              respArrayVals(respBulkString("field"), respBulkString("value")),
+              RespValue.NullValue
             )
+          )
 
           Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message has more then two elements") {
-          val input =
+          val input = respArrayVals(
             respArrayVals(
-              respArrayVals(
-                respBulkString("id"),
-                respArrayVals(respBulkString("a"), respBulkString("b"), respBulkString("c"))
-              )
+              respBulkString("id"),
+              respArrayVals(respBulkString("a"), respBulkString("b"), respBulkString("c"))
             )
+          )
 
           Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
-      suite("XPending")(
+      suite("xPending")(
         testM("extract valid value") {
           val input = respArrayVals(
             RespValue.Integer(1),
@@ -344,6 +341,70 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(XPendingOutput.unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        }
+      ),
+      suite("pendingMessages")(
+        testM("extract valid value") {
+          val input = respArrayVals(
+            respArrayVals(
+              respBulkString("id"),
+              respBulkString("consumer"),
+              RespValue.Integer(100),
+              RespValue.Integer(10)
+            ),
+            respArrayVals(
+              respBulkString("id1"),
+              respBulkString("consumer1"),
+              RespValue.Integer(101),
+              RespValue.Integer(11)
+            )
+          )
+          Task(PendingMessagesOutput.unsafeDecode(input)).map(
+            assert(_)(
+              hasSameElements(
+                Chunk(
+                  PendingMessage("id", "consumer", 100.millis, 10),
+                  PendingMessage("id1", "consumer1", 101.millis, 11)
+                )
+              )
+            )
+          )
+        },
+        testM("extract when message has more than four fields") {
+          val input = respArrayVals(
+            respArrayVals(
+              respBulkString("id"),
+              respBulkString("consumer"),
+              RespValue.Integer(100),
+              RespValue.Integer(10),
+              RespValue.NullValue
+            ),
+            respArrayVals(
+              respBulkString("id1"),
+              respBulkString("consumer1"),
+              RespValue.Integer(101),
+              RespValue.Integer(11)
+            )
+          )
+          Task(PendingMessagesOutput.unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        },
+        testM("extract when message has less than four fields") {
+          val input = respArrayVals(
+            respArrayVals(
+              respBulkString("id"),
+              respBulkString("consumer"),
+              RespValue.Integer(100)
+            ),
+            respArrayVals(
+              respBulkString("id1"),
+              respBulkString("consumer1"),
+              RespValue.Integer(101),
+              RespValue.Integer(11)
+            )
+          )
+          Task(PendingMessagesOutput.unsafeDecode(input)).either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       )
