@@ -320,8 +320,11 @@ object Output {
       respValue match {
         case RespValue.Array(entities) =>
           val output = collection.mutable.Map.empty[String, Map[String, String]]
-          entities.foreach { case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-            output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+          entities.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+            case other =>
+              throw ProtocolError(s"$other isn't a valid array")
           }
 
           output.toMap
@@ -379,6 +382,8 @@ object Output {
                   )
                 ) =>
               PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
+            case other =>
+              throw ProtocolError(s"$other isn't an array with four elements")
           }
         case other =>
           throw ProtocolError(s"$other isn't an array")
@@ -390,8 +395,11 @@ object Output {
       respValue match {
         case RespValue.Array(streams) =>
           val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
-          streams.foreach { case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-            output += (id.asString -> StreamOutput.unsafeDecode(value))
+          streams.foreach {
+            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+              output += (id.asString -> StreamOutput.unsafeDecode(value))
+            case other =>
+              throw ProtocolError(s"$other isn't an array with two elements")
           }
 
           output.toMap

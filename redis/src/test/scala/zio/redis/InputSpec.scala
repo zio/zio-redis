@@ -829,6 +829,133 @@ object InputSpec extends BaseSpec {
             result <- Task(WithHashInput.encode(WithHash))
           } yield assert(result)(equalTo(respArgs("WITHHASH")))
         }
+      ),
+      suite("Idle")(
+        testM("with 1 second") {
+          Task(IdleInput.encode(1.second))
+            .map(assert(_)(equalTo(respArgs("IDLE", "1000"))))
+        },
+        testM("with 100 milliseconds") {
+          Task(IdleInput.encode(100.millis))
+            .map(assert(_)(equalTo(respArgs("IDLE", "100"))))
+        },
+        testM("with negative duration") {
+          Task(IdleInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("IDLE", "0"))))
+        }
+      ),
+      suite("Time")(
+        testM("with 1 second") {
+          Task(TimeInput.encode(1.second))
+            .map(assert(_)(equalTo(respArgs("TIME", "1000"))))
+        },
+        testM("with 100 milliseconds") {
+          Task(TimeInput.encode(100.millis))
+            .map(assert(_)(equalTo(respArgs("TIME", "100"))))
+        },
+        testM("with negative duration") {
+          Task(TimeInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("TIME", "0"))))
+        }
+      ),
+      suite("RetryCount")(
+        testM("with positive count") {
+          Task(RetryCountInput.encode(100))
+            .map(assert(_)(equalTo(respArgs("RETRYCOUNT", "100"))))
+        },
+        testM("with negative count") {
+          Task(RetryCountInput.encode(-100))
+            .map(assert(_)(equalTo(respArgs("RETRYCOUNT", "-100"))))
+        }
+      ),
+      suite("XGroupCreate")(
+        testM("without mkStream") {
+          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = false)))
+            .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id"))))
+        },
+        testM("with mkStream") {
+          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = true)))
+            .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id", "MKSTREAM"))))
+        }
+      ),
+      suite("XGroupSetId")(
+        testM("valid value") {
+          Task(XGroupSetIdInput.encode(XGroupCommand.SetId("key", "group", "id")))
+            .map(assert(_)(equalTo(respArgs("SETID", "key", "group", "id"))))
+        }
+      ),
+      suite("XGroupDestroy")(
+        testM("valid value") {
+          Task(XGroupDestroyInput.encode(XGroupCommand.Destroy("key", "group")))
+            .map(assert(_)(equalTo(respArgs("DESTROY", "key", "group"))))
+        }
+      ),
+      suite("XGroupCreateConsumer")(
+        testM("valid value") {
+          Task(XGroupCreateConsumerInput.encode(XGroupCommand.CreateConsumer("key", "group", "consumer")))
+            .map(assert(_)(equalTo(respArgs("CREATECONSUMER", "key", "group", "consumer"))))
+        }
+      ),
+      suite("XGroupDelConsumer")(
+        testM("valid value") {
+          Task(XGroupDelConsumerInput.encode(XGroupCommand.DelConsumer("key", "group", "consumer")))
+            .map(assert(_)(equalTo(respArgs("DELCONSUMER", "key", "group", "consumer"))))
+        }
+      ),
+      suite("Block")(
+        testM("with 1 second") {
+          Task(BlockInput.encode(1.second))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "1000"))))
+        },
+        testM("with 100 milliseconds") {
+          Task(BlockInput.encode(100.millis))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "100"))))
+        },
+        testM("with negative duration") {
+          Task(BlockInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "0"))))
+        }
+      ),
+      suite("Streams")(
+        testM("with one pair") {
+          Task(StreamsInput.encode(("a" -> "b", Chunk.empty)))
+            .map(assert(_)(equalTo(respArgs("STREAMS", "a", "b"))))
+        },
+        testM("with multiple pairs") {
+          Task(StreamsInput.encode(("a" -> "b", Chunk.single("c" -> "d"))))
+            .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
+        }
+      ),
+      suite("Group")(
+        testM("valid value") {
+          Task(GroupInput.encode(Group("group", "consumer")))
+            .map(assert(_)(equalTo(respArgs("GROUP", "group", "consumer"))))
+        }
+      ),
+      suite("NoAck")(
+        testM("valid value") {
+          Task(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(respArgs("NOACK"))))
+        }
+      ),
+      suite("MaxLen")(
+        testM("with approximate") {
+          Task(MaxLenInput.encode(MaxLen(approximate = true, 10)))
+            .map(assert(_)(equalTo(respArgs("MAXLEN", "~", "10"))))
+        },
+        testM("without approximate") {
+          Task(MaxLenInput.encode(MaxLen(approximate = false, 10)))
+            .map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
+        }
+      ),
+      suite("WithForce")(
+        testM("valid value") {
+          Task(WithForceInput.encode(WithForce)).map(assert(_)(equalTo(respArgs("FORCE"))))
+        }
+      ),
+      suite("WithJustId")(
+        testM("valid value") {
+          Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
+        }
       )
     )
 
