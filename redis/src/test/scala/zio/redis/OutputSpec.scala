@@ -9,14 +9,6 @@ import zio.{ Chunk, Task }
 
 object OutputSpec extends BaseSpec {
 
-  private def respBulkString(s: String) = RespValue.bulkString(s)
-
-  private def respDouble(d: Double) = respBulkString(d.toString)
-
-  private def respArray(xs: String*) = RespValue.Array(Chunk.fromIterable(xs.map(respBulkString)))
-
-  private def respArrayVals(xs: RespValue*) = RespValue.Array(Chunk.fromIterable(xs))
-
   def spec: Spec[Any, TestFailure[Throwable], TestSuccess] =
     suite("Output decoders")(
       suite("errors")(
@@ -51,7 +43,8 @@ object OutputSpec extends BaseSpec {
         },
         testM("extract non-empty arrays") {
           for {
-            res <- Task(ChunkOutput.unsafeDecode(respArray("foo", "bar")))
+            res <-
+              Task(ChunkOutput.unsafeDecode(RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))))
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),
@@ -59,13 +52,13 @@ object OutputSpec extends BaseSpec {
         testM("extract numbers") {
           val num = 42.3
           for {
-            res <- Task(DoubleOutput.unsafeDecode(respDouble(num)))
+            res <- Task(DoubleOutput.unsafeDecode(RespValue.bulkString(num.toString)))
           } yield assert(res)(equalTo(num))
         },
         testM("report number format exceptions as protocol errors") {
           val bad = "ok"
           for {
-            res <- Task(DoubleOutput.unsafeDecode(respBulkString(bad))).either
+            res <- Task(DoubleOutput.unsafeDecode(RespValue.bulkString(bad))).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(s"'$bad' isn't a double."))))
         }
       ),
@@ -135,7 +128,10 @@ object OutputSpec extends BaseSpec {
       ),
       suite("scan")(
         testM("extract cursor and elements") {
-          val input = respArrayVals(respBulkString("5"), respArray("foo", "bar"))
+          val input = RespValue.array(
+            RespValue.bulkString("5"),
+            RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
+          )
           for {
             res <- Task(ScanOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(5L -> Chunk("foo", "bar")))
@@ -144,7 +140,7 @@ object OutputSpec extends BaseSpec {
       suite("string")(
         testM("extract strings") {
           for {
-            res <- Task(MultiStringOutput.unsafeDecode(respBulkString(Noise)))
+            res <- Task(MultiStringOutput.unsafeDecode(RespValue.bulkString(Noise)))
           } yield assert(res)(equalTo(Noise))
         }
       ),
@@ -163,11 +159,12 @@ object OutputSpec extends BaseSpec {
         },
         testM("extract key and element") {
           for {
-            res <- Task(KeyElemOutput.unsafeDecode(respArray("key", "a")))
+            res <-
+              Task(KeyElemOutput.unsafeDecode(RespValue.array(RespValue.bulkString("key"), RespValue.bulkString("a"))))
           } yield assert(res)(isSome(equalTo(("key", "a"))))
         },
         testM("report invalid input as protocol error") {
-          val input = respArray("1", "2", "3")
+          val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
             res <- Task(KeyElemOutput.unsafeDecode(input)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
@@ -181,11 +178,11 @@ object OutputSpec extends BaseSpec {
         },
         testM("extract one multi-string value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(respBulkString("ab")))
+            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.bulkString("ab")))
           } yield assert(res)(hasSameElements(Chunk("ab")))
         },
         testM("extract one array value") {
-          val input = respArray("1", "2", "3")
+          val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
             res <- Task(MultiStringChunkOutput.unsafeDecode(input))
           } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
@@ -199,17 +196,17 @@ object OutputSpec extends BaseSpec {
         },
         testM("extract array with one non-empty element") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(respArray("ab")))
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.array(RespValue.bulkString("ab"))))
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
         testM("extract array with multiple non-empty elements") {
-          val input = respArray("1", "2", "3")
+          val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
             res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
         testM("extract array with empty and non-empty elements") {
-          val input = respArrayVals(respBulkString("1"), RespValue.NullValue, respBulkString("3"))
+          val input = RespValue.array(RespValue.bulkString("1"), RespValue.NullValue, RespValue.bulkString("3"))
           for {
             res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
@@ -222,7 +219,7 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(isEmpty)
         },
         testM("extract array with empty and non-empty elements") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(1L),
             RespValue.NullValue,
             RespValue.Integer(2L),
@@ -233,7 +230,7 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
         },
         testM("extract array with non-empty elements") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(1L),
             RespValue.Integer(1L),
             RespValue.Integer(2L),
@@ -246,23 +243,23 @@ object OutputSpec extends BaseSpec {
       ),
       suite("stream")(
         testM("extract valid input") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("id"),
-              respArrayVals(respBulkString("field"), respBulkString("value"))
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("id"),
+              RespValue.array(RespValue.bulkString("field"), RespValue.bulkString("value"))
             )
           )
 
           Task(StreamOutput.unsafeDecode(input)).map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
         },
         testM("extract empty map") {
-          Task(StreamOutput.unsafeDecode(respArrayVals())).map(assert(_)(isEmpty))
+          Task(StreamOutput.unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
         },
         testM("error when array of field-value pairs has odd length") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("id"),
-              respArrayVals(respBulkString("field"), respBulkString("value")),
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("id"),
+              RespValue.array(RespValue.bulkString("field"), RespValue.bulkString("value")),
               RespValue.NullValue
             )
           )
@@ -270,10 +267,10 @@ object OutputSpec extends BaseSpec {
           Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message has more then two elements") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("id"),
-              respArrayVals(respBulkString("a"), respBulkString("b"), respBulkString("c"))
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("id"),
+              RespValue.array(RespValue.bulkString("a"), RespValue.bulkString("b"), RespValue.bulkString("c"))
             )
           )
 
@@ -282,46 +279,46 @@ object OutputSpec extends BaseSpec {
       ),
       suite("xPending")(
         testM("extract valid value") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(1),
-            respBulkString("a"),
-            respBulkString("b"),
-            respArrayVals(
-              respArrayVals(respBulkString("consumer1"), respBulkString("1")),
-              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            RespValue.bulkString("a"),
+            RespValue.bulkString("b"),
+            RespValue.array(
+              RespValue.array(RespValue.bulkString("consumer1"), RespValue.bulkString("1")),
+              RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
           Task(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(1L, Some("a"), Some("b"), Map("consumer1" -> 1L, "consumer2" -> 2L)))))
         },
         testM("extract when the smallest ID is null") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(1),
             RespValue.NullValue,
-            respBulkString("b"),
-            respArrayVals(
-              respArrayVals(respBulkString("consumer1"), respBulkString("1")),
-              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            RespValue.bulkString("b"),
+            RespValue.array(
+              RespValue.array(RespValue.bulkString("consumer1"), RespValue.bulkString("1")),
+              RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
           Task(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(1L, None, Some("b"), Map("consumer1" -> 1L, "consumer2" -> 2L)))))
         },
         testM("extract when the greatest ID is null") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(1),
-            respBulkString("a"),
+            RespValue.bulkString("a"),
             RespValue.NullValue,
-            respArrayVals(
-              respArrayVals(respBulkString("consumer1"), respBulkString("1")),
-              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            RespValue.array(
+              RespValue.array(RespValue.bulkString("consumer1"), RespValue.bulkString("1")),
+              RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
           Task(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(1L, Some("a"), None, Map("consumer1" -> 1L, "consumer2" -> 2L)))))
         },
         testM("extract when total number of pending messages is zero") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(0),
             RespValue.NullValue,
             RespValue.NullValue,
@@ -331,13 +328,13 @@ object OutputSpec extends BaseSpec {
             .map(assert(_)(equalTo(PendingInfo(0L, None, None, Map.empty))))
         },
         testM("error when consumer array doesn't have two elements") {
-          val input = respArrayVals(
+          val input = RespValue.array(
             RespValue.Integer(1),
-            respBulkString("a"),
-            respBulkString("b"),
-            respArrayVals(
-              respArrayVals(respBulkString("consumer1")),
-              respArrayVals(respBulkString("consumer2"), respBulkString("2"))
+            RespValue.bulkString("a"),
+            RespValue.bulkString("b"),
+            RespValue.array(
+              RespValue.array(RespValue.bulkString("consumer1")),
+              RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
           Task(XPendingOutput.unsafeDecode(input)).either
@@ -346,16 +343,16 @@ object OutputSpec extends BaseSpec {
       ),
       suite("pendingMessages")(
         testM("extract valid value") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("id"),
-              respBulkString("consumer"),
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("id"),
+              RespValue.bulkString("consumer"),
               RespValue.Integer(100),
               RespValue.Integer(10)
             ),
-            respArrayVals(
-              respBulkString("id1"),
-              respBulkString("consumer1"),
+            RespValue.array(
+              RespValue.bulkString("id1"),
+              RespValue.bulkString("consumer1"),
               RespValue.Integer(101),
               RespValue.Integer(11)
             )
@@ -372,17 +369,17 @@ object OutputSpec extends BaseSpec {
           )
         },
         testM("error when message has more than four fields") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("id"),
-              respBulkString("consumer"),
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("id"),
+              RespValue.bulkString("consumer"),
               RespValue.Integer(100),
               RespValue.Integer(10),
               RespValue.NullValue
             ),
-            respArrayVals(
-              respBulkString("id1"),
-              respBulkString("consumer1"),
+            RespValue.array(
+              RespValue.bulkString("id1"),
+              RespValue.bulkString("consumer1"),
               RespValue.Integer(101),
               RespValue.Integer(11)
             )
@@ -391,15 +388,15 @@ object OutputSpec extends BaseSpec {
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message has less than four fields") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("id"),
-              respBulkString("consumer"),
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("id"),
+              RespValue.bulkString("consumer"),
               RespValue.Integer(100)
             ),
-            respArrayVals(
-              respBulkString("id1"),
-              respBulkString("consumer1"),
+            RespValue.array(
+              RespValue.bulkString("id1"),
+              RespValue.bulkString("consumer1"),
               RespValue.Integer(101),
               RespValue.Integer(11)
             )
@@ -410,34 +407,34 @@ object OutputSpec extends BaseSpec {
       ),
       suite("xRead")(
         testM("extract valid value") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("str1"),
-              respArrayVals(
-                respArrayVals(
-                  respBulkString("id1"),
-                  respArrayVals(
-                    respBulkString("a"),
-                    respBulkString("b")
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("str1"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("id1"),
+                  RespValue.array(
+                    RespValue.bulkString("a"),
+                    RespValue.bulkString("b")
                   )
                 )
               )
             ),
-            respArrayVals(
-              respBulkString("str2"),
-              respArrayVals(
-                respArrayVals(
-                  respBulkString("id2"),
-                  respArrayVals(
-                    respBulkString("c"),
-                    respBulkString("d")
+            RespValue.array(
+              RespValue.bulkString("str2"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("id2"),
+                  RespValue.array(
+                    RespValue.bulkString("c"),
+                    RespValue.bulkString("d")
                   )
                 ),
-                respArrayVals(
-                  respBulkString("id3"),
-                  respArrayVals(
-                    respBulkString("e"),
-                    respBulkString("f")
+                RespValue.array(
+                  RespValue.bulkString("id3"),
+                  RespValue.array(
+                    RespValue.bulkString("e"),
+                    RespValue.bulkString("f")
                   )
                 )
               )
@@ -455,14 +452,14 @@ object OutputSpec extends BaseSpec {
           )
         },
         testM("error when message content has odd number of fields") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("str1"),
-              respArrayVals(
-                respArrayVals(
-                  respBulkString("id1"),
-                  respArrayVals(
-                    respBulkString("a")
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("str1"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("id1"),
+                  RespValue.array(
+                    RespValue.bulkString("a")
                   )
                 )
               )
@@ -471,14 +468,14 @@ object OutputSpec extends BaseSpec {
           Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message doesn't have an ID") {
-          val input = respArrayVals(
-            respArrayVals(
-              respBulkString("str1"),
-              respArrayVals(
-                respArrayVals(
-                  respArrayVals(
-                    respBulkString("a"),
-                    respBulkString("b")
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.bulkString("str1"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.array(
+                    RespValue.bulkString("a"),
+                    RespValue.bulkString("b")
                   )
                 )
               )
@@ -487,14 +484,14 @@ object OutputSpec extends BaseSpec {
           Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when stream doesn't have an ID") {
-          val input = respArrayVals(
-            respArrayVals(
-              respArrayVals(
-                respArrayVals(
-                  respBulkString("id1"),
-                  respArrayVals(
-                    respBulkString("a"),
-                    respBulkString("b")
+          val input = RespValue.array(
+            RespValue.array(
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("id1"),
+                  RespValue.array(
+                    RespValue.bulkString("a"),
+                    RespValue.bulkString("b")
                   )
                 )
               )
