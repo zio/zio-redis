@@ -5,23 +5,12 @@ import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-//import zio.{Chunk, ZIO}
 import java.time.{Duration => JavaDuration}
-// import SecondRedisExecutorLayer._
-// import zio.redis.Output.OptionalOutput
-// import zio.redis.Output.MultiStringOutput
-// import zio.redis.RedisError.ProtocolError
-//import zio.Has
 import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
 import zio.{ Chunk, Has, ZIO }
 import zio.ZLayer
 import zio.logging.Logging
-// import zio.redis.ApiSpec.RedisExecutorWrapper
-// import zio.redis.Output.OptionalOutput
-// import zio.redis.Output.MultiStringOutput
-// import zio.redis.ApiSpec.RedisExecutorWrapper
-// import zio.redis.Output.OptionalOutput
-// import zio.redis.Output.MultiStringOutput
+import zio.redis.RedisError.ProtocolError
 
 trait KeysSpec extends BaseSpec {
 
@@ -30,12 +19,12 @@ trait KeysSpec extends BaseSpec {
   ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
     Annotations.Service
   ], TestFailure[RedisError], TestSuccess] = {
-    final case class RedisExecutorWrapper(re: RedisExecutor.Service)
 
+    // Note the migrate command tests require two Redis instances, so here we create a second
+    // Redis RedisExecutor
     val secondConfigLayer = ZLayer.succeed(RedisConfig("localhost", 6380))
-    val secondRedisService = (Logging.ignore ++ secondConfigLayer >>> RedisExecutor.live).fresh.project(service => RedisExecutorWrapper(service))
-
-    // Implicit conversion from RedisExecutorWrapper to
+    val secondRedisService = (Logging.ignore ++ secondConfigLayer >>> RedisExecutor.live).fresh
+    val migrateTimeout = JavaDuration.ofMillis(5000)
 
     suite("keys")(
       testM("set followed by get") {
@@ -144,16 +133,54 @@ trait KeysSpec extends BaseSpec {
                                   6379,
                                   key,
                                   0L,
-                                  JavaDuration.ofMillis(5000),
+                                  migrateTimeout,
                                   copy = Option(Copy),
                                   replace = Option(Replace),
                                   keys = None)
-            value2    <- get(key).provide(secondRedisService)
+            originGet <- get(key)
+            destGet   <- get(key).provideLayer(secondRedisService)
           } yield
-              assert(response)(equalTo("OK")) && assert(value2)(isSome)
-              // assert(value2)(isSome(equalTo(value))) &&
-              // assert(value3)(isSome(equalTo(value)))
-        }
+              assert(response)(equalTo("OK")) &&
+                assert(originGet)(isSome(equalTo(value))) &&
+                assert(destGet)(isSome(equalTo(value)))
+        },
+        testM("migrate key to another redis server (move and replace)") {
+          for {
+            key       <- uuid
+            value     <- uuid
+            _         <- set(key, value)
+            response  <- migrate("redis2",
+                                  6379,
+                                  key,
+                                  0L,
+                                  migrateTimeout,
+                                  copy = None,
+                                  replace = Option(Replace),
+                                  keys = None)
+            originGet <- get(key)
+            destGet   <- get(key).provideLayer(secondRedisService)
+          } yield
+              assert(response)(equalTo("OK")) &&
+                assert(originGet)(isNone) &&
+                assert(destGet)(isSome(equalTo(value)))
+        },
+        testM("migrate key to another redis server (move and no replace, should fail when key exists)") {
+          for {
+            key       <- uuid
+            value     <- uuid
+            _         <- set(key, value)
+            _         <- set(key, value).provideLayer(secondRedisService) // also add to second Redis
+            response  <- migrate("redis2",
+                                  6379,
+                                  key,
+                                  0L,
+                                  migrateTimeout,
+                                  copy = None,
+                                  replace = None,
+                                  keys = None).either
+          } yield
+            assert(response)(isLeft(isSubtype[ProtocolError](anything)))
+        },
       ),
       suite("ttl")(
         testM("check ttl for existing key") {

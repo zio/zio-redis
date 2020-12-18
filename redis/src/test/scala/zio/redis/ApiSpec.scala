@@ -40,7 +40,6 @@ object ApiSpec
         hashSuite,
         streamsSuite
       ).provideCustomLayerShared(
-       // ((Logging.ignore ++ secondConfigLayer) >>> secondRedisService.orDie) ++
         (Logging.ignore >>> RedisExecutor.local.orDie) ++ Clock.live
       ),
       suite("Test Executor")(
