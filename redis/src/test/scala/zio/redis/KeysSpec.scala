@@ -294,6 +294,16 @@ trait KeysSpec extends BaseSpec {
           } yield assert(renamed)(isLeft)
         }
       ),
+      suite("duration")(
+        test("duration converts to zero") {
+          val zero = JavaDuration.ofMillis(0).toMillis
+          assert(zero)(equalTo(0L))
+        },
+        test("timeout of more than 1ms is not zero") {
+          val moreThanOne = JavaDuration.ofNanos(1000000).toMillis
+          assert(moreThanOne)(equalTo(1L))
+        }
+      ),
       suite("types")(
         testM("string type") {
           for {
