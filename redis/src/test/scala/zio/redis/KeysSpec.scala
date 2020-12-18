@@ -10,7 +10,7 @@ import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{Chunk, Has, ZIO, ZLayer}
+import zio.{ Chunk, Has, ZIO, ZLayer }
 
 trait KeysSpec extends BaseSpec {
 
