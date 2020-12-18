@@ -4,13 +4,16 @@ import java.time.{ Duration => JavaDuration }
 
 import zio.clock.Clock
 import zio.duration._
-import zio.logging.Logging
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{ Chunk, Has, ZIO, ZLayer }
+import zio.{ Chunk, Has, ZIO }
+
+object KeysSpec {
+  val migrateTimeout: Duration = Duration.fromMillis(5000)
+}
 
 trait KeysSpec extends BaseSpec {
 
@@ -19,12 +22,6 @@ trait KeysSpec extends BaseSpec {
   ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
     Annotations.Service
   ], TestFailure[RedisError], TestSuccess] = {
-
-    // Note the migrate command tests require two Redis instances, so here we create a second
-    // Redis RedisExecutor
-    val secondConfigLayer  = ZLayer.succeed(RedisConfig("localhost", 6380))
-    val secondRedisService = (Logging.ignore ++ secondConfigLayer >>> RedisExecutor.live).fresh
-    val migrateTimeout     = JavaDuration.ofMillis(5000)
 
     suite("keys")(
       testM("set followed by get") {
@@ -134,13 +131,13 @@ trait KeysSpec extends BaseSpec {
                           6379,
                           key,
                           0L,
-                          migrateTimeout,
+                          KeysSpec.migrateTimeout,
                           copy = Option(Copy),
                           replace = Option(Replace),
                           keys = None
                         )
             originGet <- get(key)
-            destGet   <- get(key).provideLayer(secondRedisService)
+            destGet   <- get(key).provideLayer(ApiSpec.secondRedisService)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isSome(equalTo(value))) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -151,9 +148,18 @@ trait KeysSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value)
             response <-
-              migrate("redis2", 6379, key, 0L, migrateTimeout, copy = None, replace = Option(Replace), keys = None)
+              migrate(
+                "redis2",
+                6379,
+                key,
+                0L,
+                KeysSpec.migrateTimeout,
+                copy = None,
+                replace = Option(Replace),
+                keys = None
+              )
             originGet <- get(key)
-            destGet   <- get(key).provideLayer(secondRedisService)
+            destGet   <- get(key).provideLayer(ApiSpec.secondRedisService)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isNone) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -163,9 +169,9 @@ trait KeysSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            _     <- set(key, value).provideLayer(secondRedisService) // also add to second Redis
+            _     <- set(key, value).provideLayer(ApiSpec.secondRedisService) // also add to second Redis
             response <-
-              migrate("redis2", 6379, key, 0L, migrateTimeout, copy = None, replace = None, keys = None).either
+              migrate("redis2", 6379, key, 0L, KeysSpec.migrateTimeout, copy = None, replace = None, keys = None).either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),

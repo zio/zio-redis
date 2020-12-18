@@ -1,12 +1,13 @@
 package zio.redis
 
-import zio.Has
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.random.Random
 import zio.test._
 import zio.test.environment.{ Live, TestClock, TestConsole, TestRandom, TestSystem }
+import zio.{ Has, ZLayer }
+import zio.ULayer
 
 object ApiSpec
     extends ConnectionSpec
@@ -49,4 +50,10 @@ object ApiSpec
         .get
         .provideCustomLayerShared(RedisExecutor.test)
     )
+
+  // Some groups of commands, such as keys, have functions that work across multiple
+  // Redis instances, so we create a second one that can be provided as needed.
+  val secondConfigLayer: ULayer[Has[RedisConfig]] = ZLayer.succeed(RedisConfig("localhost", 6380))
+  val secondRedisService: ZLayer[Any with Any, RedisError.IOError, RedisExecutor] =
+    (Logging.ignore ++ secondConfigLayer >>> RedisExecutor.live).fresh
 }
