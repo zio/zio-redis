@@ -260,7 +260,8 @@ trait Keys {
    * @param timeout specified as a Duration, 0 means to block forever
    * @return the number of replicas reached both in case of failure and success
    */
-  final def wait_(replicas: Long, timeout: Duration): ZIO[RedisExecutor, RedisError, Long] = Wait.run((replicas, timeout.toMillis))
+  final def wait_(replicas: Long, timeout: Duration): ZIO[RedisExecutor, RedisError, Long] =
+    Wait.run((replicas, timeout.toMillis))
 }
 
 private[redis] object Keys {
