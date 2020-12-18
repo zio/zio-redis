@@ -6,8 +6,7 @@ import zio.logging.Logging
 import zio.random.Random
 import zio.test._
 import zio.test.environment.{ Live, TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{ Has, ZLayer }
-import zio.ULayer
+import zio.{ Has, ULayer, ZLayer }
 
 object ApiSpec
     extends ConnectionSpec
