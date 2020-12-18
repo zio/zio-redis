@@ -26,7 +26,7 @@ object ApiSpec
     TestSystem.Service
   ] with Has[Clock.Service] with Has[zio.console.Console.Service] with Has[zio.system.System.Service] with Has[
     Random.Service
-  ] with Has[Blocking.Service], TestFailure[java.io.Serializable], TestSuccess] = {
+  ] with Has[Blocking.Service], TestFailure[java.io.Serializable], TestSuccess] =
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite,
@@ -49,5 +49,4 @@ object ApiSpec
         .get
         .provideCustomLayerShared(RedisExecutor.test)
     )
-  }
 }
