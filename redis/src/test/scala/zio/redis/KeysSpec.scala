@@ -1,16 +1,16 @@
 package zio.redis
 
+import java.time.{ Duration => JavaDuration }
+
 import zio.clock.Clock
 import zio.duration._
+import zio.logging.Logging
+import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import java.time.{ Duration => JavaDuration }
 import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{ Chunk, Has, ZIO }
-import zio.ZLayer
-import zio.logging.Logging
-import zio.redis.RedisError.ProtocolError
+import zio.{Chunk, Has, ZIO, ZLayer}
 
 trait KeysSpec extends BaseSpec {
 
