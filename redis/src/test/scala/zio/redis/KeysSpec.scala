@@ -2,6 +2,7 @@ package zio.redis
 
 import zio.clock.Clock
 import zio.duration._
+import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -14,7 +15,8 @@ trait KeysSpec extends BaseSpec {
     TestConsole.Service
   ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
     Annotations.Service
-  ], TestFailure[RedisError], TestSuccess] =
+  ], TestFailure[RedisError], TestSuccess] = {
+
     suite("keys")(
       testM("set followed by get") {
         for {
@@ -44,7 +46,7 @@ trait KeysSpec extends BaseSpec {
           _     <- set(key, value)
           e1    <- exists(key)
           e2    <- exists("unknown")
-        } yield assert(e1)(isTrue) && assert(e2)(isFalse)
+        } yield assert(e1)(equalTo(1L)) && assert(e2)(equalTo(0L))
       },
       testM("delete existing key") {
         for {
@@ -112,6 +114,61 @@ trait KeysSpec extends BaseSpec {
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
       },
+      suite("migrate")(
+        testM("migrate key to another redis server (copy and replace)") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value)
+            response <- migrate(
+                          "redis2",
+                          6379,
+                          key,
+                          0L,
+                          KeysSpec.MigrateTimeout,
+                          copy = Option(Copy),
+                          replace = Option(Replace),
+                          keys = None
+                        )
+            originGet <- get(key)
+            destGet   <- get(key).provideLayer(ApiSpec.secondRedisService)
+          } yield assert(response)(equalTo("OK")) &&
+            assert(originGet)(isSome(equalTo(value))) &&
+            assert(destGet)(isSome(equalTo(value)))
+        },
+        testM("migrate key to another redis server (move and replace)") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value)
+            response <-
+              migrate(
+                "redis2",
+                6379,
+                key,
+                0L,
+                KeysSpec.MigrateTimeout,
+                copy = None,
+                replace = Option(Replace),
+                keys = None
+              )
+            originGet <- get(key)
+            destGet   <- get(key).provideLayer(ApiSpec.secondRedisService)
+          } yield assert(response)(equalTo("OK")) &&
+            assert(originGet)(isNone) &&
+            assert(destGet)(isSome(equalTo(value)))
+        },
+        testM("migrate key to another redis server (move and no replace, should fail when key exists)") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value)
+            _     <- set(key, value).provideLayer(ApiSpec.secondRedisService) // also add to second Redis
+            response <-
+              migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
+          } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
       suite("ttl")(
         testM("check ttl for existing key") {
           for {
@@ -152,7 +209,7 @@ trait KeysSpec extends BaseSpec {
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key)
-          } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
+          } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         } @@ eventually,
         testM("set key expiration with pExpireAt command") {
           for {
@@ -164,7 +221,7 @@ trait KeysSpec extends BaseSpec {
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key)
-          } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
+          } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         } @@ eventually,
         testM("expire followed by persist") {
           for {
@@ -185,7 +242,7 @@ trait KeysSpec extends BaseSpec {
             response1 <- exists(key)
             _         <- ZIO.sleep(2050.millis)
             response2 <- exists(key)
-          } yield assert(exp)(isTrue) && assert(response1)(isTrue) && assert(response2)(isFalse)
+          } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         } @@ eventually
       ),
       suite("renaming")(
@@ -265,7 +322,21 @@ trait KeysSpec extends BaseSpec {
             _     <- hSet(key, (field, value))
             hash  <- typeOf(key)
           } yield assert(hash)(equalTo(RedisType.Hash))
+        },
+        testM("stream type") {
+          for {
+            key    <- uuid
+            field  <- uuid
+            value  <- uuid
+            _      <- xAdd(key, "*", (field, value))
+            stream <- typeOf(key)
+          } yield assert(stream)(equalTo(RedisType.Stream))
         }
       )
     )
+  }
+}
+
+object KeysSpec {
+  final val MigrateTimeout: Duration = 5.seconds
 }

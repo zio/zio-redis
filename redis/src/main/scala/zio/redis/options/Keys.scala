@@ -33,6 +33,7 @@ trait Keys {
     case object Set       extends RedisType
     case object SortedSet extends RedisType
     case object Hash      extends RedisType
+    case object Stream    extends RedisType
   }
 
   case object Replace {

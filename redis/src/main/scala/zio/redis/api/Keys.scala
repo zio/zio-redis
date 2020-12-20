@@ -1,9 +1,10 @@
 package zio.redis.api
 
-import java.time.{ Duration, Instant }
+import java.time.Instant
 
 import scala.util.matching.Regex
 
+import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
@@ -39,7 +40,7 @@ trait Keys {
    * @param keys maybe rest of the keys
    * @return The number of keys existing.
    */
-  final def exists(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Boolean] = Exists.run((key, keys.toList))
+  final def exists(key: String, keys: String*): ZIO[RedisExecutor, RedisError, Long] = Exists.run((key, keys.toList))
 
   /**
    * Set a timeout on key. After the timeout has expired, the key will automatically be deleted.
@@ -80,7 +81,7 @@ trait Keys {
    * @param port remote redis instance port
    * @param key key to be transferred or empty string if using the keys option
    * @param destinationDb remote database id
-   * @param timeout timeout in milliseconds
+   * @param timeout specifies the longest period without blocking which is allowed during the transfer
    * @param auth optionally provide password for the remote instance
    * @param copy copy option, to not remove the key from the local instance
    * @param replace replace option, to replace existing key on the remote instance
@@ -92,13 +93,13 @@ trait Keys {
     port: Long,
     key: String,
     destinationDb: Long,
-    timeout: Long,
+    timeout: Duration,
     auth: Option[Auth] = None,
     copy: Option[Copy] = None,
     replace: Option[Replace] = None,
     keys: Option[(String, List[String])]
   ): ZIO[RedisExecutor, RedisError, String] =
-    Migrate.run((host, port, key, destinationDb, timeout, copy, replace, auth, keys))
+    Migrate.run((host, port, key, destinationDb, timeout.toMillis, copy, replace, auth, keys))
 
   /**
    * Move key from the currently selected database to the specified destination database. When key already
@@ -257,10 +258,11 @@ trait Keys {
    * by at least the specified number of replicas.
    *
    * @param replicas minimum replicas to reach
-   * @param timeout specified in milliseconds, 0 means to block forever
+   * @param timeout specified as a Duration, 0 means to block forever
    * @return the number of replicas reached both in case of failure and success
    */
-  final def wait_(replicas: Long, timeout: Long): ZIO[RedisExecutor, RedisError, Long] = Wait.run((replicas, timeout))
+  final def wait_(replicas: Long, timeout: Duration): ZIO[RedisExecutor, RedisError, Long] =
+    Wait.run((replicas, timeout.toMillis))
 }
 
 private[redis] object Keys {
@@ -268,8 +270,8 @@ private[redis] object Keys {
 
   final val Dump: RedisCommand[String, Chunk[Byte]] = RedisCommand("DUMP", StringInput, BulkStringOutput)
 
-  final val Exists: RedisCommand[(String, List[String]), Boolean] =
-    RedisCommand("EXISTS", NonEmptyList(StringInput), BoolOutput)
+  final val Exists: RedisCommand[(String, List[String]), Long] =
+    RedisCommand("EXISTS", NonEmptyList(StringInput), LongOutput)
 
   final val Expire: RedisCommand[(String, Duration), Boolean] =
     RedisCommand("EXPIRE", Tuple2(StringInput, DurationSecondsInput), BoolOutput)
@@ -296,7 +298,7 @@ private[redis] object Keys {
         OptionalInput(AuthInput),
         OptionalInput(NonEmptyList(StringInput))
       ),
-      MultiStringOutput
+      StringOutput
     )
 
   final val Move: RedisCommand[(String, Long), Boolean] =
