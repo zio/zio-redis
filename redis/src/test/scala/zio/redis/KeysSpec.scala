@@ -338,5 +338,5 @@ trait KeysSpec extends BaseSpec {
 }
 
 object KeysSpec {
-  val MigrateTimeout: Duration = 5.seconds
+  final val MigrateTimeout: Duration = 5.seconds
 }
