@@ -1,7 +1,6 @@
 package zio.redis.api
 
-import java.time.Duration
-
+import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._

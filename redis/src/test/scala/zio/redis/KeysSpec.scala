@@ -9,10 +9,6 @@ import zio.test._
 import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
 import zio.{ Chunk, Has, ZIO }
 
-object KeysSpec {
-  val migrateTimeout: Duration = Duration.fromMillis(5000)
-}
-
 trait KeysSpec extends BaseSpec {
 
   val keysSuite: Spec[Has[Clock.Service] with Has[RedisExecutor.Service] with Has[TestClock.Service] with Has[
@@ -129,7 +125,7 @@ trait KeysSpec extends BaseSpec {
                           6379,
                           key,
                           0L,
-                          KeysSpec.migrateTimeout,
+                          KeysSpec.MigrateTimeout,
                           copy = Option(Copy),
                           replace = Option(Replace),
                           keys = None
@@ -151,7 +147,7 @@ trait KeysSpec extends BaseSpec {
                 6379,
                 key,
                 0L,
-                KeysSpec.migrateTimeout,
+                KeysSpec.MigrateTimeout,
                 copy = None,
                 replace = Option(Replace),
                 keys = None
@@ -169,7 +165,7 @@ trait KeysSpec extends BaseSpec {
             _     <- set(key, value)
             _     <- set(key, value).provideLayer(ApiSpec.secondRedisService) // also add to second Redis
             response <-
-              migrate("redis2", 6379, key, 0L, KeysSpec.migrateTimeout, copy = None, replace = None, keys = None).either
+              migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -339,4 +335,8 @@ trait KeysSpec extends BaseSpec {
       )
     )
   }
+}
+
+object KeysSpec {
+  final val MigrateTimeout: Duration = 5.seconds
 }
