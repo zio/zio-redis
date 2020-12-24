@@ -33,6 +33,8 @@ jobs:
             ~/.m2
             ~/.cache
           key: sbt-cache-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+      - name: Run test containers
+        run: docker-compose up -d
       - name: Lint code
         run: sbt check
       - name: Run tests
