@@ -1,8 +1,8 @@
 # ZIO Redis
 
-| CI             | Discord                                   |
-|----------------|-------------------------------------------|
-| [CI][Badge-CI] | [![Discord][Badge-Discord]][Link-Discord] |
+| CI              | Discord                                   |
+|-----------------|-------------------------------------------|
+| ![CI][Badge-CI] | [![Discord][Badge-Discord]][Link-Discord] |
 
 ZIO-based Redis client.
 
