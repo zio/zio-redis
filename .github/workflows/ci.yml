@@ -16,35 +16,52 @@ jobs:
         java: ['adopt@1.8', 'adopt@1.11']
         scala: ['2.12.12', '2.13.3']
     steps:
-    - uses: actions/checkout@v2.3.4
-    - uses: olafurpg/setup-scala@v10
-      with:
-        java-version: ${{ matrix.java }}
-    - name: Cache scala dependencies
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.ivy2/cache
-          ~/.sbt
-          ~/.m2
-          ~/.cache
-        key: sbt-actors-cache-${{ matrix.java }}-${{ matrix.scala }}
-    - name: Lint code
-      run: sbt check
-    - name: Run tests
-      run: sbt ++${{ matrix.scala }}! test
+      - name: Checkout current branch
+        uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: 0
+      - name: Setup Scala and Java
+        uses: olafurpg/setup-scala@v10
+        with:
+          java-version: ${{ matrix.java }}
+      - name: Cache scala dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+            ~/.m2
+            ~/.cache
+          key: sbt-cache-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+      - name: Lint code
+        run: sbt check
+      - name: Run tests
+        run: sbt ++${{ matrix.scala }}! test
 
   publish:
     runs-on: ubuntu-20.04
     needs: [build]
     if: github.event_name != 'pull_request'
     steps:
-      - uses: actions/checkout@v2.3.4
+      - name: Checkout current branch
+        uses: actions/checkout@v2.3.4
         with:
           fetch-depth: 0
-      - uses: olafurpg/setup-scala@v10
-      - uses: olafurpg/setup-gpg@v3
-      - run: sbt ci-release
+      - name: Setup Scala and Java 
+        uses: olafurpg/setup-scala@v10
+      - name: Cache scala dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+            ~/.m2
+            ~/.cache
+          key: sbt-cache-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+      - name: Setup GPG
+        uses: olafurpg/setup-gpg@v3
+      - name: Release artifacts
+        run: sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
