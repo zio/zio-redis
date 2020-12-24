@@ -4,6 +4,7 @@ on: push
 
 jobs:
   delete-artifacts:
+    name: Delete artifacts
     runs-on: ubuntu-20.04
     steps:
       - name: Delete artifacts
