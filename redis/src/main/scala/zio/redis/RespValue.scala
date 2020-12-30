@@ -89,7 +89,8 @@ object RespValue {
 
     final val CrLf: Chunk[Byte] = Chunk(Cr, Lf)
 
-    final val Null: String = "$-1"
+    final val Null: String      = "$-1"
+    final val NullArray: String = "*-1"
 
     final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
@@ -104,7 +105,7 @@ object RespValue {
 
       final def feed(line: String): State =
         self match {
-          case Start if line == Null => State.Done(NullValue)
+          case Start if line == Null || line == NullArray => Done(NullValue)
 
           case Start if line.nonEmpty =>
             line.head match {
@@ -117,10 +118,8 @@ object RespValue {
 
                 if (size > 0)
                   CollectingArray(size, Chunk.empty, Start.feed)
-                else if (size == 0)
-                  Done(Array(Chunk.empty))
                 else
-                  Done(NullValue)
+                  Done(Array(Chunk.empty))
             }
 
           case CollectingArray(rem, vals, next) =>
