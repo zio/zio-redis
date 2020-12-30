@@ -7,6 +7,7 @@ import zio.stream._
 
 sealed trait RespValue extends Any { self =>
   import RespValue._
+  import RespValue.internal.{ Headers, NullString, CrLf }
 
   final def serialize: Chunk[Byte] =
     self match {
@@ -60,70 +61,15 @@ object RespValue {
 
   private[redis] final val Lf: Byte = '\n'
 
-  private final val CrLf = Chunk(Cr, Lf)
-
-  private final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
-
-  private object Headers {
-    final val SimpleString: Byte = '+'
-    final val Error: Byte        = '-'
-    final val Integer: Byte      = ':'
-    final val BulkString: Byte   = '$'
-    final val Array: Byte        = '*'
-  }
-
   private[redis] final val Deserializer: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
-    sealed trait State { self =>
-      final def inProgress: Boolean =
-        self match {
-          case State.Done(_) | State.Failed => false
-          case _                            => true
-        }
-    }
-
-    object State {
-      case object Start                                                                         extends State
-      final case class CollectingArray(rem: Int, vals: Chunk[RespValue], next: String => State) extends State
-      case object ExpectingBulk                                                                 extends State
-      final case class Done(value: RespValue)                                                   extends State
-      case object Failed                                                                        extends State
-    }
+    import internal.State
 
     // TODO: handle NumberFormatException
     // TODO: remove utf8Decode transducer
 
-    def transform(state: State, line: String): State =
-      state match {
-        case State.Start if line == "$-1" => State.Done(NullValue)
-
-        case State.Start if line.nonEmpty =>
-          line.head match {
-            case Headers.SimpleString => State.Done(SimpleString(line.tail))
-            case Headers.Error        => State.Done(Error(line.tail))
-            case Headers.Integer      => State.Done(Integer(line.tail.toLong))
-            case Headers.BulkString   => State.ExpectingBulk
-            case Headers.Array        => State.CollectingArray(line.tail.toInt, Chunk.empty, transform(State.Start, _))
-          }
-
-        case State.CollectingArray(rem, vals, next) if rem > 1 =>
-          next(line) match {
-            case State.Done(v) => State.CollectingArray(rem - 1, vals :+ v, transform(State.Start, _))
-            case state         => State.CollectingArray(rem, vals, transform(state, _))
-          }
-
-        case State.CollectingArray(rem, vals, next) if rem == 1 =>
-          next(line) match {
-            case State.Done(v) => State.Done(Array(vals :+ v))
-            case state         => State.CollectingArray(rem, vals, transform(state, _))
-          }
-
-        case State.ExpectingBulk => State.Done(bulkString(line))
-        case _                   => State.Failed
-      }
-
     val processLine =
       Transducer
-        .fold[String, State](State.Start)(_.inProgress)(transform)
+        .fold[String, State](State.Start)(_.inProgress)(_ transform _)
         .mapM {
           case State.Done(value) => IO.succeedNow(value)
           case State.Failed      => IO.fail(RedisError.ProtocolError("Invalid data received."))
@@ -131,5 +77,66 @@ object RespValue {
         }
 
     Transducer.utf8Decode >>> Transducer.splitLines >>> processLine
+  }
+
+  private object internal {
+    object Headers {
+      final val SimpleString: Byte = '+'
+      final val Error: Byte        = '-'
+      final val Integer: Byte      = ':'
+      final val BulkString: Byte   = '$'
+      final val Array: Byte        = '*'
+    }
+
+    final val CrLf = Chunk(Cr, Lf)
+
+    final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
+
+    sealed trait State { self =>
+      import State._
+
+      final def inProgress: Boolean =
+        self match {
+          case Done(_) | Failed => false
+          case _                => true
+        }
+
+      final def transform(line: String): State =
+        self match {
+          case Start if line == "$-1" => State.Done(NullValue)
+
+          case Start if line.nonEmpty =>
+            line.head match {
+              case Headers.SimpleString => Done(SimpleString(line.tail))
+              case Headers.Error        => Done(Error(line.tail))
+              case Headers.Integer      => Done(Integer(line.tail.toLong))
+              case Headers.BulkString   => ExpectingBulk
+              case Headers.Array        => CollectingArray(line.tail.toInt, Chunk.empty, Start.transform)
+            }
+
+          case CollectingArray(rem, vals, next) if rem > 1 =>
+            next(line) match {
+              case Done(v) => CollectingArray(rem - 1, vals :+ v, Start.transform)
+              case state   => CollectingArray(rem, vals, state.transform)
+            }
+
+          case CollectingArray(rem, vals, next) if rem == 1 =>
+            next(line) match {
+              case Done(v) => Done(Array(vals :+ v))
+              case state   => CollectingArray(rem, vals, state.transform)
+            }
+
+          case ExpectingBulk => Done(bulkString(line))
+          case _             => Failed
+        }
+    }
+
+    object State {
+      case object Start                                                                         extends State
+      case object ExpectingBulk                                                                 extends State
+      case object Failed                                                                        extends State
+      final case class CollectingArray(rem: Int, vals: Chunk[RespValue], next: String => State) extends State
+      final case class Done(value: RespValue)                                                   extends State
+    }
   }
 }
