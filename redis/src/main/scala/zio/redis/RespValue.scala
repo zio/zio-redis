@@ -111,9 +111,9 @@ object RespValue {
             line.head match {
               case Headers.SimpleString => Done(SimpleString(line.tail))
               case Headers.Error        => Done(Error(line.tail))
-              case Headers.Integer      => Done(Integer(line.tail.toLong))
+              case Headers.Integer      => Done(Integer(unsafeReadLong(line)))
               case Headers.BulkString   => ExpectingBulk
-              case Headers.Array        => CollectingArray(line.tail.toInt, Chunk.empty, Start.feed)
+              case Headers.Array        => CollectingArray(unsafeReadLong(line).toInt, Chunk.empty, Start.feed)
             }
 
           case CollectingArray(rem, vals, next) if rem > 0 =>
@@ -134,6 +134,26 @@ object RespValue {
       case object Failed                                                                        extends State
       final case class CollectingArray(rem: Int, vals: Chunk[RespValue], next: String => State) extends State
       final case class Done(value: RespValue)                                                   extends State
+    }
+    
+    def unsafeReadLong(text: String): Long = {
+      var pos = 1
+      var res = 0L
+      var neg = false
+      
+      if (text.charAt(pos) == '-') {
+        neg = true
+        pos += 1
+      }
+      
+      val len = text.length
+
+      while (pos < len) {
+        res = res * 10 + text.charAt(pos) - '0'
+        pos += 1
+      }
+
+      if (neg) -res else res
     }
   }
 }
