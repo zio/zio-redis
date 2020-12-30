@@ -109,7 +109,7 @@ trait KeysSpec extends BaseSpec {
           restore  <- restore(key, 0L, dumped).either
           restored <- get(key)
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
-      },
+      } @@ ignore,
       suite("migrate")(
         testM("migrate key to another redis server (copy and replace)") {
           for {
