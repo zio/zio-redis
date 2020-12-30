@@ -21,13 +21,20 @@ object RespValueSpec extends BaseSpec {
         val values = Chunk(
           RespValue.SimpleString("OK"),
           RespValue.bulkString("test1"),
-          RespValue.array(RespValue.Integer(42L), RespValue.bulkString("in array"))
+          RespValue.array(
+            RespValue.bulkString("test1"),
+            RespValue.Integer(42L),
+            RespValue.NullValue,
+            RespValue.array(RespValue.SimpleString("a"), RespValue.Integer(0L)),
+            RespValue.bulkString("in array"),
+            RespValue.SimpleString("test2")
+          ),
+          RespValue.NullValue
         )
 
-        val bytes = values.flatMap(_.serialize)
-
         Stream
-          .succeed(bytes)
+          .fromChunk(values)
+          .mapConcat(_.serialize)
           .transduce(RespValue.Deserializer)
           .runCollect
           .map(assert(_)(equalTo(values)))

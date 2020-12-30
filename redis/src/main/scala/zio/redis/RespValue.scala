@@ -50,30 +50,19 @@ object RespValue {
       }
   }
 
-  /*
-   * - take a byte chunk
-   * - analyze header
-   * - crunch the remaining => State(header, remaining)
-   * - when terminal value is read materialize the state
-   */
-  final val Deserializer: Transducer[RedisError.ProtocolError, Chunk[Byte], RespValue] = {
-    sealed trait State
-
-    object State {
-      case object InProgress  extends State
-      final case class Done() extends State
-    }
-
-    Transducer.foldLeft[Chunk[Byte], State](State.InProgress) { (state, bytes) =>
-      ???
-    }
-  }
-
   def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
 
   def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
 
   def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
+
+  private[redis] final val Cr: Byte = '\r'
+
+  private[redis] final val Lf: Byte = '\n'
+
+  private final val CrLf = Chunk(Cr, Lf)
+
+  private final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
   private object Headers {
     final val SimpleString: Byte = '+'
@@ -83,11 +72,64 @@ object RespValue {
     final val Array: Byte        = '*'
   }
 
-  private[redis] final val Cr: Byte = '\r'
+  private[redis] final val Deserializer: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
+    sealed trait State { self =>
+      final def inProgress: Boolean =
+        self match {
+          case State.Done(_) | State.Failed => false
+          case _                            => true
+        }
+    }
 
-  private[redis] final val Lf: Byte = '\n'
+    object State {
+      case object Start                                                                         extends State
+      final case class CollectingArray(rem: Int, vals: Chunk[RespValue], next: String => State) extends State
+      case object ExpectingBulk                                                                 extends State
+      final case class Done(value: RespValue)                                                   extends State
+      case object Failed                                                                        extends State
+    }
 
-  private final val CrLf = Chunk(Cr, Lf)
+    // TODO: handle NumberFormatException
+    // TODO: remove utf8Decode transducer
 
-  private final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
+    def transform(state: State, line: String): State =
+      state match {
+        case State.Start if line == "$-1" => State.Done(NullValue)
+
+        case State.Start if line.nonEmpty =>
+          line.head match {
+            case Headers.SimpleString => State.Done(SimpleString(line.tail))
+            case Headers.Error        => State.Done(Error(line.tail))
+            case Headers.Integer      => State.Done(Integer(line.tail.toLong))
+            case Headers.BulkString   => State.ExpectingBulk
+            case Headers.Array        => State.CollectingArray(line.tail.toInt, Chunk.empty, transform(State.Start, _))
+          }
+
+        case State.CollectingArray(rem, vals, next) if rem > 1 =>
+          next(line) match {
+            case State.Done(v) => State.CollectingArray(rem - 1, vals :+ v, transform(State.Start, _))
+            case state         => State.CollectingArray(rem, vals, transform(state, _))
+          }
+
+        case State.CollectingArray(rem, vals, next) if rem == 1 =>
+          next(line) match {
+            case State.Done(v) => State.Done(Array(vals :+ v))
+            case state         => State.CollectingArray(rem, vals, transform(state, _))
+          }
+
+        case State.ExpectingBulk => State.Done(bulkString(line))
+        case _                   => State.Failed
+      }
+
+    val processLine =
+      Transducer
+        .fold[String, State](State.Start)(_.inProgress)(transform)
+        .mapM {
+          case State.Done(value) => IO.succeedNow(value)
+          case State.Failed      => IO.fail(RedisError.ProtocolError("Invalid data received."))
+          case other             => IO.dieMessage(s"Deserialization bug, should not get $other")
+        }
+
+    Transducer.utf8Decode >>> Transducer.splitLines >>> processLine
+  }
 }
