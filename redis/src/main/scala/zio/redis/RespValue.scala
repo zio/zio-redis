@@ -39,7 +39,8 @@ object RespValue {
     def asString: String = decodeString(value)
 
     def asLong: Long = {
-      val text = decodeString(value)
+      val text = asString
+      val len  = value.length
 
       var pos = 0
       var res = 0L
@@ -49,8 +50,6 @@ object RespValue {
         neg = true
         pos += 1
       }
-
-      val len = value.length
 
       while (pos < len) {
         res = res * 10 + text.charAt(pos) - '0'
