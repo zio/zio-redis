@@ -6,29 +6,6 @@ import org.openjdk.jmh.annotations._
 
 import zio.ZIO
 
-/*
- * Baseline:
- *
- * GetBenchmarks.laserdisc       500  thrpt   15   6.929 ± 0.524  ops/s
- * GetBenchmarks.rediculous      500  thrpt   15   6.532 ± 0.600  ops/s
- * GetBenchmarks.redis4cats      500  thrpt   15  13.558 ± 1.124  ops/s
- * GetBenchmarks.zio             500  thrpt   15   9.430 ± 0.812  ops/s
- *
- * After 1st draft:
- *
- * Benchmark          (count)   Mode  Cnt   Score   Error  Units
- * GetBenchmarks.zio      500  thrpt   15  14.155 ± 0.204  ops/s
- *
- * After specializing number parsing:
- *
- * Benchmark          (count)   Mode  Cnt   Score   Error  Units
- * GetBenchmarks.zio      500  thrpt   15  14.575 ± 0.316  ops/s
- *
- * After using chunk builder:
- *
- * Benchmark          (count)   Mode  Cnt   Score   Error  Units
- * GetBenchmarks.zio      500  thrpt   15  14.647 ± 0.065  ops/s
- */
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
