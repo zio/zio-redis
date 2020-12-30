@@ -1,12 +1,12 @@
 package zio.redis
 
+import zio.Has
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.random.Random
 import zio.test._
 import zio.test.environment.{ Live, TestClock, TestConsole, TestRandom, TestSystem }
-import zio.Has
 
 object ApiSpec
     extends ConnectionSpec

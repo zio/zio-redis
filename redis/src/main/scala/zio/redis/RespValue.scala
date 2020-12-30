@@ -2,8 +2,8 @@ package zio.redis
 
 import java.nio.charset.StandardCharsets
 
-import zio.stream._
 import zio._
+import zio.stream._
 
 sealed trait RespValue extends Any { self =>
   import RespValue._
