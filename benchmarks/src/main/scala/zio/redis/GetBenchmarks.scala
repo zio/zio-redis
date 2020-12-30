@@ -18,9 +18,9 @@ import zio.ZIO
  *
  * Benchmark          (count)   Mode  Cnt   Score   Error  Units
  * GetBenchmarks.zio      500  thrpt   15  14.155 ± 0.204  ops/s
- * 
+ *
  * After specializing number parsing:
- * 
+ *
  * Benchmark          (count)   Mode  Cnt   Score   Error  Units
  * GetBenchmarks.zio      500  thrpt   15  14.575 ± 0.316  ops/s
  */

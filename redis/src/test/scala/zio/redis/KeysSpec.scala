@@ -1,18 +1,22 @@
 package zio.redis
 
+import zio.clock.Clock
 import zio.duration._
 import zio.logging.Logging
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ Chunk, ZIO, ZLayer }
+import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
+import zio.{ Chunk, Has, ZIO, ZLayer }
 
 trait KeysSpec extends BaseSpec {
 
-  // scalafix: off
-  val keysSuite = {
-    // scalafix: on
+  val keysSuite: Spec[Has[Clock.Service] with Has[RedisExecutor.Service] with Has[TestClock.Service] with Has[
+    TestConsole.Service
+  ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
+    Annotations.Service
+  ], TestFailure[RedisError], TestSuccess] = {
     suite("keys")(
       testM("set followed by get") {
         for {
