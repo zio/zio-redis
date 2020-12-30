@@ -65,63 +65,7 @@ object RespValue {
     import internal.State
 
     // TODO: handle NumberFormatException
-    // TODO: remove utf8Decode transducer
-    // val lineSplitter: Transducer[Nothing, Byte, Byte] =
-    // ZTransducer {
-    //   ZRef.makeManaged[(Option[Byte], Boolean)]((None, false)).map { stateRef =>
-    //     {
-    //       case None =>
-    //         stateRef.getAndSet((None, false)).flatMap {
-    //           case (None, _)      => ZIO.succeedNow(Chunk.empty)
-    //           case (Some(str), _) => ZIO.succeedNow(Chunk(str))
-    //         }
 
-    //       case Some(strings) =>
-    //         stateRef.modify { case (leftover, wasSplitCRLF) =>
-    //           val buf    = scala.collection.mutable.ArrayBuffer[Byte]()
-    //           var inCRLF = wasSplitCRLF
-    //           var carry  = leftover getOrElse 0.toByte
-
-    //           strings.foreach { string =>
-    //             val concat = carry + string
-
-    //             if (concat.length() > 0) {
-    //               var i =
-    //                 // If we had a split CRLF, we start reading
-    //                 // from the last character of the leftover (which was the '\r')
-    //                 if (inCRLF && carry.length > 0) carry.length - 1
-    //                 // Otherwise we just skip over the entire previous leftover as
-    //                 // it doesn't contain a newline.
-    //                 else carry.length
-    //               var sliceStart = 0
-
-    //               while (i < concat.length()) {
-    //                 if (concat(i) == '\n') {
-    //                   buf += concat.substring(sliceStart, i)
-    //                   i += 1
-    //                   sliceStart = i
-    //                 } else if (concat(i) == '\r' && (i + 1) < concat.length && concat(i + 1) == '\n') {
-    //                   buf += concat.substring(sliceStart, i)
-    //                   i += 2
-    //                   sliceStart = i
-    //                 } else if (concat(i) == '\r' && i == concat.length - 1) {
-    //                   inCRLF = true
-    //                   i += 1
-    //                 } else {
-    //                   i += 1
-    //                 }
-    //               }
-
-    //               carry = concat.substring(sliceStart, concat.length)
-    //             }
-    //           }
-
-    //           (Chunk.fromArray(buf.toArray), (if (carry.length() > 0) Some(carry) else None, inCRLF))
-    //         }
-    //     }
-    //   }
-    // }
- 
     val processLine =
       Transducer
         .fold[String, State](State.Start)(_.inProgress)(_ feed _)
