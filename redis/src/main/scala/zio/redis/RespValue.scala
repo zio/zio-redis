@@ -121,7 +121,7 @@ object RespValue {
                   Done(Array(Chunk.empty))
             }
 
-          case CollectingArray(rem, vals, next) if rem > 0 =>
+          case CollectingArray(rem, vals, next) =>
             next(line) match {
               case Done(v) if rem > 1 => CollectingArray(rem - 1, vals :+ v, Start.feed)
               case Done(v)            => Done(Array(vals :+ v))
