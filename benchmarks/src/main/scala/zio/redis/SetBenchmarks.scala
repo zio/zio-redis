@@ -8,15 +8,15 @@ import zio.ZIO
 
 /*
  * Baseline:
- * 
+ *
  * Benchmark                 (count)   Mode  Cnt   Score   Error  Units
  * SetBenchmarks.laserdisc       500  thrpt   15   6.704 ± 0.604  ops/s
  * SetBenchmarks.rediculous      500  thrpt   15   6.719 ± 0.612  ops/s
  * SetBenchmarks.redis4cats      500  thrpt   15  15.129 ± 0.235  ops/s
  * SetBenchmarks.zio             500  thrpt   15  12.189 ± 0.123  ops/s
- * 
+ *
  * After 1st iteration:
- * 
+ *
  * Benchmark          (count)   Mode  Cnt   Score   Error  Units
  * SetBenchmarks.zio      500  thrpt   15  14.077 ± 0.757  ops/s
  */
