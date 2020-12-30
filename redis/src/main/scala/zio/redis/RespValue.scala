@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import zio._
 import zio.stream._
 
-sealed trait RespValue extends Any { self =>
+sealed trait RespValue extends Product with Serializable { self =>
   import RespValue._
   import RespValue.internal.{ Headers, NullString, CrLf }
 
@@ -29,17 +29,17 @@ sealed trait RespValue extends Any { self =>
 }
 
 object RespValue {
-  final case class SimpleString(value: String) extends AnyVal with RespValue
+  final case class SimpleString(value: String) extends RespValue
 
-  final case class Error(value: String) extends AnyVal with RespValue
+  final case class Error(value: String) extends RespValue
 
-  final case class Integer(value: Long) extends AnyVal with RespValue
+  final case class Integer(value: Long) extends RespValue
 
-  final case class BulkString(value: Chunk[Byte]) extends AnyVal with RespValue {
+  final case class BulkString(value: Chunk[Byte]) extends RespValue {
     def asString: String = decodeString(value)
   }
 
-  final case class Array(values: Chunk[RespValue]) extends AnyVal with RespValue
+  final case class Array(values: Chunk[RespValue]) extends RespValue
 
   case object NullValue extends RespValue
 
