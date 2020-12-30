@@ -60,7 +60,16 @@ object RedisExecutor {
 
     private def send: IO[RedisError, Unit] =
       reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
-        val bytes = Chunk.fromIterable(reqs).flatMap(req => RespValue.Array(req.command).serialize)
+        val buffer = ChunkBuilder.make[Byte]()
+        val it     = reqs.iterator
+
+        while (it.hasNext) {
+          val req = it.next()
+          buffer ++= RespValue.Array(req.command).serialize
+        }
+
+        val bytes = buffer.result()
+
         byteStream
           .write(bytes)
           .mapError(RedisError.IOError)

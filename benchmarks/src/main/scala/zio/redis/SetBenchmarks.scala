@@ -24,6 +24,11 @@ import zio.ZIO
  *
  * Benchmark          (count)   Mode  Cnt   Score   Error  Units
  * SetBenchmarks.zio      500  thrpt   15  14.329 ± 0.205  ops/s
+ *
+ * After using chunk builder:
+ *
+ * Benchmark          (count)   Mode  Cnt   Score   Error  Units
+ * SetBenchmarks.zio      500  thrpt   15  14.314 ± 0.171  ops/s
  */
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
