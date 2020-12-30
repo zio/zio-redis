@@ -112,7 +112,7 @@ object Output {
             case s @ RespValue.BulkString(_) => s.asString
             case other                       => s"$other is not a bulk string"
           }
-          (cursor.asString.toLong, strings)
+          (cursor.asLong, strings)
         case other =>
           throw ProtocolError(s"$other isn't scan output")
       }
@@ -334,7 +334,7 @@ object Output {
 
           pairs.foreach {
             case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
-              consumers += (consumer.asString -> total.asString.toLong)
+              consumers += (consumer.asString -> total.asLong)
             case _ =>
               throw ProtocolError(s"Consumers doesn't have 2 elements")
           }

@@ -37,6 +37,28 @@ object RespValue {
 
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
     def asString: String = decodeString(value)
+
+    def asLong: Long = {
+      val text = decodeString(value)
+
+      var pos = 0
+      var res = 0L
+      var neg = false
+
+      if (text.charAt(pos) == '-') {
+        neg = true
+        pos += 1
+      }
+
+      val len = value.length
+
+      while (pos < len) {
+        res = res * 10 + text.charAt(pos) - '0'
+        pos += 1
+      }
+
+      if (neg) -res else res
+    }
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue
