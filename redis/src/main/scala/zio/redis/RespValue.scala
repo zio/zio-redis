@@ -69,7 +69,7 @@ object RespValue {
 
     val processLine =
       Transducer
-        .fold[String, State](State.Start)(_.inProgress)(_ transform _)
+        .fold[String, State](State.Start)(_.inProgress)(_ feed _)
         .mapM {
           case State.Done(value) => IO.succeedNow(value)
           case State.Failed      => IO.fail(RedisError.ProtocolError("Invalid data received."))
@@ -88,9 +88,9 @@ object RespValue {
       final val Array: Byte        = '*'
     }
 
-    final val CrLf = Chunk(Cr, Lf)
+    final val CrLf: Chunk[Byte] = Chunk(Cr, Lf)
 
-    final val NullString = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
+    final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
     sealed trait State { self =>
       import State._
@@ -101,7 +101,7 @@ object RespValue {
           case _                => true
         }
 
-      final def transform(line: String): State =
+      final def feed(line: String): State =
         self match {
           case Start if line == "$-1" => State.Done(NullValue)
 
@@ -111,19 +111,19 @@ object RespValue {
               case Headers.Error        => Done(Error(line.tail))
               case Headers.Integer      => Done(Integer(line.tail.toLong))
               case Headers.BulkString   => ExpectingBulk
-              case Headers.Array        => CollectingArray(line.tail.toInt, Chunk.empty, Start.transform)
+              case Headers.Array        => CollectingArray(line.tail.toInt, Chunk.empty, Start.feed)
             }
 
           case CollectingArray(rem, vals, next) if rem > 1 =>
             next(line) match {
-              case Done(v) => CollectingArray(rem - 1, vals :+ v, Start.transform)
-              case state   => CollectingArray(rem, vals, state.transform)
+              case Done(v) => CollectingArray(rem - 1, vals :+ v, Start.feed)
+              case state   => CollectingArray(rem, vals, state.feed)
             }
 
           case CollectingArray(rem, vals, next) if rem == 1 =>
             next(line) match {
               case Done(v) => Done(Array(vals :+ v))
-              case state   => CollectingArray(rem, vals, state.transform)
+              case state   => CollectingArray(rem, vals, state.feed)
             }
 
           case ExpectingBulk => Done(bulkString(line))
