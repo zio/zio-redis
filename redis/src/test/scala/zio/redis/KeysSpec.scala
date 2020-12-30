@@ -2,12 +2,13 @@ package zio.redis
 
 import zio.clock.Clock
 import zio.duration._
+import zio.logging.Logging
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{ Chunk, Has, ZIO }
+import zio.{ Chunk, Has, ZIO, ZLayer }
 
 trait KeysSpec extends BaseSpec {
 
@@ -131,7 +132,7 @@ trait KeysSpec extends BaseSpec {
                           keys = None
                         )
             originGet <- get(key)
-            destGet   <- get(key).provideLayer(ApiSpec.secondRedisService)
+            destGet   <- get(key).provideLayer(KeysSpec.SecondExecutor)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isSome(equalTo(value))) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -153,7 +154,7 @@ trait KeysSpec extends BaseSpec {
                 keys = None
               )
             originGet <- get(key)
-            destGet   <- get(key).provideLayer(ApiSpec.secondRedisService)
+            destGet   <- get(key).provideLayer(KeysSpec.SecondExecutor)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isNone) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -163,7 +164,7 @@ trait KeysSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            _     <- set(key, value).provideLayer(ApiSpec.secondRedisService) // also add to second Redis
+            _     <- set(key, value).provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
             response <-
               migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
@@ -339,4 +340,8 @@ trait KeysSpec extends BaseSpec {
 
 object KeysSpec {
   final val MigrateTimeout: Duration = 5.seconds
+
+  final val SecondExecutor: ZLayer[Any with Any, RedisError.IOError, RedisExecutor] =
+    (Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live).fresh
+
 }
