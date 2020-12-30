@@ -64,8 +64,6 @@ object RespValue {
   private[redis] final val Deserializer: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
     import internal.State
 
-    // TODO: handle NumberFormatException
-
     val processLine =
       Transducer
         .fold[String, State](State.Start)(_.inProgress)(_ feed _)
