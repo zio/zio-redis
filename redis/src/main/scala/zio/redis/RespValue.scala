@@ -85,11 +85,9 @@ object RespValue {
       final val Array: Byte        = '*'
     }
 
-    final val CrLf: Chunk[Byte] = Chunk(Cr, Lf)
-
-    final val Null: String      = "$-1"
-    final val NullArray: String = "*-1"
-
+    final val CrLf: Chunk[Byte]       = Chunk(Cr, Lf)
+    final val Null: String            = "$-1"
+    final val NullArray: String       = "*-1"
     final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
     sealed trait State { self =>
