@@ -5,11 +5,12 @@ import zio.redis.RedisError._
 import zio.test.Assertion._
 import zio.test.TestAspect.ignore
 import zio.test._
-import zio.{ Chunk, Has }
+import zio.Chunk
 
 trait StreamsSpec extends BaseSpec {
-  val streamsSuite
-    : Spec[Has[RedisExecutor.Service] with Has[Annotations.Service], TestFailure[RedisError], TestSuccess] =
+  // scalafix: off
+  val streamsSuite =
+    // scalafix: on
     suite("streams")(
       suite("xAck")(
         testM("one message") {
