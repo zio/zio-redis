@@ -117,8 +117,10 @@ object RespValue {
 
                 if (size > 0)
                   CollectingArray(size, Chunk.empty, Start.feed)
-                else
+                else if (size == 0)
                   Done(Array(Chunk.empty))
+                else
+                  Done(NullValue)
             }
 
           case CollectingArray(rem, vals, next) =>
