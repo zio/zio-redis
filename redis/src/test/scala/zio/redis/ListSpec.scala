@@ -1,5 +1,6 @@
 package zio.redis
 
+import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
 import zio.clock.{ Clock, currentTime }
@@ -10,7 +11,6 @@ import zio.test._
 import zio.{ Chunk, Has }
 
 trait ListSpec extends BaseSpec {
-
   val listSuite: Spec[Has[RedisExecutor.Service] with Has[Clock.Service], TestFailure[Serializable], TestSuccess] =
     suite("lists")(
       suite("pop")(
