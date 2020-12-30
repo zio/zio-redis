@@ -105,7 +105,7 @@ object RespValue {
 
       final def feed(line: String): State =
         self match {
-          case Start if line eq Null => State.Done(NullValue)
+          case Start if line == Null => State.Done(NullValue)
 
           case Start if line.nonEmpty =>
             line.head match {
