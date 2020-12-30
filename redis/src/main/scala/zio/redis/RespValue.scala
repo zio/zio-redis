@@ -114,16 +114,11 @@ object RespValue {
               case Headers.Array        => CollectingArray(line.tail.toInt, Chunk.empty, Start.feed)
             }
 
-          case CollectingArray(rem, vals, next) if rem > 1 =>
+          case CollectingArray(rem, vals, next) if rem > 0 =>
             next(line) match {
-              case Done(v) => CollectingArray(rem - 1, vals :+ v, Start.feed)
-              case state   => CollectingArray(rem, vals, state.feed)
-            }
-
-          case CollectingArray(rem, vals, next) if rem == 1 =>
-            next(line) match {
-              case Done(v) => Done(Array(vals :+ v))
-              case state   => CollectingArray(rem, vals, state.feed)
+              case Done(v) if rem > 1 => CollectingArray(rem - 1, vals :+ v, Start.feed)
+              case Done(v)            => Done(Array(vals :+ v))
+              case state              => CollectingArray(rem, vals, state.feed)
             }
 
           case ExpectingBulk => Done(bulkString(line))
