@@ -11,7 +11,7 @@ sealed trait RespValue extends Product with Serializable { self =>
 
   final def serialize: Chunk[Byte] =
     self match {
-      case NullValue       => NullString
+      case Null       => NullString
       case SimpleString(s) => Headers.SimpleString +: encode(s)
       case Error(s)        => Headers.Error +: encode(s)
       case Integer(i)      => Headers.Integer +: encode(i.toString)
@@ -43,7 +43,7 @@ object RespValue {
 
   final case class Array(values: Chunk[RespValue]) extends RespValue
 
-  case object NullValue extends RespValue
+  case object Null extends RespValue
 
   object ArrayValues {
     def unapplySeq(v: RespValue): Option[Seq[RespValue]] =
@@ -88,8 +88,8 @@ object RespValue {
     }
 
     final val CrLf: Chunk[Byte]       = Chunk(Cr, Lf)
-    final val Null: String            = "$-1"
     final val NullArray: String       = "*-1"
+    final val NullValue: String       = "$-1"
     final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
     sealed trait State { self =>
@@ -103,7 +103,7 @@ object RespValue {
 
       final def feed(line: String): State =
         self match {
-          case Start if line == Null || line == NullArray => Done(NullValue)
+          case Start if line == NullValue || line == NullArray => Done(Null)
 
           case Start if line.nonEmpty =>
             line.head match {
