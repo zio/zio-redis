@@ -11,7 +11,7 @@ sealed trait RespValue extends Product with Serializable { self =>
 
   final def serialize: Chunk[Byte] =
     self match {
-      case Null       => NullString
+      case Null            => NullString
       case SimpleString(s) => Headers.SimpleString +: encode(s)
       case Error(s)        => Headers.Error +: encode(s)
       case Integer(i)      => Headers.Integer +: encode(i.toString)

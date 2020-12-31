@@ -100,7 +100,7 @@ object Output {
     protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {
         case RespValue.Null => None
-        case other               => Some(output.tryDecode(other))
+        case other          => Some(output.tryDecode(other))
       }
   }
 
@@ -185,7 +185,7 @@ object Output {
         case RespValue.Array(elements) =>
           elements.map {
             case s @ RespValue.BulkString(_) => Some(s.asString)
-            case RespValue.Null         => None
+            case RespValue.Null              => None
             case other                       => throw ProtocolError(s"$other isn't null or a bulk string")
           }
         case other => throw ProtocolError(s"$other isn't an array")
@@ -198,7 +198,7 @@ object Output {
         case RespValue.Array(elements) =>
           elements.map {
             case RespValue.Integer(element) => Some(element)
-            case RespValue.Null        => None
+            case RespValue.Null             => None
             case other                      => throw ProtocolError(s"$other isn't an integer")
           }
         case other => throw ProtocolError(s"$other isn't an array")
@@ -326,7 +326,7 @@ object Output {
 
           val pairs = ps match {
             case RespValue.Array(value) => value
-            case RespValue.Null    => Chunk.empty
+            case RespValue.Null         => Chunk.empty
             case other                  => throw ProtocolError(s"$other isn't an array")
           }
 
@@ -397,7 +397,7 @@ object Output {
   case object SetOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
-        case RespValue.Null       => false
+        case RespValue.Null            => false
         case RespValue.SimpleString(_) => true
         case other                     => throw ProtocolError(s"$other isn't a valid set response")
       }
