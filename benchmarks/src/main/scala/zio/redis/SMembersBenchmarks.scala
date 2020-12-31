@@ -6,15 +6,6 @@ import org.openjdk.jmh.annotations._
 
 import zio.ZIO
 
-/*
- * Baseline:
- * 
- * Benchmark                      (size)   Mode  Cnt  Score   Error  Units
- * SMembersBenchmarks.laserdisc      500  thrpt   15  1.534 ± 0.060  ops/s
- * SMembersBenchmarks.rediculous     500  thrpt   15  3.141 ± 0.013  ops/s
- * SMembersBenchmarks.redis4cats     500  thrpt   15  4.766 ± 0.064  ops/s
- * SMembersBenchmarks.zio            500  thrpt   15  3.401 ± 0.616  ops/s
- */
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
