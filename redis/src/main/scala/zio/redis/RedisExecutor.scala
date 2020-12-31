@@ -82,7 +82,7 @@ object RedisExecutor {
     private def receive: IO[RedisError, Unit] =
       byteStream.read
         .mapError(RedisError.IOError)
-        .transduce(RespValue.Deserializer)
+        .transduce(RespValue.Decoder)
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 
   }

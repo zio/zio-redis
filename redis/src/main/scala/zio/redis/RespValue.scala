@@ -53,7 +53,7 @@ object RespValue {
       }
   }
 
-  private[redis] final val Deserializer: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
+  private[redis] final val Decoder: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
     import internal.State
 
     val processLine =
