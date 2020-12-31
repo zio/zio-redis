@@ -396,7 +396,7 @@ object Output {
   }
 
   private def decodeDouble(bytes: Chunk[Byte]): Double = {
-    val text = RespValue.decodeString(bytes)
+    val text = RespValue.decode(bytes)
     try text.toDouble
     catch {
       case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")

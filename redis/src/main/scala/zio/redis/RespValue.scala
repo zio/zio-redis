@@ -36,7 +36,7 @@ object RespValue {
   final case class Integer(value: Long) extends RespValue
 
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
-    private[redis] def asString: String = decodeString(value)
+    private[redis] def asString: String = decode(value)
 
     private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
   }
@@ -76,7 +76,7 @@ object RespValue {
 
   private[redis] def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
 
-  private[redis] def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
+  private[redis] def decode(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   private object internal {
     object Headers {
