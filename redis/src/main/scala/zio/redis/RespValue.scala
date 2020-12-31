@@ -109,10 +109,10 @@ object RespValue {
             line.head match {
               case Headers.SimpleString => Done(SimpleString(line.tail))
               case Headers.Error        => Done(Error(line.tail))
-              case Headers.Integer      => Done(Integer(unsafeReadLong(line, 0)))
+              case Headers.Integer      => Done(Integer(unsafeReadLong(line, 1)))
               case Headers.BulkString   => ExpectingBulk
               case Headers.Array =>
-                val size = unsafeReadLong(line, 0).toInt
+                val size = unsafeReadLong(line, 1).toInt
 
                 if (size > 0)
                   CollectingArray(size, Chunk.empty, Start.feed)
