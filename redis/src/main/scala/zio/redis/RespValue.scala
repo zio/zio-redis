@@ -11,7 +11,7 @@ sealed trait RespValue extends Product with Serializable { self =>
 
   final def serialize: Chunk[Byte] =
     self match {
-      case NullValue       => NullString
+      case Null            => NullString
       case SimpleString(s) => Headers.SimpleString +: encode(s)
       case Error(s)        => Headers.Error +: encode(s)
       case Integer(i)      => Headers.Integer +: encode(i.toString)
@@ -36,33 +36,14 @@ object RespValue {
   final case class Integer(value: Long) extends RespValue
 
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
-    def asString: String = decodeString(value)
+    private[redis] def asString: String = decodeString(value)
 
-    def asLong: Long = {
-      val text = asString
-      val len  = value.length
-
-      var pos = 0
-      var res = 0L
-      var neg = false
-
-      if (text.charAt(pos) == '-') {
-        neg = true
-        pos += 1
-      }
-
-      while (pos < len) {
-        res = res * 10 + text.charAt(pos) - '0'
-        pos += 1
-      }
-
-      if (neg) -res else res
-    }
+    private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue
 
-  case object NullValue extends RespValue
+  case object Null extends RespValue
 
   object ArrayValues {
     def unapplySeq(v: RespValue): Option[Seq[RespValue]] =
@@ -107,8 +88,8 @@ object RespValue {
     }
 
     final val CrLf: Chunk[Byte]       = Chunk(Cr, Lf)
-    final val Null: String            = "$-1"
     final val NullArray: String       = "*-1"
+    final val NullValue: String       = "$-1"
     final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
 
     sealed trait State { self =>
@@ -122,16 +103,16 @@ object RespValue {
 
       final def feed(line: String): State =
         self match {
-          case Start if line == Null || line == NullArray => Done(NullValue)
+          case Start if line == NullValue || line == NullArray => Done(Null)
 
           case Start if line.nonEmpty =>
             line.head match {
               case Headers.SimpleString => Done(SimpleString(line.tail))
               case Headers.Error        => Done(Error(line.tail))
-              case Headers.Integer      => Done(Integer(unsafeReadLong(line)))
+              case Headers.Integer      => Done(Integer(unsafeReadLong(line, 1)))
               case Headers.BulkString   => ExpectingBulk
               case Headers.Array =>
-                val size = unsafeReadLong(line).toInt
+                val size = unsafeReadLong(line, 1).toInt
 
                 if (size > 0)
                   CollectingArray(size, Chunk.empty, Start.feed)
@@ -159,8 +140,8 @@ object RespValue {
       final case class Done(value: RespValue)                                                   extends State
     }
 
-    def unsafeReadLong(text: String): Long = {
-      var pos = 1
+    def unsafeReadLong(text: String, startFrom: Int): Long = {
+      var pos = startFrom
       var res = 0L
       var neg = false
 

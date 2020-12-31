@@ -99,8 +99,8 @@ object Output {
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
     protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {
-        case RespValue.NullValue => None
-        case other               => Some(output.tryDecode(other))
+        case RespValue.Null => None
+        case other          => Some(output.tryDecode(other))
       }
   }
 
@@ -121,7 +121,7 @@ object Output {
   case object KeyElemOutput extends Output[Option[(String, String)]] {
     protected def tryDecode(respValue: RespValue): Option[(String, String)] =
       respValue match {
-        case RespValue.NullValue =>
+        case RespValue.Null =>
           None
         case RespValue.ArrayValues(a @ RespValue.BulkString(_), b @ RespValue.BulkString(_)) =>
           Some((a.asString, b.asString))
@@ -165,7 +165,7 @@ object Output {
   case object MultiStringChunkOutput extends Output[Chunk[String]] {
     protected def tryDecode(respValue: RespValue): Chunk[String] =
       respValue match {
-        case RespValue.NullValue =>
+        case RespValue.Null =>
           Chunk.empty
         case s @ RespValue.BulkString(_) =>
           Chunk.single(s.asString)
@@ -181,11 +181,11 @@ object Output {
   case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[String]] =
       respValue match {
-        case RespValue.NullValue => Chunk.empty
+        case RespValue.Null => Chunk.empty
         case RespValue.Array(elements) =>
           elements.map {
             case s @ RespValue.BulkString(_) => Some(s.asString)
-            case RespValue.NullValue         => None
+            case RespValue.Null              => None
             case other                       => throw ProtocolError(s"$other isn't null or a bulk string")
           }
         case other => throw ProtocolError(s"$other isn't an array")
@@ -198,7 +198,7 @@ object Output {
         case RespValue.Array(elements) =>
           elements.map {
             case RespValue.Integer(element) => Some(element)
-            case RespValue.NullValue        => None
+            case RespValue.Null             => None
             case other                      => throw ProtocolError(s"$other isn't an integer")
           }
         case other => throw ProtocolError(s"$other isn't an array")
@@ -233,11 +233,11 @@ object Output {
           elements.map {
             case RespValue.ArrayValues(RespValue.BulkString(long), RespValue.BulkString(lat)) =>
               Some(LongLat(decodeDouble(long), decodeDouble(lat)))
-            case RespValue.NullValue => None
+            case RespValue.Null => None
             case other =>
               throw ProtocolError(s"$other was not a longitude,latitude pair")
           }
-        case RespValue.NullValue =>
+        case RespValue.Null =>
           Chunk.empty
         case other =>
           throw ProtocolError(s"$other isn't geo output")
@@ -311,7 +311,7 @@ object Output {
 
           output.toMap
 
-        case RespValue.NullValue => Map.empty[String, Map[String, String]]
+        case RespValue.Null => Map.empty[String, Map[String, String]]
 
         case other => throw ProtocolError(s"$other isn't an array")
       }
@@ -326,7 +326,7 @@ object Output {
 
           val pairs = ps match {
             case RespValue.Array(value) => value
-            case RespValue.NullValue    => Chunk.empty
+            case RespValue.Null         => Chunk.empty
             case other                  => throw ProtocolError(s"$other isn't an array")
           }
 
@@ -386,7 +386,7 @@ object Output {
 
           output.toMap
 
-        case RespValue.NullValue =>
+        case RespValue.Null =>
           Map.empty[String, Map[String, Map[String, String]]]
 
         case other =>
@@ -397,7 +397,7 @@ object Output {
   case object SetOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
-        case RespValue.NullValue       => false
+        case RespValue.Null            => false
         case RespValue.SimpleString(_) => true
         case other                     => throw ProtocolError(s"$other isn't a valid set response")
       }

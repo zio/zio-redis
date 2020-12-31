@@ -117,7 +117,7 @@ object OutputSpec extends BaseSpec {
       suite("optional")(
         testM("extract None") {
           for {
-            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(RespValue.NullValue))
+            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(RespValue.Null))
           } yield assert(res)(isNone)
         },
         testM("extract some") {
@@ -154,7 +154,7 @@ object OutputSpec extends BaseSpec {
       suite("keyElem")(
         testM("extract none") {
           for {
-            res <- Task(KeyElemOutput.unsafeDecode(RespValue.NullValue))
+            res <- Task(KeyElemOutput.unsafeDecode(RespValue.Null))
           } yield assert(res)(isNone)
         },
         testM("extract key and element") {
@@ -173,7 +173,7 @@ object OutputSpec extends BaseSpec {
       suite("multiStringChunk")(
         testM("extract one empty value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.NullValue))
+            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.Null))
           } yield assert(res)(isEmpty)
         },
         testM("extract one multi-string value") {
@@ -191,7 +191,7 @@ object OutputSpec extends BaseSpec {
       suite("chunkOptionalMultiString")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.NullValue))
+            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.Null))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with one non-empty element") {
@@ -206,7 +206,7 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
         testM("extract array with empty and non-empty elements") {
-          val input = RespValue.array(RespValue.bulkString("1"), RespValue.NullValue, RespValue.bulkString("3"))
+          val input = RespValue.array(RespValue.bulkString("1"), RespValue.Null, RespValue.bulkString("3"))
           for {
             res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
@@ -221,7 +221,7 @@ object OutputSpec extends BaseSpec {
         testM("extract array with empty and non-empty elements") {
           val input = RespValue.array(
             RespValue.Integer(1L),
-            RespValue.NullValue,
+            RespValue.Null,
             RespValue.Integer(2L),
             RespValue.Integer(3L)
           )
@@ -260,7 +260,7 @@ object OutputSpec extends BaseSpec {
             RespValue.array(
               RespValue.bulkString("id"),
               RespValue.array(RespValue.bulkString("field"), RespValue.bulkString("value")),
-              RespValue.NullValue
+              RespValue.Null
             )
           )
 
@@ -294,7 +294,7 @@ object OutputSpec extends BaseSpec {
         testM("extract when the smallest ID is null") {
           val input = RespValue.array(
             RespValue.Integer(1),
-            RespValue.NullValue,
+            RespValue.Null,
             RespValue.bulkString("b"),
             RespValue.array(
               RespValue.array(RespValue.bulkString("consumer1"), RespValue.bulkString("1")),
@@ -308,7 +308,7 @@ object OutputSpec extends BaseSpec {
           val input = RespValue.array(
             RespValue.Integer(1),
             RespValue.bulkString("a"),
-            RespValue.NullValue,
+            RespValue.Null,
             RespValue.array(
               RespValue.array(RespValue.bulkString("consumer1"), RespValue.bulkString("1")),
               RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
@@ -320,9 +320,9 @@ object OutputSpec extends BaseSpec {
         testM("extract when total number of pending messages is zero") {
           val input = RespValue.array(
             RespValue.Integer(0),
-            RespValue.NullValue,
-            RespValue.NullValue,
-            RespValue.NullValue
+            RespValue.Null,
+            RespValue.Null,
+            RespValue.Null
           )
           Task(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(0L, None, None, Map.empty))))
@@ -375,7 +375,7 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("consumer"),
               RespValue.Integer(100),
               RespValue.Integer(10),
-              RespValue.NullValue
+              RespValue.Null
             ),
             RespValue.array(
               RespValue.bulkString("id1"),
