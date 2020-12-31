@@ -7,10 +7,10 @@ import org.openjdk.jmh.annotations._
 import zio.ZIO
 
 @State(Scope.Thread)
-@BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
+@BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Measurement(iterations = 10)
-@Warmup(iterations = 5)
+@Measurement(iterations = 15)
+@Warmup(iterations = 15)
 @Fork(2)
 class SetBenchmarks extends BenchmarkRuntime {
 

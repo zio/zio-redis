@@ -1,10 +1,7 @@
 package zio.redis
 
-import java.io.IOException
-
 import zio._
 import zio.logging._
-import zio.stream.Stream
 
 object RedisExecutor {
   trait Service {
@@ -54,7 +51,7 @@ object RedisExecutor {
      * Only exits by interruption or defect.
      */
     val run: IO[RedisError, Unit] =
-      (send.forever race runReceive(byteStream.read))
+      (send.forever race receive)
         .tapError(e => logger.warn(s"Reconnecting due to error: $e") *> drainWith(e))
         .retryWhile(True)
         .tapError(e => logger.error(s"Executor exiting: $e"))
@@ -63,7 +60,16 @@ object RedisExecutor {
 
     private def send: IO[RedisError, Unit] =
       reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
-        val bytes = Chunk.fromIterable(reqs).flatMap(req => RespValue.Array(req.command).serialize)
+        val buffer = ChunkBuilder.make[Byte]()
+        val it     = reqs.iterator
+
+        while (it.hasNext) {
+          val req = it.next()
+          buffer ++= RespValue.Array(req.command).serialize
+        }
+
+        val bytes = buffer.result()
+
         byteStream
           .write(bytes)
           .mapError(RedisError.IOError)
@@ -73,10 +79,10 @@ object RedisExecutor {
           )
       }
 
-    private def runReceive(inStream: Stream[IOException, Byte]): IO[RedisError, Unit] =
-      inStream
+    private def receive: IO[RedisError, Unit] =
+      byteStream.read
         .mapError(RedisError.IOError)
-        .transduce(RespValue.Deserializer.toTransducer)
+        .transduce(RespValue.Deserializer)
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 
   }
