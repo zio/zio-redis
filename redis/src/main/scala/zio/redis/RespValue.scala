@@ -38,26 +38,7 @@ object RespValue {
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
     private[redis] def asString: String = decodeString(value)
 
-    private[redis] def asLong: Long = {
-      val text = asString
-      val len  = value.length
-
-      var pos = 0
-      var res = 0L
-      var neg = false
-
-      if (text.charAt(pos) == '-') {
-        neg = true
-        pos += 1
-      }
-
-      while (pos < len) {
-        res = res * 10 + text.charAt(pos) - '0'
-        pos += 1
-      }
-
-      if (neg) -res else res
-    }
+    private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue
@@ -128,10 +109,10 @@ object RespValue {
             line.head match {
               case Headers.SimpleString => Done(SimpleString(line.tail))
               case Headers.Error        => Done(Error(line.tail))
-              case Headers.Integer      => Done(Integer(unsafeReadLong(line)))
+              case Headers.Integer      => Done(Integer(unsafeReadLong(line, 0)))
               case Headers.BulkString   => ExpectingBulk
               case Headers.Array =>
-                val size = unsafeReadLong(line).toInt
+                val size = unsafeReadLong(line, 0).toInt
 
                 if (size > 0)
                   CollectingArray(size, Chunk.empty, Start.feed)
@@ -159,8 +140,8 @@ object RespValue {
       final case class Done(value: RespValue)                                                   extends State
     }
 
-    def unsafeReadLong(text: String): Long = {
-      var pos = 1
+    def unsafeReadLong(text: String, startFrom: Int): Long = {
+      var pos = startFrom
       var res = 0L
       var neg = false
 
