@@ -53,10 +53,6 @@ object RespValue {
       }
   }
 
-  private[redis] final val Cr: Byte = '\r'
-
-  private[redis] final val Lf: Byte = '\n'
-
   private[redis] final val Deserializer: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
     import internal.State
 
@@ -87,7 +83,7 @@ object RespValue {
       final val Array: Byte        = '*'
     }
 
-    final val CrLf: Chunk[Byte]       = Chunk(Cr, Lf)
+    final val CrLf: Chunk[Byte]       = Chunk('\r', '\n')
     final val NullArray: String       = "*-1"
     final val NullValue: String       = "$-1"
     final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
