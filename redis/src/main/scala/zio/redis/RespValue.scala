@@ -53,12 +53,6 @@ object RespValue {
       }
   }
 
-  def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
-
-  def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
-
-  def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
-
   private[redis] final val Cr: Byte = '\r'
 
   private[redis] final val Lf: Byte = '\n'
@@ -77,6 +71,12 @@ object RespValue {
 
     Transducer.utf8Decode >>> Transducer.splitLines >>> processLine
   }
+
+  private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
+
+  private[redis] def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
+
+  private[redis] def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   private object internal {
     object Headers {
