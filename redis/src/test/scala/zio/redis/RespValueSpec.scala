@@ -13,7 +13,7 @@ object RespValueSpec extends BaseSpec {
       suite("serialization")(
         test("array") {
           val expected = Chunk.fromArray("*3\r\n$3\r\nabc\r\n:123\r\n$-1\r\n".getBytes(StandardCharsets.UTF_8))
-          val v        = RespValue.array(RespValue.bulkString("abc"), RespValue.Integer(123), RespValue.NullValue)
+          val v        = RespValue.array(RespValue.bulkString("abc"), RespValue.Integer(123), RespValue.Null)
           assert(v.serialize)(equalTo(expected))
         }
       ),
@@ -24,12 +24,12 @@ object RespValueSpec extends BaseSpec {
           RespValue.array(
             RespValue.bulkString("test1"),
             RespValue.Integer(42L),
-            RespValue.NullValue,
+            RespValue.Null,
             RespValue.array(RespValue.SimpleString("a"), RespValue.Integer(0L)),
             RespValue.bulkString("in array"),
             RespValue.SimpleString("test2")
           ),
-          RespValue.NullValue
+          RespValue.Null
         )
 
         Stream

@@ -155,12 +155,12 @@ private[redis] final class TestExecutor private (
               res <- maybeCount match {
                        case None =>
                          selectOne[String](asVector, randomPick).map(maybeValue =>
-                           maybeValue.map(RespValue.bulkString).getOrElse(RespValue.NullValue)
+                           maybeValue.map(RespValue.bulkString).getOrElse(RespValue.Null)
                          )
                        case Some(n) if n > 0 => selectN(asVector, n, randomPick).map(Replies.array)
                        case Some(n) if n < 0 =>
                          selectNWithReplacement(asVector, -1 * n, randomPick).map(Replies.array)
-                       case Some(0) => STM.succeedNow(RespValue.NullValue)
+                       case Some(0) => STM.succeedNow(RespValue.Null)
                      }
             } yield res
           },
