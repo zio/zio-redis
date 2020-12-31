@@ -74,17 +74,20 @@ private[redis] object ByteStream {
 
     val read: Stream[IOException, Byte] =
       Stream.repeatEffectChunkOption {
-        (for {
-          _ <- IO.effectTotal(readBuffer.clear())
-          _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
-          chunk <- IO.effectTotal {
-                     readBuffer.flip()
-                     val count = readBuffer.remaining()
-                     val array = Array.ofDim[Byte](count)
-                     readBuffer.get(array)
-                     Chunk.fromArray(array)
-                   }
-        } yield chunk).mapError {
+        val receive =
+          for {
+            _ <- IO.effectTotal(readBuffer.clear())
+            _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+            chunk <- IO.effectTotal {
+                       readBuffer.flip()
+                       val count = readBuffer.remaining()
+                       val array = Array.ofDim[Byte](count)
+                       readBuffer.get(array)
+                       Chunk.fromArray(array)
+                     }
+          } yield chunk
+
+        receive.mapError {
           case _: EOFException => None
           case e: IOException  => Some(e)
         }
@@ -92,15 +95,14 @@ private[redis] object ByteStream {
 
     def write(chunk: Chunk[Byte]): IO[IOException, Unit] =
       IO.when(chunk.nonEmpty) {
-        IO.effectTotal {
+        IO.effectSuspendTotal {
           writeBuffer.clear()
           val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
           writeBuffer.put(c.toArray)
           writeBuffer.flip()
-          remainder
-        }.flatMap { remainder =>
+
           closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
-            .repeatWhileM(_ => IO.effectTotal(writeBuffer.hasRemaining))
+            .repeatWhile(_ => writeBuffer.hasRemaining)
             .zipRight(write(remainder))
         }
       }
