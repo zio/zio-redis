@@ -36,9 +36,9 @@ object RespValue {
   final case class Integer(value: Long) extends RespValue
 
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
-    def asString: String = decodeString(value)
+    private[redis] def asString: String = decodeString(value)
 
-    def asLong: Long = {
+    private[redis] def asLong: Long = {
       val text = asString
       val len  = value.length
 
