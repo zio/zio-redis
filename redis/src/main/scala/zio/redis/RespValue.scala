@@ -36,7 +36,7 @@ object RespValue {
   final case class Integer(value: Long) extends RespValue
 
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
-    private[redis] def asString: String = decodeString(value)
+    private[redis] def asString: String = decode(value)
 
     private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
   }
@@ -53,17 +53,7 @@ object RespValue {
       }
   }
 
-  def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
-
-  def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
-
-  def decodeString(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
-
-  private[redis] final val Cr: Byte = '\r'
-
-  private[redis] final val Lf: Byte = '\n'
-
-  private[redis] final val Deserializer: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
+  private[redis] final val Decoder: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
     import internal.State
 
     val processLine =
@@ -78,6 +68,12 @@ object RespValue {
     Transducer.utf8Decode >>> Transducer.splitLines >>> processLine
   }
 
+  private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
+
+  private[redis] def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
+
+  private[redis] def decode(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
+
   private object internal {
     object Headers {
       final val SimpleString: Byte = '+'
@@ -87,7 +83,7 @@ object RespValue {
       final val Array: Byte        = '*'
     }
 
-    final val CrLf: Chunk[Byte]       = Chunk(Cr, Lf)
+    final val CrLf: Chunk[Byte]       = Chunk('\r', '\n')
     final val NullArray: String       = "*-1"
     final val NullValue: String       = "$-1"
     final val NullString: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
@@ -115,15 +111,15 @@ object RespValue {
                 val size = unsafeReadLong(line, 1).toInt
 
                 if (size > 0)
-                  CollectingArray(size, Chunk.empty, Start.feed)
+                  CollectingArray(size, ChunkBuilder.make(size), Start.feed)
                 else
                   Done(Array(Chunk.empty))
             }
 
           case CollectingArray(rem, vals, next) =>
             next(line) match {
-              case Done(v) if rem > 1 => CollectingArray(rem - 1, vals :+ v, Start.feed)
-              case Done(v)            => Done(Array(vals :+ v))
+              case Done(v) if rem > 1 => CollectingArray(rem - 1, vals += v, Start.feed)
+              case Done(v)            => Done(Array((vals += v).result()))
               case state              => CollectingArray(rem, vals, state.feed)
             }
 
@@ -133,11 +129,11 @@ object RespValue {
     }
 
     object State {
-      case object Start                                                                         extends State
-      case object ExpectingBulk                                                                 extends State
-      case object Failed                                                                        extends State
-      final case class CollectingArray(rem: Int, vals: Chunk[RespValue], next: String => State) extends State
-      final case class Done(value: RespValue)                                                   extends State
+      case object Start                                                                                extends State
+      case object ExpectingBulk                                                                        extends State
+      case object Failed                                                                               extends State
+      final case class CollectingArray(rem: Int, vals: ChunkBuilder[RespValue], next: String => State) extends State
+      final case class Done(value: RespValue)                                                          extends State
     }
 
     def unsafeReadLong(text: String, startFrom: Int): Long = {
