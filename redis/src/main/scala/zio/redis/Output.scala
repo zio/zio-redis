@@ -36,14 +36,6 @@ object Output {
 
   import RedisError._
 
-  private def decodeDouble(bytes: Chunk[Byte]): Double = {
-    val text = RespValue.decodeString(bytes)
-    try text.toDouble
-    catch {
-      case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
-    }
-  }
-
   case object BoolOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
@@ -401,5 +393,13 @@ object Output {
         case RespValue.SimpleString(_) => true
         case other                     => throw ProtocolError(s"$other isn't a valid set response")
       }
+  }
+
+  private def decodeDouble(bytes: Chunk[Byte]): Double = {
+    val text = RespValue.decode(bytes)
+    try text.toDouble
+    catch {
+      case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
+    }
   }
 }
