@@ -91,8 +91,8 @@ object Output {
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
     protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {
-        case RespValue.Null => None
-        case other          => Some(output.tryDecode(other))
+        case RespValue.NullBulkString | RespValue.NullArray => None
+        case other                                          => Some(output.tryDecode(other))
       }
   }
 
@@ -113,7 +113,7 @@ object Output {
   case object KeyElemOutput extends Output[Option[(String, String)]] {
     protected def tryDecode(respValue: RespValue): Option[(String, String)] =
       respValue match {
-        case RespValue.Null =>
+        case RespValue.NullArray =>
           None
         case RespValue.ArrayValues(a @ RespValue.BulkString(_), b @ RespValue.BulkString(_)) =>
           Some((a.asString, b.asString))
@@ -157,7 +157,7 @@ object Output {
   case object MultiStringChunkOutput extends Output[Chunk[String]] {
     protected def tryDecode(respValue: RespValue): Chunk[String] =
       respValue match {
-        case RespValue.Null =>
+        case RespValue.NullBulkString =>
           Chunk.empty
         case s @ RespValue.BulkString(_) =>
           Chunk.single(s.asString)
@@ -173,11 +173,11 @@ object Output {
   case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[String]] =
       respValue match {
-        case RespValue.Null => Chunk.empty
+        case RespValue.NullArray => Chunk.empty
         case RespValue.Array(elements) =>
           elements.map {
+            case RespValue.NullBulkString    => None
             case s @ RespValue.BulkString(_) => Some(s.asString)
-            case RespValue.Null              => None
             case other                       => throw ProtocolError(s"$other isn't null or a bulk string")
           }
         case other => throw ProtocolError(s"$other isn't an array")
@@ -189,8 +189,8 @@ object Output {
       respValue match {
         case RespValue.Array(elements) =>
           elements.map {
+            case RespValue.NullBulkString   => None
             case RespValue.Integer(element) => Some(element)
-            case RespValue.Null             => None
             case other                      => throw ProtocolError(s"$other isn't an integer")
           }
         case other => throw ProtocolError(s"$other isn't an array")
@@ -221,16 +221,16 @@ object Output {
   case object GeoOutput extends Output[Chunk[Option[LongLat]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[LongLat]] =
       respValue match {
+        case RespValue.NullArray =>
+          Chunk.empty
         case RespValue.Array(elements) =>
           elements.map {
+            case RespValue.NullArray => None
             case RespValue.ArrayValues(RespValue.BulkString(long), RespValue.BulkString(lat)) =>
               Some(LongLat(decodeDouble(long), decodeDouble(lat)))
-            case RespValue.Null => None
             case other =>
               throw ProtocolError(s"$other was not a longitude,latitude pair")
           }
-        case RespValue.Null =>
-          Chunk.empty
         case other =>
           throw ProtocolError(s"$other isn't geo output")
       }
@@ -292,6 +292,7 @@ object Output {
   case object StreamOutput extends Output[Map[String, Map[String, String]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, String]] =
       respValue match {
+        case RespValue.NullArray => Map.empty[String, Map[String, String]]
         case RespValue.Array(entities) =>
           val output = collection.mutable.Map.empty[String, Map[String, String]]
           entities.foreach {
@@ -302,9 +303,6 @@ object Output {
           }
 
           output.toMap
-
-        case RespValue.Null => Map.empty[String, Map[String, String]]
-
         case other => throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -317,8 +315,8 @@ object Output {
           val last  = OptionalOutput(MultiStringOutput).unsafeDecode(l)
 
           val pairs = ps match {
+            case RespValue.NullArray    => Chunk.empty
             case RespValue.Array(value) => value
-            case RespValue.Null         => Chunk.empty
             case other                  => throw ProtocolError(s"$other isn't an array")
           }
 
@@ -367,6 +365,8 @@ object Output {
   case object XReadOutput extends Output[Map[String, Map[String, Map[String, String]]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, Map[String, String]]] =
       respValue match {
+        case RespValue.NullArray =>
+          Map.empty[String, Map[String, Map[String, String]]]
         case RespValue.Array(streams) =>
           val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
           streams.foreach {
@@ -377,10 +377,6 @@ object Output {
           }
 
           output.toMap
-
-        case RespValue.Null =>
-          Map.empty[String, Map[String, Map[String, String]]]
-
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
@@ -389,7 +385,7 @@ object Output {
   case object SetOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
-        case RespValue.Null            => false
+        case RespValue.NullBulkString  => false
         case RespValue.SimpleString(_) => true
         case other                     => throw ProtocolError(s"$other isn't a valid set response")
       }

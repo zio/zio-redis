@@ -155,12 +155,12 @@ private[redis] final class TestExecutor private (
               res <- maybeCount match {
                        case None =>
                          selectOne[String](asVector, randomPick).map(maybeValue =>
-                           maybeValue.map(RespValue.bulkString).getOrElse(RespValue.Null)
+                           maybeValue.map(RespValue.bulkString).getOrElse(RespValue.NullBulkString)
                          )
                        case Some(n) if n > 0 => selectN(asVector, n, randomPick).map(Replies.array)
                        case Some(n) if n < 0 =>
                          selectNWithReplacement(asVector, -1 * n, randomPick).map(Replies.array)
-                       case Some(0) => STM.succeedNow(RespValue.Null)
+                       case Some(0) => STM.succeedNow(RespValue.NullBulkString)
                      }
             } yield res
           },
@@ -293,7 +293,7 @@ private[redis] final class TestExecutor private (
     }
     def get(key: String): STM[Nothing, State] =
       STM.ifM(isSet(key))(
-        sets.get(key).map(_.fold[State](State.Empty)(State.Continue(_))),
+        sets.get(key).map(_.fold[State](State.Empty)(State.Continue)),
         STM.succeedNow(State.WrongType)
       )
 
@@ -328,21 +328,22 @@ private[redis] final class TestExecutor private (
     val Ok: RespValue.SimpleString = RespValue.SimpleString("OK")
     val WrongType: RespValue.Error = RespValue.Error("WRONGTYPE")
     def array(values: Iterable[String]): RespValue.Array =
-      RespValue.array(values.map(RespValue.bulkString(_)).toList: _*)
+      RespValue.array(values.map(RespValue.bulkString).toList: _*)
     val EmptyArray: RespValue.Array = RespValue.array()
   }
 }
 
 private[redis] object TestExecutor {
-  lazy val live: URLayer[zio.random.Random, RedisExecutor] =
-    ZLayer.fromEffect {
-      for {
-        seed      <- random.nextInt
-        sRandom    = new scala.util.Random(seed)
-        ref       <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
-        randomPick = (i: Int) => ref.modify(s => (s.head(i), s.tail))
-        sets      <- TMap.empty[String, Set[String]].commit
-        strings   <- TMap.empty[String, String].commit
-      } yield new TestExecutor(sets, strings, randomPick)
-    }
+  lazy val live: URLayer[zio.random.Random, RedisExecutor] = {
+    val executor = for {
+      seed      <- random.nextInt
+      sRandom    = new scala.util.Random(seed)
+      ref       <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
+      randomPick = (i: Int) => ref.modify(s => (s.head(i), s.tail))
+      sets      <- TMap.empty[String, Set[String]].commit
+      strings   <- TMap.empty[String, String].commit
+    } yield new TestExecutor(sets, strings, randomPick)
+
+    executor.toLayer
+  }
 }
