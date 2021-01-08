@@ -3,7 +3,7 @@ package zio.redis
 import zio.Chunk
 import zio.duration._
 
-trait Output[+A] {
+sealed trait Output[+A] {
   self =>
 
   private[redis] final def unsafeDecode(respValue: RespValue): A =
@@ -34,6 +34,10 @@ trait Output[+A] {
 object Output {
 
   import RedisError._
+
+  case object RespValueOutput extends Output[RespValue] {
+    protected def tryDecode(respValue: RespValue): RespValue = respValue
+  }
 
   case object BoolOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue): Boolean =

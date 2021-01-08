@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 import zio.Chunk
 import zio.duration.Duration
 
-trait Input[-A] {
+sealed trait Input[-A] {
   def encode(data: A): Chunk[RespValue.BulkString]
 }
 
@@ -16,6 +16,8 @@ object Input {
 
   @inline
   private[this] def encodeString(s: String): RespValue.BulkString = RespValue.bulkString(s)
+  @inline
+  private[this] def encodeBytes(s: Chunk[Byte]): RespValue.BulkString = RespValue.BulkString(s)
 
   case object AbsTtlInput extends Input[AbsTtl] {
     def encode(data: AbsTtl): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
@@ -414,11 +416,13 @@ object Input {
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
-  case class EvalInput[K, A](keysInput: Input[K], argsInput: Input[A]) extends Input[Script[K, A]] {
-    def encode(data: Script[K, A]): Chunk[RespValue.BulkString] = {
-      Chunk(encodeString(data.lua), encodeString(data.keys.size.toString)) ++
-      data.keys.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur ++ keysInput.encode(next)) ++
-      data.args.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur ++ argsInput.encode(next))
+  case object EvalInput extends Input[(String, Seq[Chunk[Byte]], Seq[Chunk[Byte]])] {
+    def encode(data: (String, Seq[Chunk[Byte]], Seq[Chunk[Byte]])): Chunk[RespValue.BulkString] = {
+      val (lua, keys, args) = data
+      val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
+      val encodedKeys       = keys.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur :+ encodeBytes(next))
+      val encodedArgs       = args.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur :+ encodeBytes(next))
+      encodedScript ++ encodedKeys ++ encodedArgs
     }
   }
 

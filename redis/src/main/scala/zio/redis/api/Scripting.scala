@@ -1,18 +1,21 @@
 package zio.redis.api
 
-import zio.ZIO
 import zio.redis.Input.EvalInput
+import zio.redis.Output.RespValueOutput
 import zio.redis._
-import Scripting._
+import zio.{ Chunk, ZIO }
 
 trait Scripting {
+  import Scripting._
 
-  def eval[K: Input, A: Input, R: Output](e: Script[K, A]): ZIO[RedisExecutor, RedisError, R] =
-    evalCommand[K, A, R].run(e)
+  def eval[K: RedisEncoder, A: RedisEncoder, R: RedisDecoder](script: Script[K, A]): ZIO[RedisExecutor, RedisError, R] =
+    Eval
+      .run((script.lua, script.encodeKeys, script.encodeArgs))
+      .flatMap(v => implicitly[RedisDecoder[R]].decode(v))
 }
 
 private[redis] object Scripting {
 
-  final def evalCommand[K: Input, A: Input, R: Output]: RedisCommand[Script[K, A], R] =
-    RedisCommand("EVAL", EvalInput[K, A](implicitly[Input[K]], implicitly[Input[A]]), implicitly[Output[R]])
+  val Eval: RedisCommand[(String, Seq[Chunk[Byte]], Seq[Chunk[Byte]]), RespValue] =
+    RedisCommand("EVAL", EvalInput, RespValueOutput)
 }
