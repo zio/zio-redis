@@ -11,13 +11,15 @@ package object redis
     with api.Strings
     with api.SortedSets
     with api.Streams
+    with api.Scripting
     with options.Geo
     with options.Keys
     with options.Shared
     with options.SortedSets
     with options.Strings
     with options.Lists
-    with options.Streams {
+    with options.Streams
+    with options.Scripting {
 
   type RedisExecutor = Has[RedisExecutor.Service]
 

@@ -8,8 +8,8 @@ import scala.util.matching.Regex
 import zio.Chunk
 import zio.duration.Duration
 
-sealed trait Input[-A] {
-  private[redis] def encode(data: A): Chunk[RespValue.BulkString]
+trait Input[-A] {
+  def encode(data: A): Chunk[RespValue.BulkString]
 }
 
 object Input {
@@ -188,7 +188,7 @@ object Input {
   }
 
   case object ByteInput extends Input[Chunk[Byte]] {
-    private[redis] def encode(data: Chunk[Byte]) = Chunk.single(RespValue.BulkString(data))
+    def encode(data: Chunk[Byte]): Chunk[RespValue.BulkString] = Chunk.single(RespValue.BulkString(data))
   }
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]] {
@@ -409,9 +409,17 @@ object Input {
     def encode(data: Update): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
 
-  final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
+  final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] { // todo: never used ??
     def encode(data: Iterable[A]): Chunk[RespValue.BulkString] =
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
+  }
+
+  case class EvalInput[K, A](keysInput: Input[K], argsInput: Input[A]) extends Input[Script[K, A]] {
+    def encode(data: Script[K, A]): Chunk[RespValue.BulkString] = {
+      Chunk(encodeString(data.lua), encodeString(data.keys.size.toString)) ++
+      data.keys.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur ++ keysInput.encode(next)) ++
+      data.args.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur ++ argsInput.encode(next))
+    }
   }
 
   case object WithScoresInput extends Input[WithScores] {

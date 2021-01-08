@@ -3,8 +3,7 @@ package zio.redis
 import zio.Chunk
 import zio.duration._
 
-sealed trait Output[+A] {
-
+trait Output[+A] {
   self =>
 
   private[redis] final def unsafeDecode(respValue: RespValue): A =
