@@ -1,29 +1,29 @@
 package zio.redis
 
-import zio.Chunk
-
 import java.nio.charset.StandardCharsets
 
-trait RedisEncoder[A] {
+import zio.Chunk
+
+trait Encoder[A] {
   def encode(a: A): Chunk[Byte]
 }
 
-object RedisEncoder {
-  implicit val bytesEncoder: RedisEncoder[Chunk[Byte]] = identity
+object Encoder {
+  implicit val bytesEncoder: Encoder[Chunk[Byte]] = identity
 
-  implicit val booleanEncoder: RedisEncoder[Boolean] = { value =>
+  implicit val booleanEncoder: Encoder[Boolean] = { value =>
     Chunk.fromArray(value.toString.getBytes(StandardCharsets.UTF_8))
   }
 
-  implicit val stringEncoder: RedisEncoder[String] = { value =>
+  implicit val stringEncoder: Encoder[String] = { value =>
     Chunk.fromArray(value.getBytes(StandardCharsets.UTF_8))
   }
 
-  implicit val intEncoder: RedisEncoder[Int] = { value =>
+  implicit val intEncoder: Encoder[Int] = { value =>
     Chunk.fromArray(value.toString.getBytes(StandardCharsets.UTF_8))
   }
 
-  implicit val longEncoder: RedisEncoder[Long] = { value =>
+  implicit val longEncoder: Encoder[Long] = { value =>
     Chunk.fromArray(value.toString.getBytes(StandardCharsets.UTF_8))
   }
 }

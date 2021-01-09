@@ -8,14 +8,20 @@ import zio.{ Chunk, ZIO }
 trait Scripting {
   import Scripting._
 
-  def eval[K: RedisEncoder, A: RedisEncoder, R: RedisDecoder](script: Script[K, A]): ZIO[RedisExecutor, RedisError, R] =
-    Eval
-      .run((script.lua, script.encodeKeys, script.encodeArgs))
-      .flatMap(v => implicitly[RedisDecoder[R]].decode(v))
+  def eval[K: Encoder, A: Encoder, R: Decoder](
+    script: String,
+    keys: Chunk[K],
+    args: Chunk[A]
+  ): ZIO[RedisExecutor, RedisError, R] = {
+    val encodeKey  = implicitly[Encoder[K]].encode _
+    val encodeArg  = implicitly[Encoder[A]].encode _
+    val decodeResp = implicitly[Decoder[R]].decode _
+    Eval.run((script, keys.map(encodeKey), args.map(encodeArg))).flatMap(decodeResp)
+  }
 }
 
 private[redis] object Scripting {
 
-  val Eval: RedisCommand[(String, Seq[Chunk[Byte]], Seq[Chunk[Byte]]), RespValue] =
+  val Eval: RedisCommand[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]]), RespValue] =
     RedisCommand("EVAL", EvalInput, RespValueOutput)
 }

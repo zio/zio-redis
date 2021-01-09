@@ -416,8 +416,8 @@ object Input {
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
-  case object EvalInput extends Input[(String, Seq[Chunk[Byte]], Seq[Chunk[Byte]])] {
-    def encode(data: (String, Seq[Chunk[Byte]], Seq[Chunk[Byte]])): Chunk[RespValue.BulkString] = {
+  case object EvalInput extends Input[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]])] {
+    def encode(data: (String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]])): Chunk[RespValue.BulkString] = {
       val (lua, keys, args) = data
       val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
       val encodedKeys       = keys.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur :+ encodeBytes(next))

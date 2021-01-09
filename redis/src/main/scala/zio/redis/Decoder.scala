@@ -2,6 +2,6 @@ package zio.redis
 
 import zio.IO
 
-trait RedisDecoder[A] {
+trait Decoder[A] {
   def decode(respValue: RespValue): IO[RedisError, A]
 }
