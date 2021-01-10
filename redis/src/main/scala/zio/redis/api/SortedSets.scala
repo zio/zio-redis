@@ -423,10 +423,18 @@ private[redis] object SortedSets {
     RedisCommand("ZPOPMIN", Tuple2(StringInput, OptionalInput(LongInput)), ChunkOutput(MultiStringOutput))
 
   final val ZRange: RedisCommand[(String, Range, Option[WithScores]), Chunk[String]] =
-    RedisCommand("ZRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput(MultiStringOutput))
+    RedisCommand(
+      "ZRANGE",
+      Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)),
+      ChunkOutput(MultiStringOutput)
+    )
 
   final val ZRangeByLex: RedisCommand[(String, LexRange, Option[Limit]), Chunk[String]] =
-    RedisCommand("ZRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput(MultiStringOutput))
+    RedisCommand(
+      "ZRANGEBYLEX",
+      Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)),
+      ChunkOutput(MultiStringOutput)
+    )
 
   final val ZRangeByScore: RedisCommand[(String, ScoreRange, Option[WithScores], Option[Limit]), Chunk[String]] =
     RedisCommand(
@@ -451,10 +459,18 @@ private[redis] object SortedSets {
     RedisCommand("ZREMRANGEBYSCORE", Tuple2(StringInput, ScoreRangeInput), LongOutput)
 
   final val ZRevRange: RedisCommand[(String, Range, Option[WithScores]), Chunk[String]] =
-    RedisCommand("ZREVRANGE", Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)), ChunkOutput(MultiStringOutput))
+    RedisCommand(
+      "ZREVRANGE",
+      Tuple3(StringInput, RangeInput, OptionalInput(WithScoresInput)),
+      ChunkOutput(MultiStringOutput)
+    )
 
   final val ZRevRangeByLex: RedisCommand[(String, LexRange, Option[Limit]), Chunk[String]] =
-    RedisCommand("ZREVRANGEBYLEX", Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)), ChunkOutput(MultiStringOutput))
+    RedisCommand(
+      "ZREVRANGEBYLEX",
+      Tuple3(StringInput, LexRangeInput, OptionalInput(LimitInput)),
+      ChunkOutput(MultiStringOutput)
+    )
 
   final val ZRevRangeByScore: RedisCommand[(String, ScoreRange, Option[WithScores], Option[Limit]), Chunk[String]] =
     RedisCommand(

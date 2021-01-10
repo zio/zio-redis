@@ -201,7 +201,8 @@ private[redis] object Sets {
   final val SIsMember: RedisCommand[(String, String), Boolean] =
     RedisCommand("SISMEMBER", Tuple2(StringInput, StringInput), BoolOutput)
 
-  final val SMembers: RedisCommand[String, Chunk[String]] = RedisCommand("SMEMBERS", StringInput, ChunkOutput(MultiStringOutput))
+  final val SMembers: RedisCommand[String, Chunk[String]] =
+    RedisCommand("SMEMBERS", StringInput, ChunkOutput(MultiStringOutput))
 
   final val SMove: RedisCommand[(String, String, String), Boolean] =
     RedisCommand("SMOVE", Tuple3(StringInput, StringInput, StringInput), BoolOutput)

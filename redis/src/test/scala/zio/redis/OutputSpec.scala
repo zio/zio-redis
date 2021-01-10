@@ -42,9 +42,9 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(isEmpty)
         },
         testM("extract non-empty arrays") {
+          val respValue = RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           for {
-            res <-
-              Task(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))))
+            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(respValue))
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),
