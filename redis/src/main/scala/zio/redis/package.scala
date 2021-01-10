@@ -18,7 +18,8 @@ package object redis
     with options.SortedSets
     with options.Strings
     with options.Lists
-    with options.Streams {
+    with options.Streams
+    with options.Scripting {
 
   type RedisExecutor = Has[RedisExecutor.Service]
 

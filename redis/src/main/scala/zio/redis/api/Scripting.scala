@@ -1,13 +1,25 @@
 package zio.redis.api
 
-import zio.redis.Input.EvalInput
-import zio.redis.Output.RespValueOutput
+import zio.redis.Input._
+import zio.redis.Output._
 import zio.redis._
 import zio.{ Chunk, ZIO }
 
 trait Scripting {
   import Scripting._
 
+  /**
+   * Evaluates a Lua script
+   *
+   * @param script Lua script
+   * @param keys keys available through KEYS param in the script
+   * @param args values available through ARGV param in the script
+   * @return redis protocol value that is converted from the Lua type.
+   *         You have to write decoder that would convert
+   *         redis protocol value to a suitable type for your app
+   *
+   * @since 2.6.0
+   */
   def eval[K: Encoder, A: Encoder, R: Decoder](
     script: String,
     keys: Chunk[K],
@@ -18,10 +30,107 @@ trait Scripting {
     val decodeResp = implicitly[Decoder[R]].decode _
     Eval.run((script, keys.map(encodeKey), args.map(encodeArg))).flatMap(decodeResp)
   }
+
+  /**
+   * Evaluates a Lua script cached on the server side by its SHA1 digest.
+   * Scripts could be cached using the [[zio.redis.api.Scripting.scriptLoad]] method.
+   *
+   * @param sha1 SHA1 digest
+   * @param keys keys available through KEYS param in the script
+   * @param args values available through ARGV param in the script
+   * @return redis protocol value that is converted from the Lua type.
+   *         You have to write decoder that would convert
+   *         redis protocol value to a suitable type for your app
+   *
+   * @since 2.6.0
+   */
+  def evalSHA[K: Encoder, A: Encoder, R: Decoder](
+    sha1: String,
+    keys: Chunk[K],
+    args: Chunk[A]
+  ): ZIO[RedisExecutor, RedisError, R] = {
+    val encodeKey  = implicitly[Encoder[K]].encode _
+    val encodeArg  = implicitly[Encoder[A]].encode _
+    val decodeResp = implicitly[Decoder[R]].decode _
+    EvalSHA.run((sha1, keys.map(encodeKey), args.map(encodeArg))).flatMap(decodeResp)
+  }
+
+  /**
+   * Sets the debug mode for subsequent scripts executed with EVAL
+   *
+   * @param debugMode on of debug mods: YES, SYNC, NO
+   *
+   * @since 3.2.0
+   */
+  def scriptDebug(debugMode: DebugMode): ZIO[RedisExecutor, RedisError, Unit] =
+    ScriptDebug.run(debugMode)
+
+  /**
+   * Checks existence of the scripts in the script cache.
+   *
+   * @param sha1 one required SHA1 digest
+   * @param sha1s maybe rest of the SHA1 digests
+   * @return for every corresponding SHA1 digest of a script that actually exists in the script cache,
+   *         an true is returned, otherwise false is returned.
+   *
+   * @since 2.6.0
+   */
+  def scriptExists(sha1: String, sha1s: String*): ZIO[RedisExecutor, RedisError, Chunk[Boolean]] =
+    ScriptExists.run((sha1, sha1s.toList))
+
+  /**
+   * Flushes the scripts cache
+   *
+   * @since 2.6.0
+   */
+  def scriptFlush(): ZIO[RedisExecutor, RedisError, Unit] =
+    ScriptFlush.run(())
+
+  /**
+   * Kills the currently executing Lua script, assuming no write operation was yet performed by the script.
+   *
+   * @note If the script already performed write operations it can not be killed in this way because
+   *       it would violate Lua script atomicity contract. In such a case only SHUTDOWN NOSAVE is able to kill the script,
+   *       killing the Redis process in an hard way preventing it to persist with half-written information.
+   * @since 2.6.0
+   */
+  def scriptKill(): ZIO[RedisExecutor, RedisError, Unit] =
+    ScriptKill.run(())
+
+  /**
+   * Loads a script into the scripts cache.
+   * After the script is loaded into the script cache it could be evaluated using the [[zio.redis.api.Scripting.evalSHA]] method.
+   *
+   * @param script Lua script
+   * @return the SHA1 digest of the script added into the script cache.
+   *
+   * @since 2.6.0
+   */
+  def scriptLoad(script: String): ZIO[RedisExecutor, RedisError, String] =
+    ScriptLoad.run(script)
 }
 
 private[redis] object Scripting {
 
-  val Eval: RedisCommand[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]]), RespValue] =
+  final val Eval: RedisCommand[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]]), RespValue] =
     RedisCommand("EVAL", EvalInput, RespValueOutput)
+
+  final val EvalSHA: RedisCommand[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]]), RespValue] =
+    RedisCommand("EVALSHA", EvalInput, RespValueOutput)
+
+  final val ScriptDebug: RedisCommand[DebugMode, Unit] =
+    RedisCommand("SCRIPT DEBUG", ScriptDebugInput, UnitOutput)
+
+  final val ScriptExists: RedisCommand[(String, List[String]), Chunk[Boolean]] =
+    RedisCommand("SCRIPT EXISTS", NonEmptyList(StringInput), ChunkOutput(BoolOutput))
+
+  final val ScriptFlush: RedisCommand[Unit, Unit] =
+    RedisCommand("SCRIPT FLUSH", NoInput, UnitOutput)
+
+  final val ScriptKill: RedisCommand[Unit, Unit] =
+    RedisCommand("SCRIPT KILL", NoInput, UnitOutput)
+
+  final val ScriptLoad: RedisCommand[String, String] =
+    RedisCommand("SCRIPT LOAD", StringInput, MultiStringOutput)
+
 }

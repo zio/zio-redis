@@ -38,13 +38,13 @@ object OutputSpec extends BaseSpec {
       suite("chunk")(
         testM("extract empty arrays") {
           for {
-            res <- Task(ChunkOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract non-empty arrays") {
           for {
             res <-
-              Task(ChunkOutput.unsafeDecode(RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))))
+              Task(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))))
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),

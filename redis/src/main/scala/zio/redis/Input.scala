@@ -2,9 +2,7 @@ package zio.redis
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 import scala.util.matching.Regex
-
 import zio.Chunk
 import zio.duration.Duration
 
@@ -411,7 +409,7 @@ object Input {
     def encode(data: Update): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
 
-  final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] { // todo: never used ??
+  final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
     def encode(data: Iterable[A]): Chunk[RespValue.BulkString] =
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
@@ -424,6 +422,11 @@ object Input {
       val encodedArgs       = args.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur :+ encodeBytes(next))
       encodedScript ++ encodedKeys ++ encodedArgs
     }
+  }
+
+  case object ScriptDebugInput extends Input[DebugMode] {
+    def encode(data: DebugMode): Chunk[RespValue.BulkString] =
+      Chunk.single(encodeString(data.stringify))
   }
 
   case object WithScoresInput extends Input[WithScores] {
