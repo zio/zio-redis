@@ -2,20 +2,27 @@ package zio.redis
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+
 import scala.util.matching.Regex
+
 import zio.Chunk
 import zio.duration.Duration
+import zio.redis.RespValue.BulkString
 
 sealed trait Input[-A] {
+  self =>
+
   def encode(data: A): Chunk[RespValue.BulkString]
+
+  final def contramap[B](f: B => A): Input[B] = new Input[B] {
+    def encode(data: B): Chunk[BulkString] = self.encode(f(data))
+  }
 }
 
 object Input {
 
   @inline
   private[this] def encodeString(s: String): RespValue.BulkString = RespValue.bulkString(s)
-  @inline
-  private[this] def encodeBytes(s: Chunk[Byte]): RespValue.BulkString = RespValue.BulkString(s)
 
   case object AbsTtlInput extends Input[AbsTtl] {
     def encode(data: AbsTtl): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
@@ -414,12 +421,12 @@ object Input {
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
-  case object EvalInput extends Input[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]])] {
-    def encode(data: (String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]])): Chunk[RespValue.BulkString] = {
+  final case class EvalInput[-K, -V](inputK: Input[K], inputV: Input[V]) extends Input[(String, Chunk[K], Chunk[V])] {
+    def encode(data: (String, Chunk[K], Chunk[V])): Chunk[RespValue.BulkString] = {
       val (lua, keys, args) = data
       val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
-      val encodedKeys       = keys.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur :+ encodeBytes(next))
-      val encodedArgs       = args.foldLeft[Chunk[RespValue.BulkString]](Chunk.empty)((cur, next) => cur :+ encodeBytes(next))
+      val encodedKeys       = keys.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputK.encode(next))
+      val encodedArgs       = args.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputV.encode(next))
       encodedScript ++ encodedKeys ++ encodedArgs
     }
   }
@@ -452,4 +459,13 @@ object Input {
   case object WithJustIdInput extends Input[WithJustId] {
     def encode(data: WithJustId): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
+
+  trait Implicits {
+    implicit val bytesEncoder: Input[Chunk[Byte]] = ByteInput
+    implicit val booleanInput: Input[Boolean]     = BoolInput
+    implicit val stringInput: Input[String]       = StringInput
+    implicit val longInput: Input[Long]           = LongInput
+  }
+
+  object Implicits extends Implicits
 }

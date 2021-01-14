@@ -32,7 +32,6 @@ sealed trait Output[+A] {
     new Output[B] {
       protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
     }
-
 }
 
 object Output {

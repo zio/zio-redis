@@ -20,16 +20,12 @@ trait Scripting {
    *
    * @since 2.6.0
    */
-  def eval[K: Encoder, A: Encoder, R: Decoder](
+  def eval[K: Input, A: Input, R: Output](
     script: String,
     keys: Chunk[K],
     args: Chunk[A]
-  ): ZIO[RedisExecutor, RedisError, R] = {
-    val encodeKey  = implicitly[Encoder[K]].encode _
-    val encodeArg  = implicitly[Encoder[A]].encode _
-    val decodeResp = implicitly[Decoder[R]].decode _
-    Eval.run((script, keys.map(encodeKey), args.map(encodeArg))).flatMap(decodeResp)
-  }
+  ): ZIO[RedisExecutor, RedisError, R] =
+    Eval[K, A, R].run((script, keys, args))
 
   /**
    * Evaluates a Lua script cached on the server side by its SHA1 digest.
@@ -44,16 +40,12 @@ trait Scripting {
    *
    * @since 2.6.0
    */
-  def evalSHA[K: Encoder, A: Encoder, R: Decoder](
+  def evalSha[K: Input, A: Input, R: Output](
     sha1: String,
     keys: Chunk[K],
     args: Chunk[A]
-  ): ZIO[RedisExecutor, RedisError, R] = {
-    val encodeKey  = implicitly[Encoder[K]].encode _
-    val encodeArg  = implicitly[Encoder[A]].encode _
-    val decodeResp = implicitly[Decoder[R]].decode _
-    EvalSHA.run((sha1, keys.map(encodeKey), args.map(encodeArg))).flatMap(decodeResp)
-  }
+  ): ZIO[RedisExecutor, RedisError, R] =
+    EvalSha[K, A, R].run((sha1, keys, args))
 
   /**
    * Sets the debug mode for subsequent scripts executed with EVAL
@@ -99,11 +91,10 @@ trait Scripting {
 
   /**
    * Loads a script into the scripts cache.
-   * After the script is loaded into the script cache it could be evaluated using the [[zio.redis.api.Scripting.evalSHA]] method.
+   * After the script is loaded into the script cache it could be evaluated using the [[zio.redis.api.Scripting.evalSha]] method.
    *
    * @param script Lua script
    * @return the SHA1 digest of the script added into the script cache.
-   *
    * @since 2.6.0
    */
   def scriptLoad(script: String): ZIO[RedisExecutor, RedisError, String] =
@@ -112,11 +103,11 @@ trait Scripting {
 
 private[redis] object Scripting {
 
-  final val Eval: RedisCommand[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]]), RespValue] =
-    RedisCommand("EVAL", EvalInput, RespValueOutput)
+  final def Eval[K: Input, A: Input, R: Output]: RedisCommand[(String, Chunk[K], Chunk[A]), R] =
+    RedisCommand("EVAL", EvalInput(implicitly[Input[K]], implicitly[Input[A]]), implicitly[Output[R]])
 
-  final val EvalSHA: RedisCommand[(String, Chunk[Chunk[Byte]], Chunk[Chunk[Byte]]), RespValue] =
-    RedisCommand("EVALSHA", EvalInput, RespValueOutput)
+  final def EvalSha[K: Input, A: Input, R: Output]: RedisCommand[(String, Chunk[K], Chunk[A]), R] =
+    RedisCommand("EVALSHA", EvalInput(implicitly[Input[K]], implicitly[Input[A]]), implicitly[Output[R]])
 
   final val ScriptDebug: RedisCommand[DebugMode, Unit] =
     RedisCommand("SCRIPT DEBUG", ScriptDebugInput, UnitOutput)
