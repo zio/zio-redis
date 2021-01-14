@@ -9,7 +9,6 @@ import zio.redis.Output.{ KeyValueOutput, MultiStringOutput, RespValueOutput }
 import zio.redis.RedisError._
 import zio.redis.ScriptingSpec.CustomInputValue
 import zio.test.Assertion._
-import zio.test.TestAspect.ignore
 import zio.test._
 
 trait ScriptingSpec extends BaseSpec {
@@ -159,20 +158,6 @@ trait ScriptingSpec extends BaseSpec {
           } yield assert(res)(isLeft(isSubtype[NoScript](hasField("message", _.message, equalTo(error)))))
         }
       ),
-      suite("scriptDebug")(
-        testM("turn on sync mode and turn it off") {
-          for {
-            resSync <- scriptDebug(DebugMode.Sync).either
-            resNo   <- scriptDebug(DebugMode.No).either
-          } yield assert(resSync)(isRight) && assert(resNo)(isRight)
-        } @@ ignore,
-        testM("turn on async mode and turn it off") {
-          for {
-            resYes <- scriptDebug(DebugMode.Yes).either
-            resNo  <- scriptDebug(DebugMode.No).either
-          } yield assert(resYes)(isRight) && assert(resNo)(isRight)
-        } @@ ignore
-      ),
       suite("scriptExists")(
         testM("return true if scripts are found in the cache") {
           val lua1 = """return "1""""
@@ -189,38 +174,6 @@ trait ScriptingSpec extends BaseSpec {
           for {
             res <- scriptExists(lua1, lua2)
           } yield assert(res)(equalTo(Chunk(false, false)))
-        }
-      ),
-      suite("scriptFlush")(
-        testM("correct flushes the scripts cache") {
-          val lua1 = """return "1""""
-          for {
-            sha1       <- scriptLoad(lua1)
-            existence1 <- scriptExists(sha1)
-            _          <- scriptFlush()
-            existence2 <- scriptExists(sha1)
-          } yield assert(existence1)(equalTo(Chunk(true))) && assert(existence2)(equalTo(Chunk(false)))
-        } @@ ignore
-      ),
-      suite("scriptKill")(
-        testM("correctly kills the scripts that in execution right now") {
-          import ScriptingSpec.simpleStringOutput
-          val lua =
-            """
-              |while true do
-              |end
-            """.stripMargin
-          for {
-            fiber   <- eval[String, String, String](lua, Chunk.empty, Chunk.empty).run.fork
-            killRes <- scriptKill().either
-            evalRes <- fiber.join
-          } yield assert(killRes)(isRight) && assert(evalRes)(dies(anything))
-        } @@ ignore,
-        testM("throw NotBusy error if no scripts in execution right now") {
-          val error = "No scripts in execution right now."
-          for {
-            res <- scriptKill().either
-          } yield assert(res)(isLeft(isSubtype[NotBusy](hasField("message", _.message, equalTo(error)))))
         }
       ),
       suite("scriptLoad")(
