@@ -17,8 +17,6 @@ trait Scripting {
    * @return redis protocol value that is converted from the Lua type.
    *         You have to write decoder that would convert
    *         redis protocol value to a suitable type for your app
-   *
-   * @since 2.6.0
    */
   def eval[K: Input, A: Input, R: Output](
     script: String,
@@ -37,8 +35,6 @@ trait Scripting {
    * @return redis protocol value that is converted from the Lua type.
    *         You have to write decoder that would convert
    *         redis protocol value to a suitable type for your app
-   *
-   * @since 2.6.0
    */
   def evalSha[K: Input, A: Input, R: Output](
     sha1: String,
@@ -51,8 +47,6 @@ trait Scripting {
    * Sets the debug mode for subsequent scripts executed with EVAL
    *
    * @param debugMode on of debug mods: YES, SYNC, NO
-   *
-   * @since 3.2.0
    */
   def scriptDebug(debugMode: DebugMode): ZIO[RedisExecutor, RedisError, Unit] =
     ScriptDebug.run(debugMode)
@@ -64,16 +58,12 @@ trait Scripting {
    * @param sha1s maybe rest of the SHA1 digests
    * @return for every corresponding SHA1 digest of a script that actually exists in the script cache,
    *         an true is returned, otherwise false is returned.
-   *
-   * @since 2.6.0
    */
   def scriptExists(sha1: String, sha1s: String*): ZIO[RedisExecutor, RedisError, Chunk[Boolean]] =
     ScriptExists.run((sha1, sha1s.toList))
 
   /**
    * Flushes the scripts cache
-   *
-   * @since 2.6.0
    */
   def scriptFlush(): ZIO[RedisExecutor, RedisError, Unit] =
     ScriptFlush.run(())
@@ -84,7 +74,6 @@ trait Scripting {
    * @note If the script already performed write operations it can not be killed in this way because
    *       it would violate Lua script atomicity contract. In such a case only SHUTDOWN NOSAVE is able to kill the script,
    *       killing the Redis process in an hard way preventing it to persist with half-written information.
-   * @since 2.6.0
    */
   def scriptKill(): ZIO[RedisExecutor, RedisError, Unit] =
     ScriptKill.run(())
@@ -95,7 +84,6 @@ trait Scripting {
    *
    * @param script Lua script
    * @return the SHA1 digest of the script added into the script cache.
-   * @since 2.6.0
    */
   def scriptLoad(script: String): ZIO[RedisExecutor, RedisError, String] =
     ScriptLoad.run(script)
