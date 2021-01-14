@@ -12,7 +12,7 @@ import zio.redis.RespValue.BulkString
 sealed trait Input[-A] {
   self =>
 
-  def encode(data: A): Chunk[RespValue.BulkString]
+  private[redis] def encode(data: A): Chunk[RespValue.BulkString]
 
   final def contramap[B](f: B => A): Input[B] = new Input[B] {
     def encode(data: B): Chunk[BulkString] = self.encode(f(data))
