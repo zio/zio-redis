@@ -54,7 +54,7 @@ lazy val benchmarks =
       skip in publish := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.11.1",
-        "io.chrisdavenport" %% "rediculous"         % "0.0.8",
+        "io.chrisdavenport" %% "rediculous"         % "0.0.12",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
       scalacOptions in Compile := Seq("-Xlint:unused")
