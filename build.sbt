@@ -38,7 +38,7 @@ lazy val redis =
     .settings(
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
-        "dev.zio" %% "zio-logging"  % "0.5.5",
+        "dev.zio" %% "zio-logging"  % "0.5.6",
         "dev.zio" %% "zio-test"     % Zio % Test,
         "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
