@@ -4,6 +4,7 @@ import scala.collection.compat.immutable.LazyList
 
 import zio._
 import zio.redis.RedisError.ProtocolError
+import zio.redis.RespValue.BulkString
 import zio.stm.{ STM, TMap, TRef, USTM }
 
 private[redis] final class TestExecutor private (
@@ -11,13 +12,20 @@ private[redis] final class TestExecutor private (
   strings: TMap[String, String],
   randomPick: Int => USTM[Int]
 ) extends RedisExecutor.Service {
+
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name   <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
       result <- runCommand(name.asString, command.tail).commit
     } yield result
 
-  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): STM[RedisError, RespValue] =
+  private def errResponse(cmd: String): RespValue.BulkString =
+    RespValue.bulkString(s"(error) ERR wrong number of arguments for '$cmd' command")
+
+  private def onConnection(command: String, input: Chunk[RespValue.BulkString])(
+    res: => RespValue.BulkString
+  ): USTM[BulkString] = STM.succeedNow(if (input.isEmpty) errResponse(command) else res)
+  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): STM[RedisError, RespValue] = {
     name match {
       case api.Connection.Ping.name =>
         STM.succeedNow {
@@ -26,7 +34,9 @@ private[redis] final class TestExecutor private (
           else
             input.head
         }
-
+      case api.Connection.Auth.name   => onConnection(name, input)(RespValue.bulkString("OK"))
+      case api.Connection.Echo.name   => onConnection(name, input)(input.head)
+      case api.Connection.Select.name => onConnection(name, input)(RespValue.bulkString("OK"))
       case api.Sets.SAdd.name =>
         val key = input.head.asString
         STM.ifM(isSet(key))(
@@ -250,6 +260,7 @@ private[redis] final class TestExecutor private (
 
       case _ => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
     }
+  }
 
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): STM[Nothing, Boolean] =
