@@ -292,19 +292,110 @@ object Output {
   case object StreamOutput extends Output[Map[String, Map[String, String]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, String]] =
       respValue match {
-        case RespValue.NullArray => Map.empty[String, Map[String, String]]
-        case RespValue.Array(entities) =>
-          val output = collection.mutable.Map.empty[String, Map[String, String]]
-          entities.foreach {
-            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+        case RespValue.NullArray       => Map.empty[String, Map[String, String]]
+        case RespValue.Array(entities) => extractMapMap(entities)
+        case other                     => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  private def extractMapMap(entities: Chunk[RespValue]): Map[String, Map[String, String]] = {
+    val output = collection.mutable.Map.empty[String, Map[String, String]]
+    entities.foreach {
+      case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+        output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+      case other =>
+        throw ProtocolError(s"$other isn't a valid array")
+    }
+    output.toMap
+  }
+
+  case object StreamGroupInfoOutput extends Output[Chunk[StreamGroupInfo]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamGroupInfo] =
+      respValue match {
+        case RespValue.Array(messages) =>
+          messages.collect {
+            case RespValue.Array(
+                  Seq(
+                    RespValue.Array(Seq(_, name @ RespValue.BulkString(_))),
+                    RespValue.Array(Seq(_, consumers @ RespValue.Integer(_))),
+                    RespValue.Array(Seq(_, pending @ RespValue.Integer(_))),
+                    RespValue.Array(Seq(_, lastDeliveredId @ RespValue.BulkString(_)))
+                  )
+                ) =>
+              StreamGroupInfo(name.asString, consumers.value, pending.value, lastDeliveredId.asString)
             case other =>
-              throw ProtocolError(s"$other isn't a valid array")
+              throw ProtocolError(s"$other isn't an array with four elements")
           }
 
-          output.toMap
-        case other => throw ProtocolError(s"$other isn't an array")
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
       }
+  }
+
+  case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumerInfo]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamConsumerInfo] =
+      respValue match {
+        case RespValue.Array(messages) =>
+          messages.collect {
+            case RespValue.Array(
+                  Seq(
+                    RespValue.Array(Seq(_, name @ RespValue.BulkString(_))),
+                    RespValue.Array(Seq(_, pending @ RespValue.Integer(_))),
+                    RespValue.Array(Seq(_, idle @ RespValue.Integer(_)))
+                  )
+                ) =>
+              StreamConsumerInfo(name.asString, idle.value, pending.value)
+            case other =>
+              throw ProtocolError(s"$other isn't an array with three elements")
+          }
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object StreamInfoOutput extends Output[StreamInfo] {
+    override protected def tryDecode(respValue: RespValue): _root_.zio.redis.StreamInfo =
+      respValue match {
+        case RespValue.ArrayValues(
+              RespValue.Array(Seq(RespValue.BulkString(_), RespValue.Integer(length))),
+              RespValue.Array(Seq(RespValue.BulkString(_), RespValue.Integer(radixTreeKeys))),
+              RespValue.Array(Seq(RespValue.BulkString(_), RespValue.Integer(radixTreeNodes))),
+              RespValue.Array(Seq(RespValue.BulkString(_), RespValue.Integer(groups))),
+              RespValue.Array(Seq(RespValue.BulkString(_), lastGeneratedId @ RespValue.BulkString(_))),
+              RespValue.Array(Seq(RespValue.BulkString(_), first @ RespValue.Array(_))),
+              RespValue.Array(Seq(RespValue.BulkString(_), last @ RespValue.Array(_)))
+            ) =>
+          StreamInfo(
+            length,
+            radixTreeKeys,
+            radixTreeNodes,
+            groups,
+            lastGeneratedId.asString,
+            extractStreamEntry(first),
+            extractStreamEntry(last)
+          )
+
+        case other => throw ProtocolError(s"$other isn't an array or isn't with seven elements")
+      }
+  }
+
+  private def extractStreamEntry(es: RespValue): StreamEntry = {
+    val entry           = collection.mutable.Map.empty[String, String]
+    var entryId: String = ""
+    es match {
+      case RespValue.Array(entities) =>
+        entities.foreach {
+          case id @ RespValue.BulkString(_) => entryId = id.asString
+          case RespValue.ArrayValues(id @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
+            entry += (id.asString -> value.asString)
+          case other =>
+            throw ProtocolError(s"$other isn't a valid array")
+        }
+      case other =>
+        throw ProtocolError(s"$other isn't a valid array")
+    }
+    StreamEntry(id = entryId, entry.toMap)
   }
 
   case object XPendingOutput extends Output[PendingInfo] {

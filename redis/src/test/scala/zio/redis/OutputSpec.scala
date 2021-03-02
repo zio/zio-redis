@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.duration._
 import zio.redis.Output._
-import zio.redis.RedisError._
+import zio.redis.RedisError.{ ProtocolError, _ }
 import zio.test.Assertion._
 import zio.test._
 import zio.{ Chunk, Task }
@@ -498,7 +498,182 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
-        }
+        },
+        suite("StreamInfo")(
+          testM("extract valid value") {
+            val input = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("length"),
+                RespValue.Integer(1)
+              ),
+              RespValue.array(
+                RespValue.bulkString("radix-tree-keys"),
+                RespValue.Integer(2)
+              ),
+              RespValue.array(
+                RespValue.bulkString("radix-tree-nodes"),
+                RespValue.Integer(3)
+              ),
+              RespValue.array(
+                RespValue.bulkString("groups"),
+                RespValue.Integer(2)
+              ),
+              RespValue.array(
+                RespValue.bulkString("last-generated-id"),
+                RespValue.bulkString("1-111")
+              ),
+              RespValue.array(
+                RespValue.bulkString("first-entry"),
+                RespValue.array(
+                  RespValue.bulkString("id"),
+                  RespValue.bulkString("1-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                )
+              ),
+              RespValue.array(
+                RespValue.bulkString("last-entry"),
+                RespValue.array(
+                  RespValue.bulkString("id"),
+                  RespValue.bulkString("1-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key2"),
+                    RespValue.bulkString("value2")
+                  )
+                )
+              )
+            )
+            Task(StreamInfoOutput.unsafeDecode(input)).map(x =>
+              assert(x.lastGeneratedId)(equalTo("1-111")) &&
+                assert(x.firstEntry)(equalTo(StreamEntry("1-0", Map("key1" -> "value1")))) &&
+                assert(x.lastEntry)(equalTo(StreamEntry("1-0", Map("key2" -> "value2"))))
+            )
+          },
+          testM("error when message mis fields") {
+            val input = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("length"),
+                RespValue.Integer(1)
+              ),
+              RespValue.array(
+                RespValue.bulkString("invalid-field"),
+                RespValue.Integer(2)
+              ),
+              RespValue.array(
+                RespValue.bulkString("radix-tree-nodes"),
+                RespValue.Integer(3)
+              )
+            )
+            Task(StreamInfoOutput.unsafeDecode(input)).either
+              .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          },
+          testM("error when message mis value") {
+            val input = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("length"),
+                RespValue.Integer(1)
+              ),
+              RespValue.array(
+                RespValue.bulkString("radix-tree-nodes"),
+                RespValue.Integer(3)
+              )
+            )
+            Task(StreamInfoOutput.unsafeDecode(input)).either
+              .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          }
+        ),
+        suite("StreamGroupsInfo")(
+          testM("extract valid value") {
+            val input = RespValue.array(
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("name"),
+                  RespValue.bulkString("name")
+                ),
+                RespValue.array(
+                  RespValue.bulkString("consumers"),
+                  RespValue.Integer(10)
+                ),
+                RespValue.array(
+                  RespValue.bulkString("pending"),
+                  RespValue.Integer(100)
+                ),
+                RespValue.array(
+                  RespValue.bulkString("last-delivered-id"),
+                  RespValue.bulkString("1111")
+                )
+              ),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("name"),
+                  RespValue.bulkString("name2")
+                ),
+                RespValue.array(
+                  RespValue.bulkString("consumers"),
+                  RespValue.Integer(110)
+                ),
+                RespValue.array(
+                  RespValue.bulkString("pending"),
+                  RespValue.Integer(1100)
+                ),
+                RespValue.array(
+                  RespValue.bulkString("last-delivered-id"),
+                  RespValue.bulkString("1111")
+                )
+              )
+            )
+            Task(StreamGroupInfoOutput.unsafeDecode(input)).map(x =>
+              assert(x)(
+                equalTo(
+                  Chunk.apply(StreamGroupInfo("name", 10, 100, "1111"), StreamGroupInfo("name2", 110, 1100, "1111"))
+                )
+              )
+            )
+          }
+        ),
+        suite("StreamConsumersInfo")(
+          testM("extract valid value") {
+            val input = RespValue.array(
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("name"),
+                  RespValue.bulkString("name")
+                ),
+                RespValue.array(
+                  RespValue.bulkString("pending"),
+                  RespValue.Integer(100)
+                ),
+                RespValue.array(
+                  RespValue.bulkString("idle"),
+                  RespValue.Integer(10)
+                )
+              ),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("name"),
+                  RespValue.bulkString("name2")
+                ),
+                RespValue.array(
+                  RespValue.bulkString("pending"),
+                  RespValue.Integer(1100)
+                ),
+                RespValue.array(
+                  RespValue.bulkString("idle"),
+                  RespValue.Integer(10)
+                )
+              )
+            )
+            Task(StreamConsumersInfoOutput.unsafeDecode(input)).map(x =>
+              assert(x)(
+                equalTo(
+                  Chunk.apply(StreamConsumerInfo("name", 10, 100), StreamConsumerInfo("name2", 10, 1100))
+                )
+              )
+            )
+          }
+        )
       )
     )
 

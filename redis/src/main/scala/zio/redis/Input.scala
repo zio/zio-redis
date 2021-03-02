@@ -268,6 +268,21 @@ object Input {
       Chunk(encodeString("DELCONSUMER"), encodeString(data.key), encodeString(data.group), encodeString(data.consumer))
   }
 
+  case object XInfoGroupInput extends Input[XInfoCommand.Group] {
+    def encode(data: XInfoCommand.Group): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("GROUPS"), encodeString(data.key))
+  }
+
+  case object XInfoStreamInput extends Input[XInfoCommand.Stream] {
+    def encode(data: XInfoCommand.Stream): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("STREAM"), encodeString(data.key))
+  }
+
+  case object XInfoConsumerInput extends Input[XInfoCommand.Consumer] {
+    def encode(data: XInfoCommand.Consumer): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("CONSUMERS"), encodeString(data.key), encodeString(data.group))
+  }
+
   case object BlockInput extends Input[Duration] {
     def encode(data: Duration): Chunk[RespValue.BulkString] =
       Chunk(encodeString("BLOCK"), encodeString(data.toMillis.toString))

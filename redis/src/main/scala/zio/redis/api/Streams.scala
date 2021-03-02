@@ -40,6 +40,38 @@ trait Streams {
     XAdd.run((key, None, id, (pair, pairs.toList)))
 
   /**
+   * An introspection command used in order to retrieve different information about the group.
+   *
+   * @param key ID of the stream
+   * @return The result of introspection.
+   */
+  final def xInfoGroup(
+    key: String
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamGroupInfo]] = XInfoGroups.run(XInfoCommand.Group(key))
+
+  /**
+   * An introspection command used in order to retrieve different information about the consumers.
+   *
+   * @param key ID of the stream
+   * @param group ID of the consumer group
+   * @return The result of consumers introspection.
+   */
+  final def xInfoConsumers(
+    key: String,
+    group: String
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamConsumerInfo]] = XInfoConsumers.run(XInfoCommand.Consumer(key, group))
+
+  /**
+   * An introspection command used in order to retrieve different information about the stream.
+   *
+   * @param key ID of the stream
+   * @return The result of introspection.
+   */
+  final def xInfoStream(
+    key: String
+  ): ZIO[RedisExecutor, RedisError, StreamInfo] = XInfoStream.run(XInfoCommand.Stream(key))
+
+  /**
    * Appends the specified stream entry to the stream at the specified key while limiting the size of the stream.
    *
    * @param key ID of the stream
@@ -381,6 +413,9 @@ trait Streams {
 
 private object Streams {
 
+  import zio.redis.Input.XInfoConsumerInput
+  import zio.redis.Output.StreamGroupInfoOutput
+
   final val XAck: RedisCommand[(String, String, (String, List[String])), Long] =
     RedisCommand("XACK", Tuple3(StringInput, StringInput, NonEmptyList(StringInput)), LongOutput)
 
@@ -468,7 +503,15 @@ private object Streams {
   final val XGroupDelConsumer: RedisCommand[XGroupCommand.DelConsumer, Long] =
     RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
 
-  // TODO: implement XINFO command
+  //TODO XINFO FULL and HELP
+  final val XInfoGroups: RedisCommand[XInfoCommand.Group, Chunk[StreamGroupInfo]] =
+    RedisCommand("XINFO", XInfoGroupInput, StreamGroupInfoOutput)
+
+  final val XInfoStream: RedisCommand[XInfoCommand.Stream, StreamInfo] =
+    RedisCommand("XINFO", XInfoStreamInput, StreamInfoOutput)
+
+  final val XInfoConsumers: RedisCommand[XInfoCommand.Consumer, Chunk[StreamConsumerInfo]] =
+    RedisCommand("XINFO", XInfoConsumerInput, StreamConsumersInfoOutput)
 
   final val XLen: RedisCommand[String, Long] = RedisCommand("XLEN", StringInput, LongOutput)
 
