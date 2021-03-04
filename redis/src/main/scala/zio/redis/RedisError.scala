@@ -7,9 +7,7 @@ import scala.util.control.NoStackTrace
 sealed trait RedisError extends NoStackTrace
 
 object RedisError {
-  final case class ProtocolError(message: String)  extends RedisError {
-    override def toString: String = message
-  }
+  final case class ProtocolError(message: String)  extends RedisError
   final case class WrongType(message: String)      extends RedisError
   final case class BusyGroup(message: String)      extends RedisError
   final case class NoGroup(message: String)        extends RedisError
