@@ -216,6 +216,25 @@ trait Keys {
     `type`: Option[String] = None
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((cursor, pattern, count, `type`))
 
+
+  final def sort(
+    key: String,
+    desc: Boolean = false,
+    alpha: Boolean = false,
+    by: Option[String] = None,
+    get: List[String] = List.empty
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    {
+      val args =
+        by.map { sortBy => List("BY", sortBy)}.getOrElse(List.empty) ++
+          get.flatMap(getAt => List("GET", getAt)) ++
+          List(if (desc) "DESC" else "ASC") ++
+          (if (alpha) List("ALPHA") else List.empty)
+      Sort.run((key, args))
+    }
+
+
+
   /**
    * Alters the last access time of a key(s). A key is ignored if it does not exist.
    *
@@ -345,6 +364,9 @@ private[redis] object Keys {
       Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
       ScanOutput
     )
+
+  final val Sort: RedisCommand[(String, List[String]), Chunk[String]] =
+    RedisCommand("SORT", NonEmptyList(StringInput), ChunkOutput)
 
   final val Touch: RedisCommand[(String, List[String]), Long] =
     RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
