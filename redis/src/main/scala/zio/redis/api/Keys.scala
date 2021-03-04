@@ -217,22 +217,46 @@ trait Keys {
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((cursor, pattern, count, `type`))
 
 
+  private def sortArguments(
+                             by: Option[String],
+                             limitOffset: Option[(Int, Int)],
+                             desc: Boolean,
+                             get: List[String],
+                             alpha: Boolean,
+                           ): List[String] =
+    by.map { sortBy => List("BY", sortBy)}.getOrElse(List.empty) ++
+      limitOffset.map { case (count, offset) => List("LIMIT", offset.toString, count.toString) }.getOrElse(List.empty) ++
+      get.flatMap(getAt => List("GET", getAt)) ++
+      List(if (desc) "DESC" else "ASC") ++
+      (if (alpha) List("ALPHA") else List.empty)
+
   final def sort(
     key: String,
-    desc: Boolean = false,
-    alpha: Boolean = false,
     by: Option[String] = None,
-    get: List[String] = List.empty
+    limitOffset: Option[(Int, Int)] = None,
+    desc: Boolean = false,
+    get: List[String] = List.empty,
+    alpha: Boolean = false,
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     {
-      val args =
-        by.map { sortBy => List("BY", sortBy)}.getOrElse(List.empty) ++
-          get.flatMap(getAt => List("GET", getAt)) ++
-          List(if (desc) "DESC" else "ASC") ++
-          (if (alpha) List("ALPHA") else List.empty)
+      val args = sortArguments(by, limitOffset, desc, get, alpha)
       Sort.run((key, args))
     }
 
+
+  final def sortStore(
+                       key: String,
+                       storeAt: String,
+                       by: Option[String] = None,
+                       limitOffset: Option[(Int, Int)] = None,
+                       desc: Boolean = false,
+                       get: List[String] = List.empty,
+                       alpha: Boolean = false,
+                     ): ZIO[RedisExecutor, RedisError, Long] = {
+    val args = sortArguments(by, limitOffset, desc, get, alpha) ++ List("STORE", storeAt)
+
+    SortStore.run((key, args))
+  }
 
 
   /**
@@ -367,6 +391,9 @@ private[redis] object Keys {
 
   final val Sort: RedisCommand[(String, List[String]), Chunk[String]] =
     RedisCommand("SORT", NonEmptyList(StringInput), ChunkOutput)
+
+  final val SortStore: RedisCommand[(String, List[String]), Long] =
+    RedisCommand("SORT", NonEmptyList(StringInput), LongOutput)
 
   final val Touch: RedisCommand[(String, List[String]), Long] =
     RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)

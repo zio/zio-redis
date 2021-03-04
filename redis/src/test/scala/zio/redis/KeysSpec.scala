@@ -348,6 +348,13 @@ trait KeysSpec extends BaseSpec {
             sorted <- sort(key, alpha = true)
           } yield assert(sorted)(equalTo(Chunk("a", "c", "z")))
         },
+        testM("list of numbers, limited") {
+          for {
+            key <- uuid
+            _ <- lPush(key, "1", "0", "2")
+            sorted <- sort(key, limitOffset = Some((1, 1)))
+          } yield assert(sorted)(equalTo(Chunk("1")))
+        },
         testM("descending sort") {
           for {
             key <- uuid
@@ -388,6 +395,15 @@ trait KeysSpec extends BaseSpec {
             _ <- set(s"${prefix2}_$value", "0")
             sorted <- sort(key, get = List(s"${prefix}_*", s"${prefix2}_*"), alpha = true)
           } yield assert(sorted)(equalTo(Chunk("A", "0")))
+        },
+        testM("sort and store result") {
+          for {
+            key <- uuid
+            resultKey <- uuid
+            _ <- lPush(key, "1", "0", "2")
+            count <- sortStore(key, resultKey)
+            sorted <- lRange(resultKey, Range(0, 2))
+          } yield assert(sorted)(equalTo(Chunk("0", "1", "2"))) && assert(count)(equalTo(3L))
         }
       )
     )
