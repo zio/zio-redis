@@ -216,20 +216,17 @@ trait Keys {
     `type`: Option[String] = None
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((cursor, pattern, count, `type`))
 
-  private def sortArguments(
-    by: Option[String],
-    limitOffset: Option[(Int, Int)],
-    desc: Boolean,
-    get: List[String],
-    alpha: Boolean
-  ): List[String] =
-    by.map(sortBy => List("BY", sortBy)).getOrElse(List.empty) ++
-      limitOffset.map { case (count, offset) => List("LIMIT", offset.toString, count.toString) }
-        .getOrElse(List.empty) ++
-      get.flatMap(getAt => List("GET", getAt)) ++
-      List(if (desc) "DESC" else "ASC") ++
-      (if (alpha) List("ALPHA") else List.empty)
-
+  /**
+   * Sorts the list, set, or sorted set stored at key. Returns the sorted elements.
+   *
+   * @param key key
+   * @param by by option, specifies a pattern to use as an external key
+   * @param limitOffset limit count and offset option, take only limit values, starting at position offset
+   * @param desc desc option, sort descending instead of ascending
+   * @param get get option, return the values referenced by the keys generated from the get patterns
+   * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
+   * @return the sorted values, or the values found using the get patterns
+   */
   final def sort(
     key: String,
     by: Option[String] = None,
@@ -242,6 +239,21 @@ trait Keys {
     Sort.run((key, args))
   }
 
+  /**
+   * Sorts the list, set, or sorted set stored at key. Stores the results at storeAt. Returns the number of values sorted.
+   *
+   * The functions sort and sortStore are both implemented by the Redis command SORT. Because they have different return
+   * types, they are split into two Scala functions.
+   *
+   * @param key key
+   * @param storeAt where to store the results
+   * @param by by option, specifies a pattern to use as an external key
+   * @param limitOffset limit count and offset option, take only limit values, starting at position offset
+   * @param desc desc option, sort descending instead of ascending
+   * @param get get option, return the values referenced by the keys generated from the get patterns
+   * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
+   * @return the sorted values, or the values found using the get patterns
+   */
   final def sortStore(
     key: String,
     storeAt: String,
@@ -252,7 +264,6 @@ trait Keys {
     alpha: Boolean = false
   ): ZIO[RedisExecutor, RedisError, Long] = {
     val args = sortArguments(by, limitOffset, desc, get, alpha) ++ List("STORE", storeAt)
-
     SortStore.run((key, args))
   }
 
@@ -306,6 +317,20 @@ trait Keys {
 }
 
 private[redis] object Keys {
+  def sortArguments(
+    by: Option[String],
+    limitOffset: Option[(Int, Int)],
+    desc: Boolean,
+    get: List[String],
+    alpha: Boolean
+  ): List[String] =
+    by.map(sortBy => List("BY", sortBy)).getOrElse(List.empty) ++
+      limitOffset.map { case (count, offset) => List("LIMIT", offset.toString, count.toString) }
+        .getOrElse(List.empty) ++
+      get.flatMap(getAt => List("GET", getAt)) ++
+      List(if (desc) "DESC" else "ASC") ++
+      (if (alpha) List("ALPHA") else List.empty)
+
   final val Del: RedisCommand[(String, List[String]), Long] = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
 
   final val Dump: RedisCommand[String, Chunk[Byte]] = RedisCommand("DUMP", StringInput, BulkStringOutput)
