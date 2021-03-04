@@ -336,73 +336,73 @@ trait KeysSpec extends BaseSpec {
       suite("sort")(
         testM("list of numbers") {
           for {
-            key <- uuid
-            _ <- lPush(key, "1", "0", "2")
+            key    <- uuid
+            _      <- lPush(key, "1", "0", "2")
             sorted <- sort(key)
           } yield assert(sorted)(equalTo(Chunk("0", "1", "2")))
         },
         testM("list of strings") {
           for {
-            key <- uuid
-            _ <- lPush(key, "z", "a", "c")
+            key    <- uuid
+            _      <- lPush(key, "z", "a", "c")
             sorted <- sort(key, alpha = true)
           } yield assert(sorted)(equalTo(Chunk("a", "c", "z")))
         },
         testM("list of numbers, limited") {
           for {
-            key <- uuid
-            _ <- lPush(key, "1", "0", "2")
+            key    <- uuid
+            _      <- lPush(key, "1", "0", "2")
             sorted <- sort(key, limitOffset = Some((1, 1)))
           } yield assert(sorted)(equalTo(Chunk("1")))
         },
         testM("descending sort") {
           for {
-            key <- uuid
-            _ <- lPush(key, "1", "0", "2")
+            key    <- uuid
+            _      <- lPush(key, "1", "0", "2")
             sorted <- sort(key, desc = true)
           } yield assert(sorted)(equalTo(Chunk("2", "1", "0")))
         },
         testM("by the value referenced by a key-value pair") {
           for {
-            key <- uuid
-            a <- uuid
-            b <- uuid
-            _ <- lPush(key, b, a)
+            key    <- uuid
+            a      <- uuid
+            b      <- uuid
+            _      <- lPush(key, b, a)
             prefix <- uuid
-            _ <- set(s"${prefix}_$a", "A")
-            _ <- set(s"${prefix}_$b", "B")
+            _      <- set(s"${prefix}_$a", "A")
+            _      <- set(s"${prefix}_$b", "B")
             sorted <- sort(key, by = Some(s"${prefix}_*"), alpha = true)
           } yield assert(sorted)(equalTo(Chunk(a, b)))
         },
         testM("getting the value referenced by a key-value pair") {
           for {
-            key <- uuid
-            value <- uuid
-            _ <- lPush(key, value)
+            key    <- uuid
+            value  <- uuid
+            _      <- lPush(key, value)
             prefix <- uuid
-            _ <- set(s"${prefix}_$value", "A")
+            _      <- set(s"${prefix}_$value", "A")
             sorted <- sort(key, get = List(s"${prefix}_*"), alpha = true)
           } yield assert(sorted)(equalTo(Chunk("A")))
         },
         testM("getting multiple value referenced by a key-value pair") {
           for {
-            key <- uuid
-            value <- uuid
-            _ <- lPush(key, value)
-            prefix <- uuid
-            _ <- set(s"${prefix}_$value", "A")
+            key     <- uuid
+            value   <- uuid
+            _       <- lPush(key, value)
+            prefix  <- uuid
+            _       <- set(s"${prefix}_$value", "A")
             prefix2 <- uuid
-            _ <- set(s"${prefix2}_$value", "0")
-            sorted <- sort(key, get = List(s"${prefix}_*", s"${prefix2}_*"), alpha = true)
+            _       <- set(s"${prefix2}_$value", "0")
+            sorted  <- sort(key, get = List(s"${prefix}_*", s"${prefix2}_*"), alpha = true)
           } yield assert(sorted)(equalTo(Chunk("A", "0")))
         },
         testM("sort and store result") {
           for {
-            key <- uuid
+            key       <- uuid
             resultKey <- uuid
-            _ <- lPush(key, "1", "0", "2")
-            count <- sortStore(key, resultKey)
-            sorted <- lRange(resultKey, Range(0, 2))
+            _         <- lPush(key, "1", "0", "2")
+            count     <- sortStore(key, resultKey)
+            sorted    <- lRange(resultKey, Range(0, 2))
           } yield assert(sorted)(equalTo(Chunk("0", "1", "2"))) && assert(count)(equalTo(3L))
         }
       )
