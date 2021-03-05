@@ -10,7 +10,8 @@ import zio.stm.{ STM, TMap, TRef, USTM }
 private[redis] final class TestExecutor private (
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
-  randomPick: Int => USTM[Int]
+  randomPick: Int => USTM[Int],
+  hyperLogLogs: TMap[String, Seq[String]]
 ) extends RedisExecutor.Service {
 
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
@@ -25,6 +26,7 @@ private[redis] final class TestExecutor private (
   private def onConnection(command: String, input: Chunk[RespValue.BulkString])(
     res: => RespValue.BulkString
   ): USTM[BulkString] = STM.succeedNow(if (input.isEmpty) errResponse(command) else res)
+
   private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): STM[RedisError, RespValue] = {
     name match {
       case api.Connection.Ping.name =>
@@ -227,6 +229,7 @@ private[redis] final class TestExecutor private (
             case "COUNT" => Some(value.asString.toInt)
             case _       => None
           }
+
         val key = input.head.asString
         STM.ifM(isSet(key))(
           {
@@ -257,7 +260,48 @@ private[redis] final class TestExecutor private (
         val key   = input.head.asString
         val value = input(1).asString
         strings.put(key, value).as(Replies.Ok)
+      case api.HyperLogLog.PfAdd.name =>
+        val key    = input.head.asString
+        val values = input.tail.map(_.asString)
+        STM.ifM(forAll(Chunk.single(key))(isSet))(
+          for {
+            oldValues <- hyperLogLogs.getOrElse(key, Seq.empty[String])
+            ret        = if (oldValues == values) 0L else 1L
+            _         <- hyperLogLogs.put(key, values)
+          } yield {
+            RespValue.Integer(ret)
+          },
+          STM.succeedNow(Replies.WrongType)
+        )
 
+      case api.HyperLogLog.PfCount.name =>
+        val keys = input.map(_.asString)
+        STM.ifM(forAll(keys)(isSet))(
+          STM
+            .foldLeft(keys)(Seq.empty[String]) { (bHyperLogLogs, nextKey) =>
+              hyperLogLogs.getOrElse(nextKey, Seq.empty[String]).map { currentSet =>
+                bHyperLogLogs ++ currentSet
+              }
+            }
+            .map(vs => RespValue.Integer(vs.size.toLong)),
+          STM.succeedNow(Replies.WrongType)
+        )
+      case api.HyperLogLog.PfMerge.name =>
+        val key    = input.head.asString
+        val values = input.tail.map(_.asString)
+        STM.ifM(forAll(values ++ Chunk.single(key))(isSet))(
+          for {
+            sourceValues <- STM.foldLeft(values)(Seq.empty[String]) { (bHyperLogLogs, nextKey) =>
+                              hyperLogLogs.getOrElse(nextKey, Seq.empty[String]).map { currentSet =>
+                                bHyperLogLogs ++ currentSet
+                              }
+                            }
+            destValues <- hyperLogLogs.getOrElse(key, Seq.empty[String])
+            putValues   = sourceValues ++ destValues
+            _          <- hyperLogLogs.put(key, putValues)
+          } yield Replies.Ok,
+          STM.succeedNow(Replies.WrongType)
+        )
       case _ => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
     }
   }
@@ -279,6 +323,7 @@ private[redis] final class TestExecutor private (
             go(xs, toPick - 1, x :: acc)
           }
       }
+
     go(values, Math.max(n, 0), Nil)
   }
 
@@ -298,9 +343,13 @@ private[redis] final class TestExecutor private (
   private[this] def sInter(mainKey: String, otherKeys: Chunk[String]): STM[Unit, Set[String]] = {
     sealed trait State
     object State {
-      case object WrongType                          extends State
-      case object Empty                              extends State
+
+      case object WrongType extends State
+
+      case object Empty extends State
+
       final case class Continue(values: Set[String]) extends State
+
     }
     def get(key: String): STM[Nothing, State] =
       STM.ifM(isSet(key))(
@@ -338,22 +387,26 @@ private[redis] final class TestExecutor private (
   private[this] object Replies {
     val Ok: RespValue.SimpleString = RespValue.SimpleString("OK")
     val WrongType: RespValue.Error = RespValue.Error("WRONGTYPE")
+
     def array(values: Iterable[String]): RespValue.Array =
       RespValue.array(values.map(RespValue.bulkString).toList: _*)
+
     val EmptyArray: RespValue.Array = RespValue.array()
   }
+
 }
 
 private[redis] object TestExecutor {
   lazy val live: URLayer[zio.random.Random, RedisExecutor] = {
     val executor = for {
-      seed      <- random.nextInt
-      sRandom    = new scala.util.Random(seed)
-      ref       <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
-      randomPick = (i: Int) => ref.modify(s => (s.head(i), s.tail))
-      sets      <- TMap.empty[String, Set[String]].commit
-      strings   <- TMap.empty[String, String].commit
-    } yield new TestExecutor(sets, strings, randomPick)
+      seed         <- random.nextInt
+      sRandom       = new scala.util.Random(seed)
+      ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
+      randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
+      sets         <- TMap.empty[String, Set[String]].commit
+      strings      <- TMap.empty[String, String].commit
+      hyperLogLogs <- TMap.empty[String, Seq[String]].commit
+    } yield new TestExecutor(sets, strings, randomPick, hyperLogLogs)
 
     executor.toLayer
   }
