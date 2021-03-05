@@ -34,6 +34,14 @@ object Input {
     def encode(data: Boolean): Chunk[RespValue.BulkString] = Chunk.single(encodeString(if (data) "1" else "0"))
   }
 
+  case object ByInput extends Input[String] {
+    def encode(data: String): Chunk[RespValue.BulkString] = Chunk(encodeString("BY"), encodeString(data))
+  }
+
+  case object GetInput extends Input[String] {
+    def encode(data: String): Chunk[RespValue.BulkString] = Chunk(encodeString("GET"), encodeString(data))
+  }
+
   case object BitFieldCommandInput extends Input[BitFieldCommand] {
     def encode(data: BitFieldCommand): Chunk[RespValue.BulkString] = {
       import BitFieldCommand._
@@ -144,6 +152,11 @@ object Input {
     def encode(data: Unit): Chunk[RespValue.BulkString] = Chunk.empty
   }
 
+  final case class ListInput[-A](input: Input[A]) extends Input[List[A]] {
+    override private[redis] def encode(data: List[A]): Chunk[RespValue.BulkString] =
+      data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
+  }
+
   final case class NonEmptyList[-A](input: Input[A]) extends Input[(A, List[A])] {
     def encode(data: (A, List[A])): Chunk[RespValue.BulkString] =
       (data._1 :: data._2).foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
@@ -151,6 +164,10 @@ object Input {
 
   case object OrderInput extends Input[Order] {
     def encode(data: Order): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
+  }
+
+  case object AlphaInput extends Input[Alpha] {
+    def encode(data: Alpha): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
 
   case object RadiusUnitInput extends Input[RadiusUnit] {

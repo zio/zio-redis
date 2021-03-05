@@ -230,14 +230,12 @@ trait Keys {
   final def sort(
     key: String,
     by: Option[String] = None,
-    limitOffset: Option[(Int, Int)] = None,
-    desc: Boolean = false,
+    limit: Option[Limit] = None,
+    order: Order = Order.Ascending,
     get: List[String] = List.empty,
-    alpha: Boolean = false
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
-    val args = sortArguments(by, limitOffset, desc, get, alpha)
-    Sort.run((key, args))
-  }
+    alpha: Option[Alpha] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    Sort.run((key, by, limit, get, order, alpha))
 
   /**
    * Sorts the list, set, or sorted set stored at key. Stores the results at storeAt. Returns the number of values sorted.
@@ -256,16 +254,14 @@ trait Keys {
    */
   final def sortStore(
     key: String,
-    storeAt: String,
+    storeAt: Store,
     by: Option[String] = None,
-    limitOffset: Option[(Int, Int)] = None,
-    desc: Boolean = false,
+    limit: Option[Limit] = None,
+    order: Order = Order.Ascending,
     get: List[String] = List.empty,
-    alpha: Boolean = false
-  ): ZIO[RedisExecutor, RedisError, Long] = {
-    val args = sortArguments(by, limitOffset, desc, get, alpha) ++ List("STORE", storeAt)
-    SortStore.run((key, args))
-  }
+    alpha: Option[Alpha] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    SortStore.run((key, by, limit, get, order, alpha, storeAt))
 
   /**
    * Alters the last access time of a key(s). A key is ignored if it does not exist.
@@ -411,11 +407,36 @@ private[redis] object Keys {
       ScanOutput
     )
 
-  final val Sort: RedisCommand[(String, List[String]), Chunk[String]] =
-    RedisCommand("SORT", NonEmptyList(StringInput), ChunkOutput)
+  final val Sort
+    : RedisCommand[(String, Option[String], Option[Limit], List[String], Order, Option[Alpha]), Chunk[String]] =
+    RedisCommand(
+      "SORT",
+      Tuple6(
+        StringInput,
+        OptionalInput(ByInput),
+        OptionalInput(LimitInput),
+        ListInput(GetInput),
+        OrderInput,
+        OptionalInput(AlphaInput)
+      ),
+      ChunkOutput
+    )
 
-  final val SortStore: RedisCommand[(String, List[String]), Long] =
-    RedisCommand("SORT", NonEmptyList(StringInput), LongOutput)
+  final val SortStore
+    : RedisCommand[(String, Option[String], Option[Limit], List[String], Order, Option[Alpha], Store), Long] =
+    RedisCommand(
+      "SORT",
+      Tuple7(
+        StringInput,
+        OptionalInput(ByInput),
+        OptionalInput(LimitInput),
+        ListInput(GetInput),
+        OrderInput,
+        OptionalInput(AlphaInput),
+        StoreInput
+      ),
+      LongOutput
+    )
 
   final val Touch: RedisCommand[(String, List[String]), Long] =
     RedisCommand("TOUCH", NonEmptyList(StringInput), LongOutput)
