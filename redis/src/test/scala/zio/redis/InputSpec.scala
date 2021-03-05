@@ -41,6 +41,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("AGGREGATE", "SUM")))
         }
       ),
+      suite("Alpha")(
+        testM("alpha") {
+          for {
+            result <- Task(AlphaInput.encode(Alpha))
+          } yield assert(result)(equalTo(respArgs("ALPHA")))
+        }
+      ),
       suite("Auth")(
         testM("with empty password") {
           for {
@@ -161,6 +168,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("0", "1000")))
         }
       ),
+      suite("By")(
+        testM("with a pattern") {
+          for {
+            result <- Task(ByInput.encode("mykey_*"))
+          } yield assert(result)(equalTo(respArgs("BY", "mykey_*")))
+        }
+      ),
       suite("Changed")(
         testM("valid value") {
           for {
@@ -274,6 +288,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("FREQ", "frequency")))
         }
       ),
+      suite("Get")(
+        testM("with a pattern") {
+          for {
+            result <- Task(GetInput.encode("mypattern_*"))
+          } yield assert(result)(equalTo(respArgs("GET", "mypattern_*")))
+        }
+      ),
       suite("IdleTime")(
         testM("0 seconds") {
           for {
@@ -362,6 +383,18 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(LimitInput.encode(Limit(0L, 0L)))
           } yield assert(result)(equalTo(respArgs("LIMIT", "0", "0")))
+        }
+      ),
+      suite("List")(
+        testM("empty") {
+          for {
+            result <- Task(ListInput(StringInput).encode(List.empty))
+          } yield assert(result)(equalTo(Chunk.empty))
+        },
+        testM("nonempty") {
+          for {
+            result <- Task(ListInput(StringInput).encode(List("one", "two", "three")))
+          } yield assert(result)(equalTo(respArgs("one", "two", "three")))
         }
       ),
       suite("Long")(
