@@ -221,8 +221,8 @@ trait Keys {
    *
    * @param key key
    * @param by by option, specifies a pattern to use as an external key
-   * @param limitOffset limit count and offset option, take only limit values, starting at position offset
-   * @param desc desc option, sort descending instead of ascending
+   * @param limit limit option, take only limit values, starting at position offset
+   * @param order ordering option, sort descending instead of ascending
    * @param get get option, return the values referenced by the keys generated from the get patterns
    * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
    * @return the sorted values, or the values found using the get patterns
@@ -246,8 +246,8 @@ trait Keys {
    * @param key key
    * @param storeAt where to store the results
    * @param by by option, specifies a pattern to use as an external key
-   * @param limitOffset limit count and offset option, take only limit values, starting at position offset
-   * @param desc desc option, sort descending instead of ascending
+   * @param limit limit option, take only limit values, starting at position offset
+   * @param order ordering option, sort descending instead of ascending
    * @param get get option, return the values referenced by the keys generated from the get patterns
    * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
    * @return the sorted values, or the values found using the get patterns
