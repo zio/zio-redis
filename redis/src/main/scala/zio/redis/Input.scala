@@ -140,7 +140,7 @@ object Input {
 
   final case class ListInput[-A](input: Input[A]) extends Input[List[A]] {
     override private[redis] def encode(data: List[A]): Chunk[RespValue.BulkString] =
-      data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
+      Chunk.fromIterable(data).flatMap(input.encode)
   }
 
   case object LongInput extends Input[Long] {
