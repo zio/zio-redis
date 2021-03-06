@@ -265,7 +265,7 @@ private[redis] final class TestExecutor private (
         val values = input.tail.map(_.asString)
         STM.ifM(forAll(Chunk.single(key))(isSet))(
           for {
-            oldValues <- hyperLogLogs.getOrElse(key, Seq.empty[String])
+            oldValues <- hyperLogLogs.getOrElse(key, Chunk.empty)
             ret        = if (oldValues == values) 0L else 1L
             _         <- hyperLogLogs.put(key, values)
           } yield {
@@ -291,12 +291,12 @@ private[redis] final class TestExecutor private (
         val values = input.tail.map(_.asString)
         STM.ifM(forAll(values ++ Chunk.single(key))(isSet))(
           for {
-            sourceValues <- STM.foldLeft(values)(Seq.empty[String]) { (bHyperLogLogs, nextKey) =>
-                              hyperLogLogs.getOrElse(nextKey, Seq.empty[String]).map { currentSet =>
+            sourceValues <- STM.foldLeft(values)(Chunk.empty: Chunk[String]) { (bHyperLogLogs, nextKey) =>
+                              hyperLogLogs.getOrElse(nextKey, Chunk.empty).map { currentSet =>
                                 bHyperLogLogs ++ currentSet
                               }
                             }
-            destValues <- hyperLogLogs.getOrElse(key, Seq.empty[String])
+            destValues <- hyperLogLogs.getOrElse(key, Chunk.empty)
             putValues   = sourceValues ++ destValues
             _          <- hyperLogLogs.put(key, putValues)
           } yield Replies.Ok,
