@@ -217,6 +217,53 @@ trait Keys {
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((cursor, pattern, count, `type`))
 
   /**
+   * Sorts the list, set, or sorted set stored at key. Returns the sorted elements.
+   *
+   * @param key key
+   * @param by by option, specifies a pattern to use as an external key
+   * @param limit limit option, take only limit values, starting at position offset
+   * @param order ordering option, sort descending instead of ascending
+   * @param get get option, return the values referenced by the keys generated from the get patterns
+   * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
+   * @return the sorted values, or the values found using the get patterns
+   */
+  final def sort(
+    key: String,
+    by: Option[String] = None,
+    limit: Option[Limit] = None,
+    order: Order = Order.Ascending,
+    get: Option[(String, List[String])] = None,
+    alpha: Option[Alpha] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+    Sort.run((key, by, limit, get, order, alpha))
+
+  /**
+   * Sorts the list, set, or sorted set stored at key. Stores the results at storeAt. Returns the number of values sorted.
+   *
+   * The functions sort and sortStore are both implemented by the Redis command SORT. Because they have different return
+   * types, they are split into two Scala functions.
+   *
+   * @param key key
+   * @param storeAt where to store the results
+   * @param by by option, specifies a pattern to use as an external key
+   * @param limit limit option, take only limit values, starting at position offset
+   * @param order ordering option, sort descending instead of ascending
+   * @param get get option, return the values referenced by the keys generated from the get patterns
+   * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
+   * @return the sorted values, or the values found using the get patterns
+   */
+  final def sortStore(
+    key: String,
+    storeAt: Store,
+    by: Option[String] = None,
+    limit: Option[Limit] = None,
+    order: Order = Order.Ascending,
+    get: Option[(String, List[String])] = None,
+    alpha: Option[Alpha] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    SortStore.run((key, by, limit, get, order, alpha, storeAt))
+
+  /**
    * Alters the last access time of a key(s). A key is ignored if it does not exist.
    *
    * @param key one required key
@@ -344,6 +391,41 @@ private[redis] object Keys {
       "SCAN",
       Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
       ScanOutput
+    )
+
+  final val Sort
+    : RedisCommand[(String, Option[String], Option[Limit], Option[(String, List[String])], Order, Option[Alpha]), Chunk[
+      String
+    ]] =
+    RedisCommand(
+      "SORT",
+      Tuple6(
+        StringInput,
+        OptionalInput(ByInput),
+        OptionalInput(LimitInput),
+        OptionalInput(NonEmptyList(GetInput)),
+        OrderInput,
+        OptionalInput(AlphaInput)
+      ),
+      ChunkOutput
+    )
+
+  final val SortStore: RedisCommand[
+    (String, Option[String], Option[Limit], Option[(String, List[String])], Order, Option[Alpha], Store),
+    Long
+  ] =
+    RedisCommand(
+      "SORT",
+      Tuple7(
+        StringInput,
+        OptionalInput(ByInput),
+        OptionalInput(LimitInput),
+        OptionalInput(NonEmptyList(GetInput)),
+        OrderInput,
+        OptionalInput(AlphaInput),
+        StoreInput
+      ),
+      LongOutput
     )
 
   final val Touch: RedisCommand[(String, List[String]), Long] =
