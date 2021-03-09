@@ -232,7 +232,7 @@ trait Keys {
     by: Option[String] = None,
     limit: Option[Limit] = None,
     order: Order = Order.Ascending,
-    get: List[String] = List.empty,
+    get: Option[(String, List[String])] = None,
     alpha: Option[Alpha] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     Sort.run((key, by, limit, get, order, alpha))
@@ -258,7 +258,7 @@ trait Keys {
     by: Option[String] = None,
     limit: Option[Limit] = None,
     order: Order = Order.Ascending,
-    get: List[String] = List.empty,
+    get: Option[(String, List[String])] = None,
     alpha: Option[Alpha] = None
   ): ZIO[RedisExecutor, RedisError, Long] =
     SortStore.run((key, by, limit, get, order, alpha, storeAt))
@@ -394,29 +394,33 @@ private[redis] object Keys {
     )
 
   final val Sort
-    : RedisCommand[(String, Option[String], Option[Limit], List[String], Order, Option[Alpha]), Chunk[String]] =
+    : RedisCommand[(String, Option[String], Option[Limit], Option[(String, List[String])], Order, Option[Alpha]), Chunk[
+      String
+    ]] =
     RedisCommand(
       "SORT",
       Tuple6(
         StringInput,
         OptionalInput(ByInput),
         OptionalInput(LimitInput),
-        ListInput(GetInput),
+        OptionalInput(NonEmptyList(GetInput)),
         OrderInput,
         OptionalInput(AlphaInput)
       ),
       ChunkOutput
     )
 
-  final val SortStore
-    : RedisCommand[(String, Option[String], Option[Limit], List[String], Order, Option[Alpha], Store), Long] =
+  final val SortStore: RedisCommand[
+    (String, Option[String], Option[Limit], Option[(String, List[String])], Order, Option[Alpha], Store),
+    Long
+  ] =
     RedisCommand(
       "SORT",
       Tuple7(
         StringInput,
         OptionalInput(ByInput),
         OptionalInput(LimitInput),
-        ListInput(GetInput),
+        OptionalInput(NonEmptyList(GetInput)),
         OrderInput,
         OptionalInput(AlphaInput),
         StoreInput

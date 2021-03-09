@@ -385,18 +385,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("LIMIT", "0", "0")))
         }
       ),
-      suite("List")(
-        testM("empty") {
-          for {
-            result <- Task(ListInput(StringInput).encode(List.empty))
-          } yield assert(result)(equalTo(Chunk.empty))
-        },
-        testM("nonempty") {
-          for {
-            result <- Task(ListInput(StringInput).encode(List("one", "two", "three")))
-          } yield assert(result)(equalTo(respArgs("one", "two", "three")))
-        }
-      ),
       suite("Long")(
         testM("positive value") {
           for {

@@ -381,7 +381,7 @@ trait KeysSpec extends BaseSpec {
             _      <- lPush(key, value)
             prefix <- uuid
             _      <- set(s"${prefix}_$value", "A")
-            sorted <- sort(key, get = List(s"${prefix}_*"), alpha = Some(Alpha))
+            sorted <- sort(key, get = Some((s"${prefix}_*", List.empty)), alpha = Some(Alpha))
           } yield assert(sorted)(equalTo(Chunk("A")))
         },
         testM("getting multiple value referenced by a key-value pair") {
@@ -393,7 +393,7 @@ trait KeysSpec extends BaseSpec {
             _       <- set(s"${prefix}_$value", "A")
             prefix2 <- uuid
             _       <- set(s"${prefix2}_$value", "0")
-            sorted  <- sort(key, get = List(s"${prefix}_*", s"${prefix2}_*"), alpha = Some(Alpha))
+            sorted  <- sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
           } yield assert(sorted)(equalTo(Chunk("A", "0")))
         },
         testM("sort and store result") {

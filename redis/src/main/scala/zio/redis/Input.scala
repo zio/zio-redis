@@ -138,11 +138,6 @@ object Input {
       Chunk(encodeString("LIMIT"), encodeString(data.offset.toString), encodeString(data.count.toString))
   }
 
-  final case class ListInput[-A](input: Input[A]) extends Input[List[A]] {
-    override private[redis] def encode(data: List[A]): Chunk[RespValue.BulkString] =
-      Chunk.fromIterable(data).flatMap(input.encode)
-  }
-
   case object LongInput extends Input[Long] {
     def encode(data: Long): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.toString))
   }
