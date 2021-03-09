@@ -313,20 +313,6 @@ trait Keys {
 }
 
 private[redis] object Keys {
-  def sortArguments(
-    by: Option[String],
-    limitOffset: Option[(Int, Int)],
-    desc: Boolean,
-    get: List[String],
-    alpha: Boolean
-  ): List[String] =
-    by.map(sortBy => List("BY", sortBy)).getOrElse(List.empty) ++
-      limitOffset.map { case (count, offset) => List("LIMIT", offset.toString, count.toString) }
-        .getOrElse(List.empty) ++
-      get.flatMap(getAt => List("GET", getAt)) ++
-      List(if (desc) "DESC" else "ASC") ++
-      (if (alpha) List("ALPHA") else List.empty)
-
   final val Del: RedisCommand[(String, List[String]), Long] = RedisCommand("DEL", NonEmptyList(StringInput), LongOutput)
 
   final val Dump: RedisCommand[String, Chunk[Byte]] = RedisCommand("DUMP", StringInput, BulkStringOutput)
