@@ -1,6 +1,7 @@
 package zio.redis.options
 
 trait Geo {
+  this: Shared =>
 
   sealed case class LongLat(longitude: Double, latitude: Double)
 
@@ -21,6 +22,23 @@ trait Geo {
     case object Kilometers extends RadiusUnit
     case object Feet       extends RadiusUnit
     case object Miles      extends RadiusUnit
+  }
+
+  sealed trait StoreOptions {
+    def store: Option[Store]
+    def storeDist: Option[StoreDist]
+  }
+  case class StoreResults(results: Store) extends StoreOptions {
+    override def store: Option[Store]         = Some(results)
+    override def storeDist: Option[StoreDist] = None
+  }
+  case class StoreDistances(distances: StoreDist) extends StoreOptions {
+    override def store: Option[Store]         = None
+    override def storeDist: Option[StoreDist] = Some(distances)
+  }
+  case class StoreBoth(results: Store, distances: StoreDist) extends StoreOptions {
+    override def store: Option[Store]         = Some(results)
+    override def storeDist: Option[StoreDist] = Some(distances)
   }
 
   sealed case class StoreDist(key: String)

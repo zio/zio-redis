@@ -45,6 +45,14 @@ trait GeoSpec extends BaseSpec {
             hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
           )
         },
+        testM("storing the result") {
+          import GeoSpec.Sicily._
+          for {
+            dest      <- uuid
+            _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            numStored <- geoRadiusStore(key, member1LongLat, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
+          } yield assert(numStored)(equalTo(2L))
+        },
         testM("with coordinates") {
           import GeoSpec.Sicily._
           for {
@@ -169,6 +177,14 @@ trait GeoSpec extends BaseSpec {
           } yield assert(response)(
             hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
           )
+        },
+        testM("storing the result") {
+          import GeoSpec.Sicily._
+          for {
+            dest      <- uuid
+            _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            numStored <- geoRadiusByMemberStore(key, member1, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
+          } yield assert(numStored)(equalTo(2L))
         },
         testM("with coordinates") {
           import GeoSpec.Sicily._
