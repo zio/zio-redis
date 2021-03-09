@@ -8,7 +8,10 @@ trait Keys {
 
   type AbsTtl = AbsTtl.type
 
-  case object Alpha
+  case object Alpha {
+    private[redis] def stringify: String = "ALPHA"
+  }
+
   type Alpha = Alpha.type
 
   sealed case class Auth(password: String)

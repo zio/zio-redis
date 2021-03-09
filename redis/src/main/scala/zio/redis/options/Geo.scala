@@ -6,19 +6,6 @@ trait Geo {
 
   sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
 
-  sealed trait Order { self =>
-    private[redis] final def stringify: String =
-      self match {
-        case Order.Ascending  => "ASC"
-        case Order.Descending => "DESC"
-      }
-  }
-
-  object Order {
-    case object Ascending  extends Order
-    case object Descending extends Order
-  }
-
   sealed trait RadiusUnit { self =>
     private[redis] final def stringify: String =
       self match {
@@ -35,8 +22,6 @@ trait Geo {
     case object Feet       extends RadiusUnit
     case object Miles      extends RadiusUnit
   }
-
-  sealed case class Store(key: String)
 
   sealed case class StoreDist(key: String)
 
