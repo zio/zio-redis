@@ -4,7 +4,6 @@ import zio.Chunk
 import zio.duration._
 
 sealed trait Output[+A] {
-
   self =>
 
   private[redis] final def unsafeDecode(respValue: RespValue): A =
@@ -17,6 +16,10 @@ sealed trait Output[+A] {
         throw RedisError.BusyGroup(msg.drop(9).trim)
       case RespValue.Error(msg) if msg.startsWith("NOGROUP") =>
         throw RedisError.NoGroup(msg.drop(7).trim)
+      case RespValue.Error(msg) if msg.startsWith("NOSCRIPT") =>
+        throw RedisError.NoScript(msg.drop(8).trim)
+      case RespValue.Error(msg) if msg.startsWith("NOTBUSY") =>
+        throw RedisError.NotBusy(msg.drop(7).trim)
       case RespValue.Error(msg) =>
         throw RedisError.ProtocolError(msg.trim)
       case success =>
@@ -29,12 +32,15 @@ sealed trait Output[+A] {
     new Output[B] {
       protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
     }
-
 }
 
 object Output {
 
   import RedisError._
+
+  case object RespValueOutput extends Output[RespValue] {
+    protected def tryDecode(respValue: RespValue): RespValue = respValue
+  }
 
   case object BoolOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue): Boolean =
@@ -45,16 +51,11 @@ object Output {
       }
   }
 
-  case object ChunkOutput extends Output[Chunk[String]] {
-    protected def tryDecode(respValue: RespValue): Chunk[String] =
+  final case class ChunkOutput[R](output: Output[R]) extends Output[Chunk[R]] {
+    protected def tryDecode(respValue: RespValue): Chunk[R] =
       respValue match {
-        case RespValue.Array(values) =>
-          values.map {
-            case s @ RespValue.BulkString(_) => s.asString
-            case other                       => throw ProtocolError(s"$other is not a bulk string")
-          }
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
+        case RespValue.Array(values) => values.map(output.unsafeDecode)
+        case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -262,28 +263,24 @@ object Output {
       }
   }
 
-  case object KeyValueOutput extends Output[Map[String, String]] {
-    protected def tryDecode(respValue: RespValue): Map[String, String] =
+  final case class KeyValueOutput[K, V](outK: Output[K], outV: Output[V]) extends Output[Map[K, V]] {
+    protected def tryDecode(respValue: RespValue): Map[K, V] =
       respValue match {
         case RespValue.Array(elements) if elements.length % 2 == 0 =>
-          val output = collection.mutable.Map.empty[String, String]
+          val output = collection.mutable.Map.empty[K, V]
           val len    = elements.length
           var pos    = 0
 
           while (pos < len) {
-            (elements(pos), elements(pos + 1)) match {
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-                output += key.asString -> value.asString
-              case _ =>
-            }
+            val key   = outK.unsafeDecode(elements(pos))
+            val value = outV.unsafeDecode(elements(pos + 1))
+            output += key -> value
             pos += 2
           }
 
           output.toMap
-
         case array @ RespValue.Array(_) =>
           throw ProtocolError(s"$array doesn't have an even number of elements")
-
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
@@ -297,7 +294,7 @@ object Output {
           val output = collection.mutable.Map.empty[String, Map[String, String]]
           entities.foreach {
             case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+              output += (id.asString -> KeyValueOutput(MultiStringOutput, MultiStringOutput).unsafeDecode(value))
             case other =>
               throw ProtocolError(s"$other isn't a valid array")
           }

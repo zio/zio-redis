@@ -245,7 +245,7 @@ private[redis] object Lists {
     RedisCommand("LPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 
   final val LRange: RedisCommand[(String, Range), Chunk[String]] =
-    RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput)
+    RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput(MultiStringOutput))
 
   final val LRem: RedisCommand[(String, Long, String), Long] =
     RedisCommand("LREM", Tuple3(StringInput, LongInput, StringInput), LongOutput)

@@ -7,9 +7,16 @@ import scala.util.matching.Regex
 
 import zio.Chunk
 import zio.duration.Duration
+import zio.redis.RespValue.BulkString
 
 sealed trait Input[-A] {
+  self =>
+
   private[redis] def encode(data: A): Chunk[RespValue.BulkString]
+
+  final def contramap[B](f: B => A): Input[B] = new Input[B] {
+    def encode(data: B): Chunk[BulkString] = self.encode(f(data))
+  }
 }
 
 object Input {
@@ -200,7 +207,7 @@ object Input {
   }
 
   case object ByteInput extends Input[Chunk[Byte]] {
-    private[redis] def encode(data: Chunk[Byte]) = Chunk.single(RespValue.BulkString(data))
+    def encode(data: Chunk[Byte]): Chunk[RespValue.BulkString] = Chunk.single(RespValue.BulkString(data))
   }
 
   final case class OptionalInput[-A](a: Input[A]) extends Input[Option[A]] {
@@ -426,6 +433,21 @@ object Input {
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
   }
 
+  final case class EvalInput[-K, -V](inputK: Input[K], inputV: Input[V]) extends Input[(String, Chunk[K], Chunk[V])] {
+    def encode(data: (String, Chunk[K], Chunk[V])): Chunk[RespValue.BulkString] = {
+      val (lua, keys, args) = data
+      val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
+      val encodedKeys       = keys.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputK.encode(next))
+      val encodedArgs       = args.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputV.encode(next))
+      encodedScript ++ encodedKeys ++ encodedArgs
+    }
+  }
+
+  case object ScriptDebugInput extends Input[DebugMode] {
+    def encode(data: DebugMode): Chunk[RespValue.BulkString] =
+      Chunk.single(encodeString(data.stringify))
+  }
+
   case object WithScoresInput extends Input[WithScores] {
     def encode(data: WithScores): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
@@ -449,4 +471,13 @@ object Input {
   case object WithJustIdInput extends Input[WithJustId] {
     def encode(data: WithJustId): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
+
+  trait Implicits {
+    implicit val bytesEncoder: Input[Chunk[Byte]] = ByteInput
+    implicit val booleanInput: Input[Boolean]     = BoolInput
+    implicit val stringInput: Input[String]       = StringInput
+    implicit val longInput: Input[Long]           = LongInput
+  }
+
+  object Implicits extends Implicits
 }

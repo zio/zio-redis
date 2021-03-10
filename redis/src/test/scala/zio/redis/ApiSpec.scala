@@ -14,7 +14,8 @@ object ApiSpec
     with GeoSpec
     with HyperLogLogSpec
     with HashSpec
-    with StreamsSpec {
+    with StreamsSpec
+    with ScriptingSpec {
 
   // scalafix:off
   def spec =
@@ -30,7 +31,8 @@ object ApiSpec
         geoSuite,
         hyperLogLogSuite,
         hashSuite,
-        streamsSuite
+        streamsSuite,
+        scriptingSpec
       ).provideCustomLayerShared((Logging.ignore >>> RedisExecutor.local.orDie) ++ Clock.live),
       suite("Test Executor")(
         connectionSuite,
