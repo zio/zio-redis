@@ -1,23 +1,11 @@
 package zio.redis.options
 
 trait Geo {
+  this: Shared =>
 
   sealed case class LongLat(longitude: Double, latitude: Double)
 
   sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
-
-  sealed trait Order { self =>
-    private[redis] final def stringify: String =
-      self match {
-        case Order.Ascending  => "ASC"
-        case Order.Descending => "DESC"
-      }
-  }
-
-  object Order {
-    case object Ascending  extends Order
-    case object Descending extends Order
-  }
 
   sealed trait RadiusUnit { self =>
     private[redis] final def stringify: String =
@@ -36,7 +24,22 @@ trait Geo {
     case object Miles      extends RadiusUnit
   }
 
-  sealed case class Store(key: String)
+  sealed trait StoreOptions {
+    def store: Option[Store]
+    def storeDist: Option[StoreDist]
+  }
+  case class StoreResults(results: Store) extends StoreOptions {
+    override def store: Option[Store]         = Some(results)
+    override def storeDist: Option[StoreDist] = None
+  }
+  case class StoreDistances(distances: StoreDist) extends StoreOptions {
+    override def store: Option[Store]         = None
+    override def storeDist: Option[StoreDist] = Some(distances)
+  }
+  case class StoreBoth(results: Store, distances: StoreDist) extends StoreOptions {
+    override def store: Option[Store]         = Some(results)
+    override def storeDist: Option[StoreDist] = Some(distances)
+  }
 
   sealed case class StoreDist(key: String)
 

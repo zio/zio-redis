@@ -26,6 +26,10 @@ object Input {
       Chunk(encodeString("AGGREGATE"), encodeString(data.stringify))
   }
 
+  case object AlphaInput extends Input[Alpha] {
+    def encode(data: Alpha): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
+  }
+
   case object AuthInput extends Input[Auth] {
     def encode(data: Auth): Chunk[RespValue.BulkString] = Chunk(encodeString("AUTH"), encodeString(data.password))
   }
@@ -60,6 +64,10 @@ object Input {
     }
   }
 
+  case object ByInput extends Input[String] {
+    def encode(data: String): Chunk[RespValue.BulkString] = Chunk(encodeString("BY"), encodeString(data))
+  }
+
   case object ChangedInput extends Input[Changed] {
     def encode(data: Changed): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
@@ -71,6 +79,10 @@ object Input {
   case object CountInput extends Input[Count] {
     def encode(data: Count): Chunk[RespValue.BulkString] =
       Chunk(encodeString("COUNT"), encodeString(data.count.toString))
+  }
+
+  case object GetInput extends Input[String] {
+    def encode(data: String): Chunk[RespValue.BulkString] = Chunk(encodeString("GET"), encodeString(data))
   }
 
   case object PositionInput extends Input[Position] {
