@@ -79,9 +79,6 @@ trait Geo {
    *  @param withHash flag to include raw geohash sorted set score of each member in the result
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
-   *  @param store sorted set where the results should be stored
-   *  @param storeDist sorted set where the results populated with their distance from the center as a floating point
-   *  number should be stored
    *  @return chunk of members within the specified are
    */
   final def geoRadius(
@@ -93,11 +90,43 @@ trait Geo {
     withDist: Option[WithDist] = None,
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
-    order: Option[Order] = None,
-    store: Option[Store] = None,
-    storeDist: Option[StoreDist] = None
+    order: Option[Order] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] =
-    GeoRadius.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store, storeDist))
+    GeoRadius.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+
+  /**
+   * Similar to geoRadius, but store the results to the argument passed to store and return the number of
+   * elements stored. Added as a separate Scala function because it returns a Long instead of the list of results.
+   * Find the geospatial members of a sorted set which are within the area specified with a *center location* and the
+   * *maximum distance from the center*.
+   *
+   *  @param key sorted set of geospatial members
+   *  @param center position
+   *  @param radius distance from the center
+   *  @param store sorted set where the results and/or distances should be stored
+   *  @param radiusUnit Unit of distance ("m", "km", "ft", "mi")
+   *  @param withCoord flag to include the position of each member in the result
+   *  @param withDist flag to include the distance of each member from the center in the result
+   *  @param withHash flag to include raw geohash sorted set score of each member in the result
+   *  @param count limit the results to the first N matching items
+   *  @param order sort returned items in the given `Order`
+   *  @return chunk of members within the specified are
+   */
+  final def geoRadiusStore(
+    key: String,
+    center: LongLat,
+    radius: Double,
+    radiusUnit: RadiusUnit,
+    store: StoreOptions,
+    withCoord: Option[WithCoord] = None,
+    withDist: Option[WithDist] = None,
+    withHash: Option[WithHash] = None,
+    count: Option[Count] = None,
+    order: Option[Order] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    GeoRadiusStore.run(
+      (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
+    )
 
   /**
    *  Return geospatial members of a sorted set which are within the area specified with an *existing member* in the set
@@ -111,8 +140,6 @@ trait Geo {
    *  @param withHash flag to include raw geohash sorted set score of each member in the result
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
-   *  @param store sorted set where the results should be stored
-   *  @param storeDist sorted set where the results populated with their distance from the center as a floating point
    *  number should be stored
    *  @return chunk of members within the specified area, or an error if the member is not in the set
    */
@@ -125,12 +152,44 @@ trait Geo {
     withDist: Option[WithDist] = None,
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
-    order: Option[Order] = None,
-    store: Option[Store] = None,
-    storeDist: Option[StoreDist] = None
+    order: Option[Order] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] =
     GeoRadiusByMember.run(
-      (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order, store, storeDist)
+      (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order)
+    )
+
+  /**
+   * Similar to geoRadiusByMember, but store the results to the argument passed to store and return the number of
+   * elements stored. Added as a separate Scala function because it returns a Long instead of the list of results.
+   * Find geospatial members of a sorted set which are within the area specified with an *existing member* in the set
+   * and the *maximum distance from the location of that member*.
+   *
+   *  @param key sorted set of geospatial members
+   *  @param member member in the set
+   *  @param radius distance from the member
+   *  @param radiusUnit Unit of distance ("m", "km", "ft", "mi")
+   *  @param store sorted set where the results and/or distances should be stored
+   *  @param withCoord flag to include the position of each member in the result
+   *  @param withDist flag to include the distance of each member from the center in the result
+   *  @param withHash flag to include raw geohash sorted set score of each member in the result
+   *  @param count limit the results to the first N matching items
+   *  @param order sort returned items in the given `Order`
+   *  @return chunk of members within the specified area, or an error if the member is not in the set
+   */
+  final def geoRadiusByMemberStore(
+    key: String,
+    member: String,
+    radius: Double,
+    radiusUnit: RadiusUnit,
+    store: StoreOptions,
+    withCoord: Option[WithCoord] = None,
+    withDist: Option[WithDist] = None,
+    withHash: Option[WithHash] = None,
+    count: Option[Count] = None,
+    order: Option[Order] = None
+  ): ZIO[RedisExecutor, RedisError, Long] =
+    GeoRadiusByMemberStore.run(
+      (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
 }
 
@@ -161,11 +220,42 @@ private[redis] object Geo {
       Option[WithDist],
       Option[WithHash],
       Option[Count],
+      Option[Order]
+    ),
+    Chunk[GeoView]
+  ] =
+    RedisCommand(
+      "GEORADIUS",
+      Tuple9(
+        StringInput,
+        LongLatInput,
+        DoubleInput,
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput)
+      ),
+      GeoRadiusOutput
+    )
+
+  // We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
+  final val GeoRadiusStore: RedisCommand[
+    (
+      String,
+      LongLat,
+      Double,
+      RadiusUnit,
+      Option[WithCoord],
+      Option[WithDist],
+      Option[WithHash],
+      Option[Count],
       Option[Order],
       Option[Store],
       Option[StoreDist]
     ),
-    Chunk[GeoView]
+    Long
   ] =
     RedisCommand(
       "GEORADIUS",
@@ -182,10 +272,41 @@ private[redis] object Geo {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      GeoRadiusOutput
+      LongOutput
     )
 
   final val GeoRadiusByMember: RedisCommand[
+    (
+      String,
+      String,
+      Double,
+      RadiusUnit,
+      Option[WithCoord],
+      Option[WithDist],
+      Option[WithHash],
+      Option[Count],
+      Option[Order]
+    ),
+    Chunk[GeoView]
+  ] =
+    RedisCommand(
+      "GEORADIUSBYMEMBER",
+      Tuple9(
+        StringInput,
+        StringInput,
+        DoubleInput,
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput)
+      ),
+      GeoRadiusOutput
+    )
+
+  // We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
+  final val GeoRadiusByMemberStore: RedisCommand[
     (
       String,
       String,
@@ -199,7 +320,7 @@ private[redis] object Geo {
       Option[Store],
       Option[StoreDist]
     ),
-    Chunk[GeoView]
+    Long
   ] =
     RedisCommand(
       "GEORADIUSBYMEMBER",
@@ -216,6 +337,6 @@ private[redis] object Geo {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      GeoRadiusOutput
+      LongOutput
     )
 }
