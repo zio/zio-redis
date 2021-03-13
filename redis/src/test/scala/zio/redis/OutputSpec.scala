@@ -499,8 +499,8 @@ object OutputSpec extends BaseSpec {
           )
           Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
-        suite("xInfoStream commands output")(
-          testM("extract valid value") {
+        suite("xInfoStream")(
+          testM("extract valid value with first and last entry") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -511,7 +511,7 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("groups"),
               RespValue.Integer(2),
               RespValue.bulkString("last-generated-id"),
-              RespValue.bulkString("1-111"),
+              RespValue.bulkString("2-0"),
               RespValue.bulkString("first-entry"),
               RespValue.array(
                 RespValue.bulkString("id"),
@@ -524,131 +524,121 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("last-entry"),
               RespValue.array(
                 RespValue.bulkString("id"),
-                RespValue.bulkString("1-0"),
+                RespValue.bulkString("2-0"),
                 RespValue.array(
                   RespValue.bulkString("key2"),
                   RespValue.bulkString("value2")
                 )
               )
             )
-            Task(StreamInfoOutput.unsafeDecode(resp)).map { f =>
-              assert(f)(
-                equalTo(
-                  StreamInfo(
-                    length = Option(1),
-                    radixTreeKeys = Option(2),
-                    radixTreeNodes = Option(3),
-                    groups = Option(2),
-                    lastGeneratedId = Option("1-111"),
-                    firstEntry = Some(StreamEntry("1-0", Map("key1" -> "value1"))),
-                    lastEntry = Some(StreamEntry("1-0", Map("key2" -> "value2")))
-                  )
+
+            assertM(Task(StreamInfoOutput.unsafeDecode(resp)))(
+              equalTo(
+                StreamInfo(
+                  1,
+                  2,
+                  3,
+                  2,
+                  "2-0",
+                  Some(StreamEntry("1-0", Map("key1" -> "value1"))),
+                  Some(StreamEntry("2-0", Map("key2" -> "value2")))
                 )
               )
-            }
+            )
           },
-          testM("success when message mis value") {
+          testM("extract valid value without first and last entry") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
               RespValue.bulkString("radix-tree-nodes"),
-              RespValue.Integer(3)
+              RespValue.Integer(3),
+              RespValue.bulkString("groups"),
+              RespValue.Integer(1),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0")
             )
-            Task(StreamInfoOutput.unsafeDecode(resp)).map { f =>
-              assert(f)(
-                equalTo(
-                  StreamInfo(Some(1), None, Some(3), None, None, None, None)
-                )
-              )
-            }
+
+            assertM(Task(StreamInfoOutput.unsafeDecode(resp)))(
+              equalTo(StreamInfo(1, 2, 3, 1, "0-0", None, None))
+            )
           }
         ),
-        suite("xInfoGroup commands output")(
-          testM("extract valid value") {
+        suite("xInfoGroups")(
+          testM("extract a valid value") {
             val resp = RespValue.array(
               RespValue.array(
                 RespValue.bulkString("name"),
-                RespValue.bulkString("name"),
+                RespValue.bulkString("group1"),
                 RespValue.bulkString("consumers"),
-                RespValue.Integer(10),
+                RespValue.Integer(1),
                 RespValue.bulkString("pending"),
-                RespValue.Integer(100),
+                RespValue.Integer(1),
                 RespValue.bulkString("last-delivered-id"),
-                RespValue.bulkString("1111")
+                RespValue.bulkString("1-0")
               ),
               RespValue.array(
                 RespValue.bulkString("name"),
-                RespValue.bulkString("name2"),
+                RespValue.bulkString("group2"),
                 RespValue.bulkString("consumers"),
-                RespValue.Integer(110),
+                RespValue.Integer(2),
                 RespValue.bulkString("pending"),
-                RespValue.Integer(1100),
+                RespValue.Integer(2),
                 RespValue.bulkString("last-delivered-id"),
-                RespValue.bulkString("1111")
+                RespValue.bulkString("2-0")
               )
             )
-            Task(StreamGroupInfoOutput.unsafeDecode(resp)).map(x =>
-              assert(x)(
-                equalTo(
-                  Chunk.apply(
-                    StreamGroupInfo(Some("name"), Some(10), Some(100), Some("1111")),
-                    StreamGroupInfo(Some("name2"), Some(110), Some(1100), Some("1111"))
-                  )
+
+            assertM(Task(StreamGroupsInfoOutput.unsafeDecode(resp)))(
+              equalTo(
+                Chunk(
+                  StreamGroupsInfo("group1", 1, 1, "1-0"),
+                  StreamGroupsInfo("group2", 2, 2, "2-0")
                 )
               )
             )
           },
-          testM("empty array when xinfo groups") {
+          testM("extract an empty array") {
             val resp = RespValue.array()
-            Task(StreamGroupInfoOutput.unsafeDecode(resp)).map { f =>
-              assert(f)(
-                equalTo(
-                  Chunk.empty
-                )
-              )
-            }
-          },
-          testM("empty array when xinfo consumers") {
-            val resp = RespValue.array()
-            Task(StreamConsumerInfoOutput.unsafeDecode(resp)).map { f =>
-              assert(f)(
-                equalTo(
-                  Chunk.empty
-                )
-              )
-            }
+
+            assertM(Task(StreamGroupsInfoOutput.unsafeDecode(resp)))(isEmpty)
           }
         ),
-        suite("XInfoConsumers commands output")(
-          testM("extract valid value") {
+        suite("xInfoConsumers")(
+          testM("extract a valid value") {
             val resp = RespValue.array(
               RespValue.array(
                 RespValue.bulkString("name"),
-                RespValue.bulkString("name"),
+                RespValue.bulkString("consumer1"),
                 RespValue.bulkString("pending"),
-                RespValue.Integer(100),
+                RespValue.Integer(1),
                 RespValue.bulkString("idle"),
-                RespValue.Integer(10)
+                RespValue.Integer(100)
               ),
               RespValue.array(
                 RespValue.bulkString("name"),
-                RespValue.bulkString("name2"),
+                RespValue.bulkString("consumer2"),
                 RespValue.bulkString("pending"),
-                RespValue.Integer(1100),
+                RespValue.Integer(2),
                 RespValue.bulkString("idle"),
-                RespValue.Integer(10)
+                RespValue.Integer(200)
               )
             )
-            Task(StreamConsumerInfoOutput.unsafeDecode(resp)).map(x =>
-              assert(x)(
-                equalTo(
-                  Chunk.apply(
-                    StreamConsumerInfo(Some("name"), Some(10), Some(100)),
-                    StreamConsumerInfo(Some("name2"), Some(10), Some(1100))
-                  )
+
+            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(
+              equalTo(
+                Chunk(
+                  StreamConsumersInfo("consumer1", 1, 100.millis),
+                  StreamConsumersInfo("consumer2", 2, 200.millis)
                 )
               )
             )
+          },
+          testM("extract an empty array") {
+            val resp = RespValue.array()
+
+            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
           }
         )
       )
