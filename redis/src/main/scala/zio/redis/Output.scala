@@ -292,19 +292,156 @@ object Output {
   case object StreamOutput extends Output[Map[String, Map[String, String]]] {
     protected def tryDecode(respValue: RespValue): Map[String, Map[String, String]] =
       respValue match {
-        case RespValue.NullArray => Map.empty[String, Map[String, String]]
-        case RespValue.Array(entities) =>
-          val output = collection.mutable.Map.empty[String, Map[String, String]]
-          entities.foreach {
-            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-              output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+        case RespValue.NullArray       => Map.empty[String, Map[String, String]]
+        case RespValue.Array(entities) => extractMapMap(entities)
+        case other                     => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  private def extractMapMap(entities: Chunk[RespValue]): Map[String, Map[String, String]] = {
+    val output = collection.mutable.Map.empty[String, Map[String, String]]
+    entities.foreach {
+      case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+        output += (id.asString -> KeyValueOutput.unsafeDecode(value))
+      case other =>
+        throw ProtocolError(s"$other isn't a valid array")
+    }
+    output.toMap
+  }
+
+  case object StreamGroupInfoOutput extends Output[Chunk[StreamGroupInfo]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamGroupInfo] =
+      respValue match {
+        case RespValue.NullArray => Chunk.empty
+        case RespValue.Array(messages) =>
+          messages.collect {
+            // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
+            case RespValue.Array(elements) if elements.length % 2 == 0 =>
+              var streamGroupInfo: StreamGroupInfo = StreamGroupInfo.empty
+              val len                              = elements.length
+              var pos                              = 0
+              while (pos < len) {
+                (elements(pos), elements(pos + 1)) match {
+                  case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
+                    if (key.asString == XInfoFields.Name)
+                      streamGroupInfo = streamGroupInfo.copy(name = Some(value.asString))
+                    else if (key.asString == XInfoFields.LastDelivered)
+                      streamGroupInfo = streamGroupInfo.copy(lastDeliveredId = Some(value.asString))
+                  case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                    if (key.asString == XInfoFields.Pending)
+                      streamGroupInfo = streamGroupInfo.copy(pending = Some(value.value))
+                    else if (key.asString == XInfoFields.Consumers)
+                      streamGroupInfo = streamGroupInfo.copy(consumers = Some(value.value))
+                  case _ =>
+                }
+                pos += 2
+              }
+              streamGroupInfo
+            case array @ RespValue.Array(_) =>
+              throw ProtocolError(s"$array doesn't have an even number of elements")
             case other =>
-              throw ProtocolError(s"$other isn't a valid array")
+              throw ProtocolError(s"$other isn't an array")
           }
 
-          output.toMap
-        case other => throw ProtocolError(s"$other isn't an array")
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
       }
+  }
+
+  case object StreamConsumerInfoOutput extends Output[Chunk[StreamConsumerInfo]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamConsumerInfo] =
+      respValue match {
+        case RespValue.NullArray => Chunk.empty
+        case RespValue.Array(messages) =>
+          messages.collect {
+            // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
+            case RespValue.Array(elements) if elements.length % 2 == 0 =>
+              var streamConsumerInfo: StreamConsumerInfo = StreamConsumerInfo.empty
+              val len                                    = elements.length
+              var pos                                    = 0
+              while (pos < len) {
+                (elements(pos), elements(pos + 1)) match {
+                  case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
+                      if key.asString == XInfoFields.Name =>
+                    streamConsumerInfo = streamConsumerInfo.copy(name = Some(value.asString))
+                  case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                    if (key.asString == XInfoFields.Pending)
+                      streamConsumerInfo = streamConsumerInfo.copy(pending = Some(value.value))
+                    else if (key.asString == XInfoFields.Idle)
+                      streamConsumerInfo = streamConsumerInfo.copy(idle = Some(value.value))
+                  case _ =>
+                }
+                pos += 2
+              }
+              streamConsumerInfo
+            case array @ RespValue.Array(_) =>
+              throw ProtocolError(s"$array doesn't have an even number of elements")
+            case other =>
+              throw ProtocolError(s"$other isn't an array")
+          }
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object StreamInfoOutput extends Output[StreamInfo] {
+    override protected def tryDecode(respValue: RespValue): StreamInfo = {
+      var streamInfo: StreamInfo = StreamInfo.empty
+      respValue match {
+        // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
+        case RespValue.Array(elements) if elements.length % 2 == 0 =>
+          val len = elements.length
+          var pos = 0
+          while (pos < len) {
+            (elements(pos), elements(pos + 1)) match {
+              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                if (key.asString == XInfoFields.Length)
+                  streamInfo = streamInfo.copy(length = Some(value.value))
+                else if (key.asString == XInfoFields.RadixTreeNodes)
+                  streamInfo = streamInfo.copy(radixTreeNodes = Some(value.value))
+                else if (key.asString == XInfoFields.RadixTreeKeys)
+                  streamInfo = streamInfo.copy(radixTreeKeys = Some(value.value))
+                else if (key.asString == XInfoFields.Groups)
+                  streamInfo = streamInfo.copy(groups = Some(value.value))
+              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
+                  if key.asString == XInfoFields.LastGeneratedId =>
+                streamInfo = streamInfo.copy(lastGeneratedId = Some(value.asString))
+              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) =>
+                if (key.asString == XInfoFields.FirstEntry)
+                  streamInfo = streamInfo.copy(firstEntry = Some(extractStreamEntry(value)))
+                else if (key.asString == XInfoFields.LastEntry)
+                  streamInfo = streamInfo.copy(lastEntry = Some(extractStreamEntry(value)))
+              case _ =>
+            }
+            pos += 2
+          }
+          streamInfo
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have an even number of elements")
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+    }
+  }
+
+  private def extractStreamEntry(es: RespValue): StreamEntry = {
+    val entry           = collection.mutable.Map.empty[String, String]
+    var entryId: String = ""
+    es match {
+      case RespValue.Array(entities) =>
+        entities.foreach {
+          case id @ RespValue.BulkString(_) => entryId = id.asString
+          case RespValue.ArrayValues(id @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
+            entry += (id.asString -> value.asString)
+          case other =>
+            throw ProtocolError(s"$other isn't a valid array")
+        }
+      case other =>
+        throw ProtocolError(s"$other isn't a valid array")
+    }
+    StreamEntry(id = entryId, entry.toMap)
   }
 
   case object XPendingOutput extends Output[PendingInfo] {

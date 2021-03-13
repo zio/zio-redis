@@ -1230,6 +1230,50 @@ trait StreamsSpec extends BaseSpec {
             result <- xTrim(stream, 1000L).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("XInfo")(
+        testM("stream info") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- xAdd(stream, "*", "a" -> "b")
+            result <- xInfoStream(stream)
+          } yield assert(result.lastEntry.map(_.id))(equalTo(Some(id)))
+        },
+        testM("ERR no such key") {
+          for {
+            stream <- uuid
+            result <- xInfoStream(stream).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("ERR not a stream") {
+          for {
+            maybeStream <- uuid
+            _           <- set(maybeStream, "helloworld")
+            result      <- xInfoStream(maybeStream).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("consumers info") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            _        <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, consumer)(stream -> ">")
+            result   <- xInfoConsumers(stream, group)
+          } yield assert(result.toList.head.name)(equalTo(Some(consumer)))
+        },
+        testM("groups info") {
+          for {
+            stream <- uuid
+            group  <- uuid
+            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            _      <- xAdd(stream, "*", "a" -> "b")
+            result <- xInfoGroup(stream)
+          } yield assert(result.toList.head.name)(equalTo(Some(group)))
+        }
       )
     )
 }
