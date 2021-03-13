@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.duration._
 import zio.redis.Output._
-import zio.redis.RedisError._
+import zio.redis.RedisError.{ ProtocolError, _ }
 import zio.test.Assertion._
 import zio.test._
 import zio.{ Chunk, Task }
@@ -498,7 +498,159 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
-        }
+        },
+        suite("xInfoStream commands output")(
+          testM("extract valid value") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("groups"),
+              RespValue.Integer(2),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("1-111"),
+              RespValue.bulkString("first-entry"),
+              RespValue.array(
+                RespValue.bulkString("id"),
+                RespValue.bulkString("1-0"),
+                RespValue.array(
+                  RespValue.bulkString("key1"),
+                  RespValue.bulkString("value1")
+                )
+              ),
+              RespValue.bulkString("last-entry"),
+              RespValue.array(
+                RespValue.bulkString("id"),
+                RespValue.bulkString("1-0"),
+                RespValue.array(
+                  RespValue.bulkString("key2"),
+                  RespValue.bulkString("value2")
+                )
+              )
+            )
+            Task(StreamInfoOutput.unsafeDecode(resp)).map { f =>
+              assert(f)(
+                equalTo(
+                  StreamInfo(
+                    length = Option(1),
+                    radixTreeKeys = Option(2),
+                    radixTreeNodes = Option(3),
+                    groups = Option(2),
+                    lastGeneratedId = Option("1-111"),
+                    firstEntry = Some(StreamEntry("1-0", Map("key1" -> "value1"))),
+                    lastEntry = Some(StreamEntry("1-0", Map("key2" -> "value2")))
+                  )
+                )
+              )
+            }
+          },
+          testM("success when message mis value") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3)
+            )
+            Task(StreamInfoOutput.unsafeDecode(resp)).map { f =>
+              assert(f)(
+                equalTo(
+                  StreamInfo(Some(1), None, Some(3), None, None, None, None)
+                )
+              )
+            }
+          }
+        ),
+        suite("xInfoGroup commands output")(
+          testM("extract valid value") {
+            val resp = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("name"),
+                RespValue.bulkString("consumers"),
+                RespValue.Integer(10),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(100),
+                RespValue.bulkString("last-delivered-id"),
+                RespValue.bulkString("1111")
+              ),
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("name2"),
+                RespValue.bulkString("consumers"),
+                RespValue.Integer(110),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(1100),
+                RespValue.bulkString("last-delivered-id"),
+                RespValue.bulkString("1111")
+              )
+            )
+            Task(StreamGroupInfoOutput.unsafeDecode(resp)).map(x =>
+              assert(x)(
+                equalTo(
+                  Chunk.apply(
+                    StreamGroupInfo(Some("name"), Some(10), Some(100), Some("1111")),
+                    StreamGroupInfo(Some("name2"), Some(110), Some(1100), Some("1111"))
+                  )
+                )
+              )
+            )
+          },
+          testM("empty array when xinfo groups") {
+            val resp = RespValue.array()
+            Task(StreamGroupInfoOutput.unsafeDecode(resp)).map { f =>
+              assert(f)(
+                equalTo(
+                  Chunk.empty
+                )
+              )
+            }
+          },
+          testM("empty array when xinfo consumers") {
+            val resp = RespValue.array()
+            Task(StreamConsumerInfoOutput.unsafeDecode(resp)).map { f =>
+              assert(f)(
+                equalTo(
+                  Chunk.empty
+                )
+              )
+            }
+          }
+        ),
+        suite("XInfoConsumers commands output")(
+          testM("extract valid value") {
+            val resp = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("name"),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(100),
+                RespValue.bulkString("idle"),
+                RespValue.Integer(10)
+              ),
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("name2"),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(1100),
+                RespValue.bulkString("idle"),
+                RespValue.Integer(10)
+              )
+            )
+            Task(StreamConsumerInfoOutput.unsafeDecode(resp)).map(x =>
+              assert(x)(
+                equalTo(
+                  Chunk.apply(
+                    StreamConsumerInfo(Some("name"), Some(10), Some(100)),
+                    StreamConsumerInfo(Some("name2"), Some(10), Some(1100))
+                  )
+                )
+              )
+            )
+          }
+        )
       )
     )
 
