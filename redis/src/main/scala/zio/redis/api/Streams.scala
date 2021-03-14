@@ -1,8 +1,8 @@
 package zio.redis.api
 
 import zio.duration._
-import zio.redis.Input.{ XInfoConsumerInput, _ }
-import zio.redis.Output.{ StreamGroupInfoOutput, _ }
+import zio.redis.Input.{ XInfoConsumersInput, _ }
+import zio.redis.Output.{ StreamGroupsInfoOutput, _ }
 import zio.redis._
 import zio.{ Chunk, ZIO }
 
@@ -40,14 +40,22 @@ trait Streams {
     XAdd.run((key, None, id, (pair, pairs.toList)))
 
   /**
+   * An introspection command used in order to retrieve different information about the stream.
+   *
+   * @param key ID of the stream
+   * @return General information about the stream stored at the specified key.
+   */
+  final def xInfoStream(key: String): ZIO[RedisExecutor, RedisError, StreamInfo] =
+    XInfoStream.run(XInfoCommand.Stream(key))
+
+  /**
    * An introspection command used in order to retrieve different information about the group.
    *
    * @param key ID of the stream
    * @return List of consumer groups associated with the stream stored at the specified key.
    */
-  final def xInfoGroup(
-    key: String
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamGroupInfo]] = XInfoGroups.run(XInfoCommand.Group(key))
+  final def xInfoGroups(key: String): ZIO[RedisExecutor, RedisError, Chunk[StreamGroupsInfo]] =
+    XInfoGroups.run(XInfoCommand.Groups(key))
 
   /**
    * An introspection command used in order to retrieve different information about the consumers.
@@ -56,20 +64,8 @@ trait Streams {
    * @param group ID of the consumer group
    * @return List of every consumer in a specific consumer group.
    */
-  final def xInfoConsumers(
-    key: String,
-    group: String
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamConsumerInfo]] = XInfoConsumers.run(XInfoCommand.Consumer(key, group))
-
-  /**
-   * An introspection command used in order to retrieve different information about the stream.
-   *
-   * @param key ID of the stream
-   * @return General information about the stream stored at the specified key.
-   */
-  final def xInfoStream(
-    key: String
-  ): ZIO[RedisExecutor, RedisError, StreamInfo] = XInfoStream.run(XInfoCommand.Stream(key))
+  final def xInfoConsumers(key: String, group: String): ZIO[RedisExecutor, RedisError, Chunk[StreamConsumersInfo]] =
+    XInfoConsumers.run(XInfoCommand.Consumers(key, group))
 
   /**
    * Appends the specified stream entry to the stream at the specified key while limiting the size of the stream.
@@ -500,14 +496,14 @@ private object Streams {
   final val XGroupDelConsumer: RedisCommand[XGroupCommand.DelConsumer, Long] =
     RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
 
-  final val XInfoGroups: RedisCommand[XInfoCommand.Group, Chunk[StreamGroupInfo]] =
-    RedisCommand("XINFO", XInfoGroupInput, StreamGroupInfoOutput)
-
   final val XInfoStream: RedisCommand[XInfoCommand.Stream, StreamInfo] =
     RedisCommand("XINFO", XInfoStreamInput, StreamInfoOutput)
 
-  final val XInfoConsumers: RedisCommand[XInfoCommand.Consumer, Chunk[StreamConsumerInfo]] =
-    RedisCommand("XINFO", XInfoConsumerInput, StreamConsumerInfoOutput)
+  final val XInfoGroups: RedisCommand[XInfoCommand.Groups, Chunk[StreamGroupsInfo]] =
+    RedisCommand("XINFO", XInfoGroupsInput, StreamGroupsInfoOutput)
+
+  final val XInfoConsumers: RedisCommand[XInfoCommand.Consumers, Chunk[StreamConsumersInfo]] =
+    RedisCommand("XINFO", XInfoConsumersInput, StreamConsumersInfoOutput)
 
   final val XLen: RedisCommand[String, Long] = RedisCommand("XLEN", StringInput, LongOutput)
 

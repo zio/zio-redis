@@ -36,11 +36,11 @@ trait Streams {
 
   object XInfoCommand {
 
-    case class Group(key: String) extends XInfoCommand
-
     case class Stream(key: String) extends XInfoCommand
 
-    case class Consumer(key: String, group: String) extends XInfoCommand
+    case class Groups(key: String) extends XInfoCommand
+
+    case class Consumers(key: String, group: String) extends XInfoCommand
   }
 
   case object MkStream {
@@ -76,38 +76,38 @@ trait Streams {
   case class StreamEntry(id: String, fields: Map[String, String])
 
   case class StreamInfo(
-    length: Option[Long],
-    radixTreeKeys: Option[Long],
-    radixTreeNodes: Option[Long],
-    groups: Option[Long],
-    lastGeneratedId: Option[String],
+    length: Long,
+    radixTreeKeys: Long,
+    radixTreeNodes: Long,
+    groups: Long,
+    lastGeneratedId: String,
     firstEntry: Option[StreamEntry],
     lastEntry: Option[StreamEntry]
   )
 
   object StreamInfo {
-    def empty: StreamInfo = StreamInfo(None, None, None, None, None, None, None)
+    def empty: StreamInfo = StreamInfo(0, 0, 0, 0, "", None, None)
   }
 
-  case class StreamGroupInfo(
-    name: Option[String],
-    consumers: Option[Long],
-    pending: Option[Long],
-    lastDeliveredId: Option[String]
+  case class StreamGroupsInfo(
+    name: String,
+    consumers: Long,
+    pending: Long,
+    lastDeliveredId: String
   )
 
-  object StreamGroupInfo {
-    def empty: StreamGroupInfo = StreamGroupInfo(None, None, None, None)
+  object StreamGroupsInfo {
+    def empty: StreamGroupsInfo = StreamGroupsInfo("", 0, 0, "")
   }
 
-  case class StreamConsumerInfo(
-    name: Option[String],
-    idle: Option[Long],
-    pending: Option[Long]
+  case class StreamConsumersInfo(
+    name: String,
+    pending: Long,
+    idle: Duration
   )
 
-  object StreamConsumerInfo {
-    def empty: StreamConsumerInfo = StreamConsumerInfo(None, None, None)
+  object StreamConsumersInfo {
+    def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis)
   }
 
   private[redis] object XInfoFields {

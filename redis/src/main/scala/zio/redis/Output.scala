@@ -309,34 +309,34 @@ object Output {
     output.toMap
   }
 
-  case object StreamGroupInfoOutput extends Output[Chunk[StreamGroupInfo]] {
-    override protected def tryDecode(respValue: RespValue): Chunk[StreamGroupInfo] =
+  case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamGroupsInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
           messages.collect {
             // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
             case RespValue.Array(elements) if elements.length % 2 == 0 =>
-              var streamGroupInfo: StreamGroupInfo = StreamGroupInfo.empty
-              val len                              = elements.length
-              var pos                              = 0
+              var streamGroupsInfo: StreamGroupsInfo = StreamGroupsInfo.empty
+              val len                                = elements.length
+              var pos                                = 0
               while (pos < len) {
                 (elements(pos), elements(pos + 1)) match {
                   case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
                     if (key.asString == XInfoFields.Name)
-                      streamGroupInfo = streamGroupInfo.copy(name = Some(value.asString))
+                      streamGroupsInfo = streamGroupsInfo.copy(name = value.asString)
                     else if (key.asString == XInfoFields.LastDelivered)
-                      streamGroupInfo = streamGroupInfo.copy(lastDeliveredId = Some(value.asString))
+                      streamGroupsInfo = streamGroupsInfo.copy(lastDeliveredId = value.asString)
                   case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
                     if (key.asString == XInfoFields.Pending)
-                      streamGroupInfo = streamGroupInfo.copy(pending = Some(value.value))
+                      streamGroupsInfo = streamGroupsInfo.copy(pending = value.value)
                     else if (key.asString == XInfoFields.Consumers)
-                      streamGroupInfo = streamGroupInfo.copy(consumers = Some(value.value))
+                      streamGroupsInfo = streamGroupsInfo.copy(consumers = value.value)
                   case _ =>
                 }
                 pos += 2
               }
-              streamGroupInfo
+              streamGroupsInfo
             case array @ RespValue.Array(_) =>
               throw ProtocolError(s"$array doesn't have an even number of elements")
             case other =>
@@ -348,32 +348,32 @@ object Output {
       }
   }
 
-  case object StreamConsumerInfoOutput extends Output[Chunk[StreamConsumerInfo]] {
-    override protected def tryDecode(respValue: RespValue): Chunk[StreamConsumerInfo] =
+  case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
           messages.collect {
             // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
             case RespValue.Array(elements) if elements.length % 2 == 0 =>
-              var streamConsumerInfo: StreamConsumerInfo = StreamConsumerInfo.empty
-              val len                                    = elements.length
-              var pos                                    = 0
+              var streamConsumersInfo: StreamConsumersInfo = StreamConsumersInfo.empty
+              val len                                      = elements.length
+              var pos                                      = 0
               while (pos < len) {
                 (elements(pos), elements(pos + 1)) match {
                   case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                       if key.asString == XInfoFields.Name =>
-                    streamConsumerInfo = streamConsumerInfo.copy(name = Some(value.asString))
+                    streamConsumersInfo = streamConsumersInfo.copy(name = value.asString)
                   case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
                     if (key.asString == XInfoFields.Pending)
-                      streamConsumerInfo = streamConsumerInfo.copy(pending = Some(value.value))
+                      streamConsumersInfo = streamConsumersInfo.copy(pending = value.value)
                     else if (key.asString == XInfoFields.Idle)
-                      streamConsumerInfo = streamConsumerInfo.copy(idle = Some(value.value))
+                      streamConsumersInfo = streamConsumersInfo.copy(idle = value.value.millis)
                   case _ =>
                 }
                 pos += 2
               }
-              streamConsumerInfo
+              streamConsumersInfo
             case array @ RespValue.Array(_) =>
               throw ProtocolError(s"$array doesn't have an even number of elements")
             case other =>
@@ -397,16 +397,16 @@ object Output {
             (elements(pos), elements(pos + 1)) match {
               case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
                 if (key.asString == XInfoFields.Length)
-                  streamInfo = streamInfo.copy(length = Some(value.value))
+                  streamInfo = streamInfo.copy(length = value.value)
                 else if (key.asString == XInfoFields.RadixTreeNodes)
-                  streamInfo = streamInfo.copy(radixTreeNodes = Some(value.value))
+                  streamInfo = streamInfo.copy(radixTreeNodes = value.value)
                 else if (key.asString == XInfoFields.RadixTreeKeys)
-                  streamInfo = streamInfo.copy(radixTreeKeys = Some(value.value))
+                  streamInfo = streamInfo.copy(radixTreeKeys = value.value)
                 else if (key.asString == XInfoFields.Groups)
-                  streamInfo = streamInfo.copy(groups = Some(value.value))
+                  streamInfo = streamInfo.copy(groups = value.value)
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                   if key.asString == XInfoFields.LastGeneratedId =>
-                streamInfo = streamInfo.copy(lastGeneratedId = Some(value.asString))
+                streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
               case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) =>
                 if (key.asString == XInfoFields.FirstEntry)
                   streamInfo = streamInfo.copy(firstEntry = Some(extractStreamEntry(value)))
