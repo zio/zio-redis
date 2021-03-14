@@ -947,18 +947,25 @@ object InputSpec extends BaseSpec {
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
         }
       ),
-      suite("XInfo")(
-        testM("stream info") {
-          Task(XInfoStreamInput.encode(XInfoCommand.Stream("key")))
-            .map(assert(_)(equalTo(respArgs("STREAM", "key"))))
-        },
-        testM("group info") {
-          Task(XInfoGroupInput.encode(XInfoCommand.Group("key")))
-            .map(assert(_)(equalTo(respArgs("GROUPS", "key"))))
-        },
-        testM("consumer info") {
-          Task(XInfoConsumerInput.encode(XInfoCommand.Consumer("key", "group")))
-            .map(assert(_)(equalTo(respArgs("CONSUMERS", "key", "group"))))
+      suite("XInfoStream")(
+        testM("valid value") {
+          assertM(Task(XInfoStreamInput.encode(XInfoCommand.Stream("key"))))(
+            equalTo(respArgs("STREAM", "key"))
+          )
+        }
+      ),
+      suite("XInfoGroups")(
+        testM("valid value") {
+          assertM(Task(XInfoGroupsInput.encode(XInfoCommand.Groups("key"))))(
+            equalTo(respArgs("GROUPS", "key"))
+          )
+        }
+      ),
+      suite("XInfoConsumers")(
+        testM("valid value") {
+          assertM(Task(XInfoConsumersInput.encode(XInfoCommand.Consumers("key", "group"))))(
+            equalTo(respArgs("CONSUMERS", "key", "group"))
+          )
         }
       ),
       suite("Group")(
