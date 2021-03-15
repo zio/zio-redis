@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{BenchmarkRuntime, sAdd, sDiff}
+import zio.redis.{ BenchmarkRuntime, sAdd, sDiff }
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
