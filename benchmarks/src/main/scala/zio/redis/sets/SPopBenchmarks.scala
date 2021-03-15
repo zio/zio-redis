@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{BenchmarkRuntime, sAdd, sPop}
+import zio.redis.{ BenchmarkRuntime, sAdd, sPop }
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -20,10 +20,12 @@ class SPopBenchmarks extends BenchmarkRuntime {
 
   private var items: List[String] = _
 
+  private val key = "test-set"
+
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => sAdd(i, i)))
+    zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -33,23 +35,23 @@ class SPopBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.spop(Key.unsafeFrom(i)))))
+    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.spop(Key.unsafeFrom(key)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.spop[RedisIO](i).run(c)))
+    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.spop[RedisIO](key).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sPop(i)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sPop(key)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sPop(i)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sPop(key)))
 }

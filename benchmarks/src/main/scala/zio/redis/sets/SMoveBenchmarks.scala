@@ -18,12 +18,18 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   private var count: Int = _
 
-  private var items: List[String] = _
+  private var items: List[String]      = _
+  private var otherItems: List[String] = _
+
+  private val key            = "test-set1"
+  private val destinationKey = "test-set2"
 
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => sAdd(i, i)))
+    otherItems = (0 to count).toList.map(_.toString)
+    zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
+
   }
 
   @Benchmark
@@ -34,7 +40,7 @@ class SMoveBenchmarks extends BenchmarkRuntime {
     import cats.syntax.foldable._
 
     unsafeRun[LaserDiscClient](c =>
-      items.traverse_(i => c.send(cmd.smove(Key.unsafeFrom(i), Key.unsafeFrom(i), Key.unsafeFrom(i))))
+      items.traverse_(i => c.send(cmd.smove(Key.unsafeFrom(key), Key.unsafeFrom(destinationKey), Key.unsafeFrom(i))))
     )
   }
 
@@ -42,16 +48,16 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.smove[RedisIO](i, i, i).run(c)))
+    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.smove[RedisIO](key, destinationKey, i).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sMove(i, i, i)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sMove(key, destinationKey, i)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sMove(i, i, i)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sMove(key, destinationKey, i)))
 }

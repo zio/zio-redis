@@ -18,12 +18,20 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   private var count: Int = _
 
-  private var items: List[String] = _
+  private var items: List[String]      = _
+  private var otherItems: List[String] = _
+
+  private val key            = "test-set1"
+  private val otherKey       = "test-set2"
+  private val destinationKey = "test-set3"
 
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => sAdd(i, i)))
+    otherItems = (0 to count).toList.map(_.toString)
+    zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
+    zioUnsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+
   }
 
   @Benchmark
@@ -34,7 +42,9 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
     import cats.syntax.foldable._
 
     unsafeRun[LaserDiscClient](c =>
-      items.traverse_(i => c.send(cmd.sunionstore(Key.unsafeFrom(i), Key.unsafeFrom(i), Key.unsafeFrom(i))))
+      items.traverse_(_ =>
+        c.send(cmd.sunionstore(Key.unsafeFrom(key), Key.unsafeFrom(key), Key.unsafeFrom(destinationKey)))
+      )
     )
   }
 
@@ -42,16 +52,18 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.sunionstore[RedisIO](i, List(i, i)).run(c)))
+    unsafeRun[RediculousClient](c =>
+      items.traverse_(_ => RedisCommands.sunionstore[RedisIO](destinationKey, List(key, otherKey)).run(c))
+    )
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sUnionStore(i, i, i)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.sUnionStore(destinationKey, key, otherKey)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sUnionStore(i, i, i)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => sUnionStore(destinationKey, key, otherKey)))
 }

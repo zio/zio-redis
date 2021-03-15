@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{ BenchmarkRuntime, sAdd, sDiff }
+import zio.redis.{BenchmarkRuntime, sAdd, sDiff}
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -18,38 +18,47 @@ class SDiffBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   private var count: Int = _
 
-  private var items: List[String] = _
+  private var items: List[String]      = _
+  private var otherItems: List[String] = _
+
+  private val key      = "test-set1"
+  private val otherKey = "test-set2"
 
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => sAdd(i, i)))
+    otherItems = (0 to count).toList.map(_.toString)
+    zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
+    zioUnsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+
   }
 
   @Benchmark
   def laserdisc(): Unit = {
-    import _root_.laserdisc.fs2._
     import _root_.laserdisc.{ all => cmd, _ }
+    import _root_.laserdisc.fs2._
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.sdiff(Key.unsafeFrom(i), Key.unsafeFrom(i)))))
+    unsafeRun[LaserDiscClient](c =>
+      items.traverse_(_ => c.send(cmd.sdiff(Key.unsafeFrom(key), Key.unsafeFrom(otherKey))))
+    )
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.sdiff[RedisIO](List(i, i)).run(c)))
+    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.sdiff[RedisIO](List(key, otherKey)).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sDiff(i, i)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.sDiff(key, otherKey)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sDiff(i, i)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => sDiff(key, otherKey)))
 }
