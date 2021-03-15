@@ -35,23 +35,23 @@ class SPopBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.spop(Key.unsafeFrom(key)))))
+    unsafeRun[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.spop(Key.unsafeFrom(key)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.spop[RedisIO](key).run(c)))
+    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.spop[RedisIO](key).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.sPop(key)))
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.sPop(key)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sPop(key)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => sPop(key)))
 }
