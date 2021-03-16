@@ -324,7 +324,8 @@ private[redis] object Keys {
   final val ExpireAt: RedisCommand[(String, Instant), Boolean] =
     RedisCommand("EXPIREAT", Tuple2(StringInput, TimeSecondsInput), BoolOutput)
 
-  final val Keys: RedisCommand[String, Chunk[String]] = RedisCommand("KEYS", StringInput, ChunkOutput)
+  final val Keys: RedisCommand[String, Chunk[String]] =
+    RedisCommand("KEYS", StringInput, ChunkOutput(MultiStringOutput))
 
   final val Migrate: RedisCommand[
     (String, Long, String, Long, Long, Option[Copy], Option[Replace], Option[Auth], Option[(String, List[String])]),
@@ -388,7 +389,7 @@ private[redis] object Keys {
     RedisCommand(
       "SCAN",
       Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
-      ScanOutput
+      ScanOutput(MultiStringOutput)
     )
 
   final val Sort
@@ -405,7 +406,7 @@ private[redis] object Keys {
         OrderInput,
         OptionalInput(AlphaInput)
       ),
-      ChunkOutput
+      ChunkOutput(MultiStringOutput)
     )
 
   final val SortStore: RedisCommand[

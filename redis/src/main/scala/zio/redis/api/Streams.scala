@@ -506,7 +506,7 @@ private object Streams {
       OptionalInput(WithForceInput),
       WithJustIdInput
     ),
-    ChunkOutput
+    ChunkOutput(MultiStringOutput)
   )
 
   final val XDel: RedisCommand[(String, (String, List[String])), Long] =

@@ -3,7 +3,9 @@ package zio.redis
 import cats.effect.{ IO => CatsIO }
 
 import zio.logging.Logging
-import zio.{ BootstrapRuntime, ZIO }
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
+import zio.{ BootstrapRuntime, Has, ULayer, ZIO, ZLayer }
 
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>
@@ -16,5 +18,6 @@ trait BenchmarksUtils {
 }
 
 object BenchmarksUtils {
-  private final val Layer = Logging.ignore >>> RedisExecutor.local.orDie
+  private final val Codec: ULayer[Has[Codec]] = ZLayer.succeed(StringUtf8Codec)
+  private final val Layer                     = Logging.ignore ++ Codec >>> RedisExecutor.local.orDie
 }

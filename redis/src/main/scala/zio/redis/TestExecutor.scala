@@ -8,6 +8,9 @@ import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.DeriveSchema.gen
+import zio.schema.codec.Codec
 import zio.stm.{ random => _, _ }
 
 private[redis] final class TestExecutor private (
@@ -18,7 +21,9 @@ private[redis] final class TestExecutor private (
   hyperLogLogs: TMap[String, Set[String]]
 ) extends RedisExecutor.Service {
 
-  def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+  override val codec: Codec = StringUtf8Codec
+
+  override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
       result <- name.asString match {
@@ -82,7 +87,7 @@ private[redis] final class TestExecutor private (
       case api.Connection.Select.name =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
-      case api.Sets.SAdd.name =>
+      case SAddCommand.name =>
         val key = input.head.asString
         orWrongType(isSet(key))(
           {
@@ -96,14 +101,14 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SCard.name =>
+      case SCardCommand.name =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
           sets.get(key).map(_.fold(RespValue.Integer(0))(s => RespValue.Integer(s.size.toLong)))
         )
 
-      case api.Sets.SDiff.name =>
+      case SDiffCommand.name =>
         val allkeys = input.map(_.asString)
         val mainKey = allkeys.head
         val others  = allkeys.tail
@@ -115,7 +120,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.array(result.map(RespValue.bulkString).toList: _*)
         )
 
-      case api.Sets.SDiffStore.name =>
+      case SDiffStoreCommand.name =>
         val allkeys = input.map(_.asString)
         val distkey = allkeys.head
         val mainKey = allkeys(1)
@@ -129,13 +134,13 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(result.size.toLong)
         )
 
-      case api.Sets.SInter.name =>
+      case SInterCommand.name =>
         val keys      = input.map(_.asString)
         val mainKey   = keys.head
         val otherKeys = keys.tail
         sInter(mainKey, otherKeys).fold(_ => Replies.WrongType, Replies.array)
 
-      case api.Sets.SInterStore.name =>
+      case SInterStoreCommand.name =>
         val keys        = input.map(_.asString)
         val destination = keys.head
         val mainKey     = keys(1)
@@ -149,7 +154,7 @@ private[redis] final class TestExecutor private (
             } yield RespValue.Integer(s.size.toLong)
         )
 
-      case api.Sets.SIsMember.name =>
+      case SIsMemberCommand.name =>
         val key    = input.head.asString
         val member = input(1).asString
 
@@ -160,7 +165,7 @@ private[redis] final class TestExecutor private (
           } yield result
         )
 
-      case api.Sets.SMove.name =>
+      case SMoveCommand.name =>
         val sourceKey      = input.head.asString
         val destinationKey = input(1).asString
         val member         = input(2).asString
@@ -180,7 +185,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SPop.name =>
+      case SPopCommand.name =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -192,14 +197,14 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(result)
         )
 
-      case api.Sets.SMembers.name =>
+      case SMembersCommand.name =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
           sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_)))
         )
 
-      case api.Sets.SRandMember.name =>
+      case SRandMemberCommand.name =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
@@ -221,7 +226,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SRem.name =>
+      case SRemCommand.name =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
@@ -236,7 +241,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SUnion.name =>
+      case SUnionCommand.name =>
         val keys = input.map(_.asString)
 
         orWrongType(forAll(keys)(isSet))(
@@ -249,7 +254,7 @@ private[redis] final class TestExecutor private (
             .map(unionSet => Replies.array(unionSet))
         )
 
-      case api.Sets.SUnionStore.name =>
+      case SUnionStoreCommand.name =>
         val destination = input.head.asString
         val keys        = input.tail.map(_.asString)
 
@@ -265,7 +270,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(union.size.toLong)
         )
 
-      case api.Sets.SScan.name =>
+      case SScanCommand.name =>
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)

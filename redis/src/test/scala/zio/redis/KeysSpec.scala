@@ -1,14 +1,16 @@
 package zio.redis
 
+import zio.{Chunk, ZIO, ZLayer}
 import zio.clock.Clock
 import zio.duration._
 import zio.logging.Logging
 import zio.random.Random
 import zio.redis.RedisError.ProtocolError
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
+import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
-import zio.test._
-import zio.{ Chunk, ZIO, ZLayer }
 
 trait KeysSpec extends BaseSpec {
 
@@ -414,5 +416,5 @@ object KeysSpec {
   final val MigrateTimeout: Duration = 5.seconds
 
   final val SecondExecutor: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    (Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live).fresh
+    (Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) ++ ZLayer.succeed[Codec](StringUtf8Codec) >>> RedisExecutor.live).fresh
 }

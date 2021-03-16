@@ -172,7 +172,8 @@ private[redis] object Hashes {
   final val HIncrByFloat: RedisCommand[(String, String, Double), Double] =
     RedisCommand("HINCRBYFLOAT", Tuple3(StringInput, StringInput, DoubleInput), DoubleOutput)
 
-  final val HKeys: RedisCommand[String, Chunk[String]] = RedisCommand("HKEYS", StringInput, ChunkOutput)
+  final val HKeys: RedisCommand[String, Chunk[String]] =
+    RedisCommand("HKEYS", StringInput, ChunkOutput(MultiStringOutput))
 
   final val HLen: RedisCommand[String, Long] = RedisCommand("HLEN", StringInput, LongOutput)
 
@@ -190,7 +191,7 @@ private[redis] object Hashes {
     RedisCommand(
       "HSCAN",
       Tuple4(StringInput, LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-      ScanOutput
+      ScanOutput(MultiStringOutput)
     )
 
   final val HSet: RedisCommand[(String, ((String, String), List[(String, String)])), Long] =
@@ -202,5 +203,6 @@ private[redis] object Hashes {
   final val HStrLen: RedisCommand[(String, String), Long] =
     RedisCommand("HSTRLEN", Tuple2(StringInput, StringInput), LongOutput)
 
-  final val HVals: RedisCommand[String, Chunk[String]] = RedisCommand("HVALS", StringInput, ChunkOutput)
+  final val HVals: RedisCommand[String, Chunk[String]] =
+    RedisCommand("HVALS", StringInput, ChunkOutput(MultiStringOutput))
 }

@@ -38,13 +38,17 @@ object OutputSpec extends BaseSpec {
       suite("chunk")(
         testM("extract empty arrays") {
           for {
-            res <- Task(ChunkOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract non-empty arrays") {
           for {
             res <-
-              Task(ChunkOutput.unsafeDecode(RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))))
+              Task(
+                ChunkOutput(MultiStringOutput).unsafeDecode(
+                  RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
+                )
+              )
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),
@@ -153,7 +157,7 @@ object OutputSpec extends BaseSpec {
             RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           )
           for {
-            res <- Task(ScanOutput.unsafeDecode(input))
+            res <- Task(ScanOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(equalTo(5L -> Chunk("foo", "bar")))
         }
       ),
@@ -193,18 +197,18 @@ object OutputSpec extends BaseSpec {
       suite("multiStringChunk")(
         testM("extract one empty value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.NullBulkString))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.NullBulkString))
           } yield assert(res)(isEmpty)
         },
         testM("extract one multi-string value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.bulkString("ab")))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.bulkString("ab")))
           } yield assert(res)(hasSameElements(Chunk("ab")))
         },
         testM("extract one array value") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(input))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
         }
       ),

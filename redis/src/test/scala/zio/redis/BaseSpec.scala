@@ -5,6 +5,8 @@ import java.util.UUID
 
 import zio.UIO
 import zio.duration._
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
 import zio.random.Random
 import zio.test.TestAspect.tag
 import zio.test._
@@ -14,6 +16,8 @@ trait BaseSpec extends DefaultRunnableSpec {
   override def aspects: List[TestAspectAtLeastR[Live]] = List(TestAspect.timeout(60.seconds))
 
   def instantOf(millis: Long): UIO[Instant] = UIO(Instant.now().plusMillis(millis))
+
+  implicit val codec: Codec = StringUtf8Codec
 
   val uuid: UIO[String] = UIO(UUID.randomUUID().toString)
 
