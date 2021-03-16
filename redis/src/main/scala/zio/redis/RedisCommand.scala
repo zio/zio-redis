@@ -9,7 +9,7 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
         val service = executor.get
         val codec   = service.codec
         val command = Input.StringInput.encode(name)(codec) ++ input.encode(in)(codec)
-        service.execute(command).flatMap(out => ZIO.effect(output.unsafeDecode(out)(codec)))
+        service.execute(command).flatMap[Any, Throwable, Out](out => ZIO.effect(output.unsafeDecode(out)(codec)))
       }
       .refineToOrDie[RedisError]
 }
