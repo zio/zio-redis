@@ -2,13 +2,11 @@ package zio.redis.api
 
 import java.time.Instant
 
-import scala.util.matching.Regex
-
 import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import zio.{ Chunk, ZIO }
+import zio.{ Chunk, Task, ZIO }
 
 trait Keys {
   import Keys.{ Keys => _, _ }
@@ -211,10 +209,13 @@ trait Keys {
    */
   final def scan(
     cursor: Long,
-    pattern: Option[Regex] = None,
+    pattern: Option[String] = None,
     count: Option[Long] = None,
     `type`: Option[String] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((cursor, pattern, count, `type`))
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
+    Task.effect(`type`.map(RedisType.from)).refineOrDie { case e: RedisError => e } >>= (redisType =>
+      Scan.run((cursor, pattern.map(Pattern), count.map(Count), redisType))
+    )
 
   /**
    * Sorts the list, set, or sorted set stored at key. Returns the sorted elements.
@@ -386,10 +387,10 @@ private[redis] object Keys {
       UnitOutput
     )
 
-  final val Scan: RedisCommand[(Long, Option[Regex], Option[Long], Option[String]), (Long, Chunk[String])] =
+  final val Scan: RedisCommand[(Long, Option[Pattern], Option[Count], Option[RedisType]), (Long, Chunk[String])] =
     RedisCommand(
       "SCAN",
-      Tuple4(LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+      Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
       ScanOutput
     )
 

@@ -1,7 +1,5 @@
 package zio.redis.api
 
-import scala.util.matching.Regex
-
 import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
@@ -315,16 +313,17 @@ trait SortedSets {
    *
    * @param key Key of the set to scan
    * @param cursor Cursor to use for this iteration of scan
-   * @param regex Glob-style pattern that filters which elements are returned
+   * @param pattern Glob-style pattern that filters which elements are returned
    * @param count Count of elements. Roughly this number will be returned by Redis if possible
    * @return Returns the items for this iteration or nothing when you reach the end
    */
   final def zScan(
     key: String,
     cursor: Long,
-    regex: Option[Regex] = None,
-    count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = ZScan.run((key, cursor, regex, count))
+    pattern: Option[String] = None,
+    count: Option[Long] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
+    ZScan.run((key, cursor, pattern.map(Pattern), count.map(Count)))
 
   /**
    * Get the score associated with the given member in a sorted set.
@@ -466,10 +465,10 @@ private[redis] object SortedSets {
   final val ZRevRank: RedisCommand[(String, String), Option[Long]] =
     RedisCommand("ZREVRANK", Tuple2(StringInput, StringInput), OptionalOutput(LongOutput))
 
-  final val ZScan: RedisCommand[(String, Long, Option[Regex], Option[Count]), (Long, Chunk[String])] =
+  final val ZScan: RedisCommand[(String, Long, Option[Pattern], Option[Count]), (Long, Chunk[String])] =
     RedisCommand(
       "ZSCAN",
-      Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
+      Tuple4(StringInput, LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
       ScanOutput
     )
 

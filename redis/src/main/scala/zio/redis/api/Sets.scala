@@ -1,7 +1,5 @@
 package zio.redis.api
 
-import scala.util.matching.Regex
-
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
@@ -143,16 +141,17 @@ trait Sets {
    *
    * @param key Key of the set to scan
    * @param cursor Cursor to use for this iteration of scan
-   * @param regex Glob-style pattern that filters which elements are returned
+   * @param pattern Glob-style pattern that filters which elements are returned
    * @param count Count of elements. Roughly this number will be returned by Redis if possible
    * @return Returns the next cursor, and items for this iteration or nothing when you reach the end, as a tuple
    */
   final def sScan(
     key: String,
     cursor: Long,
-    regex: Option[Regex] = None,
-    count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = SScan.run((key, cursor, regex, count))
+    pattern: Option[String] = None,
+    count: Option[Long] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
+    SScan.run((key, cursor, pattern.map(Pattern), count.map(Count)))
 
   /**
    * Add multiple sets
@@ -215,10 +214,10 @@ private[redis] object Sets {
   final val SRem: RedisCommand[(String, (String, List[String])), Long] =
     RedisCommand("SREM", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
 
-  final val SScan: RedisCommand[(String, Long, Option[Regex], Option[Count]), (Long, Chunk[String])] =
+  final val SScan: RedisCommand[(String, Long, Option[Pattern], Option[Count]), (Long, Chunk[String])] =
     RedisCommand(
       "SSCAN",
-      Tuple4(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
+      Tuple4(StringInput, LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
       ScanOutput
     )
 

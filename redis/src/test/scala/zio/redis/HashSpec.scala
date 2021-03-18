@@ -257,6 +257,48 @@ trait HashSpec extends BaseSpec {
             result <- hVals(hash)
           } yield assert(result)(isEmpty)
         }
+      ),
+      suite("hScan")(
+        testM("hScan entries") {
+          for {
+            hash            <- uuid
+            field           <- uuid
+            value           <- uuid
+            _               <- hSet(hash, field -> value)
+            scan            <- hScan(hash, 0L)
+            (next, elements) = scan
+          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+        },
+        testM("hScan entries with match option") {
+          for {
+            hash            <- uuid
+            field           <- uuid
+            value           <- uuid
+            _               <- hSet(hash, field -> value)
+            scan            <- hScan(hash, 0L, pattern = Some("*"))
+            (next, elements) = scan
+          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+        },
+        testM("hScan entries with count option") {
+          for {
+            hash            <- uuid
+            field           <- uuid
+            value           <- uuid
+            _               <- hSet(hash, field -> value)
+            scan            <- hScan(hash, 0L, count = Some(100L))
+            (next, elements) = scan
+          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+        },
+        testM("hScan entries with match and count options") {
+          for {
+            hash            <- uuid
+            field           <- uuid
+            value           <- uuid
+            _               <- hSet(hash, field -> value)
+            scan            <- hScan(hash, 0L)
+            (next, elements) = scan
+          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+        }
       )
     )
 }

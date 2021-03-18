@@ -1,7 +1,5 @@
 package zio.redis.api
 
-import scala.util.matching.Regex
-
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
@@ -115,10 +113,10 @@ trait Hashes {
   final def hScan(
     key: String,
     cursor: Long,
-    pattern: Option[Regex] = None,
-    count: Option[Long] = None,
-    `type`: Option[String] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = HScan.run((key, cursor, pattern, count, `type`))
+    pattern: Option[String] = None,
+    count: Option[Long] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
+    HScan.run((key, cursor, pattern.map(Pattern), count.map(Count)))
 
   /**
    * Sets `field -> value` pairs in the hash stored at `key`.
@@ -188,10 +186,10 @@ private[redis] object Hashes {
       UnitOutput
     )
 
-  final val HScan: RedisCommand[(String, Long, Option[Regex], Option[Long], Option[String]), (Long, Chunk[String])] =
+  final val HScan: RedisCommand[(String, Long, Option[Pattern], Option[Count]), (Long, Chunk[String])] =
     RedisCommand(
       "HSCAN",
-      Tuple5(StringInput, LongInput, OptionalInput(RegexInput), OptionalInput(LongInput), OptionalInput(StringInput)),
+      Tuple4(StringInput, LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
       ScanOutput
     )
 

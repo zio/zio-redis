@@ -92,7 +92,51 @@ trait KeysSpec extends BaseSpec {
           _               <- set(key, value)
           scan            <- scan(0L)
           (next, elements) = scan
-        } yield assert(next)(isGreaterThan(0L)) && assert(elements)(isNonEmpty)
+        } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+      },
+      testM("scan entries with match option") {
+        for {
+          key             <- uuid
+          value           <- uuid
+          _               <- set(key, value)
+          scan            <- scan(0L, pattern = Some("*"))
+          (next, elements) = scan
+        } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+      },
+      testM("scan entries with count option") {
+        for {
+          key             <- uuid
+          value           <- uuid
+          _               <- set(key, value)
+          scan            <- scan(0L, count = Some(100L))
+          (next, elements) = scan
+        } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+      },
+      testM("scan entries with type option") {
+        for {
+          key             <- uuid
+          value           <- uuid
+          _               <- set(key, value)
+          scan            <- scan(0L, `type` = Some("string"))
+          (next, elements) = scan
+        } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+      },
+      testM("scan fails with RedisError on unsupported type") {
+        for {
+          key   <- uuid
+          value <- uuid
+          _     <- set(key, value)
+          scan  <- scan(0L, `type` = Some("foobar")).run
+        } yield assert(scan)(fails(isSubtype[RedisError.WrongType](anything)))
+      },
+      testM("scan entries with match, count and type options") {
+        for {
+          key             <- uuid
+          value           <- uuid
+          _               <- set(key, value)
+          scan            <- scan(0L, pattern = Some("*"), count = Some(100), `type` = Some("zset"))
+          (next, elements) = scan
+        } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
       },
       testM("fetch random key") {
         for {
