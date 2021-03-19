@@ -5,11 +5,11 @@ import java.util.UUID
 
 import zio.UIO
 import zio.duration._
+import zio.random.Random
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.random.Random
-import zio.test.TestAspect.tag
 import zio.test._
+import zio.test.TestAspect.tag
 import zio.test.environment.Live
 
 trait BaseSpec extends DefaultRunnableSpec {
