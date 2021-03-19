@@ -210,12 +210,9 @@ trait Keys {
   final def scan(
     cursor: Long,
     pattern: Option[String] = None,
-    count: Option[Long] = None,
-    `type`: Option[String] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
-    Task.effect(`type`.map(RedisType.from)).refineOrDie { case e: RedisError => e } >>= (redisType =>
-      Scan.run((cursor, pattern.map(Pattern), count.map(Count), redisType))
-    )
+    count: Option[Count] = None,
+    `type`: Option[RedisType] = None
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = Scan.run((cursor, pattern.map(Pattern), count, `type`))
 
   /**
    * Sorts the list, set, or sorted set stored at key. Returns the sorted elements.

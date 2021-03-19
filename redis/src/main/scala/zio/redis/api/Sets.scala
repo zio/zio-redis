@@ -149,9 +149,9 @@ trait Sets {
     key: String,
     cursor: Long,
     pattern: Option[String] = None,
-    count: Option[Long] = None
+    count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
-    SScan.run((key, cursor, pattern.map(Pattern), count.map(Count)))
+    SScan.run((key, cursor, pattern.map(Pattern), count))
 
   /**
    * Add multiple sets

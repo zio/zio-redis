@@ -114,9 +114,9 @@ trait Hashes {
     key: String,
     cursor: Long,
     pattern: Option[String] = None,
-    count: Option[Long] = None
+    count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] =
-    HScan.run((key, cursor, pattern.map(Pattern), count.map(Count)))
+    HScan.run((key, cursor, pattern.map(Pattern), count))
 
   /**
    * Sets `field -> value` pairs in the hash stored at `key`.
