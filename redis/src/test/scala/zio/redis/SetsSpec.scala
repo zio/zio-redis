@@ -762,7 +762,7 @@ trait SetsSpec extends BaseSpec {
           for {
             key     <- uuid
             _       <- sAdd(key, testData.head, testData.tail: _*)
-            members <- scanAll(key, None, Some(3L))
+            members <- scanAll(key, None, Some(Count(3L)))
           } yield assert(members.toSet)(equalTo(testData.toSet))
         },
         testM("error when not set") {
@@ -779,7 +779,7 @@ trait SetsSpec extends BaseSpec {
   private def scanAll(
     key: String,
     pattern: Option[String] = None,
-    count: Option[Long] = None
+    count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>

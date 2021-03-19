@@ -108,7 +108,7 @@ trait KeysSpec extends BaseSpec {
           key             <- uuid
           value           <- uuid
           _               <- set(key, value)
-          scan            <- scan(0L, count = Some(100L))
+          scan            <- scan(0L, count = Some(Count(100L)))
           (next, elements) = scan
         } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
       },
@@ -117,24 +117,16 @@ trait KeysSpec extends BaseSpec {
           key             <- uuid
           value           <- uuid
           _               <- set(key, value)
-          scan            <- scan(0L, `type` = Some("string"))
+          scan            <- scan(0L, `type` = Some(RedisType.String))
           (next, elements) = scan
         } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
-      },
-      testM("scan fails with RedisError on unsupported type") {
-        for {
-          key   <- uuid
-          value <- uuid
-          _     <- set(key, value)
-          scan  <- scan(0L, `type` = Some("foobar")).run
-        } yield assert(scan)(fails(isSubtype[RedisError.WrongType](anything)))
       },
       testM("scan entries with match, count and type options") {
         for {
           key             <- uuid
           value           <- uuid
           _               <- set(key, value)
-          scan            <- scan(0L, pattern = Some("*"), count = Some(100), `type` = Some("zset"))
+          scan            <- scan(0L, pattern = Some("*"), count = Some(Count(100L)), `type` = Some(RedisType.SortedSet))
           (next, elements) = scan
         } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
       },

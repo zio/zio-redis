@@ -285,7 +285,7 @@ trait HashSpec extends BaseSpec {
             field           <- uuid
             value           <- uuid
             _               <- hSet(hash, field -> value)
-            scan            <- hScan(hash, 0L, count = Some(100L))
+            scan            <- hScan(hash, 0L, count = Some(Count(100L)))
             (next, elements) = scan
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         },

@@ -821,7 +821,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(4d, "d"),
                    MemberScore(5d, "e")
                  )
-            members <- scanAll(key, count = Some(3L))
+            members <- scanAll(key, count = Some(Count(3L)))
           } yield assert(members)(isNonEmpty)
         },
         testM("match with count over non-empty set") {
@@ -834,7 +834,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(4d, "testd"),
                    MemberScore(5d, "teste")
                  )
-            members <- scanAll(key, Some("t[a-z]*"), Some(3L))
+            members <- scanAll(key, pattern = Some("t[a-z]*"), count = Some(Count(3L)))
           } yield assert(members)(isNonEmpty)
         },
         testM("error when not set") {
@@ -994,7 +994,7 @@ trait SortedSetsSpec extends BaseSpec {
   private def scanAll(
     key: String,
     pattern: Option[String] = None,
-    count: Option[Long] = None
+    count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>

@@ -6,7 +6,7 @@ import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import zio.{ Chunk, Task, ZIO }
+import zio.{ Chunk, ZIO }
 
 trait Keys {
   import Keys.{ Keys => _, _ }
