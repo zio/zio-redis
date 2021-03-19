@@ -32,4 +32,6 @@ trait Shared {
   sealed case class Limit(offset: Long, count: Long)
 
   sealed case class Store(key: String)
+
+  sealed case class Pattern(pattern: String)
 }
