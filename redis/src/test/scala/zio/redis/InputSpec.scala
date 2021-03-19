@@ -218,6 +218,38 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("AFTER")))
         }
       ),
+      suite("RedisType")(
+        testM("string type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.String))
+          } yield assert(result)(equalTo(respArgs("TYPE", "string")))
+        },
+        testM("list type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.List))
+          } yield assert(result)(equalTo(respArgs("TYPE", "list")))
+        },
+        testM("set type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.Set))
+          } yield assert(result)(equalTo(respArgs("TYPE", "set")))
+        },
+        testM("sorted set type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.SortedSet))
+          } yield assert(result)(equalTo(respArgs("TYPE", "zset")))
+        },
+        testM("hash type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.Hash))
+          } yield assert(result)(equalTo(respArgs("TYPE", "hash")))
+        },
+        testM("stream type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.Stream))
+          } yield assert(result)(equalTo(respArgs("TYPE", "stream")))
+        }
+      ),
       suite("Double")(
         testM("positive value") {
           for {
@@ -526,15 +558,15 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("-1", "-5")))
         }
       ),
-      suite("Regex")(
+      suite("Pattern")(
         testM("with valid pattern") {
           for {
-            result <- Task(RegexInput.encode("\\d{3}".r))
-          } yield assert(result)(equalTo(respArgs("MATCH", "\\d{3}")))
+            result <- Task(PatternInput.encode(Pattern("*[ab]-*")))
+          } yield assert(result)(equalTo(respArgs("MATCH", "*[ab]-*")))
         },
         testM("with empty pattern") {
           for {
-            result <- Task(RegexInput.encode("".r))
+            result <- Task(PatternInput.encode(Pattern("")))
           } yield assert(result)(equalTo(respArgs("MATCH", "")))
         }
       ),

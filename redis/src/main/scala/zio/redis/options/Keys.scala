@@ -28,7 +28,17 @@ trait Keys {
 
   sealed case class Freq(frequency: String)
 
-  sealed trait RedisType
+  sealed trait RedisType extends Product with Serializable { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case RedisType.String    => "string"
+        case RedisType.List      => "list"
+        case RedisType.Set       => "set"
+        case RedisType.SortedSet => "zset"
+        case RedisType.Hash      => "hash"
+        case RedisType.Stream    => "stream"
+      }
+  }
 
   object RedisType {
     case object String    extends RedisType
@@ -44,5 +54,4 @@ trait Keys {
   }
 
   type Replace = Replace.type
-
 }
