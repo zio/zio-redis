@@ -40,5 +40,4 @@ object ApiSpec
         .get
         .provideCustomLayerShared(RedisExecutor.test)
     )
-    
 }
