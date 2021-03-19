@@ -232,9 +232,9 @@ object Input {
     def encode(data: String)(implicit codec: Codec): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data))
   }
 
-  final case class ArbitraryInput[A: Schema]() extends Input[A] {
+  final case class ArbitraryInput[A]()(implicit schema: Schema[A]) extends Input[A] {
     private[redis] def encode(data: A)(implicit codec: Codec): Chunk[RespValue.BulkString] = {
-      val bytes = codec.encode(Schema[A])(data)
+      val bytes = codec.encode(schema)(data)
       Chunk.single(encodeBytes(bytes))
     }
   }

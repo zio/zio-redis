@@ -150,10 +150,10 @@ object Output {
       }
   }
 
-  final case class ArbitraryOutput[A: Schema]() extends Output[A] {
+  final case class ArbitraryOutput[A]()(implicit schema: Schema[A]) extends Output[A] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): A =
       respValue match {
-        case RespValue.BulkString(s) => codec.decode(Schema[A])(s).fold(e => throw CodecError(e), identity)
+        case RespValue.BulkString(s) => codec.decode(schema)(s).fold(e => throw CodecError(e), identity)
         case other                   => throw ProtocolError(s"$other isn't a simple string")
       }
   }
@@ -300,12 +300,12 @@ object Output {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[String, Map[String, String]] =
       respValue match {
         case RespValue.NullArray       => Map.empty[String, Map[String, String]]
-        case RespValue.Array(entities) => extractMapMap(entities)
+        case RespValue.Array(entities) => extractNestedMap(entities)
         case other                     => throw ProtocolError(s"$other isn't an array")
       }
   }
 
-  private def extractMapMap(entities: Chunk[RespValue])(implicit codec: Codec): Map[String, Map[String, String]] = {
+  private def extractNestedMap(entities: Chunk[RespValue])(implicit codec: Codec): Map[String, Map[String, String]] = {
     val output = collection.mutable.Map.empty[String, Map[String, String]]
     entities.foreach {
       case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
