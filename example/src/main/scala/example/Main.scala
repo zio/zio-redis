@@ -36,12 +36,12 @@ object Main extends App {
         .make(ZIO.succeed(ActorSystem("zio-redis-example")))(as => ZIO.fromFuture(_ => as.terminate()).either)
         .toLayer
 
-    val codec: ULayer[Has[Codec]] = ZLayer.succeed(StringUtf8Codec)
-    val redis                     = Logging.ignore ++ redisConfig ++ codec >>> RedisExecutor.live
-    val sttp                      = AsyncHttpClientZioBackend.layer()
-    val cache                     = redis ++ sttp >>> ContributorsCache.live
-    val api                       = cache >>> Api.live
-    val routes                    = ZLayer.fromService[Api.Service, Route](_.routes)
+    val codec  = ZLayer.succeed[Codec](StringUtf8Codec)
+    val redis  = Logging.ignore ++ redisConfig ++ codec >>> RedisExecutor.live
+    val sttp   = AsyncHttpClientZioBackend.layer()
+    val cache  = redis ++ sttp >>> ContributorsCache.live
+    val api    = cache >>> Api.live
+    val routes = ZLayer.fromService[Api.Service, Route](_.routes)
 
     (actorSystem ++ serverConfig ++ (api >>> routes)) >>> HttpServer.live
   }

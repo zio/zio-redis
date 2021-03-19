@@ -18,6 +18,5 @@ trait BenchmarksUtils {
 }
 
 object BenchmarksUtils {
-  private final val Codec: ULayer[Has[Codec]] = ZLayer.succeed(StringUtf8Codec)
-  private final val Layer                     = Logging.ignore ++ Codec >>> RedisExecutor.local.orDie
+  private final val Layer = Logging.ignore ++ ZLayer.succeed[Codec](StringUtf8Codec) >>> RedisExecutor.local.orDie
 }
