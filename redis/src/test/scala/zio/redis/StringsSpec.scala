@@ -288,6 +288,25 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
       ),
+      suite("Stralgo")(
+        testM("get lcs from 2 strings") {
+          val str1 = "foo"
+          val str2 = "fao"
+          assertM(stralgo(StralgoCommand.StralgoLCS(StralgoType.Strings), str1, str2))(equalTo("fo"))
+        },
+        testM("get lcs from 2 keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1   <- uuid
+            _      <- set(key1, str1, None, None, None)
+            key2   <- uuid
+            _      <- set(key2, str2, None, None, None)
+            result <- stralgo(StralgoCommand.StralgoLCS(StralgoType.Keys), key1, key2)
+          } yield assert(result)(equalTo("fo"))
+        }
+      ),
       suite("bitOp")(
         testM("AND over multiple non-empty strings") {
           for {

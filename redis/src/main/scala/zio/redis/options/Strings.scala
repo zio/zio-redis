@@ -2,6 +2,25 @@ package zio.redis.options
 
 trait Strings {
 
+  sealed trait StralgoCommand
+
+  object StralgoCommand {
+    sealed case class StralgoLCS(`type`: StralgoType) extends StralgoCommand
+  }
+
+  sealed trait StralgoType { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case StralgoType.Strings => "STRINGS"
+        case StralgoType.Keys    => "KEYS"
+      }
+  }
+
+  object StralgoType {
+    case object Strings extends StralgoType
+    case object Keys    extends StralgoType
+  }
+
   sealed trait BitFieldCommand
 
   object BitFieldCommand {

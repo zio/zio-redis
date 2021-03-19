@@ -38,6 +38,16 @@ object Input {
     def encode(data: Boolean): Chunk[RespValue.BulkString] = Chunk.single(encodeString(if (data) "1" else "0"))
   }
 
+  case object StralgoCommandInput extends Input[StralgoCommand] {
+    override private[redis] def encode(data: StralgoCommand) = {
+      import StralgoCommand._
+
+      data match {
+        case c: StralgoLCS => Chunk(encodeString("LCS"), encodeString(c.`type`.stringify))
+      }
+    }
+  }
+
   case object BitFieldCommandInput extends Input[BitFieldCommand] {
     def encode(data: BitFieldCommand): Chunk[RespValue.BulkString] = {
       import BitFieldCommand._

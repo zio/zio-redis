@@ -260,6 +260,13 @@ trait Strings {
    * @return Returns the length of the string
    */
   final def strLen(key: String): ZIO[RedisExecutor, RedisError, Long] = StrLen.run(key)
+
+  /**
+   * Get the longest common subsequence of values stored in the given keys
+   * @param
+   */
+  final def stralgo(command: StralgoCommand, keyA: String, keyB: String): ZIO[RedisExecutor, RedisError, String] =
+    Stralgo.run((command, keyA, keyB))
 }
 
 private[redis] object Strings {
@@ -345,4 +352,12 @@ private[redis] object Strings {
     RedisCommand("SETRANGE", Tuple3(StringInput, LongInput, StringInput), LongOutput)
 
   final val StrLen: RedisCommand[String, Long] = RedisCommand("STRLEN", StringInput, LongOutput)
+
+  final val Stralgo: RedisCommand[(StralgoCommand, String, String), String] =
+    RedisCommand(
+      "STRALGO",
+      Tuple3(StralgoCommandInput, StringInput, StringInput),
+      MultiStringOutput
+    )
+
 }
