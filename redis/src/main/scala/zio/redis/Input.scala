@@ -3,8 +3,6 @@ package zio.redis
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import scala.util.matching.Regex
-
 import zio.Chunk
 import zio.duration.Duration
 
@@ -79,6 +77,16 @@ object Input {
   case object CountInput extends Input[Count] {
     def encode(data: Count): Chunk[RespValue.BulkString] =
       Chunk(encodeString("COUNT"), encodeString(data.count.toString))
+  }
+
+  case object RedisTypeInput extends Input[RedisType] {
+    def encode(data: RedisType): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("TYPE"), encodeString(data.stringify))
+  }
+
+  case object PatternInput extends Input[Pattern] {
+    def encode(data: Pattern): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("MATCH"), encodeString(data.pattern))
   }
 
   case object GetInput extends Input[String] {
@@ -172,10 +180,6 @@ object Input {
   case object RangeInput extends Input[Range] {
     def encode(data: Range): Chunk[RespValue.BulkString] =
       Chunk(encodeString(data.start.toString), encodeString(data.end.toString))
-  }
-
-  case object RegexInput extends Input[Regex] {
-    def encode(data: Regex): Chunk[RespValue.BulkString] = Chunk(encodeString("MATCH"), encodeString(data.regex))
   }
 
   case object ReplaceInput extends Input[Replace] {

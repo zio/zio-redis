@@ -5,6 +5,7 @@ import java.util.UUID
 
 import zio.UIO
 import zio.duration._
+import zio.random.Random
 import zio.test.TestAspect.tag
 import zio.test._
 import zio.test.environment.Live
@@ -18,4 +19,9 @@ trait BaseSpec extends DefaultRunnableSpec {
 
   val TestExecutorUnsupportedTag                   = "test executor unsupported"
   lazy val testExecutorUnsupported: TestAspectPoly = tag(TestExecutorUnsupportedTag)
+
+  val genStringRedisTypeOption: Gen[Random, Option[RedisType]] =
+    Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
+  val genCountOption: Gen[Random, Option[Count]]    = Gen.option(Gen.long(0, 100000).map(Count))
+  val genPatternOption: Gen[Random, Option[String]] = Gen.option(Gen.constSample(Sample.noShrink("*")))
 }

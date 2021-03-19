@@ -3,20 +3,18 @@ package zio.redis
 import zio.clock.Clock
 import zio.duration._
 import zio.logging.Logging
+import zio.random.Random
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{ Chunk, Has, ZIO, ZLayer }
+import zio.{ Chunk, ZIO, ZLayer }
 
 trait KeysSpec extends BaseSpec {
 
-  val keysSuite: Spec[Has[Clock.Service] with Has[RedisExecutor.Service] with Has[TestClock.Service] with Has[
-    TestConsole.Service
-  ] with Has[TestRandom.Service] with Has[TestSystem.Service] with Has[RedisExecutor.Service] with Has[
-    Annotations.Service
-  ], TestFailure[RedisError], TestSuccess] = {
+  val keysSuite: Spec[Annotations with RedisExecutor with Random with TestConfig with ZTestEnv with Clock, TestFailure[
+    RedisError
+  ], TestSuccess] = {
     suite("keys")(
       testM("set followed by get") {
         for {
@@ -85,15 +83,17 @@ trait KeysSpec extends BaseSpec {
           touched <- touch(key1, key2)
         } yield assert(touched)(equalTo(2L))
       },
-      testM("scan entries") {
-        for {
-          key             <- uuid
-          value           <- uuid
-          _               <- set(key, value)
-          scan            <- scan(0L)
-          (next, elements) = scan
-        } yield assert(next)(isGreaterThan(0L)) && assert(elements)(isNonEmpty)
-      },
+      testM("scan entries with match, count and type options")(
+        checkM(genPatternOption, genCountOption, genStringRedisTypeOption) { (pattern, count, redisType) =>
+          for {
+            key             <- uuid
+            value           <- uuid
+            _               <- set(key, value)
+            scan            <- scan(0L, pattern, count, redisType)
+            (next, elements) = scan
+          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+        }
+      ),
       testM("fetch random key") {
         for {
           key       <- uuid
@@ -415,5 +415,4 @@ object KeysSpec {
 
   final val SecondExecutor: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     (Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live).fresh
-
 }

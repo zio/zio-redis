@@ -1,7 +1,5 @@
 package zio.redis
 
-import scala.util.matching.Regex
-
 import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.stream.ZStream
 import zio.test.Assertion._
@@ -810,7 +808,7 @@ trait SortedSetsSpec extends BaseSpec {
           for {
             key     <- uuid
             _       <- zAdd(key)(MemberScore(1d, "one"), MemberScore(2d, "two"), MemberScore(3d, "three"))
-            members <- scanAll(key, Some("t[a-z]*".r))
+            members <- scanAll(key, Some("t[a-z]*"))
           } yield assert(members)(equalTo((Chunk("two", "2", "three", "3"))))
         },
         testM("with count over non-empty set") {
@@ -836,7 +834,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(4d, "testd"),
                    MemberScore(5d, "teste")
                  )
-            members <- scanAll(key, Some("t[a-z]*".r), Some(Count(3L)))
+            members <- scanAll(key, pattern = Some("t[a-z]*"), count = Some(Count(3L)))
           } yield assert(members)(isNonEmpty)
         },
         testM("error when not set") {
@@ -992,17 +990,19 @@ trait SortedSetsSpec extends BaseSpec {
         }
       )
     )
+
   private def scanAll(
     key: String,
-    regex: Option[Regex] = None,
+    pattern: Option[String] = None,
     count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
-        zScan(key, cursor, regex, count).map {
+        zScan(key, cursor, pattern, count).map {
           case (nc, nm) if nc == 0 => (nm, None)
           case (nc, nm)            => (nm, Some(nc))
         }
       }
       .runCollect
+
 }
