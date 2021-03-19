@@ -1,7 +1,5 @@
 package zio.redis.options
 
-import zio.redis.RedisError.WrongType
-
 trait Keys {
 
   case object AbsTtl {
@@ -43,17 +41,6 @@ trait Keys {
   }
 
   object RedisType {
-    def from(value: String): RedisType = value match {
-      case "string" => String
-      case "list"   => List
-      case "set"    => Set
-      case "zset"   => SortedSet
-      case "hash"   => Hash
-      case "stream" => Stream
-      case _ =>
-        throw WrongType(s"$value is not a valid redis type use one of string, list, set, zset, hash and stream.")
-    }
-
     case object String    extends RedisType
     case object List      extends RedisType
     case object Set       extends RedisType
@@ -67,5 +54,4 @@ trait Keys {
   }
 
   type Replace = Replace.type
-
 }

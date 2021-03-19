@@ -1,12 +1,13 @@
 package zio.redis
 
 import zio.Chunk
+import zio.random.Random
 import zio.test.Assertion._
 import zio.test._
 
 trait HashSpec extends BaseSpec {
 
-  val hashSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val hashSuite: Spec[RedisExecutor with Random with TestConfig, TestFailure[RedisError], TestSuccess] =
     suite("hash")(
       suite("hSet, hGet, hGetAll and hDel")(
         testM("set followed by get") {
@@ -259,46 +260,17 @@ trait HashSpec extends BaseSpec {
         }
       ),
       suite("hScan")(
-        testM("hScan entries") {
-          for {
-            hash            <- uuid
-            field           <- uuid
-            value           <- uuid
-            _               <- hSet(hash, field -> value)
-            scan            <- hScan(hash, 0L)
-            (next, elements) = scan
-          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
-        },
-        testM("hScan entries with match option") {
-          for {
-            hash            <- uuid
-            field           <- uuid
-            value           <- uuid
-            _               <- hSet(hash, field -> value)
-            scan            <- hScan(hash, 0L, pattern = Some("*"))
-            (next, elements) = scan
-          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
-        },
-        testM("hScan entries with count option") {
-          for {
-            hash            <- uuid
-            field           <- uuid
-            value           <- uuid
-            _               <- hSet(hash, field -> value)
-            scan            <- hScan(hash, 0L, count = Some(Count(100L)))
-            (next, elements) = scan
-          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
-        },
-        testM("hScan entries with match and count options") {
-          for {
-            hash            <- uuid
-            field           <- uuid
-            value           <- uuid
-            _               <- hSet(hash, field -> value)
-            scan            <- hScan(hash, 0L)
-            (next, elements) = scan
-          } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
-        }
+        testM("hScan entries with match and count options")(checkM(genPatternOption, genCountOption) {
+          (pattern, count) =>
+            for {
+              hash            <- uuid
+              field           <- uuid
+              value           <- uuid
+              _               <- hSet(hash, field -> value)
+              scan            <- hScan(hash, 0L, pattern, count)
+              (next, elements) = scan
+            } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
+        })
       )
     )
 }

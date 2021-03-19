@@ -1004,4 +1004,5 @@ trait SortedSetsSpec extends BaseSpec {
         }
       }
       .runCollect
+
 }
