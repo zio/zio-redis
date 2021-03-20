@@ -8,6 +8,7 @@ import zio.redis.RespValue.BulkString
 import zio.stm.{ STM, TMap, TRef, USTM }
 
 private[redis] final class TestExecutor private (
+  lists: TMap[String, Vector[String]],
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
@@ -286,6 +287,7 @@ private[redis] final class TestExecutor private (
             .map(vs => RespValue.Integer(vs.size.toLong)),
           STM.succeedNow(Replies.WrongType)
         )
+
       case api.HyperLogLog.PfMerge.name =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
@@ -302,6 +304,39 @@ private[redis] final class TestExecutor private (
           } yield Replies.Ok,
           STM.succeedNow(Replies.WrongType)
         )
+
+      //
+      // API Lists
+      //
+      case api.Lists.LPush.name =>
+        val key = input.head.asString
+        val values = input.tail.map(_.asString)
+
+        STM.ifM(isSet(key))(
+          for {
+            oldValues <- lists.getOrElse(key, Vector.empty)
+            newValues = values.reverse.toVector ++ oldValues
+            _ <- lists.put(key, newValues)
+          } yield RespValue.Integer(newValues.size),
+          STM.succeedNow(Replies.WrongType)
+        )
+
+      case api.Lists.RPush.name =>
+        val key = input.head.asString
+        val values = input.tail.map(_.asString)
+
+        STM.ifM(isSet(key))(
+          for {
+            oldValues <- lists.getOrElse(key, Vector.empty)
+            newValues = values.toVector ++ oldValues
+            _ <- lists.put(key, newValues)
+          } yield RespValue.Integer(newValues.size),
+          STM.succeedNow(Replies.WrongType)
+        )
+
+      //
+      // Match unsupported commands
+      //
       case _ => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
     }
   }
