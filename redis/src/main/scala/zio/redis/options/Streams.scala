@@ -36,11 +36,14 @@ trait Streams {
 
   object XInfoCommand {
 
-    case class Stream(key: String) extends XInfoCommand
+    case class Stream(key: String, full: Option[Full] = None) extends XInfoCommand
+
+    case class Full(count: Option[Long])
 
     case class Groups(key: String) extends XInfoCommand
 
     case class Consumers(key: String, group: String) extends XInfoCommand
+
   }
 
   case object MkStream {
@@ -108,6 +111,45 @@ trait Streams {
 
   object StreamConsumersInfo {
     def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis)
+  }
+
+  object XInfoFullStream {
+
+    case class StreamFullInfo(
+      length: Long,
+      radixTreeKeys: Long,
+      radixTreeNodes: Long,
+      lastGeneratedId: String,
+      entries: Option[StreamEntry],
+      groups: Seq[ConsumerGroups]
+    )
+
+    object StreamFullInfo {
+      def empty: StreamFullInfo = StreamFullInfo(0, 0, 0, "", None, Nil)
+    }
+
+    case class ConsumerGroups(
+      name: String,
+      lastDeliveredId: String,
+      pelCount: Long,
+      pending: Seq[GroupPel],
+      consumers: Seq[Consumers]
+    )
+
+    object ConsumerGroups {
+      def empty: ConsumerGroups = ConsumerGroups("", "", 0, Nil, Nil)
+    }
+
+    case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
+
+    case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Seq[ConsumerPel])
+
+    object Consumers {
+      def empty: Consumers = Consumers("", 0.millis, 0, Nil)
+    }
+
+    case class ConsumerPel(entryId: String, deliveryTime: Duration, deliveryCount: Long)
+
   }
 
   private[redis] object XInfoFields {

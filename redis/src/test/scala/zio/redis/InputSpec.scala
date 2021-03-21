@@ -986,6 +986,13 @@ object InputSpec extends BaseSpec {
           )
         }
       ),
+      suite("XInfoStream FULL")(
+        testM("valid value") {
+          assertM(Task(XInfoStreamInput.encode(XInfoCommand.Stream("key",Some(XInfoCommand.Full(Some(10)))))))(
+            equalTo( respArgs("STREAM", "key", "FULL", "COUNT", "10"))
+          )
+        }
+      ),
       suite("XInfoGroups")(
         testM("valid value") {
           assertM(Task(XInfoGroupsInput.encode(XInfoCommand.Groups("key"))))(

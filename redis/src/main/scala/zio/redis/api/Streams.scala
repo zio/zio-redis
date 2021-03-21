@@ -49,6 +49,19 @@ trait Streams {
     XInfoStream.run(XInfoCommand.Stream(key))
 
   /**
+   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
+   *
+   * @param key ID of the stream
+   * @param count limit the amount of stream/PEL entries that are returned (The first <count> entries are returned).
+   * @return General information about the stream stored at the specified key.
+   */
+  final def xInfoStreamFull(
+    key: String,
+    count: Option[Long] = None
+  ): ZIO[RedisExecutor, RedisError, XInfoFullStream.StreamFullInfo] =
+    XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(count))))
+
+  /**
    * An introspection command used in order to retrieve different information about the group.
    *
    * @param key ID of the stream
@@ -495,6 +508,9 @@ private object Streams {
 
   final val XGroupDelConsumer: RedisCommand[XGroupCommand.DelConsumer, Long] =
     RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
+
+  final val XInfoStreamFull: RedisCommand[XInfoCommand.Stream, XInfoFullStream.StreamFullInfo] =
+    RedisCommand("XINFO", XInfoStreamInput, StreamInfoFullOutput)
 
   final val XInfoStream: RedisCommand[XInfoCommand.Stream, StreamInfo] =
     RedisCommand("XINFO", XInfoStreamInput, StreamInfoOutput)

@@ -286,9 +286,18 @@ object Input {
 
   case object XInfoStreamInput extends Input[XInfoCommand.Stream] {
     def encode(data: XInfoCommand.Stream): Chunk[RespValue.BulkString] =
-      Chunk(encodeString("STREAM"), encodeString(data.key))
+      data.full.fold(Chunk(encodeString("STREAM"), encodeString(data.key))) { f =>
+        f.count.fold(Chunk(encodeString("STREAM"), encodeString(data.key), encodeString("FULL"))) { c =>
+          Chunk(
+            encodeString("STREAM"),
+            encodeString(data.key),
+            encodeString("FULL"),
+            encodeString("COUNT"),
+            encodeString(c.toString)
+          )
+        }
+      }
   }
-
   case object XInfoGroupsInput extends Input[XInfoCommand.Groups] {
     def encode(data: XInfoCommand.Groups): Chunk[RespValue.BulkString] =
       Chunk(encodeString("GROUPS"), encodeString(data.key))
