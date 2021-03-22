@@ -1,5 +1,6 @@
 package zio.redis.options
 
+import zio.Chunk
 import zio.duration._
 
 trait Streams {
@@ -113,39 +114,39 @@ trait Streams {
     def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis)
   }
 
-  object XInfoFullStream {
+  object StreamInfoWithFull {
 
-    case class StreamFullInfo(
+    case class FullStreamInfo(
       length: Long,
       radixTreeKeys: Long,
       radixTreeNodes: Long,
       lastGeneratedId: String,
-      entries: Option[StreamEntry],
-      groups: Seq[ConsumerGroups]
+      entries: Chunk[StreamEntry],
+      groups: Chunk[ConsumerGroups]
     )
 
-    object StreamFullInfo {
-      def empty: StreamFullInfo = StreamFullInfo(0, 0, 0, "", None, Nil)
+    object FullStreamInfo {
+      def empty: FullStreamInfo = FullStreamInfo(0, 0, 0, "", Chunk.empty, Chunk.empty)
     }
 
     case class ConsumerGroups(
       name: String,
       lastDeliveredId: String,
       pelCount: Long,
-      pending: Seq[GroupPel],
-      consumers: Seq[Consumers]
+      pending: Chunk[GroupPel],
+      consumers: Chunk[Consumers]
     )
 
     object ConsumerGroups {
-      def empty: ConsumerGroups = ConsumerGroups("", "", 0, Nil, Nil)
+      def empty: ConsumerGroups = ConsumerGroups("", "", 0, Chunk.empty, Chunk.empty)
     }
 
     case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
 
-    case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Seq[ConsumerPel])
+    case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
 
     object Consumers {
-      def empty: Consumers = Consumers("", 0.millis, 0, Nil)
+      def empty: Consumers = Consumers("", 0.millis, 0, Chunk.empty)
     }
 
     case class ConsumerPel(entryId: String, deliveryTime: Duration, deliveryCount: Long)
@@ -157,8 +158,8 @@ trait Streams {
     val Idle: String    = "idle"
     val Pending: String = "pending"
 
-    val Consumers: String     = "consumers"
-    val LastDelivered: String = "last-delivered-id"
+    val Consumers: String       = "consumers"
+    val LastDeliveredId: String = "last-delivered-id"
 
     val Length: String          = "length"
     val RadixTreeKeys: String   = "radix-tree-keys"

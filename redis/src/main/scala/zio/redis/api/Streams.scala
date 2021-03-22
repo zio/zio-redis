@@ -58,7 +58,7 @@ trait Streams {
   final def xInfoStreamFull(
     key: String,
     count: Option[Long] = None
-  ): ZIO[RedisExecutor, RedisError, XInfoFullStream.StreamFullInfo] =
+  ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo] =
     XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(count))))
 
   /**
@@ -509,7 +509,7 @@ private object Streams {
   final val XGroupDelConsumer: RedisCommand[XGroupCommand.DelConsumer, Long] =
     RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
 
-  final val XInfoStreamFull: RedisCommand[XInfoCommand.Stream, XInfoFullStream.StreamFullInfo] =
+  final val XInfoStreamFull: RedisCommand[XInfoCommand.Stream, StreamInfoWithFull.FullStreamInfo] =
     RedisCommand("XINFO", XInfoStreamInput, StreamInfoFullOutput)
 
   final val XInfoStream: RedisCommand[XInfoCommand.Stream, StreamInfo] =

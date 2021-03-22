@@ -1,7 +1,5 @@
 package zio.redis
 
-import scala.collection.mutable.ListBuffer
-
 import zio.Chunk
 import zio.duration._
 
@@ -327,7 +325,7 @@ object Output {
                   case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
                     if (key.asString == XInfoFields.Name)
                       streamGroupsInfo = streamGroupsInfo.copy(name = value.asString)
-                    else if (key.asString == XInfoFields.LastDelivered)
+                    else if (key.asString == XInfoFields.LastDeliveredId)
                       streamGroupsInfo = streamGroupsInfo.copy(lastDeliveredId = value.asString)
                   case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
                     if (key.asString == XInfoFields.Pending)
@@ -387,9 +385,9 @@ object Output {
       }
   }
 
-  case object StreamInfoFullOutput extends Output[XInfoFullStream.StreamFullInfo] {
-    override protected def tryDecode(respValue: RespValue): XInfoFullStream.StreamFullInfo = {
-      var streamInfoFull: XInfoFullStream.StreamFullInfo = XInfoFullStream.StreamFullInfo.empty
+  case object StreamInfoFullOutput extends Output[StreamInfoWithFull.FullStreamInfo] {
+    override protected def tryDecode(respValue: RespValue): StreamInfoWithFull.FullStreamInfo = {
+      var streamInfoFull: StreamInfoWithFull.FullStreamInfo = StreamInfoWithFull.FullStreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
         case RespValue.Array(elements) if elements.length % 2 == 0 =>
@@ -406,11 +404,12 @@ object Output {
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                   if key.asString == XInfoFields.LastGeneratedId =>
                 streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
-              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) if key.asString == XInfoFields.Entries =>
-                streamInfoFull = streamInfoFull.copy(entries = Some(extractStreamEntry(value)))
+              case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Entries =>
+                val streamEntryList = values.map(extractStreamEntry)
+                streamInfoFull = streamInfoFull.copy(entries = streamEntryList)
               case (key @ RespValue.BulkString(_), RespValue.Array(value)) if key.asString == XInfoFields.Groups =>
                 // Get the group list of the stream.
-                streamInfoFull = streamInfoFull.copy(groups = extractXInfoFullGroups(value).toSeq)
+                streamInfoFull = streamInfoFull.copy(groups = extractXInfoFullGroups(value))
               case _ =>
             }
             pos += 2
@@ -424,10 +423,10 @@ object Output {
     }
   }
 
-  private def extractXInfoFullGroups(groupValue: Chunk[RespValue]): ListBuffer[XInfoFullStream.ConsumerGroups] = {
-    val groupList = ListBuffer.empty[XInfoFullStream.ConsumerGroups]
+  private def extractXInfoFullGroups(groupValue: Chunk[RespValue]): Chunk[StreamInfoWithFull.ConsumerGroups] = {
+    var groupList: Chunk[StreamInfoWithFull.ConsumerGroups] = Chunk.empty
     groupValue.foreach { group: RespValue =>
-      var readyGroup = XInfoFullStream.ConsumerGroups.empty
+      var readyGroup = StreamInfoWithFull.ConsumerGroups.empty
       group match {
         case RespValue.Array(groupElements) if groupElements.length % 2 == 0 =>
           var groupElementPos = 0
@@ -435,7 +434,7 @@ object Output {
             (groupElements(groupElementPos), groupElements(groupElementPos + 1)) match {
               // Get the basic information of the current group.
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-                if (key.asString == XInfoFields.LastGeneratedId)
+                if (key.asString == XInfoFields.LastDeliveredId)
                   readyGroup = readyGroup.copy(lastDeliveredId = value.asString)
                 else if (key.asString == XInfoFields.Name) readyGroup = readyGroup.copy(name = value.asString)
               case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))
@@ -444,10 +443,10 @@ object Output {
               case (key @ RespValue.BulkString(_), RespValue.Array(value)) =>
                 // Get the consumer list of the current group.
                 if (key.asString == XInfoFields.Consumers) {
-                  readyGroup = readyGroup.copy(consumers = extractXInfoFullConsumers(value).toSeq)
+                  readyGroup = readyGroup.copy(consumers = Chunk.fromIterable(extractXInfoFullConsumers(value)))
                 } else if (key.asString == XInfoFields.Pending) {
                   // Get the pel list of the current group.
-                  val groupPelList = ListBuffer[XInfoFullStream.GroupPel]()
+                  var groupPelList: Chunk[StreamInfoWithFull.GroupPel] = Chunk.empty
                   value.foreach {
                     case RespValue.Array(
                           Seq(
@@ -457,8 +456,8 @@ object Output {
                             deliveryCount @ RespValue.Integer(_)
                           )
                         ) =>
-                      groupPelList.append(
-                        XInfoFullStream.GroupPel(
+                      groupPelList = groupPelList.:+(
+                        StreamInfoWithFull.GroupPel(
                           entryId.asString,
                           consumerName.asString,
                           deliveryTime.value.millis,
@@ -467,7 +466,7 @@ object Output {
                       )
                     case other => throw ProtocolError(s"$other isn't a valid array")
                   }
-                  readyGroup = readyGroup.copy(pending = groupPelList.toSeq)
+                  readyGroup = readyGroup.copy(pending = groupPelList)
                 }
               case _ =>
             }
@@ -478,15 +477,15 @@ object Output {
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
-      groupList.append(readyGroup)
+      groupList = groupList.:+(readyGroup)
     }
     groupList
   }
 
-  private def extractXInfoFullConsumers(consumerValue: Chunk[RespValue]): ListBuffer[XInfoFullStream.Consumers] = {
-    val consumerList = ListBuffer[XInfoFullStream.Consumers]()
+  private def extractXInfoFullConsumers(consumerValue: Chunk[RespValue]): Chunk[StreamInfoWithFull.Consumers] = {
+    var consumerList: Chunk[StreamInfoWithFull.Consumers] = Chunk.empty
     consumerValue.foreach { consumer =>
-      var readyConsumer = XInfoFullStream.Consumers.empty
+      var readyConsumer = StreamInfoWithFull.Consumers.empty
       consumer match {
         case RespValue.Array(consumerElements) if consumerElements.length % 2 == 0 =>
           var consumerElementPos = 0
@@ -503,7 +502,7 @@ object Output {
               // Get the pel list of the current consumer.
               case (key @ RespValue.BulkString(_), RespValue.Array(consumerPendingValue))
                   if key.asString == XInfoFields.Pending =>
-                val consumerPelList = ListBuffer[XInfoFullStream.ConsumerPel]()
+                var consumerPelList: Chunk[StreamInfoWithFull.ConsumerPel] = Chunk.empty
                 consumerPendingValue.foreach {
                   case RespValue.Array(
                         Seq(
@@ -512,12 +511,12 @@ object Output {
                           deliveryCount @ RespValue.Integer(_)
                         )
                       ) =>
-                    consumerPelList.append(
-                      XInfoFullStream.ConsumerPel(entryId.asString, deliveryTime.value.millis, deliveryCount.value)
+                    consumerPelList = consumerPelList.:+(
+                      StreamInfoWithFull.ConsumerPel(entryId.asString, deliveryTime.value.millis, deliveryCount.value)
                     )
                   case other => throw ProtocolError(s"$other isn't a valid array")
                 }
-                readyConsumer = readyConsumer.copy(pending = consumerPelList.toSeq)
+                readyConsumer = readyConsumer.copy(pending = consumerPelList)
               case _ =>
             }
             consumerElementPos += 2
@@ -527,7 +526,7 @@ object Output {
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
-      consumerList.append(readyConsumer)
+      consumerList = consumerList.:+(readyConsumer)
     }
     consumerList
   }
