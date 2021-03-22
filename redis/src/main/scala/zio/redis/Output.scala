@@ -528,11 +528,11 @@ object Output {
       }
   }
 
-  case object StrAlgoLcsOutput extends Output[StrAlgoLcs] {
-    protected def tryDecode(respValue: RespValue): StrAlgoLcs =
+  case object StrAlgoLcsOutput extends Output[LcsOutput] {
+    protected def tryDecode(respValue: RespValue): LcsOutput =
       respValue match {
-        case result @ RespValue.BulkString(_) => StrAlgoLcs.Lcs(result.asString)
-        case RespValue.Integer(length)        => StrAlgoLcs.Length(length)
+        case result @ RespValue.BulkString(_) => LcsOutput.Lcs(result.asString)
+        case RespValue.Integer(length)        => LcsOutput.Length(length)
         case RespValue.ArrayValues(
               RespValue.BulkString(_),
               RespValue.Array(items),
@@ -554,7 +554,7 @@ object Output {
               Match(matchIdxs(0), matchIdxs(1), matchLength)
             case other => throw ProtocolError(s"$other isn't a valid response")
           }
-          StrAlgoLcs.Matches(matches.toList, length)
+          LcsOutput.Matches(matches.toList, length)
         case other => throw ProtocolError(s"$other isn't a valid set response")
       }
   }

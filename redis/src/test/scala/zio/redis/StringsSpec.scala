@@ -292,8 +292,8 @@ trait StringsSpec extends BaseSpec {
         testM("get LCS from 2 strings") {
           val str1 = "foo"
           val str2 = "fao"
-          assertM(stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Strings), str1, str2))(
-            equalTo(StrAlgoLcs.Lcs("fo"))
+          assertM(stralgoLcs(StralgoLCS.Strings, str1, str2))(
+            equalTo(LcsOutput.Lcs("fo"))
           )
         },
         testM("get LCS from 2 keys") {
@@ -305,8 +305,8 @@ trait StringsSpec extends BaseSpec {
             _      <- set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- set(key2, str2, None, None, None)
-            result <- stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Keys), key1, key2)
-          } yield assert(result)(equalTo(StrAlgoLcs.Lcs("fo")))
+            result <- stralgoLcs(StralgoLCS.Keys, key1, key2)
+          } yield assert(result)(equalTo(LcsOutput.Lcs("fo")))
         },
         testM("get LCS from unknown keys") {
           val str1 = "foo"
@@ -317,16 +317,16 @@ trait StringsSpec extends BaseSpec {
             _      <- set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- set(key2, str2, None, None, None)
-            result <- stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Keys), "unknown", "unknown")
-          } yield assert(result)(equalTo(StrAlgoLcs.Lcs("")))
+            result <- stralgoLcs(StralgoLCS.Keys, "unknown", "unknown")
+          } yield assert(result)(equalTo(LcsOutput.Lcs("")))
         },
         testM("Get length of LCS for strings") {
           val str1 = "foo"
           val str2 = "fao"
           assertM(
-            stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Strings), str1, str2, Some(StralgoLcsQueryType.Len))
+            stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Len))
           )(
-            equalTo(StrAlgoLcs.Length(2))
+            equalTo(LcsOutput.Length(2))
           )
         },
         testM("get length of LCS for keys") {
@@ -339,8 +339,8 @@ trait StringsSpec extends BaseSpec {
             key2 <- uuid
             _    <- set(key2, str2, None, None, None)
             result <-
-              stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Keys), key1, key2, Some(StralgoLcsQueryType.Len))
-          } yield assert(result)(equalTo(StrAlgoLcs.Length(2)))
+              stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Len))
+          } yield assert(result)(equalTo(LcsOutput.Length(2)))
         },
         testM("get length of LCS for unknown keys") {
           val str1 = "foo"
@@ -353,21 +353,21 @@ trait StringsSpec extends BaseSpec {
             _    <- set(key2, str2, None, None, None)
             result <-
               stralgoLcs(
-                StralgoCommand.StralgoLCS(LcsType.Keys),
+                StralgoLCS.Keys,
                 "unknown",
                 "unknown",
-                Some(StralgoLcsQueryType.Len)
+                Some(StrAlgoLcsQueryType.Len)
               )
-          } yield assert(result)(equalTo(StrAlgoLcs.Length(0)))
+          } yield assert(result)(equalTo(LcsOutput.Length(0)))
         },
         testM("get index of LCS for strings") {
           val str1 = "ohmytext"
           val str2 = "mynewtext"
           assertM(
-            stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Strings), str1, str2, Some(StralgoLcsQueryType.Idx()))
+            stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Idx()))
           )(
             equalTo(
-              StrAlgoLcs.Matches(
+              LcsOutput.Matches(
                 List(
                   Match(matchIdxA = MatchIdx(4, 7), matchIdxB = MatchIdx(5, 8)),
                   Match(matchIdxA = MatchIdx(2, 3), matchIdxB = MatchIdx(0, 1))
@@ -387,11 +387,11 @@ trait StringsSpec extends BaseSpec {
             key2 <- uuid
             _    <- set(key2, str2)
             result <-
-              stralgoLcs(StralgoCommand.StralgoLCS(LcsType.Keys), key1, key2, Some(StralgoLcsQueryType.Idx()))
+              stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Idx()))
           } yield {
             assert(result)(
               equalTo(
-                StrAlgoLcs.Matches(
+                LcsOutput.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2)),
@@ -414,15 +414,15 @@ trait StringsSpec extends BaseSpec {
             _    <- set(key2, str2)
             result <-
               stralgoLcs(
-                StralgoCommand.StralgoLCS(LcsType.Keys),
+                StralgoLCS.Keys,
                 key1,
                 key2,
-                Some(StralgoLcsQueryType.Idx(minMatchLength = 2))
+                Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2))
               )
           } yield {
             assert(result)(
               equalTo(
-                StrAlgoLcs.Matches(
+                LcsOutput.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2))
@@ -444,15 +444,15 @@ trait StringsSpec extends BaseSpec {
             _    <- set(key2, str2)
             result <-
               stralgoLcs(
-                StralgoCommand.StralgoLCS(LcsType.Keys),
+                StralgoLCS.Keys,
                 key1,
                 key2,
-                Some(StralgoLcsQueryType.Idx(withMatchLength = true))
+                Some(StrAlgoLcsQueryType.Idx(withMatchLength = true))
               )
           } yield {
             assert(result)(
               equalTo(
-                StrAlgoLcs.Matches(
+                LcsOutput.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2)),
@@ -475,15 +475,15 @@ trait StringsSpec extends BaseSpec {
             _    <- set(key2, str2)
             result <-
               stralgoLcs(
-                StralgoCommand.StralgoLCS(LcsType.Keys),
+                StralgoLCS.Keys,
                 key1,
                 key2,
-                Some(StralgoLcsQueryType.Idx(minMatchLength = 2, withMatchLength = true))
+                Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2, withMatchLength = true))
               )
           } yield {
             assert(result)(
               equalTo(
-                StrAlgoLcs.Matches(
+                LcsOutput.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2))

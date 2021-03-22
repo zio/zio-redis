@@ -2,38 +2,33 @@ package zio.redis.options
 
 trait Strings {
 
-  sealed trait StralgoCommand
-
-  object StralgoCommand {
-    sealed case class StralgoLCS(`type`: LcsType) extends StralgoCommand
-  }
-
-  sealed trait LcsType { self =>
+  sealed trait StrAlgoLCS {
+    self =>
     private[redis] final def stringify: String =
       self match {
-        case LcsType.Strings => "STRINGS"
-        case LcsType.Keys    => "KEYS"
+        case StralgoLCS.Strings => "STRINGS"
+        case StralgoLCS.Keys    => "KEYS"
       }
   }
 
-  object LcsType {
-    case object Strings extends LcsType
-    case object Keys    extends LcsType
+  object StralgoLCS {
+    case object Strings extends StrAlgoLCS
+    case object Keys    extends StrAlgoLCS
   }
 
-  sealed trait StralgoLcsQueryType
+  sealed trait StrAlgoLcsQueryType
 
-  object StralgoLcsQueryType {
-    case object Len                                                           extends StralgoLcsQueryType
-    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends StralgoLcsQueryType
+  object StrAlgoLcsQueryType {
+    case object Len                                                           extends StrAlgoLcsQueryType
+    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends StrAlgoLcsQueryType
   }
 
-  sealed trait StrAlgoLcs
+  sealed trait LcsOutput
 
-  object StrAlgoLcs {
-    case class Lcs(lcs: String)                            extends StrAlgoLcs
-    case class Length(length: Long)                        extends StrAlgoLcs
-    case class Matches(matches: List[Match], length: Long) extends StrAlgoLcs
+  object LcsOutput {
+    case class Lcs(lcs: String)                            extends LcsOutput
+    case class Length(length: Long)                        extends LcsOutput
+    case class Matches(matches: List[Match], length: Long) extends LcsOutput
   }
 
   case class MatchIdx(start: Long, end: Long)

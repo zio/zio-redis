@@ -38,20 +38,14 @@ object Input {
     def encode(data: Boolean): Chunk[RespValue.BulkString] = Chunk.single(encodeString(if (data) "1" else "0"))
   }
 
-  case object StralgoCommandInput extends Input[StralgoCommand] {
-    override private[redis] def encode(data: StralgoCommand) = {
-      import StralgoCommand._
-
-      data match {
-        case StralgoLCS(t) => Chunk(encodeString("LCS"), encodeString(t.stringify))
-      }
-    }
+  case object StralgoCommandInput extends Input[StrAlgoLCS] {
+    override private[redis] def encode(data: StrAlgoLCS) = Chunk(encodeString("LCS"), encodeString(data.stringify))
   }
 
-  case object StralgoLcsQueryTypeInput extends Input[StralgoLcsQueryType] {
-    override private[redis] def encode(data: StralgoLcsQueryType) = data match {
-      case StralgoLcsQueryType.Len => Chunk.single(encodeString("LEN"))
-      case StralgoLcsQueryType.Idx(minMatchLength, withMatchLength) => {
+  case object StralgoLcsQueryTypeInput extends Input[StrAlgoLcsQueryType] {
+    override private[redis] def encode(data: StrAlgoLcsQueryType) = data match {
+      case StrAlgoLcsQueryType.Len => Chunk.single(encodeString("LEN"))
+      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) => {
         val idx = Chunk.single(encodeString("IDX"))
         val min =
           if (minMatchLength > 1) Chunk(encodeString("MINMATCHLEN"), encodeString(minMatchLength.toString))

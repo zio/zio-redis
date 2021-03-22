@@ -266,11 +266,11 @@ trait Strings {
    * @param command
    */
   final def stralgoLcs(
-    command: StralgoCommand,
+    command: StrAlgoLCS,
     keyA: String,
     keyB: String,
-    lcsQueryType: Option[StralgoLcsQueryType] = None
-  ): ZIO[RedisExecutor, RedisError, StrAlgoLcs] =
+    lcsQueryType: Option[StrAlgoLcsQueryType] = None
+  ): ZIO[RedisExecutor, RedisError, LcsOutput] =
     StralgoLcs.run((command, keyA, keyB, lcsQueryType))
 }
 
@@ -358,7 +358,7 @@ private[redis] object Strings {
 
   final val StrLen: RedisCommand[String, Long] = RedisCommand("STRLEN", StringInput, LongOutput)
 
-  final val StralgoLcs: RedisCommand[(StralgoCommand, String, String, Option[StralgoLcsQueryType]), StrAlgoLcs] =
+  final val StralgoLcs: RedisCommand[(StrAlgoLCS, String, String, Option[StrAlgoLcsQueryType]), LcsOutput] =
     RedisCommand(
       "STRALGO",
       Tuple4(StralgoCommandInput, StringInput, StringInput, OptionalInput(StralgoLcsQueryTypeInput)),
