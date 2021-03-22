@@ -6,9 +6,7 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
   private[redis] def run(in: In): ZIO[RedisExecutor, RedisError, Out] =
     ZIO
       .accessM[RedisExecutor](_.get.execute(Input.StringInput.encode(name) ++ input.encode(in)))
-      .flatMap { out =>
-        ZIO.effect(output.unsafeDecode(out))
-      }
+      .flatMap(out => ZIO.effect(output.unsafeDecode(out)))
       .refineToOrDie[RedisError]
 }
 
