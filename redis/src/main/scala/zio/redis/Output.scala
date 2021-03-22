@@ -443,7 +443,7 @@ object Output {
               case (key @ RespValue.BulkString(_), RespValue.Array(value)) =>
                 // Get the consumer list of the current group.
                 if (key.asString == XInfoFields.Consumers) {
-                  readyGroup = readyGroup.copy(consumers = Chunk.fromIterable(extractXInfoFullConsumers(value)))
+                  readyGroup = readyGroup.copy(consumers = extractXInfoFullConsumers(value))
                 } else if (key.asString == XInfoFields.Pending) {
                   // Get the pel list of the current group.
                   var groupPelList: Chunk[StreamInfoWithFull.GroupPel] = Chunk.empty
