@@ -43,7 +43,21 @@ object Input {
       import StralgoCommand._
 
       data match {
-        case c: StralgoLCS => Chunk(encodeString("LCS"), encodeString(c.`type`.stringify))
+        case StralgoLCS(t) => Chunk(encodeString("LCS"), encodeString(t.stringify))
+      }
+    }
+  }
+
+  case object StralgoLcsQueryTypeInput extends Input[StralgoLcsQueryType] {
+    override private[redis] def encode(data: StralgoLcsQueryType) = data match {
+      case StralgoLcsQueryType.Len => Chunk.single(encodeString("LEN"))
+      case StralgoLcsQueryType.Idx(minMatchLength, withMatchLength) => {
+        val idx = Chunk.single(encodeString("IDX"))
+        val min =
+          if (minMatchLength > 1) Chunk(encodeString("MINMATCHLEN"), encodeString(minMatchLength.toString))
+          else Chunk.empty
+        val length = if (withMatchLength) Chunk.single(encodeString("WITHMATCHLEN")) else Chunk.empty
+        Chunk(idx, min, length).flatten
       }
     }
   }

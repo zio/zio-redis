@@ -3,12 +3,12 @@ version: "3.2"
 services:
   redis1:
     container_name: test_redis_1
-    image: redis:6-alpine
+    image: redis:6.2.1
     ports:
       - "6379:6379"
 
   redis2:
     container_name: test_redis_2
-    image: redis:6-alpine
+    image: redis:6.2.1
     ports:
       - "6380:6379"

@@ -5,21 +5,39 @@ trait Strings {
   sealed trait StralgoCommand
 
   object StralgoCommand {
-    sealed case class StralgoLCS(`type`: StralgoType) extends StralgoCommand
+    sealed case class StralgoLCS(`type`: LcsType) extends StralgoCommand
   }
 
-  sealed trait StralgoType { self =>
+  sealed trait LcsType { self =>
     private[redis] final def stringify: String =
       self match {
-        case StralgoType.Strings => "STRINGS"
-        case StralgoType.Keys    => "KEYS"
+        case LcsType.Strings => "STRINGS"
+        case LcsType.Keys    => "KEYS"
       }
   }
 
-  object StralgoType {
-    case object Strings extends StralgoType
-    case object Keys    extends StralgoType
+  object LcsType {
+    case object Strings extends LcsType
+    case object Keys    extends LcsType
   }
+
+  sealed trait StralgoLcsQueryType
+
+  object StralgoLcsQueryType {
+    case object Len                                                           extends StralgoLcsQueryType
+    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends StralgoLcsQueryType
+  }
+
+  sealed trait StrAlgoLcs
+
+  object StrAlgoLcs {
+    case class Lcs(lcs: String)                            extends StrAlgoLcs
+    case class Length(length: Long)                        extends StrAlgoLcs
+    case class Matches(matches: List[Match], length: Long) extends StrAlgoLcs
+  }
+
+  case class MatchIdx(start: Long, end: Long)
+  case class Match(matchIdxA: MatchIdx, matchIdxB: MatchIdx, matchLength: Option[Long] = None)
 
   sealed trait BitFieldCommand
 

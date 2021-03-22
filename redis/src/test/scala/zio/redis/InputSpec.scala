@@ -9,6 +9,7 @@ import zio.test._
 import zio.{ Chunk, Task }
 
 object InputSpec extends BaseSpec {
+  import StralgoCommand._
   import BitFieldCommand._
   import BitFieldType._
   import BitOperation._
@@ -70,6 +71,43 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(BoolInput.encode(false))
           } yield assert(result)(equalTo(respArgs("0")))
+        }
+      ),
+      suite("Stralgocommand")(
+        test("lcs keys") {
+          assert(StralgoCommandInput.encode(StralgoLCS(LcsType.Keys)))(
+            equalTo(respArgs("LCS", "KEYS"))
+          )
+        },
+        test("lcs strings") {
+          assert(StralgoCommandInput.encode(StralgoLCS(LcsType.Strings)))(
+            equalTo(respArgs("LCS", "STRINGS"))
+          )
+        },
+        test("length option") {
+          assert(StralgoLcsQueryTypeInput.encode(StralgoLcsQueryType.Len))(
+            equalTo(respArgs("LEN"))
+          )
+        },
+        test("idx option default") {
+          assert(StralgoLcsQueryTypeInput.encode(StralgoLcsQueryType.Idx()))(
+            equalTo(respArgs("IDX"))
+          )
+        },
+        test("idx option with minmatchlength") {
+          assert(StralgoLcsQueryTypeInput.encode(StralgoLcsQueryType.Idx(minMatchLength = 2)))(
+            equalTo(respArgs("IDX", "MINMATCHLEN", "2"))
+          )
+        },
+        test("idx option with withmatchlength") {
+          assert(StralgoLcsQueryTypeInput.encode(StralgoLcsQueryType.Idx(withMatchLength = true)))(
+            equalTo(respArgs("IDX", "WITHMATCHLEN"))
+          )
+        },
+        test("idx option with minmatchlength and withmatchlength") {
+          assert(StralgoLcsQueryTypeInput.encode(StralgoLcsQueryType.Idx(minMatchLength = 2, withMatchLength = true)))(
+            equalTo(respArgs("IDX", "MINMATCHLEN", "2", "WITHMATCHLEN"))
+          )
         }
       ),
       suite("BitFieldCommand")(
