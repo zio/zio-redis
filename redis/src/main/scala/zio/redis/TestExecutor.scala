@@ -206,13 +206,12 @@ private[redis] final class TestExecutor private (
               asVector = set.toVector
               res <- maybeCount match {
                        case None =>
-                         selectOne[String](asVector, randomPick).map(maybeValue =>
-                           maybeValue.map(RespValue.bulkString).getOrElse(RespValue.NullBulkString)
-                         )
+                         selectOne[String](asVector, randomPick).map {
+                           _.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString)
+                         }
                        case Some(n) if n > 0 => selectN(asVector, n, randomPick).map(Replies.array)
-                       case Some(n) if n < 0 =>
-                         selectNWithReplacement(asVector, -1 * n, randomPick).map(Replies.array)
-                       case Some(0) => STM.succeedNow(RespValue.NullBulkString)
+                       case Some(n) if n < 0 => selectNWithReplacement(asVector, -n, randomPick).map(Replies.array)
+                       case Some(_)          => STM.succeedNow(RespValue.NullBulkString)
                      }
             } yield res
           }
