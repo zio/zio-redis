@@ -59,7 +59,7 @@ object RedisExecutor {
     private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
 
     private def send: IO[RedisError, Unit] =
-      reqQueue.takeBetween(1, Int.MaxValue).flatMap { reqs =>
+      reqQueue.takeBetween(1, RequestQueueSize).flatMap { reqs =>
         val buffer = ChunkBuilder.make[Byte]()
         val it     = reqs.iterator
 
