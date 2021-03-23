@@ -119,6 +119,8 @@ object RespValue {
                   CollectingArray(size, ChunkBuilder.make(size), Start.feed)
                 else
                   Done(Array(Chunk.empty))
+
+              case _ => Failed
             }
 
           case CollectingArray(rem, vals, next) =>
