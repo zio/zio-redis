@@ -35,9 +35,10 @@ object ApiSpec
       suite("Test Executor")(
         connectionSuite,
         setsSuite,
-        hyperLogLogSuite
+        hyperLogLogSuite,
+        listSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
-        .provideCustomLayerShared(RedisExecutor.test)
+        .provideCustomLayerShared(RedisExecutor.test ++ Clock.live)
     )
 }

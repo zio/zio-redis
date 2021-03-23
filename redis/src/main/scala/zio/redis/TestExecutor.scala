@@ -1,25 +1,56 @@
 package zio.redis
 
+import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
+import scala.util.Try
 
 import zio._
+import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
-import zio.stm.{ STM, TMap, TRef, USTM }
+import zio.stm.{ random => _, _ }
 
 private[redis] final class TestExecutor private (
   lists: TMap[String, Vector[String]],
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
-  hyperLogLogs: TMap[String, Seq[String]]
+  hyperLogLogs: TMap[String, Set[String]]
 ) extends RedisExecutor.Service {
 
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
-      name   <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
-      result <- runCommand(name.asString, command.tail).commit
+      name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
+      result <- name.asString match {
+                  case api.Lists.BlPop.name =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
+
+                  case api.Lists.BrPop.name =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
+
+                  case api.Lists.BrPopLPush.name =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+
+                  case _ => runCommand(name.asString, command.tail).commit
+                }
     } yield result
+
+  private def runBlockingCommand(
+    name: String,
+    input: Chunk[RespValue.BulkString],
+    timeout: Int,
+    respValue: RespValue
+  ): UIO[RespValue] =
+    if (timeout > 0)
+      runCommand(name, input).commit
+        .timeout(timeout.seconds)
+        .map(_.getOrElse(respValue))
+        .provideLayer(zio.clock.Clock.live)
+    else
+      runCommand(name, input).commit
 
   private def errResponse(cmd: String): RespValue.BulkString =
     RespValue.bulkString(s"(error) ERR wrong number of arguments for '$cmd' command")
@@ -28,7 +59,7 @@ private[redis] final class TestExecutor private (
     res: => RespValue.BulkString
   ): USTM[BulkString] = STM.succeedNow(if (input.isEmpty) errResponse(command) else res)
 
-  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): STM[RedisError, RespValue] = {
+  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): USTM[RespValue] = {
     name match {
       case api.Connection.Ping.name =>
         STM.succeedNow {
@@ -37,12 +68,19 @@ private[redis] final class TestExecutor private (
           else
             input.head
         }
-      case api.Connection.Auth.name   => onConnection(name, input)(RespValue.bulkString("OK"))
-      case api.Connection.Echo.name   => onConnection(name, input)(input.head)
-      case api.Connection.Select.name => onConnection(name, input)(RespValue.bulkString("OK"))
+
+      case api.Connection.Auth.name =>
+        onConnection(name, input)(RespValue.bulkString("OK"))
+
+      case api.Connection.Echo.name =>
+        onConnection(name, input)(input.head)
+
+      case api.Connection.Select.name =>
+        onConnection(name, input)(RespValue.bulkString("OK"))
+
       case api.Sets.SAdd.name =>
         val key = input.head.asString
-        STM.ifM(isSet(key))(
+        orWrongType(isSet(key))(
           {
             val values = input.tail.map(_.asString)
             for {
@@ -51,27 +89,26 @@ private[redis] final class TestExecutor private (
               added   = newSet.size - oldSet.size
               _      <- sets.put(key, newSet)
             } yield RespValue.Integer(added.toLong)
-          },
-          STM.succeedNow(Replies.WrongType)
+          }
         )
 
       case api.Sets.SCard.name =>
         val key = input.head.asString
-        STM.ifM(isSet(key))(
-          sets.get(key).map(_.fold(RespValue.Integer(0))(s => RespValue.Integer(s.size.toLong))),
-          STM.succeedNow(Replies.WrongType)
+
+        orWrongType(isSet(key))(
+          sets.get(key).map(_.fold(RespValue.Integer(0))(s => RespValue.Integer(s.size.toLong)))
         )
 
       case api.Sets.SDiff.name =>
         val allkeys = input.map(_.asString)
         val mainKey = allkeys.head
         val others  = allkeys.tail
-        STM.ifM(forAll(allkeys)(isSet))(
+
+        orWrongType(forAll(allkeys)(isSet))(
           for {
             main   <- sets.getOrElse(mainKey, Set.empty)
             result <- STM.foldLeft(others)(main) { case (acc, k) => sets.get(k).map(_.fold(acc)(acc -- _)) }
-          } yield RespValue.array(result.map(RespValue.bulkString(_)).toList: _*),
-          STM.succeedNow(Replies.WrongType)
+          } yield RespValue.array(result.map(RespValue.bulkString).toList: _*)
         )
 
       case api.Sets.SDiffStore.name =>
@@ -79,13 +116,13 @@ private[redis] final class TestExecutor private (
         val distkey = allkeys.head
         val mainKey = allkeys(1)
         val others  = allkeys.drop(2)
-        STM.ifM(forAll(allkeys)(isSet))(
+
+        orWrongType(forAll(allkeys)(isSet))(
           for {
             main   <- sets.getOrElse(mainKey, Set.empty)
             result <- STM.foldLeft(others)(main) { case (acc, k) => sets.get(k).map(_.fold(acc)(acc -- _)) }
             _      <- sets.put(distkey, result)
-          } yield RespValue.Integer(result.size.toLong),
-          STM.succeedNow(Replies.WrongType)
+          } yield RespValue.Integer(result.size.toLong)
         )
 
       case api.Sets.SInter.name =>
@@ -99,6 +136,7 @@ private[redis] final class TestExecutor private (
         val destination = keys.head
         val mainKey     = keys(1)
         val otherKeys   = keys.tail
+
         (STM.fail(()).unlessM(isSet(destination)) *> sInter(mainKey, otherKeys)).foldM(
           _ => STM.succeedNow(Replies.WrongType),
           s =>
@@ -110,19 +148,20 @@ private[redis] final class TestExecutor private (
       case api.Sets.SIsMember.name =>
         val key    = input.head.asString
         val member = input(1).asString
-        STM.ifM(isSet(key))(
+
+        orWrongType(isSet(key))(
           for {
             set   <- sets.getOrElse(key, Set.empty)
             result = if (set.contains(member)) RespValue.Integer(1) else RespValue.Integer(0)
-          } yield result,
-          STM.succeedNow(Replies.WrongType)
+          } yield result
         )
 
       case api.Sets.SMove.name =>
         val sourceKey      = input.head.asString
         val destinationKey = input(1).asString
         val member         = input(2).asString
-        STM.ifM(isSet(sourceKey))(
+
+        orWrongType(isSet(sourceKey))(
           sets.getOrElse(sourceKey, Set.empty).flatMap { source =>
             if (source.contains(member))
               STM.ifM(isSet(destinationKey))(
@@ -134,32 +173,32 @@ private[redis] final class TestExecutor private (
                 STM.succeedNow(Replies.WrongType)
               )
             else STM.succeedNow(RespValue.Integer(0))
-          },
-          STM.succeedNow(Replies.WrongType)
+          }
         )
 
       case api.Sets.SPop.name =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
-        STM.ifM(isSet(key))(
+
+        orWrongType(isSet(key))(
           for {
             set   <- sets.getOrElse(key, Set.empty)
             result = set.take(count)
             _     <- sets.put(key, set -- result)
-          } yield Replies.array(result),
-          STM.succeedNow(Replies.WrongType)
+          } yield Replies.array(result)
         )
 
       case api.Sets.SMembers.name =>
         val key = input.head.asString
-        STM.ifM(isSet(key))(
-          sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_))),
-          STM.succeedNow(Replies.WrongType)
+
+        orWrongType(isSet(key))(
+          sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_)))
         )
 
       case api.Sets.SRandMember.name =>
         val key = input.head.asString
-        STM.ifM(isSet(key))(
+
+        orWrongType(isSet(key))(
           {
             val maybeCount = input.tail.headOption.map(b => b.asString.toLong)
             for {
@@ -176,13 +215,13 @@ private[redis] final class TestExecutor private (
                        case Some(0) => STM.succeedNow(RespValue.NullBulkString)
                      }
             } yield res
-          },
-          STM.succeedNow(Replies.WrongType)
+          }
         )
 
       case api.Sets.SRem.name =>
         val key = input.head.asString
-        STM.ifM(isSet(key))(
+
+        orWrongType(isSet(key))(
           {
             val values = input.tail.map(_.asString)
             for {
@@ -191,27 +230,27 @@ private[redis] final class TestExecutor private (
               removed = oldSet.size - newSet.size
               _      <- sets.put(key, newSet)
             } yield RespValue.Integer(removed.toLong)
-          },
-          STM.succeedNow(Replies.WrongType)
+          }
         )
 
       case api.Sets.SUnion.name =>
         val keys = input.map(_.asString)
-        STM.ifM(forAll(keys)(isSet))(
+
+        orWrongType(forAll(keys)(isSet))(
           STM
             .foldLeft(keys)(Set.empty[String]) { (unionSoFar, nextKey) =>
               sets.getOrElse(nextKey, Set.empty[String]).map { currentSet =>
                 unionSoFar ++ currentSet
               }
             }
-            .map(unionSet => Replies.array(unionSet)),
-          STM.succeedNow(Replies.WrongType)
+            .map(unionSet => Replies.array(unionSet))
         )
 
       case api.Sets.SUnionStore.name =>
         val destination = input.head.asString
         val keys        = input.tail.map(_.asString)
-        STM.ifM(forAll(keys)(isSet))(
+
+        orWrongType(forAll(keys)(isSet))(
           for {
             union <- STM
                        .foldLeft(keys)(Set.empty[String]) { (unionSoFar, nextKey) =>
@@ -220,8 +259,7 @@ private[redis] final class TestExecutor private (
                          }
                        }
             _ <- sets.put(destination, union)
-          } yield RespValue.Integer(union.size.toLong),
-          STM.succeedNow(Replies.WrongType)
+          } yield RespValue.Integer(union.size.toLong)
         )
 
       case api.Sets.SScan.name =>
@@ -232,7 +270,7 @@ private[redis] final class TestExecutor private (
           }
 
         val key = input.head.asString
-        STM.ifM(isSet(key))(
+        orWrongType(isSet(key))(
           {
             val start = input(1).asString.toInt
             val maybeRegex = if (input.size > 2) input(2).asString match {
@@ -252,8 +290,7 @@ private[redis] final class TestExecutor private (
               nextIndex = if (filtered.size <= end) 0 else end
               results   = Replies.array(resultSet)
             } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
-          },
-          STM.succeedNow(Replies.WrongType)
+          }
         )
 
       case api.Strings.Set.name =>
@@ -261,91 +298,353 @@ private[redis] final class TestExecutor private (
         val key   = input.head.asString
         val value = input(1).asString
         strings.put(key, value).as(Replies.Ok)
+
       case api.HyperLogLog.PfAdd.name =>
         val key    = input.head.asString
-        val values = input.tail.map(_.asString)
-        STM.ifM(forAll(Chunk.single(key))(isSet))(
+        val values = input.tail.map(_.asString).toSet
+
+        orWrongType(isHyperLogLog(key))(
           for {
-            oldValues <- hyperLogLogs.getOrElse(key, Chunk.empty)
+            oldValues <- hyperLogLogs.getOrElse(key, Set.empty)
             ret        = if (oldValues == values) 0L else 1L
             _         <- hyperLogLogs.put(key, values)
-          } yield {
-            RespValue.Integer(ret)
-          },
-          STM.succeedNow(Replies.WrongType)
+          } yield RespValue.Integer(ret)
         )
 
       case api.HyperLogLog.PfCount.name =>
         val keys = input.map(_.asString)
-        STM.ifM(forAll(keys)(isSet))(
+        orWrongType(forAll(keys)(isHyperLogLog))(
           STM
-            .foldLeft(keys)(Seq.empty[String]) { (bHyperLogLogs, nextKey) =>
-              hyperLogLogs.getOrElse(nextKey, Seq.empty[String]).map { currentSet =>
+            .foldLeft(keys)(Set.empty[String]) { (bHyperLogLogs, nextKey) =>
+              hyperLogLogs.getOrElse(nextKey, Set.empty[String]).map { currentSet =>
                 bHyperLogLogs ++ currentSet
               }
             }
-            .map(vs => RespValue.Integer(vs.size.toLong)),
-          STM.succeedNow(Replies.WrongType)
+            .map(vs => RespValue.Integer(vs.size.toLong))
         )
 
       case api.HyperLogLog.PfMerge.name =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
-        STM.ifM(forAll(values ++ Chunk.single(key))(isSet))(
+
+        orWrongType(forAll(values ++ Chunk.single(key))(isHyperLogLog))(
           for {
-            sourceValues <- STM.foldLeft(values)(Chunk.empty: Chunk[String]) { (bHyperLogLogs, nextKey) =>
-                              hyperLogLogs.getOrElse(nextKey, Chunk.empty).map { currentSet =>
+            sourceValues <- STM.foldLeft(values)(Set.empty: Set[String]) { (bHyperLogLogs, nextKey) =>
+                              hyperLogLogs.getOrElse(nextKey, Set.empty).map { currentSet =>
                                 bHyperLogLogs ++ currentSet
                               }
                             }
-            destValues <- hyperLogLogs.getOrElse(key, Chunk.empty)
+            destValues <- hyperLogLogs.getOrElse(key, Set.empty)
             putValues   = sourceValues ++ destValues
             _          <- hyperLogLogs.put(key, putValues)
-          } yield Replies.Ok,
-          STM.succeedNow(Replies.WrongType)
+          } yield Replies.Ok
         )
 
-      //
-      // API Lists
-      //
-      case api.Lists.LPush.name =>
+      case api.Lists.LIndex.name =>
+        val key   = input.head.asString
+        val index = input(1).asString.toInt
+
+        orWrongType(isList(key))(
+          for {
+            list  <- lists.getOrElse(key, Vector.empty)
+            result = if (index < 0) list.lift(list.size + index) else list.lift(index)
+          } yield result.fold[RespValue](RespValue.NullBulkString)(value => RespValue.bulkString(value))
+        )
+
+      case api.Lists.LInsert.name =>
         val key = input.head.asString
+        val position = input(1).asString match {
+          case "BEFORE" => Position.Before
+          case "AFTER"  => Position.After
+        }
+        val pivot   = input(2).asString
+        val element = input(3).asString
+
+        orWrongType(isList(key))(
+          for {
+            maybeList <- lists.get(key)
+            eitherResult = maybeList match {
+                             case None => Left(RespValue.Integer(0L))
+                             case Some(list) =>
+                               Right(
+                                 position match {
+                                   case Position.Before =>
+                                     list.find(_ == pivot).map { p =>
+                                       val index        = list.indexOf(p)
+                                       val (head, tail) = list.splitAt(index)
+                                       head ++ Vector(element) ++ tail
+                                     }
+
+                                   case Position.After =>
+                                     list.find(_ == pivot).map { p =>
+                                       val index        = list.indexOf(p)
+                                       val (head, tail) = list.splitAt(index + 1)
+                                       head ++ Vector(element) ++ tail
+                                     }
+                                 }
+                               )
+                           }
+            result <- eitherResult.fold(
+                        respValue => STM.succeedNow(respValue),
+                        maybeList =>
+                          maybeList.fold(STM.succeedNow(RespValue.Integer(-1L)))(insert =>
+                            lists.put(key, insert) *> STM.succeedNow(RespValue.Integer(insert.size.toLong))
+                          )
+                      )
+          } yield result
+        )
+
+      case api.Lists.LLen.name =>
+        val key = input.head.asString
+
+        orWrongType(isList(key))(
+          for {
+            list <- lists.getOrElse(key, Vector.empty)
+          } yield RespValue.Integer(list.size.toLong)
+        )
+
+      case api.Lists.LPush.name =>
+        val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
-        STM.ifM(isSet(key))(
+        orWrongType(isList(key))(
           for {
             oldValues <- lists.getOrElse(key, Vector.empty)
-            newValues = values.reverse.toVector ++ oldValues
-            _ <- lists.put(key, newValues)
-          } yield RespValue.Integer(newValues.size),
-          STM.succeedNow(Replies.WrongType)
+            newValues  = values.reverse.toVector ++ oldValues
+            _         <- lists.put(key, newValues)
+          } yield RespValue.Integer(newValues.size.toLong)
+        )
+
+      case api.Lists.LPushX.name =>
+        val key    = input.head.asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isList(key))(
+          (for {
+            list    <- lists.get(key)
+            newList <- STM.fromOption(list.map(oldValues => values.reverse.toVector ++ oldValues))
+            _       <- lists.put(key, newList)
+          } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
+        )
+
+      case api.Lists.LRange.name =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+        val end   = input(2).asString.toInt
+
+        orWrongType(isList(key))(
+          for {
+            list  <- lists.getOrElse(key, Vector.empty)
+            result = if (end < 0) list.slice(start, list.size + 1 + end) else list.slice(start, end + 1)
+          } yield Replies.array(result)
+        )
+
+      case api.Lists.LRem.name =>
+        val key     = input.head.asString
+        val count   = input(1).asString.toInt
+        val element = input(2).asString
+
+        orWrongType(isList(key))(
+          for {
+            list <- lists.getOrElse(key, Vector.empty)
+            result = count match {
+                       case 0          => list.filterNot(_ == element)
+                       case n if n > 0 => dropWhileLimit(list)(_ == element, n).toVector
+                       case n if n < 0 => dropWhileLimit(list.reverse)(_ == element, n * (-1)).reverse.toVector
+                     }
+            _ <- lists.put(key, result)
+          } yield RespValue.Integer((list.size - result.size).toLong)
+        )
+
+      case api.Lists.LSet.name =>
+        val key     = input.head.asString
+        val index   = input(1).asString.toInt
+        val element = input(2).asString
+
+        orWrongType(isList(key))(
+          (for {
+            list <- lists.getOrElse(key, Vector.empty)
+            newList <- STM.fromOption {
+                         Try {
+                           if (index < 0) list.updated(list.size - 1 + index, element)
+                           else list.updated(index, element)
+                         }.toOption
+                       }
+            _ <- lists.put(key, newList)
+          } yield ()).fold(_ => RespValue.Error("ERR index out of range"), _ => RespValue.SimpleString("OK"))
+        )
+
+      case api.Lists.LTrim.name =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+        val stop  = input(2).asString.toInt
+
+        orWrongType(isList(key))(
+          for {
+            list <- lists.getOrElse(key, Vector.empty)
+            result = (start, stop) match {
+                       case (l, r) if l >= 0 && r >= 0 => list.slice(l, r + 1)
+                       case (l, r) if l < 0 && r >= 0  => list.slice(list.size + l, r + 1)
+                       case (l, r) if l >= 0 && r < 0  => list.slice(l, list.size + r + 1)
+                       case (l, r) if l < 0 && r < 0   => list.slice(list.size + l, list.size + r + 1)
+                       case (_, _)                     => list
+                     }
+            _ <- lists.put(key, result)
+          } yield RespValue.SimpleString("OK")
+        )
+
+      case api.Lists.RPop.name =>
+        val key   = input.head.asString
+        val count = if (input.size == 1) 1 else input(1).asString.toInt
+
+        orWrongType(isList(key))(
+          for {
+            list  <- lists.getOrElse(key, Vector.empty)
+            result = list.takeRight(count).reverse
+            _     <- lists.put(key, list.dropRight(count))
+          } yield result.size match {
+            case 0 => RespValue.NullBulkString
+            case 1 => RespValue.bulkString(result.head)
+            case _ => Replies.array(result)
+          }
+        )
+
+      case api.Lists.RPopLPush.name =>
+        val source      = input(0).asString
+        val destination = input(1).asString
+
+        orWrongType(isList(source) &&& isList(destination) map (r => r._1 && r._2))(
+          for {
+            sourceList       <- lists.getOrElse(source, Vector.empty)
+            destinationList  <- lists.getOrElse(destination, Vector.empty)
+            value             = sourceList.lastOption
+            sourceResult      = sourceList.dropRight(1)
+            destinationResult = value.map(_ +: destinationList).getOrElse(destinationList)
+            _                <- lists.put(source, sourceResult)
+            _                <- lists.put(destination, destinationResult)
+          } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
       case api.Lists.RPush.name =>
-        val key = input.head.asString
+        val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
-        STM.ifM(isSet(key))(
+        orWrongType(isList(key))(
           for {
             oldValues <- lists.getOrElse(key, Vector.empty)
-            newValues = values.toVector ++ oldValues
-            _ <- lists.put(key, newValues)
-          } yield RespValue.Integer(newValues.size),
-          STM.succeedNow(Replies.WrongType)
+            newValues  = values.toVector ++ oldValues
+            _         <- lists.put(key, newValues)
+          } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      //
-      // Match unsupported commands
-      //
-      case _ => STM.fail(RedisError.ProtocolError(s"Command not supported by test executor: $name"))
+      case api.Lists.LPop.name =>
+        val key   = input.head.asString
+        val count = if (input.size == 1) 1 else input(1).asString.toInt
+
+        orWrongType(isList(key))(
+          for {
+            list  <- lists.getOrElse(key, Vector.empty)
+            result = list.take(count)
+            _     <- lists.put(key, list.drop(count))
+          } yield result.size match {
+            case 0 => RespValue.NullBulkString
+            case 1 => RespValue.bulkString(result.head)
+            case _ => Replies.array(result)
+          }
+        )
+
+      case api.Lists.RPushX.name =>
+        val key    = input.head.asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isList(key))(
+          (for {
+            list    <- lists.get(key)
+            newList <- STM.fromOption(list.map(oldValues => oldValues ++ values.toVector))
+            _       <- lists.put(key, newList)
+          } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
+        )
+
+      case api.Lists.BlPop.name =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isList))(
+          (for {
+            allLists <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Vector.empty)))(identity)
+            nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
+            _             <- lists.put(sk, sl.tail)
+          } yield Replies.array(Chunk(sk, sl.head))).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.Lists.BrPop.name =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isList))(
+          (for {
+            allLists <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Vector.empty)))(identity)
+            nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
+            _             <- lists.put(sk, sl.dropRight(1))
+          } yield Replies.array(Chunk(sk, sl.last))).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.Lists.BrPopLPush.name =>
+        val source      = input.head.asString
+        val destination = input.tail.head.asString
+
+        orWrongType(isList(source) &&& isList(destination) map (r => r._1 && r._2))(
+          (for {
+            sourceListOpt    <- lists.get(source)
+            sourceList       <- STM.fromOption(sourceListOpt)
+            destinationList  <- lists.getOrElse(destination, Vector.empty)
+            value            <- STM.fromOption(sourceList.lastOption)
+            sourceResult      = sourceList.dropRight(1)
+            destinationResult = value +: destinationList
+            _                <- lists.put(source, sourceResult)
+            _                <- lists.put(destination, destinationResult)
+          } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
+
+  private[this] def orWrongType(predicate: ZSTM[Any, Nothing, Boolean])(
+    program: => ZSTM[Any, Nothing, RespValue]
+  ): ZSTM[Any, Nothing, RespValue] =
+    STM.ifM(predicate)(program, STM.succeedNow(Replies.WrongType))
 
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): STM[Nothing, Boolean] =
     for {
       isString <- strings.contains(name)
-    } yield !isString
+      isList   <- lists.contains(name)
+      isHyper  <- hyperLogLogs.contains(name)
+    } yield !isString && !isList && !isHyper
+
+  // check whether the key is a list or unused.
+  private[this] def isList(name: String): STM[Nothing, Boolean] =
+    for {
+      isString <- strings.contains(name)
+      isSet    <- sets.contains(name)
+      isHyper  <- hyperLogLogs.contains(name)
+    } yield !isString && !isSet && !isHyper
+
+  //check whether the key is a hyperLogLog or unused.
+  private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
+    for {
+      isString <- strings.contains(name)
+      isSet    <- sets.contains(name)
+      isList   <- lists.contains(name)
+    } yield !isString && !isSet && !isList
+
+  @tailrec
+  private[this] def dropWhileLimit[A](xs: Seq[A])(p: A => Boolean, k: Int): Seq[A] =
+    if (k <= 0 || xs.isEmpty || !p(xs.head)) xs
+    else dropWhileLimit(xs.tail)(p, k - 1)
 
   private[this] def selectN[A](values: Vector[A], n: Long, pickRandom: Int => USTM[Int]): USTM[List[A]] = {
     def go(remaining: Vector[A], toPick: Long, acc: List[A]): USTM[List[A]] =
@@ -422,6 +721,7 @@ private[redis] final class TestExecutor private (
   private[this] object Replies {
     val Ok: RespValue.SimpleString = RespValue.SimpleString("OK")
     val WrongType: RespValue.Error = RespValue.Error("WRONGTYPE")
+    val Error: RespValue.Error     = RespValue.Error("ERR")
 
     def array(values: Iterable[String]): RespValue.Array =
       RespValue.array(values.map(RespValue.bulkString).toList: _*)
@@ -440,8 +740,9 @@ private[redis] object TestExecutor {
       randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
       sets         <- TMap.empty[String, Set[String]].commit
       strings      <- TMap.empty[String, String].commit
-      hyperLogLogs <- TMap.empty[String, Seq[String]].commit
-    } yield new TestExecutor(sets, strings, randomPick, hyperLogLogs)
+      hyperLogLogs <- TMap.empty[String, Set[String]].commit
+      lists        <- TMap.empty[String, Vector[String]].commit
+    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs)
 
     executor.toLayer
   }
