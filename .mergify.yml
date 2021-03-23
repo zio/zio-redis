@@ -16,9 +16,9 @@ pull_request_rules:
       - "status-success=license/cla"
       - "status-success=lint"
       - "status-success=test (adopt@1.8, 2.12.13)"
-      - "status-success=test (adopt@1.8, 2.13.3)"
+      - "status-success=test (adopt@1.8, 2.13.5)"
       - "status-success=test (adopt@1.11, 2.12.13)"
-      - "status-success=test (adopt@1.11, 2.13.3)"
+      - "status-success=test (adopt@1.11, 2.13.5)"
     actions:
       merge:
         method: squash
