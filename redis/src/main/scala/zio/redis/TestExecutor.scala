@@ -611,9 +611,9 @@ private[redis] final class TestExecutor private (
     }
   }
 
-  private[this] def orWrongType(predicate: ZSTM[Any, Nothing, Boolean])(
-    program: => ZSTM[Any, Nothing, RespValue]
-  ): ZSTM[Any, Nothing, RespValue] =
+  private[this] def orWrongType(predicate: USTM[Boolean])(
+    program: => USTM[RespValue]
+  ): USTM[RespValue] =
     STM.ifM(predicate)(program, STM.succeedNow(Replies.WrongType))
 
   // check whether the key is a set or unused.
