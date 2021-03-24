@@ -220,6 +220,50 @@ trait Lists {
     element: String
   ): ZIO[RedisExecutor, RedisError, Long] =
     LInsert.run((key, position, pivot, element))
+
+  /**
+   * Atomically returns and removes the first/last element (head/tail depending on the
+   * wherefrom argument) of the list stored at source, and pushes the element at the
+   * first/last element (head/tail depending on the whereto argument) of the list
+   * stored at destination.
+   *
+   * @param source            the key where the element is removed
+   * @param destination       the key where the element is inserted
+   * @param sourceSide        the side where the element is removed
+   * @param destinationSide   the side where the element is inserted
+   * @return the element which is moved or nil when the source is empty
+   */
+  final def lMove(
+    source: String,
+    destination: String,
+    sourceSide: Side,
+    destinationSide: Side
+  ): ZIO[RedisExecutor, RedisError, Option[String]] =
+    LMove.run((source, destination, sourceSide, destinationSide))
+
+  /**
+   * BLMOVE is the blocking variant of LMOVE. When source contains elements, this command
+   * behaves exactly like LMOVE. When used inside a MULTI/EXEC block, this command behaves
+   * exactly like [[zio.redis.api.Lists#lMove]]. When source is empty, Redis will block the connection until another
+   * client pushes to it or until timeout is reached. A timeout of zero can be used to
+   * block indefinitely.
+   *
+   * @param source            the key where the element is removed
+   * @param destination       the key where the element is inserted
+   * @param sourceSide        the side where the element is removed
+   * @param destinationSide   the side where the element is inserted
+   * @param timeout           the timeout in seconds
+   * @return the element which is moved or nil when the timeout is reached
+   */
+  final def blMove(
+    source: String,
+    destination: String,
+    sourceSide: Side,
+    destinationSide: Side,
+    timeout: Duration
+  ): ZIO[RedisExecutor, RedisError, Option[String]] =
+    BlMove.run((source, destination, sourceSide, destinationSide, timeout))
+
 }
 
 private[redis] object Lists {
@@ -276,4 +320,14 @@ private[redis] object Lists {
 
   final val LInsert: RedisCommand[(String, Position, String, String), Long] =
     RedisCommand("LINSERT", Tuple4(StringInput, PositionInput, StringInput, StringInput), LongOutput)
+
+  final val LMove: RedisCommand[(String, String, Side, Side), Option[String]] =
+    RedisCommand("LMOVE", Tuple4(StringInput, StringInput, SideInput, SideInput), OptionalOutput(MultiStringOutput))
+
+  final val BlMove: RedisCommand[(String, String, Side, Side, Duration), Option[String]] =
+    RedisCommand(
+      "BLMOVE",
+      Tuple5(StringInput, StringInput, SideInput, SideInput, DurationSecondsInput),
+      OptionalOutput(MultiStringOutput)
+    )
 }
