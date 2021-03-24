@@ -11,7 +11,7 @@ import zio.redis.RespValue.BulkString
 import zio.stm.{ random => _, _ }
 
 private[redis] final class TestExecutor private (
-  lists: TMap[String, Vector[String]],
+  lists: TMap[String, Chunk[String]],
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
@@ -345,7 +345,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list  <- lists.getOrElse(key, Vector.empty)
+            list  <- lists.getOrElse(key, Chunk.empty)
             result = if (index < 0) list.lift(list.size + index) else list.lift(index)
           } yield result.fold[RespValue](RespValue.NullBulkString)(value => RespValue.bulkString(value))
         )
@@ -371,14 +371,14 @@ private[redis] final class TestExecutor private (
                                      list.find(_ == pivot).map { p =>
                                        val index        = list.indexOf(p)
                                        val (head, tail) = list.splitAt(index)
-                                       head ++ Vector(element) ++ tail
+                                       head ++ Chunk.single(element) ++ tail
                                      }
 
                                    case Position.After =>
                                      list.find(_ == pivot).map { p =>
                                        val index        = list.indexOf(p)
                                        val (head, tail) = list.splitAt(index + 1)
-                                       head ++ Vector(element) ++ tail
+                                       head ++ Chunk.single(element) ++ tail
                                      }
                                  }
                                )
@@ -398,7 +398,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list <- lists.getOrElse(key, Vector.empty)
+            list <- lists.getOrElse(key, Chunk.empty)
           } yield RespValue.Integer(list.size.toLong)
         )
 
@@ -408,8 +408,8 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            oldValues <- lists.getOrElse(key, Vector.empty)
-            newValues  = values.reverse.toVector ++ oldValues
+            oldValues <- lists.getOrElse(key, Chunk.empty)
+            newValues  = values.reverse ++ oldValues
             _         <- lists.put(key, newValues)
           } yield RespValue.Integer(newValues.size.toLong)
         )
@@ -421,7 +421,7 @@ private[redis] final class TestExecutor private (
         orWrongType(isList(key))(
           (for {
             list    <- lists.get(key)
-            newList <- STM.fromOption(list.map(oldValues => values.reverse.toVector ++ oldValues))
+            newList <- STM.fromOption(list.map(oldValues => values.reverse ++ oldValues))
             _       <- lists.put(key, newList)
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
@@ -433,7 +433,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list  <- lists.getOrElse(key, Vector.empty)
+            list  <- lists.getOrElse(key, Chunk.empty)
             result = if (end < 0) list.slice(start, list.size + 1 + end) else list.slice(start, end + 1)
           } yield Replies.array(result)
         )
@@ -445,11 +445,11 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list <- lists.getOrElse(key, Vector.empty)
+            list <- lists.getOrElse(key, Chunk.empty)
             result = count match {
                        case 0          => list.filterNot(_ == element)
-                       case n if n > 0 => dropWhileLimit(list)(_ == element, n).toVector
-                       case n if n < 0 => dropWhileLimit(list.reverse)(_ == element, n * (-1)).reverse.toVector
+                       case n if n > 0 => dropWhileLimit(list)(_ == element, n)
+                       case n if n < 0 => dropWhileLimit(list.reverse)(_ == element, n * (-1)).reverse
                      }
             _ <- lists.put(key, result)
           } yield RespValue.Integer((list.size - result.size).toLong)
@@ -462,7 +462,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           (for {
-            list <- lists.getOrElse(key, Vector.empty)
+            list <- lists.getOrElse(key, Chunk.empty)
             newList <- STM.fromOption {
                          Try {
                            if (index < 0) list.updated(list.size - 1 + index, element)
@@ -480,7 +480,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list <- lists.getOrElse(key, Vector.empty)
+            list <- lists.getOrElse(key, Chunk.empty)
             result = (start, stop) match {
                        case (l, r) if l >= 0 && r >= 0 => list.slice(l, r + 1)
                        case (l, r) if l < 0 && r >= 0  => list.slice(list.size + l, r + 1)
@@ -498,7 +498,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list  <- lists.getOrElse(key, Vector.empty)
+            list  <- lists.getOrElse(key, Chunk.empty)
             result = list.takeRight(count).reverse
             _     <- lists.put(key, list.dropRight(count))
           } yield result.size match {
@@ -512,10 +512,10 @@ private[redis] final class TestExecutor private (
         val source      = input(0).asString
         val destination = input(1).asString
 
-        orWrongType(isList(source) &&& isList(destination) map (r => r._1 && r._2))(
+        orWrongType(forAll(Chunk(source, destination))(isList))(
           for {
-            sourceList       <- lists.getOrElse(source, Vector.empty)
-            destinationList  <- lists.getOrElse(destination, Vector.empty)
+            sourceList       <- lists.getOrElse(source, Chunk.empty)
+            destinationList  <- lists.getOrElse(destination, Chunk.empty)
             value             = sourceList.lastOption
             sourceResult      = sourceList.dropRight(1)
             destinationResult = value.map(_ +: destinationList).getOrElse(destinationList)
@@ -530,8 +530,8 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            oldValues <- lists.getOrElse(key, Vector.empty)
-            newValues  = values.toVector ++ oldValues
+            oldValues <- lists.getOrElse(key, Chunk.empty)
+            newValues  = values ++ oldValues
             _         <- lists.put(key, newValues)
           } yield RespValue.Integer(newValues.size.toLong)
         )
@@ -542,7 +542,7 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isList(key))(
           for {
-            list  <- lists.getOrElse(key, Vector.empty)
+            list  <- lists.getOrElse(key, Chunk.empty)
             result = list.take(count)
             _     <- lists.put(key, list.drop(count))
           } yield result.size match {
@@ -570,7 +570,7 @@ private[redis] final class TestExecutor private (
         orWrongType(forAll(keys)(isList))(
           (for {
             allLists <-
-              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Vector.empty)))(identity)
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Chunk.empty)))(identity)
             nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
             _             <- lists.put(sk, sl.tail)
@@ -583,7 +583,7 @@ private[redis] final class TestExecutor private (
         orWrongType(forAll(keys)(isList))(
           (for {
             allLists <-
-              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Vector.empty)))(identity)
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Chunk.empty)))(identity)
             nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
             _             <- lists.put(sk, sl.dropRight(1))
@@ -594,11 +594,11 @@ private[redis] final class TestExecutor private (
         val source      = input.head.asString
         val destination = input.tail.head.asString
 
-        orWrongType(isList(source) &&& isList(destination) map (r => r._1 && r._2))(
+        orWrongType(forAll(Chunk(source, destination))(isList))(
           (for {
             sourceListOpt    <- lists.get(source)
             sourceList       <- STM.fromOption(sourceListOpt)
-            destinationList  <- lists.getOrElse(destination, Vector.empty)
+            destinationList  <- lists.getOrElse(destination, Chunk.empty)
             value            <- STM.fromOption(sourceList.lastOption)
             sourceResult      = sourceList.dropRight(1)
             destinationResult = value +: destinationList
@@ -641,7 +641,7 @@ private[redis] final class TestExecutor private (
     } yield !isString && !isSet && !isList
 
   @tailrec
-  private[this] def dropWhileLimit[A](xs: Seq[A])(p: A => Boolean, k: Int): Seq[A] =
+  private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
     if (k <= 0 || xs.isEmpty || !p(xs.head)) xs
     else dropWhileLimit(xs.tail)(p, k - 1)
 
@@ -740,7 +740,7 @@ private[redis] object TestExecutor {
       sets         <- TMap.empty[String, Set[String]].commit
       strings      <- TMap.empty[String, String].commit
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
-      lists        <- TMap.empty[String, Vector[String]].commit
+      lists        <- TMap.empty[String, Chunk[String]].commit
     } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs)
 
     executor.toLayer
