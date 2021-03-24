@@ -3,15 +3,15 @@ package zio.redis
 import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
+import zio.Chunk
 import zio.clock.{ Clock, currentTime }
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Has }
 
 trait ListSpec extends BaseSpec {
-  val listSuite: Spec[Has[RedisExecutor.Service] with Has[Clock.Service], TestFailure[Serializable], TestSuccess] =
+  val listSuite: Spec[Clock with RedisExecutor, TestFailure[Serializable], TestSuccess] =
     suite("lists")(
       suite("pop")(
         testM("lPop non-empty list") {
@@ -58,9 +58,17 @@ trait ListSpec extends BaseSpec {
       suite("push")(
         testM("lPush onto empty list") {
           for {
-            key  <- uuid
-            push <- lPush(key, "hello")
-          } yield assert(push)(equalTo(1L))
+            key   <- uuid
+            push  <- lPush(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(1L)) && assert(range)(equalTo(Chunk("hello")))
+        },
+        testM("lPush multiple elements onto empty list") {
+          for {
+            key   <- uuid
+            push  <- lPush(key, "hello", "world")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(2L)) && assert(range)(equalTo(Chunk("world", "hello")))
         },
         testM("lPush error when not list") {
           for {
@@ -72,10 +80,11 @@ trait ListSpec extends BaseSpec {
         },
         testM("lPushX onto non-empty list") {
           for {
-            key <- uuid
-            _   <- lPush(key, "world")
-            px  <- lPushX(key, "hello")
-          } yield assert(px)(equalTo(2L))
+            key   <- uuid
+            _     <- lPush(key, "world")
+            px    <- lPushX(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(px)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lPushX nothing when key doesn't exist") {
           for {
@@ -89,13 +98,21 @@ trait ListSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value)
             push  <- lPushX(key, "hello").either
-          } yield assert(push)(isLeft)
+          } yield assert(push)(isLeft(isSubtype[RedisError.WrongType](anything)))
         },
         testM("rPush onto empty list") {
           for {
-            key  <- uuid
-            push <- rPush(key, "hello")
-          } yield assert(push)(equalTo(1L))
+            key   <- uuid
+            push  <- rPush(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(1L)) && assert(range)(equalTo(Chunk("hello")))
+        },
+        testM("rPush multiple elements onto empty list") {
+          for {
+            key   <- uuid
+            push  <- rPush(key, "hello", "world")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("rPush error when not list") {
           for {
@@ -107,10 +124,11 @@ trait ListSpec extends BaseSpec {
         },
         testM("rPushX onto non-empty list") {
           for {
-            key <- uuid
-            _   <- rPush(key, "world")
-            px  <- rPushX(key, "hello")
-          } yield assert(px)(equalTo(2L))
+            key   <- uuid
+            _     <- rPush(key, "world")
+            px    <- rPushX(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(px)(equalTo(2L)) && assert(range)(equalTo(Chunk("world", "hello")))
         },
         testM("rPushX nothing when key doesn't exist") {
           for {
@@ -124,7 +142,7 @@ trait ListSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value)
             push  <- rPushX(key, "hello").either
-          } yield assert(push)(isLeft)
+          } yield assert(push)(isLeft(isSubtype[RedisError.WrongType](anything)))
         }
       ),
       suite("poppush")(
@@ -156,7 +174,9 @@ trait ListSpec extends BaseSpec {
             _     <- set(key, value)
             rpp   <- rPopLPush(key, dest).either
           } yield assert(rpp)(isLeft)
-        },
+        }
+      ),
+      suite("blocking poppush")(
         testM("brPopLPush") {
           for {
             key  <- uuid
@@ -349,7 +369,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 0 to 0)
-            range <- lRange(key, 0 to 1)
+            range <- lRange(key, 0 to -1)
           } yield assert(range)(equalTo(Chunk("hello")))
         },
         testM("lTrim start index out of bounds") {
