@@ -54,7 +54,10 @@ trait SetsSpec extends BaseSpec {
           } yield assert(card)(equalTo(1L))
         },
         testM("0 when key doesn't exist") {
-          assertM(sCard("unknown"))(equalTo(0L))
+          for {
+            unknown <- uuid
+            card    <- sCard(unknown)
+          } yield assert(card)(equalTo(0L))
         },
         testM("error when not set") {
           for {
