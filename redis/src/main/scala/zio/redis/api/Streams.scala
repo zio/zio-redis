@@ -52,14 +52,25 @@ trait Streams {
    * Returns the entire state of the stream, including entries, groups, consumers and PELs.
    *
    * @param key ID of the stream
+   * @return General information about the stream stored at the specified key.
+   */
+  final def xInfoStreamFull(
+    key: String
+  ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo] =
+    XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(None))))
+
+  /**
+   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
+   *
+   * @param key ID of the stream
    * @param count limit the amount of stream/PEL entries that are returned (The first <count> entries are returned).
    * @return General information about the stream stored at the specified key.
    */
   final def xInfoStreamFull(
     key: String,
-    count: Option[Long] = None
+    count: Long
   ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo] =
-    XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(count))))
+    XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(Some(count)))))
 
   /**
    * An introspection command used in order to retrieve different information about the group.

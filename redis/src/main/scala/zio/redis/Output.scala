@@ -396,20 +396,21 @@ object Output {
             (elements(pos), elements(pos + 1)) match {
               // Get the basic information of the outermost stream.
               case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
-                if (key.asString == XInfoFields.Length) streamInfoFull = streamInfoFull.copy(length = value.value)
-                else if (key.asString == XInfoFields.RadixTreeNodes)
-                  streamInfoFull = streamInfoFull.copy(radixTreeNodes = value.value)
-                else if (key.asString == XInfoFields.RadixTreeKeys)
-                  streamInfoFull = streamInfoFull.copy(radixTreeKeys = value.value)
+                key.asString match {
+                  case XInfoFields.Length         => streamInfoFull = streamInfoFull.copy(length = value.value)
+                  case XInfoFields.RadixTreeNodes => streamInfoFull = streamInfoFull.copy(radixTreeNodes = value.value)
+                  case XInfoFields.RadixTreeKeys  => streamInfoFull = streamInfoFull.copy(radixTreeKeys = value.value)
+                  case _                          =>
+                }
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                   if key.asString == XInfoFields.LastGeneratedId =>
                 streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
               case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Entries =>
                 val streamEntryList = values.map(extractStreamEntry)
                 streamInfoFull = streamInfoFull.copy(entries = streamEntryList)
-              case (key @ RespValue.BulkString(_), RespValue.Array(value)) if key.asString == XInfoFields.Groups =>
+              case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Groups =>
                 // Get the group list of the stream.
-                streamInfoFull = streamInfoFull.copy(groups = extractXInfoFullGroups(value))
+                streamInfoFull = streamInfoFull.copy(groups = values.map(extractXInfoFullGroup))
               case _ =>
             }
             pos += 2
@@ -423,31 +424,31 @@ object Output {
     }
   }
 
-  private def extractXInfoFullGroups(groupValue: Chunk[RespValue]): Chunk[StreamInfoWithFull.ConsumerGroups] = {
-    var groupList: Chunk[StreamInfoWithFull.ConsumerGroups] = Chunk.empty
-    groupValue.foreach { group: RespValue =>
-      var readyGroup = StreamInfoWithFull.ConsumerGroups.empty
-      group match {
-        case RespValue.Array(groupElements) if groupElements.length % 2 == 0 =>
-          var groupElementPos = 0
-          while (groupElementPos < groupElements.length) {
-            (groupElements(groupElementPos), groupElements(groupElementPos + 1)) match {
-              // Get the basic information of the current group.
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-                if (key.asString == XInfoFields.LastDeliveredId)
-                  readyGroup = readyGroup.copy(lastDeliveredId = value.asString)
-                else if (key.asString == XInfoFields.Name) readyGroup = readyGroup.copy(name = value.asString)
-              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))
-                  if XInfoFields.PelCount == key.asString =>
-                readyGroup = readyGroup.copy(pelCount = value.value)
-              case (key @ RespValue.BulkString(_), RespValue.Array(value)) =>
-                // Get the consumer list of the current group.
-                if (key.asString == XInfoFields.Consumers) {
-                  readyGroup = readyGroup.copy(consumers = extractXInfoFullConsumers(value))
-                } else if (key.asString == XInfoFields.Pending) {
+  private def extractXInfoFullGroup(group: RespValue): StreamInfoWithFull.ConsumerGroups = {
+    var readyGroup = StreamInfoWithFull.ConsumerGroups.empty
+    group match {
+      case RespValue.Array(groupElements) if groupElements.length % 2 == 0 =>
+        var groupElementPos = 0
+        while (groupElementPos < groupElements.length) {
+          (groupElements(groupElementPos), groupElements(groupElementPos + 1)) match {
+            // Get the basic information of the current group.
+            case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
+              key.asString match {
+                case XInfoFields.LastDeliveredId => readyGroup = readyGroup.copy(lastDeliveredId = value.asString)
+                case XInfoFields.Name            => readyGroup = readyGroup.copy(name = value.asString)
+                case _                           =>
+              }
+            case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))
+                if XInfoFields.PelCount == key.asString =>
+              readyGroup = readyGroup.copy(pelCount = value.value)
+            case (key @ RespValue.BulkString(_), RespValue.Array(values)) =>
+              // Get the consumer list of the current group.
+              key.asString match {
+                case XInfoFields.Consumers =>
+                  readyGroup = readyGroup.copy(consumers = values.map(extractXInfoFullConsumer))
+                case XInfoFields.Pending =>
                   // Get the pel list of the current group.
-                  var groupPelList: Chunk[StreamInfoWithFull.GroupPel] = Chunk.empty
-                  value.foreach {
+                  val groupPelList = values.map {
                     case RespValue.Array(
                           Seq(
                             entryId @ RespValue.BulkString(_),
@@ -456,79 +457,69 @@ object Output {
                             deliveryCount @ RespValue.Integer(_)
                           )
                         ) =>
-                      groupPelList = groupPelList.:+(
-                        StreamInfoWithFull.GroupPel(
-                          entryId.asString,
-                          consumerName.asString,
-                          deliveryTime.value.millis,
-                          deliveryCount.value
-                        )
+                      StreamInfoWithFull.GroupPel(
+                        entryId.asString,
+                        consumerName.asString,
+                        deliveryTime.value.millis,
+                        deliveryCount.value
                       )
                     case other => throw ProtocolError(s"$other isn't a valid array")
                   }
                   readyGroup = readyGroup.copy(pending = groupPelList)
-                }
-              case _ =>
-            }
-            groupElementPos += 2
+                case _ =>
+              }
+            case _ =>
           }
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have an even number of elements")
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-      groupList = groupList.:+(readyGroup)
+          groupElementPos += 2
+        }
+        readyGroup
+      case array @ RespValue.Array(_) =>
+        throw ProtocolError(s"$array doesn't have an even number of elements")
+      case other =>
+        throw ProtocolError(s"$other isn't an array")
     }
-    groupList
   }
 
-  private def extractXInfoFullConsumers(consumerValue: Chunk[RespValue]): Chunk[StreamInfoWithFull.Consumers] = {
-    var consumerList: Chunk[StreamInfoWithFull.Consumers] = Chunk.empty
-    consumerValue.foreach { consumer =>
-      var readyConsumer = StreamInfoWithFull.Consumers.empty
-      consumer match {
-        case RespValue.Array(consumerElements) if consumerElements.length % 2 == 0 =>
-          var consumerElementPos = 0
-          while (consumerElementPos < consumerElements.length) {
-            (consumerElements(consumerElementPos), consumerElements(consumerElementPos + 1)) match {
-              // Get the basic information of the current consumer.
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
-                  if key.asString == XInfoFields.Name =>
-                readyConsumer = readyConsumer.copy(name = value.asString)
-              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
-                if (XInfoFields.PelCount == key.asString) readyConsumer = readyConsumer.copy(pelCount = value.value)
-                else if (XInfoFields.SeenTime == key.asString)
-                  readyConsumer = readyConsumer.copy(seenTime = value.value.millis)
-              // Get the pel list of the current consumer.
-              case (key @ RespValue.BulkString(_), RespValue.Array(consumerPendingValue))
-                  if key.asString == XInfoFields.Pending =>
-                var consumerPelList: Chunk[StreamInfoWithFull.ConsumerPel] = Chunk.empty
-                consumerPendingValue.foreach {
-                  case RespValue.Array(
-                        Seq(
-                          entryId @ RespValue.BulkString(_),
-                          deliveryTime @ RespValue.Integer(_),
-                          deliveryCount @ RespValue.Integer(_)
-                        )
-                      ) =>
-                    consumerPelList = consumerPelList.:+(
-                      StreamInfoWithFull.ConsumerPel(entryId.asString, deliveryTime.value.millis, deliveryCount.value)
-                    )
-                  case other => throw ProtocolError(s"$other isn't a valid array")
-                }
-                readyConsumer = readyConsumer.copy(pending = consumerPelList)
-              case _ =>
-            }
-            consumerElementPos += 2
+  private def extractXInfoFullConsumer(consumer: RespValue): StreamInfoWithFull.Consumers = {
+    var readyConsumer = StreamInfoWithFull.Consumers.empty
+    consumer match {
+      case RespValue.Array(consumerElements) if consumerElements.length % 2 == 0 =>
+        var consumerElementPos = 0
+        while (consumerElementPos < consumerElements.length) {
+          (consumerElements(consumerElementPos), consumerElements(consumerElementPos + 1)) match {
+            // Get the basic information of the current consumer.
+            case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) if key.asString == XInfoFields.Name =>
+              readyConsumer = readyConsumer.copy(name = value.asString)
+            case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+              key.asString match {
+                case XInfoFields.PelCount => readyConsumer = readyConsumer.copy(pelCount = value.value)
+                case XInfoFields.SeenTime => readyConsumer = readyConsumer.copy(seenTime = value.value.millis)
+                case _                    =>
+              }
+            // Get the pel list of the current consumer.
+            case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Pending =>
+              val consumerPelList = values.map {
+                case RespValue.Array(
+                      Seq(
+                        entryId @ RespValue.BulkString(_),
+                        deliveryTime @ RespValue.Integer(_),
+                        deliveryCount @ RespValue.Integer(_)
+                      )
+                    ) =>
+                  StreamInfoWithFull.ConsumerPel(entryId.asString, deliveryTime.value.millis, deliveryCount.value)
+                case other => throw ProtocolError(s"$other isn't a valid array")
+              }
+              readyConsumer = readyConsumer.copy(pending = consumerPelList)
+            case _ =>
           }
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have an even number of elements")
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-      consumerList = consumerList.:+(readyConsumer)
+          consumerElementPos += 2
+        }
+        readyConsumer
+      case array @ RespValue.Array(_) =>
+        throw ProtocolError(s"$array doesn't have an even number of elements")
+      case other =>
+        throw ProtocolError(s"$other isn't an array")
     }
-    consumerList
   }
 
   case object StreamInfoOutput extends Output[StreamInfo] {
