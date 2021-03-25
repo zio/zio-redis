@@ -1030,6 +1030,18 @@ object InputSpec extends BaseSpec {
         testM("valid value") {
           Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
         }
+      ),
+      suite("Side")(
+        testM("left") {
+          for {
+            result <- Task(SideInput.encode(Side.Left))
+          } yield assert(result)(equalTo(respArgs("LEFT")))
+        },
+        testM("right") {
+          for {
+            result <- Task(SideInput.encode(Side.Right))
+          } yield assert(result)(equalTo(respArgs("RIGHT")))
+        }
       )
     )
 
