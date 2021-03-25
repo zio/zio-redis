@@ -1,17 +1,17 @@
 package zio.redis
 
-import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
-import zio.Chunk
 import zio.clock.{ Clock, currentTime }
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
+import zio.{ Chunk, Has }
 
 trait ListSpec extends BaseSpec {
-  val listSuite: Spec[Clock with RedisExecutor, TestFailure[Serializable], TestSuccess] =
+  val listSuite
+    : Spec[Has[Clock.Service] with Has[RedisExecutor.Service], TestFailure[java.io.Serializable], TestSuccess] =
     suite("lists")(
       suite("pop")(
         testM("lPop non-empty list") {
@@ -554,6 +554,204 @@ trait ListSpec extends BaseSpec {
             _     <- set(key, value)
             len   <- lInsert(key, Position.After, "a", "b").either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("lMove")(
+        testM("move from source to destination left right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Left, Side.Right)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "a")))
+        },
+        testM("move from source to destination right left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Right, Side.Left)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("c", "d")))
+        },
+        testM("move from source to destination left left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Left, Side.Left)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("a", "d")))
+        },
+        testM("move from source to destination right right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Right, Side.Right)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "c")))
+        },
+        testM("move from source to source left right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Left, Side.Right)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c", "a")))
+        },
+        testM("move from source to source right left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Right, Side.Left)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("c", "a", "b")))
+        },
+        testM("move from source to source left left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Left, Side.Left)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("move from source to source right right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Right, Side.Right)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("return nil when source dose not exist") {
+          for {
+            source      <- uuid
+            destination <- uuid
+            _           <- rPush(destination, "d")
+            moved       <- lMove(source, destination, Side.Left, Side.Right)
+          } yield assert(moved)(isNone)
+        }
+      ),
+      suite("blMove")(
+        testM("move from source to destination left right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Left, Side.Right, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "a")))
+        },
+        testM("move from source to destination right left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Right, Side.Left, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("c", "d")))
+        },
+        testM("move from source to destination left left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Left, Side.Left, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("a", "d")))
+        },
+        testM("move from source to destination right right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Right, Side.Right, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "c")))
+        },
+        testM("move from source to source left right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Left, Side.Right, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c", "a")))
+        },
+        testM("move from source to source right left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Right, Side.Left, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("c", "a", "b")))
+        },
+        testM("move from source to source left left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Left, Side.Left, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("move from source to source right right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Right, Side.Right, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("block until timeout reached and return nil") {
+          for {
+            source      <- uuid
+            destination <- uuid
+            _           <- rPush(destination, "d")
+            startTime   <- currentTime(TimeUnit.SECONDS)
+            moved       <- blMove(source, destination, Side.Left, Side.Right, 1.second)
+            endTime     <- currentTime(TimeUnit.SECONDS)
+          } yield assert(moved)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
         }
       )
     )

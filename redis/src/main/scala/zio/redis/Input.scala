@@ -97,6 +97,10 @@ object Input {
     def encode(data: Position): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
 
+  case object SideInput extends Input[Side] {
+    def encode(data: Side): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
+  }
+
   case object DoubleInput extends Input[Double] {
     def encode(data: Double): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.toString))
   }
