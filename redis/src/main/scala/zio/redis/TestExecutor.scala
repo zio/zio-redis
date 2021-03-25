@@ -611,7 +611,7 @@ private[redis] final class TestExecutor private (
         val key     = input(0).asString
         val element = input(1).asString
 
-        val options      = input.drop(2).map(_.asString).zipWithIndex
+        val options      = input.map(_.asString).zipWithIndex
         val rankOption   = options.find(_._1 == "RANK").map(_._2).map(idx => input(idx + 1).asLong)
         val countOption  = options.find(_._1 == "COUNT").map(_._2).map(idx => input(idx + 1).asLong)
         val maxLenOption = options.find(_._1 == "MAXLEN").map(_._2).map(idx => input(idx + 1).asLong)
@@ -629,18 +629,56 @@ private[redis] final class TestExecutor private (
             result = (countOption, rankOption) match {
                        case (Some(count), Some(rank)) if rank < 0 =>
                          Right(
-                           idxList.reverse.filter(_._1 == element).drop(rank.toInt * -1).take(count.toInt).map(_._2)
+                           idxList.reverse
+                             .filter(_._1 == element)
+                             .drop((rank.toInt * -1) - 1)
+                             .take(count.toInt)
+                             .map(_._2)
                          )
                        case (Some(count), Some(rank)) =>
-                         Right(idxList.filter(_._1 == element).drop(rank.toInt).take(count.toInt).map(_._2))
-                       case (Some(count), None) => Right(idxList.filter(_._1 == element).take(count.toInt).map(_._2))
+                         Right(
+                           idxList
+                             .filter(_._1 == element)
+                             .drop(rank.toInt - 1)
+                             .take(count.toInt)
+                             .map(_._2)
+                         )
+                       case (Some(count), None) =>
+                         Right(
+                           idxList
+                             .filter(_._1 == element)
+                             .take(count.toInt)
+                             .map(_._2)
+                         )
                        case (None, Some(rank)) if rank < 0 =>
-                         Left(idxList.reverse.filter(_._1 == element).drop(rank.toInt).map(_._2).headOption)
+                         Left(
+                           idxList.reverse
+                             .filter(_._1 == element)
+                             .drop(rank.toInt)
+                             .map(_._2)
+                             .headOption
+                         )
                        case (None, Some(rank)) =>
-                         Left(idxList.filter(_._1 == element).drop(rank.toInt - 1).map(_._2).headOption)
-                       case (None, None) => Left(idxList.filter(_._1 == element).map(_._2).headOption)
+                         Left(
+                           idxList
+                             .filter(_._1 == element)
+                             .drop(rank.toInt - 1)
+                             .map(_._2)
+                             .headOption
+                         )
+                       case (None, None) =>
+                         Left(
+                           idxList
+                             .filter(_._1 == element)
+                             .map(_._2)
+                             .headOption
+                         )
                      }
-          } yield result.fold(left => left.fold[RespValue](RespValue.NullBulkString)(value => RespValue.Integer(value.toLong)), right => RespValue.array(right.map(value => RespValue.Integer(value.toLong)): _*))
+
+          } yield result.fold(
+            left => left.fold[RespValue](RespValue.NullBulkString)(value => RespValue.Integer(value.toLong)),
+            right => RespValue.array(right.map(value => RespValue.Integer(value.toLong)): _*)
+          )
         )
 
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
