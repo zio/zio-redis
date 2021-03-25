@@ -34,6 +34,10 @@ private[redis] final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
+                  case api.Lists.BlMove.name =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+
                   case _ => runCommand(name.asString, command.tail).commit
                 }
     } yield result
@@ -605,6 +609,90 @@ private[redis] final class TestExecutor private (
             _                <- lists.put(source, sourceResult)
             _                <- lists.put(destination, destinationResult)
           } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.Lists.LMove.name =>
+        val source      = input(0).asString
+        val destination = input(1).asString
+        val sourceSide = input(2).asString match {
+          case "LEFT"  => Side.Left
+          case "RIGHT" => Side.Right
+        }
+        val destinationSide = input(3).asString match {
+          case "LEFT"  => Side.Left
+          case "RIGHT" => Side.Right
+        }
+
+        orWrongType(forAll(Chunk(source, destination))(isList))(
+          (for {
+            sourceList      <- lists.get(source) >>= (l => STM.fromOption(l))
+            destinationList <- lists.getOrElse(destination, Chunk.empty)
+            element <- STM.fromOption(sourceSide match {
+                         case Side.Left  => sourceList.headOption
+                         case Side.Right => sourceList.lastOption
+                       })
+            newSourceList = sourceSide match {
+                              case Side.Left  => sourceList.drop(1)
+                              case Side.Right => sourceList.dropRight(1)
+                            }
+            newDestinationList =
+              if (source != destination)
+                destinationSide match {
+                  case Side.Left  => element +: destinationList
+                  case Side.Right => destinationList :+ element
+                }
+              else
+                destinationSide match {
+                  case Side.Left  => element +: newSourceList
+                  case Side.Right => newSourceList :+ element
+                }
+            _ <- if (source != destination)
+                   lists.put(source, newSourceList) *> lists.put(destination, newDestinationList)
+                 else
+                   lists.put(source, newDestinationList)
+          } yield element).fold(_ => RespValue.NullBulkString, result => RespValue.bulkString(result))
+        )
+
+      case api.Lists.BlMove.name =>
+        val source      = input(0).asString
+        val destination = input(1).asString
+        val sourceSide = input(2).asString match {
+          case "LEFT"  => Side.Left
+          case "RIGHT" => Side.Right
+        }
+        val destinationSide = input(3).asString match {
+          case "LEFT"  => Side.Left
+          case "RIGHT" => Side.Right
+        }
+
+        orWrongType(forAll(Chunk(source, destination))(isList))(
+          (for {
+            sourceList      <- lists.get(source) >>= (l => STM.fromOption(l))
+            destinationList <- lists.getOrElse(destination, Chunk.empty)
+            element <- STM.fromOption(sourceSide match {
+                         case Side.Left  => sourceList.headOption
+                         case Side.Right => sourceList.lastOption
+                       })
+            newSourceList = sourceSide match {
+                              case Side.Left  => sourceList.drop(1)
+                              case Side.Right => sourceList.dropRight(1)
+                            }
+            newDestinationList =
+              if (source != destination)
+                destinationSide match {
+                  case Side.Left  => element +: destinationList
+                  case Side.Right => destinationList :+ element
+                }
+              else
+                destinationSide match {
+                  case Side.Left  => element +: newSourceList
+                  case Side.Right => newSourceList :+ element
+                }
+            _ <- if (source != destination)
+                   lists.put(source, newSourceList) *> lists.put(destination, newDestinationList)
+                 else
+                   lists.put(source, newDestinationList)
+          } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
       case api.Lists.LPos.name =>

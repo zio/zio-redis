@@ -14,6 +14,19 @@ trait Lists {
     case object After  extends Position
   }
 
+  sealed trait Side { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case Side.Left  => "LEFT"
+        case Side.Right => "RIGHT"
+      }
+  }
+
+  object Side {
+    case object Left  extends Side
+    case object Right extends Side
+  }
+
   sealed case class ListMaxLen(count: Long)
 
   sealed case class Rank(rank: Long)

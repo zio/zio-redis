@@ -986,6 +986,13 @@ object InputSpec extends BaseSpec {
           )
         }
       ),
+      suite("XInfoStreamFull")(
+        testM("valid value") {
+          assertM(Task(XInfoStreamInput.encode(XInfoCommand.Stream("key", Some(XInfoCommand.Full(Some(10)))))))(
+            equalTo(respArgs("STREAM", "key", "FULL", "COUNT", "10"))
+          )
+        }
+      ),
       suite("XInfoGroups")(
         testM("valid value") {
           assertM(Task(XInfoGroupsInput.encode(XInfoCommand.Groups("key"))))(
@@ -1029,6 +1036,18 @@ object InputSpec extends BaseSpec {
       suite("WithJustId")(
         testM("valid value") {
           Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
+        }
+      ),
+      suite("Side")(
+        testM("left") {
+          for {
+            result <- Task(SideInput.encode(Side.Left))
+          } yield assert(result)(equalTo(respArgs("LEFT")))
+        },
+        testM("right") {
+          for {
+            result <- Task(SideInput.encode(Side.Right))
+          } yield assert(result)(equalTo(respArgs("RIGHT")))
         }
       ),
       suite("ListMaxLen")(
