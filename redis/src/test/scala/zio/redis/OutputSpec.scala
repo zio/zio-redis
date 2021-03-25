@@ -640,6 +640,44 @@ object OutputSpec extends BaseSpec {
 
             assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
           }
+        ),
+        suite("OptionalLongOrLongArrayOutput")(
+          testM("extract long value") {
+            val resp = RespValue.Integer(10L)
+            for {
+              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(resp))
+            } yield assert(res)(isLeft(isSome(equalTo(10L))))
+          },
+          testM("extract Null value") {
+            for {
+              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(RespValue.NullBulkString))
+            } yield assert(res)(isLeft(isNone))
+          },
+          testM("extract array of long's") {
+            val resp = RespValue.Array(Chunk(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L)))
+            for {
+              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(resp))
+            } yield assert(res)(isRight(equalTo(Chunk(1L, 2L, 3L))))
+          },
+          testM("extract empty array") {
+            for {
+              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(RespValue.NullArray))
+            } yield assert(res)(isRight(equalTo(Chunk.empty)))
+          },
+          testM("fail with ProtocolError on non long value") {
+            for {
+              res <- Task(OptionalLongOrLongArrayOutput unsafeDecode RespValue.bulkString("foo")).run
+            } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
+          },
+          testM("fail with ProtocolError when array contains not only longs") {
+            for {
+              res <- Task(
+                       OptionalLongOrLongArrayOutput unsafeDecode RespValue.Array(
+                         Chunk(RespValue.Integer(1L), RespValue.bulkString("foo"))
+                       )
+                     ).run
+            } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
+          }
         )
       )
     )

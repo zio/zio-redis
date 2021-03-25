@@ -13,4 +13,8 @@ trait Lists {
     case object Before extends Position
     case object After  extends Position
   }
+
+  sealed case class ListMaxLen(count: Long)
+
+  sealed case class Rank(rank: Long)
 }

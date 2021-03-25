@@ -184,6 +184,21 @@ object Output {
       }
   }
 
+  case object OptionalLongOrLongArrayOutput extends Output[Either[Option[Long], Chunk[Long]]] {
+    override protected def tryDecode(respValue: RespValue): Either[Option[Long], Chunk[Long]] =
+      respValue match {
+        case RespValue.NullBulkString => Left(Option.empty).withRight[Chunk[Long]]
+        case RespValue.Integer(value) => Left(Option(value)).withRight[Chunk[Long]]
+        case RespValue.NullArray      => Right(Chunk.empty).withLeft[Option[Long]]
+        case RespValue.Array(values) =>
+          Right(values.map {
+            case RespValue.Integer(i) => i
+            case other                => throw ProtocolError(s"$other isn't an integer")
+          }).withLeft[Option[Long]]
+        case other => throw ProtocolError(s"$other isn't either an integer or an array of integers")
+      }
+  }
+
   case object ChunkOptionalLongOutput extends Output[Chunk[Option[Long]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[Long]] =
       respValue match {

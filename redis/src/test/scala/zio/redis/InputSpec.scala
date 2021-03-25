@@ -1013,11 +1013,11 @@ object InputSpec extends BaseSpec {
       ),
       suite("MaxLen")(
         testM("with approximate") {
-          Task(MaxLenInput.encode(MaxLen(approximate = true, 10)))
+          Task(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "~", "10"))))
         },
         testM("without approximate") {
-          Task(MaxLenInput.encode(MaxLen(approximate = false, 10)))
+          Task(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
         }
       ),
@@ -1029,6 +1029,16 @@ object InputSpec extends BaseSpec {
       suite("WithJustId")(
         testM("valid value") {
           Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
+        }
+      ),
+      suite("ListMaxLen")(
+        testM("valid value") {
+          Task(ListMaxLenInput.encode(ListMaxLen(10L))).map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
+        }
+      ),
+      suite("Rank")(
+        testM("valid value") {
+          Task(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(respArgs("RANK", "10"))))
         }
       )
     )

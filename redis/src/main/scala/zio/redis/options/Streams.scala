@@ -71,7 +71,7 @@ trait Streams {
 
   type NoAck = NoAck.type
 
-  case class MaxLen(approximate: Boolean, count: Long)
+  case class StreamMaxLen(approximate: Boolean, count: Long)
 
   case class StreamEntry(id: String, fields: Map[String, String])
 
