@@ -264,6 +264,48 @@ trait Lists {
   ): ZIO[RedisExecutor, RedisError, Option[String]] =
     BlMove.run((source, destination, sourceSide, destinationSide, timeout))
 
+  /**
+   * The command returns the index of matching elements inside a Redis list. By default, when no
+   * options are given, it will scan the list from head to tail, looking for the first match
+   * of "element". If the element is found, its index (the zero-based position in the list)
+   * is returned. Otherwise, if no match is found, NULL is returned.
+   *
+   * @param key       the key identifier
+   * @param element   the element to search for
+   * @param rank      the rank of the element
+   * @param count     return up count element indexes
+   * @param maxLen    limit the number of performed comparisons
+   * @return Either an interger or an array depending on the count option
+   */
+  final def lPos(
+    key: String,
+    element: String,
+    rank: Option[Rank] = None,
+    maxLen: Option[ListMaxLen] = None
+  ): ZIO[RedisExecutor, RedisError, Option[Long]] =
+    LPos.run((key, element, rank, maxLen))
+
+  /**
+   * The command returns the index of matching elements inside a Redis list. By default, when no
+   * options are given, it will scan the list from head to tail, looking for the first match
+   * of "element". If the element is found, its index (the zero-based position in the list)
+   * is returned. Otherwise, if no match is found, NULL is returned.
+   *
+   * @param key       the key identifier
+   * @param element   the element to search for
+   * @param rank      the rank of the element
+   * @param count     return up count element indexes
+   * @param maxLen    limit the number of performed comparisons
+   * @return Either an interger or an array depending on the count option
+   */
+  final def lPosCount(
+    key: String,
+    element: String,
+    count: Count,
+    rank: Option[Rank] = None,
+    maxLen: Option[ListMaxLen] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[Long]] =
+    LPosCount.run((key, element, count, rank, maxLen))
 }
 
 private[redis] object Lists {
@@ -329,5 +371,30 @@ private[redis] object Lists {
       "BLMOVE",
       Tuple5(StringInput, StringInput, SideInput, SideInput, DurationSecondsInput),
       OptionalOutput(MultiStringOutput)
+    )
+
+  final val LPos: RedisCommand[(String, String, Option[Rank], Option[ListMaxLen]), Option[Long]] =
+    RedisCommand(
+      "LPOS",
+      Tuple4(
+        StringInput,
+        StringInput,
+        OptionalInput(RankInput),
+        OptionalInput(ListMaxLenInput)
+      ),
+      OptionalOutput(LongOutput)
+    )
+
+  final val LPosCount: RedisCommand[(String, String, Count, Option[Rank], Option[ListMaxLen]), Chunk[Long]] =
+    RedisCommand(
+      "LPOS",
+      Tuple5(
+        StringInput,
+        StringInput,
+        CountInput,
+        OptionalInput(RankInput),
+        OptionalInput(ListMaxLenInput)
+      ),
+      ChunkLongOutput
     )
 }
