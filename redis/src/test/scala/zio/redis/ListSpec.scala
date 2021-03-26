@@ -760,56 +760,58 @@ trait ListSpec extends BaseSpec {
             key <- uuid
             _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
             idx <- lPos(key, "3")
-          } yield assert(idx)(isLeft(isSome(equalTo(6L))))
+          } yield assert(idx)(isSome(equalTo(6L)))
         },
         testM("don't find index of element") {
           for {
             key <- uuid
             _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
             idx <- lPos(key, "unknown")
-          } yield assert(idx)(isLeft(isNone))
+          } yield assert(idx)(isNone)
         },
         testM("find index of element with positive rank") {
           for {
             key <- uuid
             _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
             idx <- lPos(key, "3", rank = Some(Rank(2)))
-          } yield assert(idx)(isLeft(isSome(equalTo(8L))))
+          } yield assert(idx)(isSome(equalTo(8L)))
         },
         testM("find index of element with negative rank") {
           for {
             key <- uuid
             _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
             idx <- lPos(key, "3", rank = Some(Rank(-1)))
-          } yield assert(idx)(isLeft(isSome(equalTo(10L))))
-        },
-        testM("find index of element with rank and count") {
-          for {
-            key <- uuid
-            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
-            idx <- lPos(key, "3", rank = Some(Rank(2)), count = Some(Count(2)))
-          } yield assert(idx)(isRight(equalTo(Chunk(8L, 9L))))
-        },
-        testM("find index of element with negative rank and count") {
-          for {
-            key <- uuid
-            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
-            idx <- lPos(key, "3", rank = Some(Rank(-3)), count = Some(Count(2)))
-          } yield assert(idx)(isRight(equalTo(Chunk(8L, 6L))))
+          } yield assert(idx)(isSome(equalTo(10L)))
         },
         testM("find index of element with maxLen") {
           for {
             key <- uuid
             _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
             idx <- lPos(key, "3", maxLen = Some(ListMaxLen(8)))
-          } yield assert(idx)(isLeft(isSome(equalTo(6L))))
+          } yield assert(idx)(isSome(equalTo(6L)))
         },
         testM("don't find index of element with maxLen") {
           for {
             key <- uuid
             _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
             idx <- lPos(key, "3", maxLen = Some(ListMaxLen(5)))
-          } yield assert(idx)(isLeft(isNone))
+          } yield assert(idx)(isNone)
+        }
+      ),
+      suite("lPosCount")(
+        testM("find index of element with rank and count") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPosCount(key, "3", Count(2), rank = Some(Rank(2)))
+          } yield assert(idx)(equalTo(Chunk(8L, 9L)))
+        },
+        testM("find index of element with negative rank and count") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPosCount(key, "3", Count(2), rank = Some(Rank(-3)))
+          } yield assert(idx)(equalTo(Chunk(8L, 6L)))
         }
       )
     )

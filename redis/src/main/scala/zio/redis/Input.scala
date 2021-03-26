@@ -349,12 +349,12 @@ object Input {
   }
 
   case object ListMaxLenInput extends Input[ListMaxLen] {
-    override private[redis] def encode(data: ListMaxLen): Chunk[RespValue.BulkString] =
+    override def encode(data: ListMaxLen): Chunk[RespValue.BulkString] =
       Chunk(encodeString("MAXLEN"), encodeString(data.count.toString))
   }
 
   case object RankInput extends Input[Rank] {
-    override private[redis] def encode(data: Rank): Chunk[RespValue.BulkString] =
+    override def encode(data: Rank): Chunk[RespValue.BulkString] =
       Chunk(encodeString("RANK"), encodeString(data.rank.toString))
   }
 

@@ -20,31 +20,20 @@ trait Streams {
   sealed trait XGroupCommand
 
   object XGroupCommand {
-
-    case class Create(key: String, group: String, id: String, mkStream: Boolean) extends XGroupCommand
-
-    case class SetId(key: String, group: String, id: String) extends XGroupCommand
-
-    case class Destroy(key: String, group: String) extends XGroupCommand
-
-    case class CreateConsumer(key: String, group: String, consumer: String) extends XGroupCommand
-
-    case class DelConsumer(key: String, group: String, consumer: String) extends XGroupCommand
-
+    sealed case class Create(key: String, group: String, id: String, mkStream: Boolean) extends XGroupCommand
+    sealed case class SetId(key: String, group: String, id: String)                     extends XGroupCommand
+    sealed case class Destroy(key: String, group: String)                               extends XGroupCommand
+    sealed case class CreateConsumer(key: String, group: String, consumer: String)      extends XGroupCommand
+    sealed case class DelConsumer(key: String, group: String, consumer: String)         extends XGroupCommand
   }
 
   sealed trait XInfoCommand
 
   object XInfoCommand {
-
-    case class Stream(key: String, full: Option[Full] = None) extends XInfoCommand
-
-    case class Full(count: Option[Long])
-
-    case class Groups(key: String) extends XInfoCommand
-
-    case class Consumers(key: String, group: String) extends XInfoCommand
-
+    sealed case class Stream(key: String, full: Option[Full] = None) extends XInfoCommand
+    sealed case class Full(count: Option[Long])
+    sealed case class Groups(key: String)                   extends XInfoCommand
+    sealed case class Consumers(key: String, group: String) extends XInfoCommand
   }
 
   case object MkStream {
@@ -53,21 +42,21 @@ trait Streams {
 
   type MkStream = MkStream.type
 
-  case class PendingInfo(
+  sealed case class PendingInfo(
     total: Long,
     first: Option[String],
     last: Option[String],
     consumers: Map[String, Long]
   )
 
-  case class PendingMessage(
+  sealed case class PendingMessage(
     id: String,
     owner: String,
     lastDelivered: Duration,
     counter: Long
   )
 
-  case class Group(group: String, consumer: String)
+  sealed case class Group(group: String, consumer: String)
 
   case object NoAck {
     private[redis] def stringify: String = "NOACK"
@@ -75,11 +64,11 @@ trait Streams {
 
   type NoAck = NoAck.type
 
-  case class StreamMaxLen(approximate: Boolean, count: Long)
+  sealed case class StreamMaxLen(approximate: Boolean, count: Long)
 
-  case class StreamEntry(id: String, fields: Map[String, String])
+  sealed case class StreamEntry(id: String, fields: Map[String, String])
 
-  case class StreamInfo(
+  sealed case class StreamInfo(
     length: Long,
     radixTreeKeys: Long,
     radixTreeNodes: Long,
@@ -93,7 +82,7 @@ trait Streams {
     def empty: StreamInfo = StreamInfo(0, 0, 0, 0, "", None, None)
   }
 
-  case class StreamGroupsInfo(
+  sealed case class StreamGroupsInfo(
     name: String,
     consumers: Long,
     pending: Long,
@@ -104,7 +93,7 @@ trait Streams {
     def empty: StreamGroupsInfo = StreamGroupsInfo("", 0, 0, "")
   }
 
-  case class StreamConsumersInfo(
+  sealed case class StreamConsumersInfo(
     name: String,
     pending: Long,
     idle: Duration
@@ -116,7 +105,7 @@ trait Streams {
 
   object StreamInfoWithFull {
 
-    case class FullStreamInfo(
+    sealed case class FullStreamInfo(
       length: Long,
       radixTreeKeys: Long,
       radixTreeNodes: Long,
@@ -129,7 +118,7 @@ trait Streams {
       def empty: FullStreamInfo = FullStreamInfo(0, 0, 0, "", Chunk.empty, Chunk.empty)
     }
 
-    case class ConsumerGroups(
+    sealed case class ConsumerGroups(
       name: String,
       lastDeliveredId: String,
       pelCount: Long,
@@ -141,16 +130,15 @@ trait Streams {
       def empty: ConsumerGroups = ConsumerGroups("", "", 0, Chunk.empty, Chunk.empty)
     }
 
-    case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
+    sealed case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
 
-    case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
+    sealed case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
 
     object Consumers {
       def empty: Consumers = Consumers("", 0.millis, 0, Chunk.empty)
     }
 
-    case class ConsumerPel(entryId: String, deliveryTime: Duration, deliveryCount: Long)
-
+    sealed case class ConsumerPel(entryId: String, deliveryTime: Duration, deliveryCount: Long)
   }
 
   private[redis] object XInfoFields {
@@ -173,5 +161,4 @@ trait Streams {
     val PelCount: String = "pel-count"
     val SeenTime: String = "seen-time"
   }
-
 }

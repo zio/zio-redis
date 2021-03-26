@@ -88,6 +88,19 @@ object Output {
       }
   }
 
+  case object ChunkLongOutput extends Output[Chunk[Long]] {
+    protected def tryDecode(respValue: RespValue): Chunk[Long] =
+      respValue match {
+        case RespValue.NullArray => Chunk.empty
+        case RespValue.Array(values) =>
+          values.map {
+            case RespValue.Integer(i) => i
+            case other                => throw ProtocolError(s"$other isn't an integer")
+          }
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
     protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {
@@ -181,21 +194,6 @@ object Output {
             case other                       => throw ProtocolError(s"$other isn't null or a bulk string")
           }
         case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object OptionalLongOrLongArrayOutput extends Output[Either[Option[Long], Chunk[Long]]] {
-    override protected def tryDecode(respValue: RespValue): Either[Option[Long], Chunk[Long]] =
-      respValue match {
-        case RespValue.NullBulkString => Left(Option.empty)
-        case RespValue.Integer(value) => Left(Option(value))
-        case RespValue.NullArray      => Right(Chunk.empty)
-        case RespValue.Array(values) =>
-          Right(values.map {
-            case RespValue.Integer(i) => i
-            case other                => throw ProtocolError(s"$other isn't an integer")
-          })
-        case other => throw ProtocolError(s"$other isn't either an integer or an array of integers")
       }
   }
 

@@ -114,6 +114,26 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(equalTo(num))
         }
       ),
+      suite("chunkLong")(
+        testM("extract empty array") {
+          for {
+            res <- Task(ChunkLongOutput.unsafeDecode(RespValue.NullArray))
+          } yield assert(res)(equalTo(Chunk.empty))
+        },
+        testM("extract array of long values") {
+          val respArray = RespValue.array(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L))
+          for {
+            res <- Task(ChunkLongOutput.unsafeDecode(respArray))
+          } yield assert(res)(equalTo(Chunk(1L, 2L, 3L)))
+        },
+        testM("fail when one value is not a long") {
+          val respArray =
+            RespValue.array(RespValue.Integer(1L), RespValue.bulkString("not a long"), RespValue.Integer(3L))
+          for {
+            res <- Task(ChunkLongOutput.unsafeDecode(respArray)).run
+          } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
+        }
+      ),
       suite("optional")(
         testM("extract None") {
           for {
@@ -809,44 +829,6 @@ object OutputSpec extends BaseSpec {
                 )
               )
             )
-          }
-        ),
-        suite("OptionalLongOrLongArrayOutput")(
-          testM("extract long value") {
-            val resp = RespValue.Integer(10L)
-            for {
-              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(resp))
-            } yield assert(res)(isLeft(isSome(equalTo(10L))))
-          },
-          testM("extract Null value") {
-            for {
-              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(RespValue.NullBulkString))
-            } yield assert(res)(isLeft(isNone))
-          },
-          testM("extract array of long's") {
-            val resp = RespValue.Array(Chunk(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L)))
-            for {
-              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(resp))
-            } yield assert(res)(isRight(equalTo(Chunk(1L, 2L, 3L))))
-          },
-          testM("extract empty array") {
-            for {
-              res <- Task(OptionalLongOrLongArrayOutput.unsafeDecode(RespValue.NullArray))
-            } yield assert(res)(isRight(equalTo(Chunk.empty)))
-          },
-          testM("fail with ProtocolError on non long value") {
-            for {
-              res <- Task(OptionalLongOrLongArrayOutput unsafeDecode RespValue.bulkString("foo")).run
-            } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
-          },
-          testM("fail with ProtocolError when array contains not only longs") {
-            for {
-              res <- Task(
-                       OptionalLongOrLongArrayOutput unsafeDecode RespValue.Array(
-                         Chunk(RespValue.Integer(1L), RespValue.bulkString("foo"))
-                       )
-                     ).run
-            } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
           }
         )
       )
