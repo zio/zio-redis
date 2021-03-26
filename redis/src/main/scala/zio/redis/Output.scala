@@ -88,6 +88,19 @@ object Output {
       }
   }
 
+  case object ChunkLongOutput extends Output[Chunk[Long]] {
+    protected def tryDecode(respValue: RespValue): Chunk[Long] =
+      respValue match {
+        case RespValue.NullArray => Chunk.empty
+        case RespValue.Array(values) =>
+          values.map {
+            case RespValue.Integer(i) => i
+            case other                => throw ProtocolError(s"$other isn't an integer")
+          }
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
     protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {

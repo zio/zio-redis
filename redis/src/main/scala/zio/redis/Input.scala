@@ -336,8 +336,8 @@ object Input {
       Chunk.single(encodeString(data.stringify))
   }
 
-  case object MaxLenInput extends Input[MaxLen] {
-    def encode(data: MaxLen): Chunk[RespValue.BulkString] = {
+  case object StreamMaxLenInput extends Input[StreamMaxLen] {
+    def encode(data: StreamMaxLen): Chunk[RespValue.BulkString] = {
       val chunk =
         if (data.approximate)
           Chunk(encodeString("MAXLEN"), encodeString("~"))
@@ -346,6 +346,16 @@ object Input {
 
       chunk :+ encodeString(data.count.toString)
     }
+  }
+
+  case object ListMaxLenInput extends Input[ListMaxLen] {
+    override def encode(data: ListMaxLen): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("MAXLEN"), encodeString(data.count.toString))
+  }
+
+  case object RankInput extends Input[Rank] {
+    override def encode(data: Rank): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("RANK"), encodeString(data.rank.toString))
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {

@@ -695,6 +695,80 @@ private[redis] final class TestExecutor private (
           } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
+      case api.Lists.LPos.name =>
+        val key     = input(0).asString
+        val element = input(1).asString
+
+        val options      = input.map(_.asString).zipWithIndex
+        val rankOption   = options.find(_._1 == "RANK").map(_._2).map(idx => input(idx + 1).asLong)
+        val countOption  = options.find(_._1 == "COUNT").map(_._2).map(idx => input(idx + 1).asLong)
+        val maxLenOption = options.find(_._1 == "MAXLEN").map(_._2).map(idx => input(idx + 1).asLong)
+
+        orWrongType(isList(key))(
+          for {
+            list <- lists.getOrElse(key, Chunk.empty).map { list =>
+                      (maxLenOption, rankOption) match {
+                        case (Some(maxLen), None)                   => list.take(maxLen.toInt)
+                        case (Some(maxLen), Some(rank)) if rank < 0 => list.reverse.take(maxLen.toInt).reverse
+                        case (_, _)                                 => list
+                      }
+                    }
+            idxList = list.zipWithIndex
+            result = (countOption, rankOption) match {
+                       case (Some(count), Some(rank)) if rank < 0 =>
+                         Right(
+                           idxList.reverse
+                             .filter(_._1 == element)
+                             .drop((rank.toInt * -1) - 1)
+                             .take(count.toInt)
+                             .map(_._2)
+                         )
+                       case (Some(count), Some(rank)) =>
+                         Right(
+                           idxList
+                             .filter(_._1 == element)
+                             .drop(rank.toInt - 1)
+                             .take(count.toInt)
+                             .map(_._2)
+                         )
+                       case (Some(count), None) =>
+                         Right(
+                           idxList
+                             .filter(_._1 == element)
+                             .take(count.toInt)
+                             .map(_._2)
+                         )
+                       case (None, Some(rank)) if rank < 0 =>
+                         Left(
+                           idxList.reverse
+                             .filter(_._1 == element)
+                             .drop(rank.toInt)
+                             .map(_._2)
+                             .headOption
+                         )
+                       case (None, Some(rank)) =>
+                         Left(
+                           idxList
+                             .filter(_._1 == element)
+                             .drop(rank.toInt - 1)
+                             .map(_._2)
+                             .headOption
+                         )
+                       case (None, None) =>
+                         Left(
+                           idxList
+                             .filter(_._1 == element)
+                             .map(_._2)
+                             .headOption
+                         )
+                     }
+
+          } yield result.fold(
+            left => left.fold[RespValue](RespValue.NullBulkString)(value => RespValue.Integer(value.toLong)),
+            right => RespValue.array(right.map(value => RespValue.Integer(value.toLong)): _*)
+          )
+        )
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
