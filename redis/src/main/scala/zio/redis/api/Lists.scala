@@ -395,6 +395,6 @@ private[redis] object Lists {
         OptionalInput(RankInput),
         OptionalInput(ListMaxLenInput)
       ),
-      ChunkLongOutput
+      ChunkOutput(LongOutput)
     )
 }

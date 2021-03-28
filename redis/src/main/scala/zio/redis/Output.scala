@@ -49,6 +49,7 @@ object Output {
   final case class ChunkOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[A] =
       respValue match {
+        case RespValue.NullArray     => Chunk.empty
         case RespValue.Array(values) => values.map(output.tryDecode)
         case other                   => throw ProtocolError(s"$other isn't an array")
       }
@@ -81,19 +82,6 @@ object Output {
       respValue match {
         case RespValue.Integer(v) => v
         case other                => throw ProtocolError(s"$other isn't an integer")
-      }
-  }
-
-  case object ChunkLongOutput extends Output[Chunk[Long]] {
-    protected def tryDecode(respValue: RespValue): Chunk[Long] =
-      respValue match {
-        case RespValue.NullArray => Chunk.empty
-        case RespValue.Array(values) =>
-          values.map {
-            case RespValue.Integer(i) => i
-            case other                => throw ProtocolError(s"$other isn't an integer")
-          }
-        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -393,7 +381,7 @@ object Output {
   }
 
   case object StreamInfoFullOutput extends Output[StreamInfoWithFull.FullStreamInfo] {
-    override protected def tryDecode(respValue: RespValue): StreamInfoWithFull.FullStreamInfo = {
+    override protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamInfoWithFull.FullStreamInfo = {
       var streamInfoFull: StreamInfoWithFull.FullStreamInfo = StreamInfoWithFull.FullStreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo

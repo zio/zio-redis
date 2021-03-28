@@ -121,20 +121,20 @@ object OutputSpec extends BaseSpec {
       suite("chunkLong")(
         testM("extract empty array") {
           for {
-            res <- Task(ChunkLongOutput.unsafeDecode(RespValue.NullArray))
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(equalTo(Chunk.empty))
         },
         testM("extract array of long values") {
           val respArray = RespValue.array(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L))
           for {
-            res <- Task(ChunkLongOutput.unsafeDecode(respArray))
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray))
           } yield assert(res)(equalTo(Chunk(1L, 2L, 3L)))
         },
         testM("fail when one value is not a long") {
           val respArray =
             RespValue.array(RespValue.Integer(1L), RespValue.bulkString("not a long"), RespValue.Integer(3L))
           for {
-            res <- Task(ChunkLongOutput.unsafeDecode(respArray)).run
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray)).run
           } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
         }
       ),

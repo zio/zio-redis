@@ -195,7 +195,7 @@ trait Sets {
   ): ZIO[RedisExecutor, RedisError, (Long, Chunk[R])] = {
     val command = RedisCommand(
       SScan,
-      Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(RegexInput), OptionalInput(CountInput)),
+      Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
       ScanOutput(ArbitraryOutput[R]())
     )
     command.run((key, cursor, pattern.map(Pattern), count))

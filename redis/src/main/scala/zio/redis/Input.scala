@@ -92,12 +92,12 @@ object Input {
   }
 
   case object RedisTypeInput extends Input[RedisType] {
-    def encode(data: RedisType): Chunk[RespValue.BulkString] =
+    def encode(data: RedisType)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("TYPE"), encodeString(data.stringify))
   }
 
   case object PatternInput extends Input[Pattern] {
-    def encode(data: Pattern): Chunk[RespValue.BulkString] =
+    def encode(data: Pattern)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("MATCH"), encodeString(data.pattern))
   }
 
@@ -112,7 +112,8 @@ object Input {
   }
 
   case object SideInput extends Input[Side] {
-    def encode(data: Side): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
+    def encode(data: Side)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      Chunk.single(encodeString(data.stringify))
   }
 
   case object DoubleInput extends Input[Double] {
@@ -386,12 +387,12 @@ object Input {
   }
 
   case object ListMaxLenInput extends Input[ListMaxLen] {
-    override def encode(data: ListMaxLen): Chunk[RespValue.BulkString] =
+    override def encode(data: ListMaxLen)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("MAXLEN"), encodeString(data.count.toString))
   }
 
   case object RankInput extends Input[Rank] {
-    override def encode(data: Rank): Chunk[RespValue.BulkString] =
+    override def encode(data: Rank)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("RANK"), encodeString(data.rank.toString))
   }
 
