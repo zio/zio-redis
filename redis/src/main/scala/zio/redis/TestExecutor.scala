@@ -300,7 +300,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Strings.Set.name =>
+      case api.Strings.Set =>
         // not a full implementation. Just enough to make set tests work
         val key   = input.head.asString
         val value = input(1).asString

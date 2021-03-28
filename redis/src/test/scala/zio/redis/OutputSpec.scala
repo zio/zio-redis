@@ -239,7 +239,7 @@ object OutputSpec extends BaseSpec {
       suite("chunkOptionalLong")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with empty and non-empty elements") {
@@ -250,7 +250,7 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
         },
         testM("extract array with non-empty elements") {
@@ -261,7 +261,7 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
         }
       ),

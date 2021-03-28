@@ -179,19 +179,6 @@ object Output {
       }
   }
 
-  case object ChunkOptionalLongOutput extends Output[Chunk[Option[Long]]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[Option[Long]] =
-      respValue match {
-        case RespValue.Array(elements) =>
-          elements.map {
-            case RespValue.NullBulkString   => None
-            case RespValue.Integer(element) => Some(element)
-            case other                      => throw ProtocolError(s"$other isn't an integer")
-          }
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
   case object TypeOutput extends Output[RedisType] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): RedisType =
       respValue match {

@@ -25,8 +25,7 @@ object StringUtf8Codec extends Codec {
     }
 
   override def decode[A](schema: Schema[A]): Chunk[Byte] => Either[String, A] = { ch =>
-    if (ch.isEmpty) Left("No bytes to decode")
-    else Decoder.decode(schema, ch)
+    Decoder.decode(schema, ch)
   }
 
   object Encoder {
