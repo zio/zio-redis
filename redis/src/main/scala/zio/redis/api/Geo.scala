@@ -3,6 +3,7 @@ package zio.redis.api
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
+import zio.schema.Schema
 import zio.{ Chunk, ZIO }
 
 trait Geo {
@@ -15,12 +16,18 @@ trait Geo {
    *  @param items additional items
    *  @return number of new elements added to the sorted set
    */
-  final def geoAdd(
-    key: String,
-    item: (LongLat, String),
-    items: (LongLat, String)*
-  ): ZIO[RedisExecutor, RedisError, Long] =
-    GeoAdd.run((key, (item, items.toList)))
+  final def geoAdd[K: Schema, M: Schema](
+    key: K,
+    item: (LongLat, M),
+    items: (LongLat, M)*
+  ): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(
+      GeoAdd,
+      Tuple2(ArbitraryInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryInput[M]()))),
+      LongOutput
+    )
+    command.run((key, (item, items.toList)))
+  }
 
   /**
    *  Return the distance between two members in the geospatial index represented by the sorted set.
@@ -30,12 +37,19 @@ trait Geo {
    *  @param radiusUnit Unit of distance ("m", "km", "ft", "mi")
    *  @return distance between the two specified members in the specified unit or None if either member is missing
    */
-  final def geoDist(
-    key: String,
-    member1: String,
-    member2: String,
+  final def geoDist[K: Schema, M: Schema](
+    key: K,
+    member1: M,
+    member2: M,
     radiusUnit: Option[RadiusUnit] = None
-  ): ZIO[RedisExecutor, RedisError, Option[Double]] = GeoDist.run((key, member1, member2, radiusUnit))
+  ): ZIO[RedisExecutor, RedisError, Option[Double]] = {
+    val command = RedisCommand(
+      GeoDist,
+      Tuple4(ArbitraryInput[K](), ArbitraryInput[M](), ArbitraryInput[M](), OptionalInput(RadiusUnitInput)),
+      OptionalOutput(DoubleOutput)
+    )
+    command.run((key, member1, member2, radiusUnit))
+  }
 
   /**
    *  Return valid Geohash strings representing the position of one or more elements in a sorted set value representing
@@ -45,12 +59,18 @@ trait Geo {
    *  @param members additional members
    *  @return chunk of geohashes, where value is `None` if a member is not in the set
    */
-  final def geoHash(
-    key: String,
-    member: String,
-    members: String*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] =
-    GeoHash.run((key, (member, members.toList)))
+  final def geoHash[K: Schema, M: Schema](
+    key: K,
+    member: M,
+    members: M*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[String]]] = {
+    val command = RedisCommand(
+      GeoHash,
+      Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())),
+      ChunkOptionalMultiStringOutput
+    )
+    command.run((key, (member, members.toList)))
+  }
 
   /**
    *  Return the positions (longitude, latitude) of all the specified members of the geospatial index represented by the
@@ -60,12 +80,14 @@ trait Geo {
    *  @param members additional members
    *  @return chunk of positions, where value is `None` if a member is not in the set
    */
-  final def geoPos(
-    key: String,
-    member: String,
-    members: String*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Option[LongLat]]] =
-    GeoPos.run((key, (member, members.toList)))
+  final def geoPos[K: Schema, M: Schema](
+    key: K,
+    member: M,
+    members: M*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[LongLat]]] = {
+    val command = RedisCommand(GeoPos, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), GeoOutput)
+    command.run((key, (member, members.toList)))
+  }
 
   /**
    *  Return geospatial members of a sorted set which are within the area specified with a *center location* and the
@@ -81,8 +103,8 @@ trait Geo {
    *  @param order sort returned items in the given `Order`
    *  @return chunk of members within the specified are
    */
-  final def geoRadius(
-    key: String,
+  final def geoRadius[K: Schema](
+    key: K,
     center: LongLat,
     radius: Double,
     radiusUnit: RadiusUnit,
@@ -91,8 +113,24 @@ trait Geo {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] =
-    GeoRadius.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+  ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = {
+    val command = RedisCommand(
+      GeoRadius,
+      Tuple9(
+        ArbitraryInput[K](),
+        LongLatInput,
+        DoubleInput,
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput)
+      ),
+      GeoRadiusOutput
+    )
+    command.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+  }
 
   /**
    * Similar to geoRadius, but store the results to the argument passed to store and return the number of
@@ -111,9 +149,11 @@ trait Geo {
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
    *  @return chunk of members within the specified are
+   *
+   *  We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
    */
-  final def geoRadiusStore(
-    key: String,
+  final def geoRadiusStore[K: Schema](
+    key: K,
     center: LongLat,
     radius: Double,
     radiusUnit: RadiusUnit,
@@ -123,10 +163,28 @@ trait Geo {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[RedisExecutor, RedisError, Long] =
-    GeoRadiusStore.run(
+  ): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(
+      GeoRadiusStore,
+      Tuple11(
+        ArbitraryInput[K](),
+        LongLatInput,
+        DoubleInput,
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput),
+        OptionalInput(StoreInput),
+        OptionalInput(StoreDistInput)
+      ),
+      LongOutput
+    )
+    command.run(
       (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
+  }
 
   /**
    *  Return geospatial members of a sorted set which are within the area specified with an *existing member* in the set
@@ -143,9 +201,9 @@ trait Geo {
    *  number should be stored
    *  @return chunk of members within the specified area, or an error if the member is not in the set
    */
-  final def geoRadiusByMember(
-    key: String,
-    member: String,
+  final def geoRadiusByMember[K: Schema, M: Schema](
+    key: K,
+    member: M,
     radius: Double,
     radiusUnit: RadiusUnit,
     withCoord: Option[WithCoord] = None,
@@ -153,10 +211,24 @@ trait Geo {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] =
-    GeoRadiusByMember.run(
-      (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order)
+  ): ZIO[RedisExecutor, RedisError, Chunk[GeoView]] = {
+    val command = RedisCommand(
+      GeoRadiusByMember,
+      Tuple9(
+        ArbitraryInput[K](),
+        ArbitraryInput[M](),
+        DoubleInput,
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput)
+      ),
+      GeoRadiusOutput
     )
+    command.run((key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+  }
 
   /**
    * Similar to geoRadiusByMember, but store the results to the argument passed to store and return the number of
@@ -175,10 +247,12 @@ trait Geo {
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
    *  @return chunk of members within the specified area, or an error if the member is not in the set
+   *
+   *  We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
    */
-  final def geoRadiusByMemberStore(
-    key: String,
-    member: String,
+  final def geoRadiusByMemberStore[K: Schema, M: Schema](
+    key: K,
+    member: M,
     radius: Double,
     radiusUnit: RadiusUnit,
     store: StoreOptions,
@@ -187,156 +261,37 @@ trait Geo {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[RedisExecutor, RedisError, Long] =
-    GeoRadiusByMemberStore.run(
+  ): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(
+      "GEORADIUSBYMEMBER",
+      Tuple11(
+        ArbitraryInput[K](),
+        ArbitraryInput[M](),
+        DoubleInput,
+        RadiusUnitInput,
+        OptionalInput(WithCoordInput),
+        OptionalInput(WithDistInput),
+        OptionalInput(WithHashInput),
+        OptionalInput(CountInput),
+        OptionalInput(OrderInput),
+        OptionalInput(StoreInput),
+        OptionalInput(StoreDistInput)
+      ),
+      LongOutput
+    )
+    command.run(
       (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
+  }
 }
 
 private[redis] object Geo {
-  final val GeoAdd: RedisCommand[(String, ((LongLat, String), List[(LongLat, String)])), Long] =
-    RedisCommand("GEOADD", Tuple2(StringInput, NonEmptyList(Tuple2(LongLatInput, StringInput))), LongOutput)
-
-  final val GeoDist: RedisCommand[(String, String, String, Option[RadiusUnit]), Option[Double]] =
-    RedisCommand(
-      "GEODIST",
-      Tuple4(StringInput, StringInput, StringInput, OptionalInput(RadiusUnitInput)),
-      OptionalOutput(DoubleOutput)
-    )
-
-  final val GeoHash: RedisCommand[(String, (String, List[String])), Chunk[Option[String]]] =
-    RedisCommand("GEOHASH", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
-
-  final val GeoPos: RedisCommand[(String, (String, List[String])), Chunk[Option[LongLat]]] =
-    RedisCommand("GEOPOS", Tuple2(StringInput, NonEmptyList(StringInput)), GeoOutput)
-
-  final val GeoRadius: RedisCommand[
-    (
-      String,
-      LongLat,
-      Double,
-      RadiusUnit,
-      Option[WithCoord],
-      Option[WithDist],
-      Option[WithHash],
-      Option[Count],
-      Option[Order]
-    ),
-    Chunk[GeoView]
-  ] =
-    RedisCommand(
-      "GEORADIUS",
-      Tuple9(
-        StringInput,
-        LongLatInput,
-        DoubleInput,
-        RadiusUnitInput,
-        OptionalInput(WithCoordInput),
-        OptionalInput(WithDistInput),
-        OptionalInput(WithHashInput),
-        OptionalInput(CountInput),
-        OptionalInput(OrderInput)
-      ),
-      GeoRadiusOutput
-    )
-
-  // We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
-  final val GeoRadiusStore: RedisCommand[
-    (
-      String,
-      LongLat,
-      Double,
-      RadiusUnit,
-      Option[WithCoord],
-      Option[WithDist],
-      Option[WithHash],
-      Option[Count],
-      Option[Order],
-      Option[Store],
-      Option[StoreDist]
-    ),
-    Long
-  ] =
-    RedisCommand(
-      "GEORADIUS",
-      Tuple11(
-        StringInput,
-        LongLatInput,
-        DoubleInput,
-        RadiusUnitInput,
-        OptionalInput(WithCoordInput),
-        OptionalInput(WithDistInput),
-        OptionalInput(WithHashInput),
-        OptionalInput(CountInput),
-        OptionalInput(OrderInput),
-        OptionalInput(StoreInput),
-        OptionalInput(StoreDistInput)
-      ),
-      LongOutput
-    )
-
-  final val GeoRadiusByMember: RedisCommand[
-    (
-      String,
-      String,
-      Double,
-      RadiusUnit,
-      Option[WithCoord],
-      Option[WithDist],
-      Option[WithHash],
-      Option[Count],
-      Option[Order]
-    ),
-    Chunk[GeoView]
-  ] =
-    RedisCommand(
-      "GEORADIUSBYMEMBER",
-      Tuple9(
-        StringInput,
-        StringInput,
-        DoubleInput,
-        RadiusUnitInput,
-        OptionalInput(WithCoordInput),
-        OptionalInput(WithDistInput),
-        OptionalInput(WithHashInput),
-        OptionalInput(CountInput),
-        OptionalInput(OrderInput)
-      ),
-      GeoRadiusOutput
-    )
-
-  // We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
-  final val GeoRadiusByMemberStore: RedisCommand[
-    (
-      String,
-      String,
-      Double,
-      RadiusUnit,
-      Option[WithCoord],
-      Option[WithDist],
-      Option[WithHash],
-      Option[Count],
-      Option[Order],
-      Option[Store],
-      Option[StoreDist]
-    ),
-    Long
-  ] =
-    RedisCommand(
-      "GEORADIUSBYMEMBER",
-      Tuple11(
-        StringInput,
-        StringInput,
-        DoubleInput,
-        RadiusUnitInput,
-        OptionalInput(WithCoordInput),
-        OptionalInput(WithDistInput),
-        OptionalInput(WithHashInput),
-        OptionalInput(CountInput),
-        OptionalInput(OrderInput),
-        OptionalInput(StoreInput),
-        OptionalInput(StoreDistInput)
-      ),
-      LongOutput
-    )
+  val GeoAdd                 = "GEOADD"
+  val GeoDist                = "GEODIST"
+  val GeoHash                = "GEOHASH"
+  val GeoPos                 = "GEOPOS"
+  val GeoRadius              = "GEORADIUS"
+  val GeoRadiusStore         = "GEORADIUS"
+  val GeoRadiusByMember      = "GEORADIUSBYMEMBER"
+  val GeoRadiusByMemberStore = "GEORADIUSBYMEMBER"
 }
