@@ -63,7 +63,7 @@ trait KeysSpec extends BaseSpec {
           key2      = "custom_key_2"
           _        <- set(key1, value)
           _        <- set(key2, value)
-          response <- keys("*custom*")
+          response <- keys[String]("*custom*")
         } yield assert(response)(hasSameElements(Chunk(key1, key2)))
       },
       testM("unlink existing key") {
@@ -101,8 +101,8 @@ trait KeysSpec extends BaseSpec {
           key       <- uuid
           value     <- uuid
           _         <- set(key, value)
-          allKeys   <- keys("*")
-          randomKey <- randomKey()
+          allKeys   <- keys[String]("*")
+          randomKey <- randomKey[String]()
         } yield assert(allKeys)(contains(randomKey.get))
       } @@ ignore,
       testM("dump followed by restore") {
@@ -340,28 +340,28 @@ trait KeysSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- lPush(key, "1", "0", "2")
-            sorted <- sort(key)
+            sorted <- sort[String, String](key)
           } yield assert(sorted)(equalTo(Chunk("0", "1", "2")))
         },
         testM("list of strings") {
           for {
             key    <- uuid
             _      <- lPush(key, "z", "a", "c")
-            sorted <- sort(key, alpha = Some(Alpha))
+            sorted <- sort[String, String](key, alpha = Some(Alpha))
           } yield assert(sorted)(equalTo(Chunk("a", "c", "z")))
         },
         testM("list of numbers, limited") {
           for {
             key    <- uuid
             _      <- lPush(key, "1", "0", "2")
-            sorted <- sort(key, limit = Some(Limit(1, 1)))
+            sorted <- sort[String, String](key, limit = Some(Limit(1, 1)))
           } yield assert(sorted)(equalTo(Chunk("1")))
         },
         testM("descending sort") {
           for {
             key    <- uuid
             _      <- lPush(key, "1", "0", "2")
-            sorted <- sort(key, order = Order.Descending)
+            sorted <- sort[String, String](key, order = Order.Descending)
           } yield assert(sorted)(equalTo(Chunk("2", "1", "0")))
         },
         testM("by the value referenced by a key-value pair") {
@@ -373,7 +373,7 @@ trait KeysSpec extends BaseSpec {
             prefix <- uuid
             _      <- set(s"${prefix}_$a", "A")
             _      <- set(s"${prefix}_$b", "B")
-            sorted <- sort(key, by = Some(s"${prefix}_*"), alpha = Some(Alpha))
+            sorted <- sort[String, String](key, by = Some(s"${prefix}_*"), alpha = Some(Alpha))
           } yield assert(sorted)(equalTo(Chunk(a, b)))
         },
         testM("getting the value referenced by a key-value pair") {
@@ -383,7 +383,7 @@ trait KeysSpec extends BaseSpec {
             _      <- lPush(key, value)
             prefix <- uuid
             _      <- set(s"${prefix}_$value", "A")
-            sorted <- sort(key, get = Some((s"${prefix}_*", List.empty)), alpha = Some(Alpha))
+            sorted <- sort[String, String](key, get = Some((s"${prefix}_*", List.empty)), alpha = Some(Alpha))
           } yield assert(sorted)(equalTo(Chunk("A")))
         },
         testM("getting multiple value referenced by a key-value pair") {
@@ -395,7 +395,8 @@ trait KeysSpec extends BaseSpec {
             _       <- set(s"${prefix}_$value", "A")
             prefix2 <- uuid
             _       <- set(s"${prefix2}_$value", "0")
-            sorted  <- sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
+            sorted <-
+              sort[String, String](key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
           } yield assert(sorted)(equalTo(Chunk("A", "0")))
         },
         testM("sort and store result") {
