@@ -164,7 +164,8 @@ private[redis] object Hashes {
   final val HGet: RedisCommand[(String, String), Option[String]] =
     RedisCommand("HGET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
 
-  final val HGetAll: RedisCommand[String, Map[String, String]] = RedisCommand("HGETALL", StringInput, KeyValueOutput)
+  final val HGetAll: RedisCommand[String, Map[String, String]] =
+    RedisCommand("HGETALL", StringInput, KeyValueOutput(MultiStringOutput, MultiStringOutput))
 
   final val HIncrBy: RedisCommand[(String, String, Long), Long] =
     RedisCommand("HINCRBY", Tuple3(StringInput, StringInput, LongInput), LongOutput)

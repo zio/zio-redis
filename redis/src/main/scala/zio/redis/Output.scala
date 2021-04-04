@@ -142,7 +142,7 @@ object Output {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): A =
       respValue match {
         case RespValue.BulkString(s) => codec.decode(schema)(s).fold(e => throw CodecError(e), identity)
-        case other                   => throw ProtocolError(s"$other isn't a simple string")
+        case other                   => throw ProtocolError(s"$other isn't a bulk string")
       }
   }
 
@@ -244,51 +244,54 @@ object Output {
       }
   }
 
-  case object KeyValueOutput extends Output[Map[String, String]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[String, String] =
+  final case class KeyValueOutput[K, V](outK: Output[K], outV: Output[V]) extends Output[Map[K, V]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[K, V] =
       respValue match {
+        case RespValue.NullArray =>
+          Map.empty[K, V]
         case RespValue.Array(elements) if elements.length % 2 == 0 =>
-          val output = collection.mutable.Map.empty[String, String]
+          val output = collection.mutable.Map.empty[K, V]
           val len    = elements.length
           var pos    = 0
 
           while (pos < len) {
-            (elements(pos), elements(pos + 1)) match {
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-                output += key.asString -> value.asString
-              case _ =>
-            }
+            val key   = outK.unsafeDecode(elements(pos))
+            val value = outV.unsafeDecode(elements(pos + 1))
+            output += key -> value
             pos += 2
           }
 
           output.toMap
-
         case array @ RespValue.Array(_) =>
           throw ProtocolError(s"$array doesn't have an even number of elements")
-
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
   }
 
-  case object StreamOutput extends Output[Map[String, Map[String, String]]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[String, Map[String, String]] =
+  final case class KeyValueTwoOutput[K, V](outK: Output[K], outV: Output[V]) extends Output[Map[K, V]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[K, V] =
       respValue match {
-        case RespValue.NullArray       => Map.empty[String, Map[String, String]]
-        case RespValue.Array(entities) => extractNestedMap(entities)
-        case other                     => throw ProtocolError(s"$other isn't an array")
+        case RespValue.NullArray => Map.empty[K, V]
+        case RespValue.Array(entities) =>
+          entities.map {
+            case RespValue.Array(Seq(key @ RespValue.BulkString(_), value)) =>
+              outK.unsafeDecode(key) -> outV.unsafeDecode(value)
+            case other =>
+              throw ProtocolError(s"$other isn't a valid array")
+          }.toMap
+        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 
-  private def extractNestedMap(entities: Chunk[RespValue])(implicit codec: Codec): Map[String, Map[String, String]] = {
-    val output = collection.mutable.Map.empty[String, Map[String, String]]
-    entities.foreach {
-      case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-        output += (id.asString -> KeyValueOutput.unsafeDecode(value))
-      case other =>
-        throw ProtocolError(s"$other isn't a valid array")
-    }
-    output.toMap
+  final case class StreamOutput[I, K, V]()(implicit
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[Map[I, Map[K, V]]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[I, Map[K, V]] =
+      KeyValueTwoOutput(ArbitraryOutput[I](), KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()))
+        .unsafeDecode(respValue)
   }
 
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
@@ -367,9 +370,12 @@ object Output {
       }
   }
 
-  case object StreamInfoFullOutput extends Output[StreamInfoWithFull.FullStreamInfo] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamInfoWithFull.FullStreamInfo = {
-      var streamInfoFull: StreamInfoWithFull.FullStreamInfo = StreamInfoWithFull.FullStreamInfo.empty
+  final case class StreamInfoFullOutput[I: Schema, K: Schema, V: Schema]()
+      extends Output[StreamInfoWithFull.FullStreamInfo[I, K, V]] {
+    override protected def tryDecode(
+      respValue: RespValue
+    )(implicit codec: Codec): StreamInfoWithFull.FullStreamInfo[I, K, V] = {
+      var streamInfoFull: StreamInfoWithFull.FullStreamInfo[I, K, V] = StreamInfoWithFull.FullStreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
         case RespValue.Array(elements) if elements.length % 2 == 0 =>
@@ -388,7 +394,7 @@ object Output {
                   if key.asString == XInfoFields.LastGeneratedId =>
                 streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
               case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Entries =>
-                val streamEntryList = values.map(extractStreamEntry)
+                val streamEntryList = values.map(extractStreamEntry[I, K, V])
                 streamInfoFull = streamInfoFull.copy(entries = streamEntryList)
               case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Groups =>
                 // Get the group list of the stream.
@@ -504,9 +510,9 @@ object Output {
     }
   }
 
-  case object StreamInfoOutput extends Output[StreamInfo] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamInfo = {
-      var streamInfo: StreamInfo = StreamInfo.empty
+  final case class StreamInfoOutput[I: Schema, K: Schema, V: Schema]() extends Output[StreamInfo[I, K, V]] {
+    override protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamInfo[I, K, V] = {
+      var streamInfo: StreamInfo[I, K, V] = StreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
         case RespValue.Array(elements) if elements.length % 2 == 0 =>
@@ -545,23 +551,17 @@ object Output {
     }
   }
 
-  private def extractStreamEntry(es: RespValue): StreamEntry = {
-    val entry           = collection.mutable.Map.empty[String, String]
-    var entryId: String = ""
+  private def extractStreamEntry[I: Schema, K: Schema, V: Schema](
+    es: RespValue
+  )(implicit codec: Codec): StreamEntry[I, K, V] =
     es match {
-      case RespValue.Array(entities) =>
-        entities.foreach {
-          case id @ RespValue.BulkString(_) => entryId = id.asString
-          case RespValue.ArrayValues(id @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
-            entry += (id.asString -> value.asString)
-          case other =>
-            throw ProtocolError(s"$other isn't a valid array")
-        }
+      case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+        val eId   = ArbitraryOutput[I]().unsafeDecode(id)
+        val entry = KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()).unsafeDecode(value)
+        StreamEntry(id = eId, entry)
       case other =>
         throw ProtocolError(s"$other isn't a valid array")
     }
-    StreamEntry(id = entryId, entry.toMap)
-  }
 
   case object XPendingOutput extends Output[PendingInfo] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): PendingInfo =
@@ -613,28 +613,6 @@ object Output {
               throw ProtocolError(s"$other isn't an array with four elements")
           }
 
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object XReadOutput extends Output[Map[String, Map[String, Map[String, String]]]] {
-    protected def tryDecode(
-      respValue: RespValue
-    )(implicit codec: Codec): Map[String, Map[String, Map[String, String]]] =
-      respValue match {
-        case RespValue.NullArray =>
-          Map.empty[String, Map[String, Map[String, String]]]
-        case RespValue.Array(streams) =>
-          val output = collection.mutable.Map.empty[String, Map[String, Map[String, String]]]
-          streams.foreach {
-            case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-              output += (id.asString -> StreamOutput.unsafeDecode(value))
-            case other =>
-              throw ProtocolError(s"$other isn't an array with two elements")
-          }
-
-          output.toMap
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
