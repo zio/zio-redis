@@ -306,7 +306,7 @@ private[redis] final class TestExecutor private (
         val value = input(1).asString
         strings.put(key, value).as(Replies.Ok)
 
-      case api.HyperLogLog.PfAdd.name =>
+      case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString).toSet
 
@@ -318,7 +318,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(ret)
         )
 
-      case api.HyperLogLog.PfCount.name =>
+      case api.HyperLogLog.PfCount =>
         val keys = input.map(_.asString)
         orWrongType(forAll(keys)(isHyperLogLog))(
           STM
@@ -330,7 +330,7 @@ private[redis] final class TestExecutor private (
             .map(vs => RespValue.Integer(vs.size.toLong))
         )
 
-      case api.HyperLogLog.PfMerge.name =>
+      case api.HyperLogLog.PfMerge =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
