@@ -67,7 +67,7 @@ trait Geo {
     val command = RedisCommand(
       GeoHash,
       Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())),
-      ChunkOptionalMultiStringOutput
+      ChunkOutput(OptionalOutput(MultiStringOutput))
     )
     command.run((key, (member, members.toList)))
   }

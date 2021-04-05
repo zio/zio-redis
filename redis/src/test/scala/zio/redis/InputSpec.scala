@@ -454,32 +454,32 @@ object InputSpec extends BaseSpec {
       suite("MemberScore")(
         testM("with positive score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
           } yield assert(result)(equalTo(respArgs("4.2", "")))
         },
         testM("with negative score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
           } yield assert(result)(equalTo(respArgs("-4.2", "")))
         },
         testM("with zero score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(0d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "")))
           } yield assert(result)(equalTo(respArgs("0.0", "")))
         },
         testM("with positive score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("4.2", "member")))
         },
         testM("with negative score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("-4.2", "member")))
         },
         testM("with zero score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(0d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
           } yield assert(result)(equalTo(respArgs("0.0", "member")))
         }
       ),

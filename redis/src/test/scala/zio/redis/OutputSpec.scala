@@ -215,24 +215,24 @@ object OutputSpec extends BaseSpec {
       suite("chunkOptionalMultiString")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.NullArray))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with one non-empty element") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.array(RespValue.bulkString("ab"))))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.array(RespValue.bulkString("ab"))))
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
         testM("extract array with multiple non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
         testM("extract array with empty and non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.NullBulkString, RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
         }
       ),

@@ -165,20 +165,6 @@ object Output {
       }
   }
 
-  case object ChunkOptionalMultiStringOutput extends Output[Chunk[Option[String]]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[Option[String]] =
-      respValue match {
-        case RespValue.NullArray => Chunk.empty
-        case RespValue.Array(elements) =>
-          elements.map {
-            case RespValue.NullBulkString    => None
-            case s @ RespValue.BulkString(_) => Some(s.asString)
-            case other                       => throw ProtocolError(s"$other isn't null or a bulk string")
-          }
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
   case object TypeOutput extends Output[RedisType] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): RedisType =
       respValue match {

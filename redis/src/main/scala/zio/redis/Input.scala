@@ -181,9 +181,9 @@ object Input {
       Chunk(encodeString(data.longitude.toString), encodeString(data.latitude.toString))
   }
 
-  case object MemberScoreInput extends Input[MemberScore] {
-    def encode(data: MemberScore)(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      Chunk(encodeString(data.score.toString), encodeString(data.member))
+  final case class MemberScoreInput[M: Schema]() extends Input[MemberScore[M]] {
+    def encode(data: MemberScore[M])(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      Chunk(encodeBytes(data.score), encodeBytes(data.member))
   }
 
   case object NoInput extends Input[Unit] {

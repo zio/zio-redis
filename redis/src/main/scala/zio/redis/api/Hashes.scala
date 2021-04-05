@@ -179,7 +179,11 @@ private[redis] object Hashes {
   final val HLen: RedisCommand[String, Long] = RedisCommand("HLEN", StringInput, LongOutput)
 
   final val HmGet: RedisCommand[(String, (String, List[String])), Chunk[Option[String]]] =
-    RedisCommand("HMGET", Tuple2(StringInput, NonEmptyList(StringInput)), ChunkOptionalMultiStringOutput)
+    RedisCommand(
+      "HMGET",
+      Tuple2(StringInput, NonEmptyList(StringInput)),
+      ChunkOutput(OptionalOutput(MultiStringOutput))
+    )
 
   final val HmSet: RedisCommand[(String, ((String, String), List[(String, String)])), Unit] =
     RedisCommand(
