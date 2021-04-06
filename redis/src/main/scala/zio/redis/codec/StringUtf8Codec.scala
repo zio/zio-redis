@@ -2,11 +2,12 @@ package zio.redis.codec
 
 import java.nio.charset.StandardCharsets
 
-import zio.{Chunk, ZIO}
 import zio.redis.RedisError.CodecError
 import zio.schema.Schema
+import zio.schema.StandardType.LongType
 import zio.schema.codec.Codec
 import zio.stream.ZTransducer
+import zio.{ Chunk, ZIO }
 
 object StringUtf8Codec extends Codec {
   override def encoder[A](schema: Schema[A]): ZTransducer[Any, Nothing, A, Byte] =
@@ -38,6 +39,8 @@ object StringUtf8Codec extends Codec {
   object Decoder {
     def decode[A](schema: Schema[A], chunk: Chunk[Byte]): Either[String, A] =
       schema match {
+        case Schema.Primitive(LongType) =>
+          Right(new String(chunk.toArray, StandardCharsets.UTF_8).toLong.asInstanceOf[A])
         case Schema.Primitive(_) => Right(new String(chunk.toArray, StandardCharsets.UTF_8).asInstanceOf[A])
         case _                   => Left("the codec support only primitives")
       }

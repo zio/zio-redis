@@ -220,7 +220,10 @@ object OutputSpec extends BaseSpec {
         },
         testM("extract array with one non-empty element") {
           for {
-            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.array(RespValue.bulkString("ab"))))
+            res <-
+              Task(
+                ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.array(RespValue.bulkString("ab")))
+              )
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
         testM("extract array with multiple non-empty elements") {
