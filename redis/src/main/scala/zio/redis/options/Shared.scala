@@ -22,17 +22,25 @@ trait Shared {
   sealed trait Expire { self =>
     private[redis] final def stringify: String =
       self match {
-        case Expire.SetExpireSeconds        => "EX"
-        case Expire.SetExpireMilliseconds   => "PX"
-        case Expire.SetExpireAtSeconds      => "EXAT"
-        case Expire.SetExpireAtMilliseconds => "PXAT"
+        case Expire.SetExpireSeconds      => "EX"
+        case Expire.SetExpireMilliseconds => "PX"
       }
   }
   object Expire {
-    case object SetExpireSeconds        extends Expire
-    case object SetExpireMilliseconds   extends Expire
-    case object SetExpireAtSeconds      extends Expire
-    case object SetExpireAtMilliseconds extends Expire
+    case object SetExpireSeconds      extends Expire
+    case object SetExpireMilliseconds extends Expire
+  }
+
+  sealed trait ExpiredAt { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case ExpiredAt.SetExpireAtSeconds      => "EXAT"
+        case ExpiredAt.SetExpireAtMilliseconds => "PXAT"
+      }
+  }
+  object ExpiredAt {
+    case object SetExpireAtSeconds      extends ExpiredAt
+    case object SetExpireAtMilliseconds extends ExpiredAt
   }
 
   sealed case class Count(count: Long)

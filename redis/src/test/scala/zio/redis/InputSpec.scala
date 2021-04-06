@@ -1071,15 +1071,16 @@ object InputSpec extends BaseSpec {
         },
         testM("GetExAtInput - valid value") {
           for {
-            resultSeconds <- Task(
-                               GetExAtInput.encode(
-                                 scala.Tuple3("key", Expire.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
-                               )
-                             )
+            resultSeconds <-
+              Task(
+                GetExAtInput.encode(
+                  scala.Tuple3("key", ExpiredAt.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
+                )
+              )
             resultMilliseconds <-
               Task(
                 GetExAtInput.encode(
-                  scala.Tuple3("key", Expire.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
+                  scala.Tuple3("key", ExpiredAt.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
                 )
               )
           } yield assert(resultSeconds)(equalTo(respArgs("key", "EXAT", "1617667200"))) && assert(resultMilliseconds)(

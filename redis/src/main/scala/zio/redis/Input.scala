@@ -478,12 +478,12 @@ object Input {
       }
   }
 
-  case object GetExAtInput extends Input[(String, Expire, Instant)] {
-    override private[redis] def encode(data: (String, Expire, Instant)): Chunk[RespValue.BulkString] =
+  case object GetExAtInput extends Input[(String, ExpiredAt, Instant)] {
+    override private[redis] def encode(data: (String, ExpiredAt, Instant)): Chunk[RespValue.BulkString] =
       data._2 match {
-        case Expire.SetExpireAtSeconds =>
+        case ExpiredAt.SetExpireAtSeconds =>
           Chunk(encodeString(data._1), encodeString("EXAT")) ++ TimeSecondsInput.encode(data._3)
-        case Expire.SetExpireAtMilliseconds =>
+        case ExpiredAt.SetExpireAtMilliseconds =>
           Chunk(encodeString(data._1), encodeString("PXAT")) ++ TimeMillisecondsInput.encode(data._3)
         case _ => Chunk.empty
       }

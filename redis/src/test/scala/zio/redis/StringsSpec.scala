@@ -1474,7 +1474,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getEx(key, Expire.SetExpireAtSeconds, Instant.now().plusMillis(1000))
+            exists <- getExAt(key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(1000))
             _      <- ZIO.sleep(1020.millis)
             res    <- get(key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
@@ -1484,7 +1484,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getEx(key, Expire.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
+            exists <- getExAt(key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
             _      <- ZIO.sleep(1020.millis)
             res    <- get(key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
@@ -1494,7 +1494,7 @@ trait StringsSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            res   <- getEx(value, Expire.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
+            res   <- getExAt(value, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
             res2  <- getEx(value, Expire.SetExpireMilliseconds, 1000.millis)
             res3  <- getEx(value, true)
           } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))

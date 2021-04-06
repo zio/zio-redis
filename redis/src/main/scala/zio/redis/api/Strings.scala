@@ -126,7 +126,7 @@ trait Strings {
     GetSet.run((key, value))
 
   /**
-   * Get the string value of a key and delete it on success (if and only if the key's value type is a string) 
+   * Get the string value of a key and delete it on success (if and only if the key's value type is a string)
    *
    * @param key Key to get the value of
    * @return Returns the value of the string or None if it did not previously have a value
@@ -149,12 +149,16 @@ trait Strings {
    * Get the value of key and set its expiration
    *
    * @param key Key to get the value of
-   * @param expire The option which can modify command behavior. e.g. use `Expire.SetExpireAtSeconds` set the specified Unix time at which the key will expire in seconds
+   * @param expiredAt The option which can modify command behavior. e.g. use `Expire.SetExpireAtSeconds` set the specified Unix time at which the key will expire in seconds
    * @param timestamp an absolute Unix timestamp (seconds/milliseconds since January 1, 1970)
    * @return Returns the value of the string or None if it did not previously have a value
    */
-  final def getEx(key: String, expire: Expire, timestamp: Instant): ZIO[RedisExecutor, RedisError, Option[String]] =
-    GetExAt.run((key, expire, timestamp))
+  final def getExAt(
+    key: String,
+    expiredAt: ExpiredAt,
+    timestamp: Instant
+  ): ZIO[RedisExecutor, RedisError, Option[String]] =
+    GetExAt.run((key, expiredAt, timestamp))
 
   /**
    * Get the value of key and remove the time to live associated with the key
@@ -349,7 +353,7 @@ private[redis] object Strings {
   final val GetEx: RedisCommand[(String, Expire, Duration), Option[String]] =
     RedisCommand("GETEX", GetExInput, OptionalOutput(MultiStringOutput))
 
-  final val GetExAt: RedisCommand[(String, Expire, Instant), Option[String]] =
+  final val GetExAt: RedisCommand[(String, ExpiredAt, Instant), Option[String]] =
     RedisCommand("GETEX", GetExAtInput, OptionalOutput(MultiStringOutput))
 
   final val GetExPersist: RedisCommand[(String, Boolean), Option[String]] =
