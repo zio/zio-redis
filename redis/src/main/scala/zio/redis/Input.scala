@@ -474,7 +474,7 @@ object Input {
           Chunk(encodeString(data._1), encodeString("EX")) ++ DurationSecondsInput.encode(data._3)
         case Expire.SetExpireMilliseconds =>
           Chunk(encodeString(data._1), encodeString("PX")) ++ DurationMillisecondsInput.encode(data._3)
-        case _ => Chunk.empty
+        case _ => Chunk(encodeString(data._1))
       }
   }
 
@@ -485,7 +485,7 @@ object Input {
           Chunk(encodeString(data._1), encodeString("EXAT")) ++ TimeSecondsInput.encode(data._3)
         case ExpiredAt.SetExpireAtMilliseconds =>
           Chunk(encodeString(data._1), encodeString("PXAT")) ++ TimeMillisecondsInput.encode(data._3)
-        case _ => Chunk.empty
+        case _ => Chunk(encodeString(data._1))
       }
   }
 
