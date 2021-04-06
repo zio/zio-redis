@@ -1059,6 +1059,40 @@ object InputSpec extends BaseSpec {
         testM("valid value") {
           Task(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(respArgs("RANK", "10"))))
         }
+      ),
+      suite("GetEx")(
+        testM("GetExInput - valid value") {
+          for {
+            resultSeconds      <- Task(GetExInput.encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
+            resultMilliseconds <- Task(GetExInput.encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
+          } yield assert(resultSeconds)(equalTo(respArgs("key", "EX", "1"))) && assert(resultMilliseconds)(
+            equalTo(respArgs("key", "PX", "100"))
+          )
+        },
+        testM("GetExAtInput - valid value") {
+          for {
+            resultSeconds <- Task(
+                               GetExAtInput.encode(
+                                 scala.Tuple3("key", Expire.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
+                               )
+                             )
+            resultMilliseconds <-
+              Task(
+                GetExAtInput.encode(
+                  scala.Tuple3("key", Expire.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
+                )
+              )
+          } yield assert(resultSeconds)(equalTo(respArgs("key", "EXAT", "1617667200"))) && assert(resultMilliseconds)(
+            equalTo(respArgs("key", "PXAT", "1617667200000"))
+          )
+        },
+        testM("GetExPersistInput - valid value") {
+          for {
+            result              <- Task(GetExPersistInput.encode("key" -> true))
+            resultWithoutOption <- Task(GetExPersistInput.encode("key" -> false))
+          } yield assert(result)(equalTo(respArgs("key", "PERSIST"))) &&
+            assert(resultWithoutOption)(equalTo(respArgs("key")))
+        }
       )
     )
 

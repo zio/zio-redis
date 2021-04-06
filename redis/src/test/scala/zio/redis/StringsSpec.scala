@@ -1,5 +1,7 @@
 package zio.redis
 
+import java.time.Instant
+
 import zio.clock.Clock
 import zio.duration._
 import zio.redis.RedisError.{ ProtocolError, WrongType }
@@ -1434,6 +1436,92 @@ trait StringsSpec extends BaseSpec {
             _   <- sAdd(key, "a")
             len <- strLen(key).either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("getEx")(
+        testM("value exists after removing ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- pSetEx(key, 1000.millis, value)
+            exists <- getEx(key, true)
+            _      <- ZIO.sleep(1010.millis)
+            res    <- get(key)
+          } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set seconds ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx(key, Expire.SetExpireSeconds, 1.second)
+            _      <- ZIO.sleep(1020.millis)
+            res    <- get(key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set milliseconds ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx(key, Expire.SetExpireMilliseconds, 1000.millis)
+            _      <- ZIO.sleep(1020.millis)
+            res    <- get(key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set seconds timestamp") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx(key, Expire.SetExpireAtSeconds, Instant.now().plusMillis(1000))
+            _      <- ZIO.sleep(1020.millis)
+            res    <- get(key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set milliseconds timestamp") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx(key, Expire.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
+            _      <- ZIO.sleep(1020.millis)
+            res    <- get(key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("key not found") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set(key, value)
+            res   <- getEx(value, Expire.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
+            res2  <- getEx(value, Expire.SetExpireMilliseconds, 1000.millis)
+            res3  <- getEx(value, true)
+          } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))
+        } @@ eventually
+      ),
+      suite("getDel")(
+        testM("error when not string") {
+          for {
+            key <- uuid
+            _   <- sAdd(key, "a")
+            res <- getDel(key).either
+          } yield assert(res)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("key not exists") {
+          for {
+            key <- uuid
+            res <- getDel(key)
+          } yield assert(res)(equalTo(None))
+        },
+        testM("get and remove key") {
+          for {
+            key      <- uuid
+            value    <- uuid
+            _        <- set(key, value)
+            res      <- getDel(key)
+            notFound <- getDel(key)
+          } yield assert(res)(equalTo(Some(value))) && assert(notFound)(equalTo(None))
         }
       )
     )

@@ -1,5 +1,7 @@
 package zio.redis.api
 
+import java.time.Instant
+
 import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
@@ -122,6 +124,47 @@ trait Strings {
    */
   final def getSet(key: String, value: String): ZIO[RedisExecutor, RedisError, Option[String]] =
     GetSet.run((key, value))
+
+  /**
+   * Get the string value of a key and delete it on success (if and only if the key's value type is a string) 
+   *
+   * @param key Key to get the value of
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getDel(key: String): ZIO[RedisExecutor, RedisError, Option[String]] =
+    GetDel.run(key)
+
+  /**
+   * Get the value of key and set its expiration
+   *
+   * @param key Key to get the value of
+   * @param expire The option which can modify command behavior. e.g. use `Expire.SetExpireSeconds` set the specified expire time in seconds
+   * @param expireTime Time in seconds/milliseconds until the string should expire
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getEx(key: String, expire: Expire, expireTime: Duration): ZIO[RedisExecutor, RedisError, Option[String]] =
+    GetEx.run((key, expire, expireTime))
+
+  /**
+   * Get the value of key and set its expiration
+   *
+   * @param key Key to get the value of
+   * @param expire The option which can modify command behavior. e.g. use `Expire.SetExpireAtSeconds` set the specified Unix time at which the key will expire in seconds
+   * @param timestamp an absolute Unix timestamp (seconds/milliseconds since January 1, 1970)
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getEx(key: String, expire: Expire, timestamp: Instant): ZIO[RedisExecutor, RedisError, Option[String]] =
+    GetExAt.run((key, expire, timestamp))
+
+  /**
+   * Get the value of key and remove the time to live associated with the key
+   *
+   * @param key Key to get the value of
+   * @param persist if true, remove the time to live associated with the key, otherwise not
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getEx(key: String, persist: Boolean): ZIO[RedisExecutor, RedisError, Option[String]] =
+    GetExPersist.run((key, persist))
 
   /**
    * Increment the integer value of a key by one
@@ -263,6 +306,7 @@ trait Strings {
 }
 
 private[redis] object Strings {
+
   final val Append: RedisCommand[(String, String), Long] =
     RedisCommand("APPEND", Tuple2(StringInput, StringInput), LongOutput)
 
@@ -298,6 +342,18 @@ private[redis] object Strings {
 
   final val GetSet: RedisCommand[(String, String), Option[String]] =
     RedisCommand("GETSET", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
+
+  final val GetDel: RedisCommand[String, Option[String]] =
+    RedisCommand("GETDEL", StringInput, OptionalOutput(MultiStringOutput))
+
+  final val GetEx: RedisCommand[(String, Expire, Duration), Option[String]] =
+    RedisCommand("GETEX", GetExInput, OptionalOutput(MultiStringOutput))
+
+  final val GetExAt: RedisCommand[(String, Expire, Instant), Option[String]] =
+    RedisCommand("GETEX", GetExAtInput, OptionalOutput(MultiStringOutput))
+
+  final val GetExPersist: RedisCommand[(String, Boolean), Option[String]] =
+    RedisCommand("GETEX", GetExPersistInput, OptionalOutput(MultiStringOutput))
 
   final val Incr: RedisCommand[String, Long] = RedisCommand("INCR", StringInput, LongOutput)
 

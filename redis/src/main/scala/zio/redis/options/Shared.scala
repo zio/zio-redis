@@ -1,6 +1,7 @@
 package zio.redis.options
 
 trait Shared {
+
   sealed trait Update { self =>
     private[redis] final def stringify: String =
       self match {
@@ -16,6 +17,22 @@ trait Shared {
     case object SetNew         extends Update
     case object SetLessThan    extends Update
     case object SetGreaterThan extends Update
+  }
+
+  sealed trait Expire { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case Expire.SetExpireSeconds        => "EX"
+        case Expire.SetExpireMilliseconds   => "PX"
+        case Expire.SetExpireAtSeconds      => "EXAT"
+        case Expire.SetExpireAtMilliseconds => "PXAT"
+      }
+  }
+  object Expire {
+    case object SetExpireSeconds        extends Expire
+    case object SetExpireMilliseconds   extends Expire
+    case object SetExpireAtSeconds      extends Expire
+    case object SetExpireAtMilliseconds extends Expire
   }
 
   sealed case class Count(count: Long)

@@ -463,6 +463,32 @@ object Input {
     def encode(data: Update): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
 
+  case object GetExPersistInput extends Input[(String, Boolean)] {
+    override private[redis] def encode(data: (String, Boolean)): Chunk[RespValue.BulkString] =
+      if (data._2) Chunk(encodeString(data._1), encodeString("PERSIST")) else Chunk(encodeString(data._1))
+  }
+  case object GetExInput extends Input[(String, Expire, Duration)] {
+    override private[redis] def encode(data: (String, Expire, Duration)): Chunk[RespValue.BulkString] =
+      data._2 match {
+        case Expire.SetExpireSeconds =>
+          Chunk(encodeString(data._1), encodeString("EX")) ++ DurationSecondsInput.encode(data._3)
+        case Expire.SetExpireMilliseconds =>
+          Chunk(encodeString(data._1), encodeString("PX")) ++ DurationMillisecondsInput.encode(data._3)
+        case _ => Chunk.empty
+      }
+  }
+
+  case object GetExAtInput extends Input[(String, Expire, Instant)] {
+    override private[redis] def encode(data: (String, Expire, Instant)): Chunk[RespValue.BulkString] =
+      data._2 match {
+        case Expire.SetExpireAtSeconds =>
+          Chunk(encodeString(data._1), encodeString("EXAT")) ++ TimeSecondsInput.encode(data._3)
+        case Expire.SetExpireAtMilliseconds =>
+          Chunk(encodeString(data._1), encodeString("PXAT")) ++ TimeMillisecondsInput.encode(data._3)
+        case _ => Chunk.empty
+      }
+  }
+
   final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
     def encode(data: Iterable[A]): Chunk[RespValue.BulkString] =
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
