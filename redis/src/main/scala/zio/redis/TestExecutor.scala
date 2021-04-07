@@ -26,19 +26,19 @@ private[redis] final class TestExecutor private (
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
       result <- name.asString match {
-                  case api.Lists.BlPop.name =>
+                  case api.Lists.BlPop =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
 
-                  case api.Lists.BrPop.name =>
+                  case api.Lists.BrPop =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
 
-                  case api.Lists.BrPopLPush.name =>
+                  case api.Lists.BrPopLPush =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
-                  case api.Lists.BlMove.name =>
+                  case api.Lists.BlMove =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
@@ -347,7 +347,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.Ok
         )
 
-      case api.Lists.LIndex.name =>
+      case api.Lists.LIndex =>
         val key   = input.head.asString
         val index = input(1).asString.toInt
 
@@ -358,7 +358,7 @@ private[redis] final class TestExecutor private (
           } yield result.fold[RespValue](RespValue.NullBulkString)(value => RespValue.bulkString(value))
         )
 
-      case api.Lists.LInsert.name =>
+      case api.Lists.LInsert =>
         val key = input.head.asString
         val position = input(1).asString match {
           case "BEFORE" => Position.Before
@@ -401,7 +401,7 @@ private[redis] final class TestExecutor private (
           } yield result
         )
 
-      case api.Lists.LLen.name =>
+      case api.Lists.LLen =>
         val key = input.head.asString
 
         orWrongType(isList(key))(
@@ -410,7 +410,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(list.size.toLong)
         )
 
-      case api.Lists.LPush.name =>
+      case api.Lists.LPush =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -422,7 +422,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      case api.Lists.LPushX.name =>
+      case api.Lists.LPushX =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -434,7 +434,7 @@ private[redis] final class TestExecutor private (
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
-      case api.Lists.LRange.name =>
+      case api.Lists.LRange =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
         val end   = input(2).asString.toInt
@@ -446,7 +446,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(result)
         )
 
-      case api.Lists.LRem.name =>
+      case api.Lists.LRem =>
         val key     = input.head.asString
         val count   = input(1).asString.toInt
         val element = input(2).asString
@@ -463,7 +463,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer((list.size - result.size).toLong)
         )
 
-      case api.Lists.LSet.name =>
+      case api.Lists.LSet =>
         val key     = input.head.asString
         val index   = input(1).asString.toInt
         val element = input(2).asString
@@ -481,7 +481,7 @@ private[redis] final class TestExecutor private (
           } yield ()).fold(_ => RespValue.Error("ERR index out of range"), _ => RespValue.SimpleString("OK"))
         )
 
-      case api.Lists.LTrim.name =>
+      case api.Lists.LTrim =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
         val stop  = input(2).asString.toInt
@@ -500,7 +500,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.SimpleString("OK")
         )
 
-      case api.Lists.RPop.name =>
+      case api.Lists.RPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -516,7 +516,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Lists.RPopLPush.name =>
+      case api.Lists.RPopLPush =>
         val source      = input(0).asString
         val destination = input(1).asString
 
@@ -532,7 +532,7 @@ private[redis] final class TestExecutor private (
           } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
-      case api.Lists.RPush.name =>
+      case api.Lists.RPush =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -544,7 +544,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      case api.Lists.LPop.name =>
+      case api.Lists.LPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -560,7 +560,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Lists.RPushX.name =>
+      case api.Lists.RPushX =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -572,7 +572,7 @@ private[redis] final class TestExecutor private (
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
-      case api.Lists.BlPop.name =>
+      case api.Lists.BlPop =>
         val keys = input.dropRight(1).map(_.asString)
 
         orWrongType(forAll(keys)(isList))(
@@ -585,7 +585,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(Chunk(sk, sl.head))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.BrPop.name =>
+      case api.Lists.BrPop =>
         val keys = input.dropRight(1).map(_.asString)
 
         orWrongType(forAll(keys)(isList))(
@@ -598,7 +598,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(Chunk(sk, sl.last))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.BrPopLPush.name =>
+      case api.Lists.BrPopLPush =>
         val source      = input.head.asString
         val destination = input.tail.head.asString
 
@@ -615,7 +615,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.LMove.name =>
+      case api.Lists.LMove =>
         val source      = input(0).asString
         val destination = input(1).asString
         val sourceSide = input(2).asString match {
@@ -657,7 +657,7 @@ private[redis] final class TestExecutor private (
           } yield element).fold(_ => RespValue.NullBulkString, result => RespValue.bulkString(result))
         )
 
-      case api.Lists.BlMove.name =>
+      case api.Lists.BlMove =>
         val source      = input(0).asString
         val destination = input(1).asString
         val sourceSide = input(2).asString match {
@@ -699,7 +699,7 @@ private[redis] final class TestExecutor private (
           } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
-      case api.Lists.LPos.name =>
+      case api.Lists.LPos =>
         val key     = input(0).asString
         val element = input(1).asString
 
