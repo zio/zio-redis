@@ -1464,8 +1464,8 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getEx(key, Expire.SetExpireMilliseconds, 1000.millis)
-            _      <- ZIO.sleep(1020.millis)
+            exists <- getEx(key, Expire.SetExpireMilliseconds, 10.millis)
+            _      <- ZIO.sleep(20.millis)
             res    <- get(key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1474,8 +1474,8 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getExAt(key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(1000))
-            _      <- ZIO.sleep(1020.millis)
+            exists <- getExAt(key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(10))
+            _      <- ZIO.sleep(20.millis)
             res    <- get(key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1484,8 +1484,8 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getExAt(key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
-            _      <- ZIO.sleep(1020.millis)
+            exists <- getExAt(key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
+            _      <- ZIO.sleep(20.millis)
             res    <- get(key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1494,8 +1494,8 @@ trait StringsSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            res   <- getExAt(value, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(1000))
-            res2  <- getEx(value, Expire.SetExpireMilliseconds, 1000.millis)
+            res   <- getExAt(value, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
+            res2  <- getEx(value, Expire.SetExpireMilliseconds, 10.millis)
             res3  <- getEx(value, true)
           } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))
         } @@ eventually
