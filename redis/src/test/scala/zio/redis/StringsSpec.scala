@@ -1443,9 +1443,9 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             value  <- uuid
-            _      <- pSetEx(key, 1000.millis, value)
+            _      <- pSetEx(key, 10.millis, value)
             exists <- getEx(key, true)
-            _      <- ZIO.sleep(1010.millis)
+            _      <- ZIO.sleep(20.millis)
             res    <- get(key)
           } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
