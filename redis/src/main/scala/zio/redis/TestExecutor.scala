@@ -779,7 +779,7 @@ private[redis] final class TestExecutor private (
           for {
             hash       <- hashes.getOrElse(key, Map.empty)
             countExists = hash.keys count values.contains
-            newHash     = hash.removedAll(values)
+            newHash     = hash -- values
             _          <- if (newHash.isEmpty) hashes.delete(key) else hashes.put(key, newHash)
           } yield RespValue.Integer(countExists.toLong)
         )
