@@ -1306,6 +1306,38 @@ trait StreamsSpec extends BaseSpec {
             result    <- xInfoConsumers(nonStream, group).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
+      ),
+      suite("xInfoStreamFull")(
+        testM("of an existing stream") {
+          for {
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            id       <- xAdd(stream, "*", "a" -> "b")
+            _        <- xReadGroup(group, consumer)(stream -> ">")
+            result   <- xInfoStreamFull(stream)
+          } yield assert {
+            val entries       = result.entries
+            val length        = result.length
+            val consumersName = result.groups.head.consumers.head.name
+            val name          = result.groups.head.name
+            (entries, length, consumersName, name)
+          }(equalTo(Tuple4(Chunk.apply(StreamEntry(id, Map("a" -> "b"))), 1L, consumer, group)))
+        },
+        testM("error when no such key") {
+          for {
+            stream <- uuid
+            result <- xInfoStreamFull(stream).either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when not a stream") {
+          for {
+            nonStream <- uuid
+            _         <- set(nonStream, "helloworld")
+            result    <- xInfoStreamFull(nonStream).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
       )
     )
 }

@@ -1,6 +1,5 @@
 package zio.redis
 
-import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
 import zio.clock.{ Clock, currentTime }
@@ -11,7 +10,8 @@ import zio.test._
 import zio.{ Chunk, Has }
 
 trait ListSpec extends BaseSpec {
-  val listSuite: Spec[Has[RedisExecutor.Service] with Has[Clock.Service], TestFailure[Serializable], TestSuccess] =
+  val listSuite
+    : Spec[Has[Clock.Service] with Has[RedisExecutor.Service], TestFailure[java.io.Serializable], TestSuccess] =
     suite("lists")(
       suite("pop")(
         testM("lPop non-empty list") {
@@ -58,9 +58,17 @@ trait ListSpec extends BaseSpec {
       suite("push")(
         testM("lPush onto empty list") {
           for {
-            key  <- uuid
-            push <- lPush(key, "hello")
-          } yield assert(push)(equalTo(1L))
+            key   <- uuid
+            push  <- lPush(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(1L)) && assert(range)(equalTo(Chunk("hello")))
+        },
+        testM("lPush multiple elements onto empty list") {
+          for {
+            key   <- uuid
+            push  <- lPush(key, "hello", "world")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(2L)) && assert(range)(equalTo(Chunk("world", "hello")))
         },
         testM("lPush error when not list") {
           for {
@@ -72,10 +80,11 @@ trait ListSpec extends BaseSpec {
         },
         testM("lPushX onto non-empty list") {
           for {
-            key <- uuid
-            _   <- lPush(key, "world")
-            px  <- lPushX(key, "hello")
-          } yield assert(px)(equalTo(2L))
+            key   <- uuid
+            _     <- lPush(key, "world")
+            px    <- lPushX(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(px)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lPushX nothing when key doesn't exist") {
           for {
@@ -89,13 +98,21 @@ trait ListSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value)
             push  <- lPushX(key, "hello").either
-          } yield assert(push)(isLeft)
+          } yield assert(push)(isLeft(isSubtype[RedisError.WrongType](anything)))
         },
         testM("rPush onto empty list") {
           for {
-            key  <- uuid
-            push <- rPush(key, "hello")
-          } yield assert(push)(equalTo(1L))
+            key   <- uuid
+            push  <- rPush(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(1L)) && assert(range)(equalTo(Chunk("hello")))
+        },
+        testM("rPush multiple elements onto empty list") {
+          for {
+            key   <- uuid
+            push  <- rPush(key, "hello", "world")
+            range <- lRange(key, 0 to -1)
+          } yield assert(push)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("rPush error when not list") {
           for {
@@ -107,10 +124,11 @@ trait ListSpec extends BaseSpec {
         },
         testM("rPushX onto non-empty list") {
           for {
-            key <- uuid
-            _   <- rPush(key, "world")
-            px  <- rPushX(key, "hello")
-          } yield assert(px)(equalTo(2L))
+            key   <- uuid
+            _     <- rPush(key, "world")
+            px    <- rPushX(key, "hello")
+            range <- lRange(key, 0 to -1)
+          } yield assert(px)(equalTo(2L)) && assert(range)(equalTo(Chunk("world", "hello")))
         },
         testM("rPushX nothing when key doesn't exist") {
           for {
@@ -124,7 +142,7 @@ trait ListSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value)
             push  <- rPushX(key, "hello").either
-          } yield assert(push)(isLeft)
+          } yield assert(push)(isLeft(isSubtype[RedisError.WrongType](anything)))
         }
       ),
       suite("poppush")(
@@ -156,7 +174,9 @@ trait ListSpec extends BaseSpec {
             _     <- set(key, value)
             rpp   <- rPopLPush(key, dest).either
           } yield assert(rpp)(isLeft)
-        },
+        }
+      ),
+      suite("blocking poppush")(
         testM("brPopLPush") {
           for {
             key  <- uuid
@@ -349,7 +369,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 0 to 0)
-            range <- lRange(key, 0 to 1)
+            range <- lRange(key, 0 to -1)
           } yield assert(range)(equalTo(Chunk("hello")))
         },
         testM("lTrim start index out of bounds") {
@@ -534,6 +554,264 @@ trait ListSpec extends BaseSpec {
             _     <- set(key, value)
             len   <- lInsert(key, Position.After, "a", "b").either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("lMove")(
+        testM("move from source to destination left right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Left, Side.Right)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "a")))
+        },
+        testM("move from source to destination right left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Right, Side.Left)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("c", "d")))
+        },
+        testM("move from source to destination left left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Left, Side.Left)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("a", "d")))
+        },
+        testM("move from source to destination right right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- lMove(source, destination, Side.Right, Side.Right)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "c")))
+        },
+        testM("move from source to source left right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Left, Side.Right)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c", "a")))
+        },
+        testM("move from source to source right left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Right, Side.Left)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("c", "a", "b")))
+        },
+        testM("move from source to source left left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Left, Side.Left)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("move from source to source right right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- lMove(source, source, Side.Right, Side.Right)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("return nil when source dose not exist") {
+          for {
+            source      <- uuid
+            destination <- uuid
+            _           <- rPush(destination, "d")
+            moved       <- lMove(source, destination, Side.Left, Side.Right)
+          } yield assert(moved)(isNone)
+        }
+      ),
+      suite("blMove")(
+        testM("move from source to destination left right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Left, Side.Right, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "a")))
+        },
+        testM("move from source to destination right left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Right, Side.Left, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("c", "d")))
+        },
+        testM("move from source to destination left left") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Left, Side.Left, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
+            assert(destinationRange)(equalTo(Chunk("a", "d")))
+        },
+        testM("move from source to destination right right") {
+          for {
+            source           <- uuid
+            destination      <- uuid
+            _                <- rPush(source, "a", "b", "c")
+            _                <- rPush(destination, "d")
+            moved            <- blMove(source, destination, Side.Right, Side.Right, 1.second)
+            sourceRange      <- lRange(source, 0 to -1)
+            destinationRange <- lRange(destination, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
+            assert(destinationRange)(equalTo(Chunk("d", "c")))
+        },
+        testM("move from source to source left right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Left, Side.Right, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("b", "c", "a")))
+        },
+        testM("move from source to source right left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Right, Side.Left, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("c", "a", "b")))
+        },
+        testM("move from source to source left left") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Left, Side.Left, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("a"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("move from source to source right right") {
+          for {
+            source      <- uuid
+            _           <- rPush(source, "a", "b", "c")
+            moved       <- blMove(source, source, Side.Right, Side.Right, 1.second)
+            sourceRange <- lRange(source, 0 to -1)
+          } yield assert(moved)(isSome(equalTo("c"))) &&
+            assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
+        },
+        testM("block until timeout reached and return nil") {
+          for {
+            source      <- uuid
+            destination <- uuid
+            _           <- rPush(destination, "d")
+            startTime   <- currentTime(TimeUnit.SECONDS)
+            moved       <- blMove(source, destination, Side.Left, Side.Right, 1.second)
+            endTime     <- currentTime(TimeUnit.SECONDS)
+          } yield assert(moved)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
+        }
+      ),
+      suite("lPos")(
+        testM("find index of element") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPos(key, "3")
+          } yield assert(idx)(isSome(equalTo(6L)))
+        },
+        testM("don't find index of element") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPos(key, "unknown")
+          } yield assert(idx)(isNone)
+        },
+        testM("find index of element with positive rank") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPos(key, "3", rank = Some(Rank(2)))
+          } yield assert(idx)(isSome(equalTo(8L)))
+        },
+        testM("find index of element with negative rank") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPos(key, "3", rank = Some(Rank(-1)))
+          } yield assert(idx)(isSome(equalTo(10L)))
+        },
+        testM("find index of element with maxLen") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPos(key, "3", maxLen = Some(ListMaxLen(8)))
+          } yield assert(idx)(isSome(equalTo(6L)))
+        },
+        testM("don't find index of element with maxLen") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPos(key, "3", maxLen = Some(ListMaxLen(5)))
+          } yield assert(idx)(isNone)
+        }
+      ),
+      suite("lPosCount")(
+        testM("find index of element with rank and count") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPosCount(key, "3", Count(2), rank = Some(Rank(2)))
+          } yield assert(idx)(equalTo(Chunk(8L, 9L)))
+        },
+        testM("find index of element with negative rank and count") {
+          for {
+            key <- uuid
+            _   <- rPush(key, "a", "b", "c", "d", "1", "2", "3", "4", "3", "3", "3")
+            idx <- lPosCount(key, "3", Count(2), rank = Some(Rank(-3)))
+          } yield assert(idx)(equalTo(Chunk(8L, 6L)))
         }
       )
     )

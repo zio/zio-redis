@@ -1,7 +1,5 @@
 package zio.redis
 
-import scala.util.matching.Regex
-
 import zio.redis.RedisError.WrongType
 import zio.stream.ZStream
 import zio.test.Assertion._
@@ -56,7 +54,10 @@ trait SetsSpec extends BaseSpec {
           } yield assert(card)(equalTo(1L))
         },
         testM("0 when key doesn't exist") {
-          assertM(sCard("unknown"))(equalTo(0L))
+          for {
+            unknown <- uuid
+            card    <- sCard(unknown)
+          } yield assert(card)(equalTo(0L))
         },
         testM("error when not set") {
           for {
@@ -756,7 +757,7 @@ trait SetsSpec extends BaseSpec {
           for {
             key     <- uuid
             _       <- sAdd(key, testData.head, testData.tail: _*)
-            members <- scanAll(key, Some("t[a-z]*".r))
+            members <- scanAll(key, Some("t[a-z]*"))
           } yield assert(members.toSet)(equalTo(Set("two", "three")))
         },
         testM("with count over non-empty set") {
@@ -777,14 +778,15 @@ trait SetsSpec extends BaseSpec {
         }
       )
     )
+
   private def scanAll(
     key: String,
-    regex: Option[Regex] = None,
+    pattern: Option[String] = None,
     count: Option[Count] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
-        sScan(key, cursor, regex, count).map {
+        sScan(key, cursor, pattern, count).map {
           case (nc, nm) if nc == 0 => (nm, None)
           case (nc, nm)            => (nm, Some(nc))
         }

@@ -38,7 +38,7 @@ lazy val redis =
     .settings(
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
-        "dev.zio" %% "zio-logging"  % "0.5.6",
+        "dev.zio" %% "zio-logging"  % "0.5.8",
         "dev.zio" %% "zio-test"     % Zio % Test,
         "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
@@ -53,7 +53,7 @@ lazy val benchmarks =
     .settings(
       skip in publish := true,
       libraryDependencies ++= Seq(
-        "dev.profunktor"    %% "redis4cats-effects" % "0.12.0",
+        "dev.profunktor"    %% "redis4cats-effects" % "0.13.1",
         "io.chrisdavenport" %% "rediculous"         % "0.0.12",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
@@ -70,7 +70,7 @@ lazy val example =
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
-        "de.heikoseeberger"            %% "akka-http-circe"               % "1.35.3",
+        "de.heikoseeberger"            %% "akka-http-circe"               % "1.36.0",
         "dev.zio"                      %% "zio-streams"                   % Zio,
         "dev.zio"                      %% "zio-config-magnolia"           % "1.0.2",
         "dev.zio"                      %% "zio-config-typesafe"           % "1.0.2",

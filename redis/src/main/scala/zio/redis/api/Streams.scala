@@ -49,6 +49,30 @@ trait Streams {
     XInfoStream.run(XInfoCommand.Stream(key))
 
   /**
+   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
+   *
+   * @param key ID of the stream
+   * @return General information about the stream stored at the specified key.
+   */
+  final def xInfoStreamFull(
+    key: String
+  ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo] =
+    XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(None))))
+
+  /**
+   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
+   *
+   * @param key ID of the stream
+   * @param count limit the amount of stream/PEL entries that are returned (The first <count> entries are returned).
+   * @return General information about the stream stored at the specified key.
+   */
+  final def xInfoStreamFull(
+    key: String,
+    count: Long
+  ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo] =
+    XInfoStreamFull.run(XInfoCommand.Stream(key, Some(XInfoCommand.Full(Some(count)))))
+
+  /**
    * An introspection command used in order to retrieve different information about the group.
    *
    * @param key ID of the stream
@@ -82,7 +106,7 @@ trait Streams {
     pair: (String, String),
     pairs: (String, String)*
   ): ZIO[RedisExecutor, RedisError, String] =
-    XAdd.run((key, Some(MaxLen(approximate, count)), id, (pair, pairs.toList)))
+    XAdd.run((key, Some(StreamMaxLen(approximate, count)), id, (pair, pairs.toList)))
 
   /**
    * Changes the ownership of a pending message.
@@ -404,7 +428,7 @@ trait Streams {
    * @return the number of entries deleted from the stream.
    */
   final def xTrim(key: String, count: Long, approximate: Boolean = false): ZIO[RedisExecutor, RedisError, Long] =
-    XTrim.run((key, MaxLen(approximate, count)))
+    XTrim.run((key, StreamMaxLen(approximate, count)))
 }
 
 private object Streams {
@@ -412,10 +436,16 @@ private object Streams {
   final val XAck: RedisCommand[(String, String, (String, List[String])), Long] =
     RedisCommand("XACK", Tuple3(StringInput, StringInput, NonEmptyList(StringInput)), LongOutput)
 
-  final val XAdd: RedisCommand[(String, Option[MaxLen], String, ((String, String), List[(String, String)])), String] =
+  final val XAdd
+    : RedisCommand[(String, Option[StreamMaxLen], String, ((String, String), List[(String, String)])), String] =
     RedisCommand(
       "XADD",
-      Tuple4(StringInput, OptionalInput(MaxLenInput), StringInput, NonEmptyList(Tuple2(StringInput, StringInput))),
+      Tuple4(
+        StringInput,
+        OptionalInput(StreamMaxLenInput),
+        StringInput,
+        NonEmptyList(Tuple2(StringInput, StringInput))
+      ),
       MultiStringOutput
     )
 
@@ -496,6 +526,9 @@ private object Streams {
   final val XGroupDelConsumer: RedisCommand[XGroupCommand.DelConsumer, Long] =
     RedisCommand("XGROUP", XGroupDelConsumerInput, LongOutput)
 
+  final val XInfoStreamFull: RedisCommand[XInfoCommand.Stream, StreamInfoWithFull.FullStreamInfo] =
+    RedisCommand("XINFO", XInfoStreamInput, StreamInfoFullOutput)
+
   final val XInfoStream: RedisCommand[XInfoCommand.Stream, StreamInfo] =
     RedisCommand("XINFO", XInfoStreamInput, StreamInfoOutput)
 
@@ -547,6 +580,6 @@ private object Streams {
   final val XRevRange: RedisCommand[(String, String, String, Option[Count]), Map[String, Map[String, String]]] =
     RedisCommand("XREVRANGE", Tuple4(StringInput, StringInput, StringInput, OptionalInput(CountInput)), StreamOutput)
 
-  final val XTrim: RedisCommand[(String, MaxLen), Long] =
-    RedisCommand("XTRIM", Tuple2(StringInput, MaxLenInput), LongOutput)
+  final val XTrim: RedisCommand[(String, StreamMaxLen), Long] =
+    RedisCommand("XTRIM", Tuple2(StringInput, StreamMaxLenInput), LongOutput)
 }

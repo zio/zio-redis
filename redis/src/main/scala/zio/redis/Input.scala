@@ -3,8 +3,6 @@ package zio.redis
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import scala.util.matching.Regex
-
 import zio.Chunk
 import zio.duration.Duration
 
@@ -99,12 +97,26 @@ object Input {
       Chunk(encodeString("COUNT"), encodeString(data.count.toString))
   }
 
+  case object RedisTypeInput extends Input[RedisType] {
+    def encode(data: RedisType): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("TYPE"), encodeString(data.stringify))
+  }
+
+  case object PatternInput extends Input[Pattern] {
+    def encode(data: Pattern): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("MATCH"), encodeString(data.pattern))
+  }
+
   case object GetInput extends Input[String] {
     def encode(data: String): Chunk[RespValue.BulkString] = Chunk(encodeString("GET"), encodeString(data))
   }
 
   case object PositionInput extends Input[Position] {
     def encode(data: Position): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
+  }
+
+  case object SideInput extends Input[Side] {
+    def encode(data: Side): Chunk[RespValue.BulkString] = Chunk.single(encodeString(data.stringify))
   }
 
   case object DoubleInput extends Input[Double] {
@@ -190,10 +202,6 @@ object Input {
   case object RangeInput extends Input[Range] {
     def encode(data: Range): Chunk[RespValue.BulkString] =
       Chunk(encodeString(data.start.toString), encodeString(data.end.toString))
-  }
-
-  case object RegexInput extends Input[Regex] {
-    def encode(data: Regex): Chunk[RespValue.BulkString] = Chunk(encodeString("MATCH"), encodeString(data.regex))
   }
 
   case object ReplaceInput extends Input[Replace] {
@@ -300,9 +308,18 @@ object Input {
 
   case object XInfoStreamInput extends Input[XInfoCommand.Stream] {
     def encode(data: XInfoCommand.Stream): Chunk[RespValue.BulkString] =
-      Chunk(encodeString("STREAM"), encodeString(data.key))
+      data.full.fold(Chunk(encodeString("STREAM"), encodeString(data.key))) { f =>
+        f.count.fold(Chunk(encodeString("STREAM"), encodeString(data.key), encodeString("FULL"))) { c =>
+          Chunk(
+            encodeString("STREAM"),
+            encodeString(data.key),
+            encodeString("FULL"),
+            encodeString("COUNT"),
+            encodeString(c.toString)
+          )
+        }
+      }
   }
-
   case object XInfoGroupsInput extends Input[XInfoCommand.Groups] {
     def encode(data: XInfoCommand.Groups): Chunk[RespValue.BulkString] =
       Chunk(encodeString("GROUPS"), encodeString(data.key))
@@ -337,8 +354,8 @@ object Input {
       Chunk.single(encodeString(data.stringify))
   }
 
-  case object MaxLenInput extends Input[MaxLen] {
-    def encode(data: MaxLen): Chunk[RespValue.BulkString] = {
+  case object StreamMaxLenInput extends Input[StreamMaxLen] {
+    def encode(data: StreamMaxLen): Chunk[RespValue.BulkString] = {
       val chunk =
         if (data.approximate)
           Chunk(encodeString("MAXLEN"), encodeString("~"))
@@ -347,6 +364,16 @@ object Input {
 
       chunk :+ encodeString(data.count.toString)
     }
+  }
+
+  case object ListMaxLenInput extends Input[ListMaxLen] {
+    override def encode(data: ListMaxLen): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("MAXLEN"), encodeString(data.count.toString))
+  }
+
+  case object RankInput extends Input[Rank] {
+    override def encode(data: Rank): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("RANK"), encodeString(data.rank.toString))
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {

@@ -114,6 +114,26 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(equalTo(num))
         }
       ),
+      suite("chunkLong")(
+        testM("extract empty array") {
+          for {
+            res <- Task(ChunkLongOutput.unsafeDecode(RespValue.NullArray))
+          } yield assert(res)(equalTo(Chunk.empty))
+        },
+        testM("extract array of long values") {
+          val respArray = RespValue.array(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L))
+          for {
+            res <- Task(ChunkLongOutput.unsafeDecode(respArray))
+          } yield assert(res)(equalTo(Chunk(1L, 2L, 3L)))
+        },
+        testM("fail when one value is not a long") {
+          val respArray =
+            RespValue.array(RespValue.Integer(1L), RespValue.bulkString("not a long"), RespValue.Integer(3L))
+          for {
+            res <- Task(ChunkLongOutput.unsafeDecode(respArray)).run
+          } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
+        }
+      ),
       suite("optional")(
         testM("extract None") {
           for {
@@ -514,7 +534,6 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("2-0"),
               RespValue.bulkString("first-entry"),
               RespValue.array(
-                RespValue.bulkString("id"),
                 RespValue.bulkString("1-0"),
                 RespValue.array(
                   RespValue.bulkString("key1"),
@@ -523,7 +542,6 @@ object OutputSpec extends BaseSpec {
               ),
               RespValue.bulkString("last-entry"),
               RespValue.array(
-                RespValue.bulkString("id"),
                 RespValue.bulkString("2-0"),
                 RespValue.array(
                   RespValue.bulkString("key2"),
@@ -639,6 +657,178 @@ object OutputSpec extends BaseSpec {
             val resp = RespValue.array()
 
             assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
+          }
+        ),
+        suite("xInfoStreamFull")(
+          testM("extract a valid value without groups") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0"),
+              RespValue.bulkString("entries"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("3-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                ),
+                RespValue.array(
+                  RespValue.bulkString("4-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                )
+              )
+            )
+
+            assertM(Task(StreamInfoFullOutput.unsafeDecode(resp)))(
+              equalTo(
+                StreamInfoWithFull.FullStreamInfo(
+                  1,
+                  2,
+                  3,
+                  "0-0",
+                  Chunk(StreamEntry("3-0", Map("key1" -> "value1")), StreamEntry("4-0", Map("key1" -> "value1"))),
+                  Chunk.empty
+                )
+              )
+            )
+          },
+          testM("extract a valid value without groups and entries") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0")
+            )
+            assertM(Task(StreamInfoFullOutput.unsafeDecode(resp)))(
+              equalTo(
+                StreamInfoWithFull.FullStreamInfo(1, 2, 3, "0-0", Chunk.empty, Chunk.empty)
+              )
+            )
+          },
+          testM("extract an empty array") {
+            val resp = RespValue.array()
+            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
+          },
+          testM("extract a valid value with groups") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0"),
+              RespValue.bulkString("entries"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("3-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                ),
+                RespValue.array(
+                  RespValue.bulkString("4-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                )
+              ),
+              RespValue.bulkString("groups"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("name"),
+                  RespValue.bulkString("name1"),
+                  RespValue.bulkString("last-delivered-id"),
+                  RespValue.bulkString("lastDeliveredId"),
+                  RespValue.bulkString("pel-count"),
+                  RespValue.Integer(1),
+                  RespValue.bulkString("pending"),
+                  RespValue.array(
+                    RespValue.array(
+                      RespValue.bulkString("entryId1"),
+                      RespValue.bulkString("consumerName1"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.Integer(1)
+                    ),
+                    RespValue.array(
+                      RespValue.bulkString("entryId2"),
+                      RespValue.bulkString("consumerName2"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.Integer(1)
+                    )
+                  ),
+                  RespValue.bulkString("consumers"),
+                  RespValue.array(
+                    RespValue.array(
+                      RespValue.bulkString("name"),
+                      RespValue.bulkString("Alice"),
+                      RespValue.bulkString("seen-time"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.bulkString("pel-count"),
+                      RespValue.Integer(1),
+                      RespValue.bulkString("pending"),
+                      RespValue.array(
+                        RespValue.array(
+                          RespValue.bulkString("entryId3"),
+                          RespValue.Integer(1588152520299L),
+                          RespValue.Integer(1)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+
+            assertM(Task(StreamInfoFullOutput.unsafeDecode(resp)))(
+              equalTo(
+                StreamInfoWithFull.FullStreamInfo(
+                  1,
+                  2,
+                  3,
+                  "0-0",
+                  Chunk(StreamEntry("3-0", Map("key1" -> "value1")), StreamEntry("4-0", Map("key1" -> "value1"))),
+                  Chunk(
+                    StreamInfoWithFull.ConsumerGroups(
+                      "name1",
+                      "lastDeliveredId",
+                      1,
+                      Chunk(
+                        StreamInfoWithFull.GroupPel("entryId1", "consumerName1", 1588152520299L.millis, 1L),
+                        StreamInfoWithFull.GroupPel("entryId2", "consumerName2", 1588152520299L.millis, 1L)
+                      ),
+                      Chunk(
+                        StreamInfoWithFull.Consumers(
+                          "Alice",
+                          1588152520299L.millis,
+                          1,
+                          Chunk(
+                            StreamInfoWithFull.ConsumerPel("entryId3", 1588152520299L.millis, 1)
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
           }
         )
       )
