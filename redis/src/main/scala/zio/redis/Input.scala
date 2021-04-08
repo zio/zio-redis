@@ -36,6 +36,24 @@ object Input {
     def encode(data: Boolean): Chunk[RespValue.BulkString] = Chunk.single(encodeString(if (data) "1" else "0"))
   }
 
+  case object StralgoCommandInput extends Input[StrAlgoLCS] {
+    override private[redis] def encode(data: StrAlgoLCS) = Chunk(encodeString("LCS"), encodeString(data.stringify))
+  }
+
+  case object StralgoLcsQueryTypeInput extends Input[StrAlgoLcsQueryType] {
+    override private[redis] def encode(data: StrAlgoLcsQueryType) = data match {
+      case StrAlgoLcsQueryType.Len => Chunk.single(encodeString("LEN"))
+      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) => {
+        val idx = Chunk.single(encodeString("IDX"))
+        val min =
+          if (minMatchLength > 1) Chunk(encodeString("MINMATCHLEN"), encodeString(minMatchLength.toString))
+          else Chunk.empty
+        val length = if (withMatchLength) Chunk.single(encodeString("WITHMATCHLEN")) else Chunk.empty
+        Chunk(idx, min, length).flatten
+      }
+    }
+  }
+
   case object BitFieldCommandInput extends Input[BitFieldCommand] {
     def encode(data: BitFieldCommand): Chunk[RespValue.BulkString] = {
       import BitFieldCommand._

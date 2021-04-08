@@ -288,6 +288,213 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
       ),
+      suite("Stralgo")(
+        testM("get LCS from 2 strings") {
+          val str1 = "foo"
+          val str2 = "fao"
+          assertM(stralgoLcs(StralgoLCS.Strings, str1, str2))(
+            equalTo(LcsOutput.Lcs("fo"))
+          )
+        },
+        testM("get LCS from 2 keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1   <- uuid
+            _      <- set(key1, str1, None, None, None)
+            key2   <- uuid
+            _      <- set(key2, str2, None, None, None)
+            result <- stralgoLcs(StralgoLCS.Keys, key1, key2)
+          } yield assert(result)(equalTo(LcsOutput.Lcs("fo")))
+        },
+        testM("get LCS from unknown keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1   <- uuid
+            _      <- set(key1, str1, None, None, None)
+            key2   <- uuid
+            _      <- set(key2, str2, None, None, None)
+            result <- stralgoLcs(StralgoLCS.Keys, "unknown", "unknown")
+          } yield assert(result)(equalTo(LcsOutput.Lcs("")))
+        },
+        testM("Get length of LCS for strings") {
+          val str1 = "foo"
+          val str2 = "fao"
+          assertM(
+            stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Len))
+          )(
+            equalTo(LcsOutput.Length(2))
+          )
+        },
+        testM("get length of LCS for keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1, None, None, None)
+            key2 <- uuid
+            _    <- set(key2, str2, None, None, None)
+            result <-
+              stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Len))
+          } yield assert(result)(equalTo(LcsOutput.Length(2)))
+        },
+        testM("get length of LCS for unknown keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1, None, None, None)
+            key2 <- uuid
+            _    <- set(key2, str2, None, None, None)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                "unknown",
+                "unknown",
+                Some(StrAlgoLcsQueryType.Len)
+              )
+          } yield assert(result)(equalTo(LcsOutput.Length(0)))
+        },
+        testM("get index of LCS for strings") {
+          val str1 = "ohmytext"
+          val str2 = "mynewtext"
+          assertM(
+            stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Idx()))
+          )(
+            equalTo(
+              LcsOutput.Matches(
+                List(
+                  Match(matchIdxA = MatchIdx(4, 7), matchIdxB = MatchIdx(5, 8)),
+                  Match(matchIdxA = MatchIdx(2, 3), matchIdxB = MatchIdx(0, 1))
+                ),
+                6
+              )
+            )
+          )
+        },
+        testM("get index of LCS for keys") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Idx()))
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2)),
+                    Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        },
+        testM("get index of LCS for keys with MINMATCHLEN") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                key1,
+                key2,
+                Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2))
+              )
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        },
+        testM("get index of LCS for keys with WITHMATCHLEN") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                key1,
+                key2,
+                Some(StrAlgoLcsQueryType.Idx(withMatchLength = true))
+              )
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2)),
+                    Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0), matchLength = Some(1))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        },
+        testM("get index of LCS for keys with MINMATCHLEN and WITHMATCHLEN") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                key1,
+                key2,
+                Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2, withMatchLength = true))
+              )
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        }
+      ),
       suite("bitOp")(
         testM("AND over multiple non-empty strings") {
           for {
