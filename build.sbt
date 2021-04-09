@@ -73,7 +73,7 @@ lazy val example =
         "de.heikoseeberger"            %% "akka-http-circe"               % "1.36.0",
         "dev.zio"                      %% "zio-streams"                   % Zio,
         "dev.zio"                      %% "zio-config-magnolia"           % "1.0.2",
-        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.3",
+        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.4",
         "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC3",
         "io.circe"                     %% "circe-core"                    % "0.13.0",
         "io.circe"                     %% "circe-generic"                 % "0.13.0",
