@@ -4,7 +4,7 @@ import java.time.Instant
 
 import zio.duration._
 import zio.redis.Input._
-import zio.redis.Output._
+import zio.redis.Output.{ Tuple2Output, _ }
 import zio.redis._
 import zio.schema.Schema
 import zio.{ Chunk, ZIO }
@@ -277,16 +277,16 @@ trait Keys {
    * @param `type` type option, filter to only return objects that match a given type
    * @return returns an updated cursor that the user needs to use as the cursor argument in the next call along with the values
    */
-  final def scan(
+  final def scan[K: Schema](
     cursor: Long,
     pattern: Option[String] = None,
     count: Option[Count] = None,
     `type`: Option[RedisType] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[String])] = {
+  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[K])] = {
     val command = RedisCommand(
       Scan,
       Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
-      ScanOutput(MultiStringOutput)
+      Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
     )
     command.run((cursor, pattern.map(Pattern), count, `type`))
   }

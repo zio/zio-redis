@@ -356,47 +356,74 @@ object InputSpec extends BaseSpec {
       suite("LexRange")(
         testM("with unbound min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "+")))
         },
         testM("with open min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "+")))
         },
         testM("with closed min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "+")))
         },
         testM("with unbound min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "(z")))
         },
         testM("with open min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "(z")))
         },
         testM("with closed min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "(z")))
         },
         testM("with unbound min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "[z")))
         },
         testM("with open min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "[z")))
         },
         testM("with closed min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "[z")))
         }
       ),
@@ -604,47 +631,74 @@ object InputSpec extends BaseSpec {
       suite("ScoreRange")(
         testM("with infinite min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "+inf")))
         },
         testM("with open min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "+inf")))
         },
         testM("with closed min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "+inf")))
         },
         testM("with infinite min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "(5.2")))
         },
         testM("with open min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "(5.2")))
         },
         testM("with closed min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "(5.2")))
         },
         testM("with infinite min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "5.2")))
         },
         testM("with open min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "5.2")))
         },
         testM("with closed min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "5.2")))
         }
       ),

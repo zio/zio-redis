@@ -171,6 +171,15 @@ object Output {
       }
   }
 
+  final case class Tuple3Output[+A, +B, +C](_1: Output[A], _2: Output[B], _3: Output[C]) extends Output[(A, B, C)] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): (A, B, C) =
+      respValue match {
+        case RespValue.ArrayValues(a: RespValue, b: RespValue, c: RespValue) =>
+          (_1.tryDecode(a), _2.tryDecode(b), _3.tryDecode(c))
+        case other => throw ProtocolError(s"$other isn't a tuple3")
+      }
+  }
+
   case object SingleOrMultiStringOutput extends Output[String] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): String =
       respValue match {

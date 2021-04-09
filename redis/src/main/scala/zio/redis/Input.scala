@@ -161,11 +161,6 @@ object Input {
       Chunk.single(encodeString(data.stringify))
   }
 
-  case object LexRangeInput extends Input[LexRange] {
-    def encode(data: LexRange)(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      Chunk(encodeString(data.min.stringify), encodeString(data.max.stringify))
-  }
-
   case object LimitInput extends Input[Limit] {
     def encode(data: Limit)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("LIMIT"), encodeString(data.offset.toString), encodeString(data.count.toString))
@@ -223,11 +218,6 @@ object Input {
   case object StoreInput extends Input[Store] {
     def encode(data: Store)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("STORE"), encodeString(data.key))
-  }
-
-  case object ScoreRangeInput extends Input[ScoreRange] {
-    def encode(data: ScoreRange)(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      Chunk(encodeString(data.min.stringify), encodeString(data.max.stringify))
   }
 
   case object StringInput extends Input[String] {
