@@ -775,7 +775,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.Hashes.HDel.name =>
+      case api.Hashes.HDel =>
         val key    = input(0).asString
         val values = input.tail.map(_.asString)
 
@@ -788,7 +788,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(countExists.toLong)
         )
 
-      case api.Hashes.HExists.name =>
+      case api.Hashes.HExists =>
         val key   = input(0).asString
         val field = input(1).asString
 
@@ -799,7 +799,7 @@ private[redis] final class TestExecutor private (
           } yield if (exists) RespValue.Integer(1L) else RespValue.Integer(0L)
         )
 
-      case api.Hashes.HGet.name =>
+      case api.Hashes.HGet =>
         val key   = input(0).asString
         val field = input(1).asString
 
@@ -810,7 +810,7 @@ private[redis] final class TestExecutor private (
           } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
-      case api.Hashes.HGetAll.name =>
+      case api.Hashes.HGetAll =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -820,7 +820,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(results))
         )
 
-      case api.Hashes.HIncrBy.name =>
+      case api.Hashes.HIncrBy =>
         val key   = input(0).asString
         val field = input(1).asString
         val incr  = input(2).asString.toLong
@@ -834,7 +834,7 @@ private[redis] final class TestExecutor private (
           } yield newValue).fold(_ => Replies.Error, result => RespValue.Integer(result))
         )
 
-      case api.Hashes.HIncrByFloat.name =>
+      case api.Hashes.HIncrByFloat =>
         val key   = input(0).asString
         val field = input(1).asString
         val incr  = input(2).asString.toDouble
@@ -848,7 +848,7 @@ private[redis] final class TestExecutor private (
           } yield newValue).fold(_ => Replies.Error, result => RespValue.bulkString(result.toString))
         )
 
-      case api.Hashes.HKeys.name =>
+      case api.Hashes.HKeys =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -857,7 +857,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(hash.keys map RespValue.bulkString))
         )
 
-      case api.Hashes.HLen.name =>
+      case api.Hashes.HLen =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -866,7 +866,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(hash.size.toLong)
         )
 
-      case api.Hashes.HmGet.name =>
+      case api.Hashes.HmGet =>
         val key    = input(0).asString
         val fields = input.tail.map(_.asString)
 
@@ -880,7 +880,7 @@ private[redis] final class TestExecutor private (
           })
         )
 
-      case api.Hashes.HmSet.name =>
+      case api.Hashes.HmSet =>
         val key    = input(0).asString
         val values = input.tail.map(_.asString)
 
@@ -892,7 +892,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.Ok
         )
 
-      case api.Hashes.HScan.name =>
+      case api.Hashes.HScan =>
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
@@ -925,7 +925,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Hashes.HSet.name =>
+      case api.Hashes.HSet =>
         val key    = input(0).asString
         val values = input.tail.map(_.asString)
 
@@ -937,7 +937,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newHash.size.toLong - hash.size.toLong)
         )
 
-      case api.Hashes.HSetNx.name =>
+      case api.Hashes.HSetNx =>
         val key   = input(0).asString
         val field = input(1).asString
         val value = input(2).asString
@@ -951,7 +951,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(if (contains) 0L else 1L)
         )
 
-      case api.Hashes.HStrLen.name =>
+      case api.Hashes.HStrLen =>
         val key   = input(0).asString
         val field = input(1).asString
 
@@ -962,7 +962,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(len)
         )
 
-      case api.Hashes.HVals.name =>
+      case api.Hashes.HVals =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(

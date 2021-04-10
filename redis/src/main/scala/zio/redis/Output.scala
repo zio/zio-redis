@@ -648,7 +648,7 @@ object Output {
   }
 
   case object StrAlgoLcsOutput extends Output[LcsOutput] {
-    protected def tryDecode(respValue: RespValue): LcsOutput =
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): LcsOutput =
       respValue match {
         case result @ RespValue.BulkString(_) => LcsOutput.Lcs(result.asString)
         case RespValue.Integer(length)        => LcsOutput.Length(length)

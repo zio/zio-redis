@@ -9,7 +9,6 @@ import zio.test._
 import zio.{ Chunk, Task }
 
 object InputSpec extends BaseSpec {
-  import StralgoLCS._
   import StrAlgoLcsQueryType._
   import BitFieldCommand._
   import BitFieldType._
@@ -75,16 +74,6 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Stralgocommand")(
-        test("lcs keys") {
-          assert(StralgoCommandInput.encode(Keys))(
-            equalTo(respArgs("LCS", "KEYS"))
-          )
-        },
-        test("lcs strings") {
-          assert(StralgoCommandInput.encode(Strings))(
-            equalTo(respArgs("LCS", "STRINGS"))
-          )
-        },
         test("length option") {
           assert(StralgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
             equalTo(respArgs("LEN"))

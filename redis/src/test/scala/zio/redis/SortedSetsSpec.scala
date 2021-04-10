@@ -134,7 +134,7 @@ trait SortedSetsSpec extends BaseSpec {
             _      <- zAdd(key)(MemberScore(3d, "v1"))
             _      <- zAdd(key)(MemberScore(4d, "v2"))
             added  <- zAdd(key, update = Some(Update.SetLessThan))(MemberScore(1d, "v3"), MemberScore(2d, "v1"))
-            result <- zRange(key, 0 to -1)
+            result <- zRange[String, String](key, 0 to -1)
           } yield assert(added)(equalTo(1L)) &&
             assert(result.toList)(equalTo(List("v3", "v1", "v2")))
         },
@@ -144,7 +144,7 @@ trait SortedSetsSpec extends BaseSpec {
             _      <- zAdd(key)(MemberScore(1d, "v1"))
             _      <- zAdd(key)(MemberScore(2d, "v2"))
             added  <- zAdd(key, update = Some(Update.SetGreaterThan))(MemberScore(1d, "v3"), MemberScore(3d, "v1"))
-            result <- zRange(key, 0 to -1)
+            result <- zRange[String, String](key, 0 to -1)
           } yield assert(added)(equalTo(1L)) &&
             assert(result.toList)(equalTo(List("v3", "v2", "v1")))
         },
@@ -157,7 +157,7 @@ trait SortedSetsSpec extends BaseSpec {
                        MemberScore(1d, "v3"),
                        MemberScore(3d, "v1")
                      )
-            result <- zRange(key, 0 to -1)
+            result <- zRange[String, String](key, 0 to -1)
           } yield assert(added)(equalTo(2L)) &&
             assert(result.toList)(equalTo(List("v3", "v2", "v1")))
         },
