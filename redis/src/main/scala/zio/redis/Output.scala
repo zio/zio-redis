@@ -647,6 +647,37 @@ object Output {
       }
   }
 
+  case object StrAlgoLcsOutput extends Output[LcsOutput] {
+    protected def tryDecode(respValue: RespValue): LcsOutput =
+      respValue match {
+        case result @ RespValue.BulkString(_) => LcsOutput.Lcs(result.asString)
+        case RespValue.Integer(length)        => LcsOutput.Length(length)
+        case RespValue.ArrayValues(
+              RespValue.BulkString(_),
+              RespValue.Array(items),
+              RespValue.BulkString(_),
+              RespValue.Integer(length)
+            ) =>
+          val matches = items.map {
+            case RespValue.Array(array) =>
+              val matchIdxs = array.collect { case RespValue.Array(values) =>
+                val idxs = values.map {
+                  case RespValue.Integer(value) => value
+                  case other                    => throw ProtocolError(s"$other isn't a valid response")
+                }
+                if (idxs.size == 2)
+                  MatchIdx(idxs.head, idxs(1))
+                else throw ProtocolError(s"Response contains illegal number of indices for a match: ${idxs.size}")
+              }
+              val matchLength = array.collectFirst { case RespValue.Integer(value) => value }
+              Match(matchIdxs(0), matchIdxs(1), matchLength)
+            case other => throw ProtocolError(s"$other isn't a valid response")
+          }
+          LcsOutput.Matches(matches.toList, length)
+        case other => throw ProtocolError(s"$other isn't a valid set response")
+      }
+  }
+
   private def decodeDouble(bytes: Chunk[Byte]): Double = {
     val text = RespValue.decode(bytes)
     try text.toDouble

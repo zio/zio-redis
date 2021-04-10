@@ -128,6 +128,39 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(added)(equalTo(2L)) &&
             assert(result.toList)(equalTo(List("v2", "v3", "v1")))
         },
+        testM("LT - return number of new members") {
+          for {
+            key    <- uuid
+            _      <- zAdd(key)(MemberScore(3d, "v1"))
+            _      <- zAdd(key)(MemberScore(4d, "v2"))
+            added  <- zAdd(key, update = Some(Update.SetLessThan))(MemberScore(1d, "v3"), MemberScore(2d, "v1"))
+            result <- zRange(key, 0 to -1)
+          } yield assert(added)(equalTo(1L)) &&
+            assert(result.toList)(equalTo(List("v3", "v1", "v2")))
+        },
+        testM("GT - return number of new members") {
+          for {
+            key    <- uuid
+            _      <- zAdd(key)(MemberScore(1d, "v1"))
+            _      <- zAdd(key)(MemberScore(2d, "v2"))
+            added  <- zAdd(key, update = Some(Update.SetGreaterThan))(MemberScore(1d, "v3"), MemberScore(3d, "v1"))
+            result <- zRange(key, 0 to -1)
+          } yield assert(added)(equalTo(1L)) &&
+            assert(result.toList)(equalTo(List("v3", "v2", "v1")))
+        },
+        testM("GT CH - return number of new and updated members") {
+          for {
+            key <- uuid
+            _   <- zAdd(key)(MemberScore(1d, "v1"))
+            _   <- zAdd(key)(MemberScore(2d, "v2"))
+            added <- zAdd(key, update = Some(Update.SetGreaterThan), change = Some(Changed))(
+                       MemberScore(1d, "v3"),
+                       MemberScore(3d, "v1")
+                     )
+            result <- zRange(key, 0 to -1)
+          } yield assert(added)(equalTo(2L)) &&
+            assert(result.toList)(equalTo(List("v3", "v2", "v1")))
+        },
         testM("INCR - increment by score") {
           for {
             key      <- uuid

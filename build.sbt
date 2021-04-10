@@ -54,7 +54,7 @@ lazy val benchmarks =
     .settings(
       skip in publish := true,
       libraryDependencies ++= Seq(
-        "dev.profunktor"    %% "redis4cats-effects" % "0.12.0",
+        "dev.profunktor"    %% "redis4cats-effects" % "0.13.1",
         "io.chrisdavenport" %% "rediculous"         % "0.0.12",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
@@ -73,8 +73,8 @@ lazy val example =
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
         "de.heikoseeberger"            %% "akka-http-circe"               % "1.36.0",
         "dev.zio"                      %% "zio-streams"                   % Zio,
-        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.2",
-        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.2",
+        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.4",
+        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.4",
         "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC3",
         "io.circe"                     %% "circe-core"                    % "0.13.0",
         "io.circe"                     %% "circe-generic"                 % "0.13.0",

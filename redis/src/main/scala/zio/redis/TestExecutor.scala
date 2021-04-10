@@ -17,7 +17,8 @@ private[redis] final class TestExecutor private (
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
-  hyperLogLogs: TMap[String, Set[String]]
+  hyperLogLogs: TMap[String, Set[String]],
+  hashes: TMap[String, Map[String, String]]
 ) extends RedisExecutor.Service {
 
   override val codec: Codec = StringUtf8Codec
@@ -277,11 +278,12 @@ private[redis] final class TestExecutor private (
           }
 
         val key = input.head.asString
+
         orWrongType(isSet(key))(
           {
             val start = input(1).asString.toInt
             val maybeRegex = if (input.size > 2) input(2).asString match {
-              case "MATCH" => Some(input(3).asString.r)
+              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
               case _       => None
             }
             else None
@@ -773,6 +775,203 @@ private[redis] final class TestExecutor private (
           )
         )
 
+      case api.Hashes.HDel.name =>
+        val key    = input(0).asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash       <- hashes.getOrElse(key, Map.empty)
+            countExists = hash.keys count values.contains
+            newHash     = hash -- values
+            _          <- if (newHash.isEmpty) hashes.delete(key) else hashes.put(key, newHash)
+          } yield RespValue.Integer(countExists.toLong)
+        )
+
+      case api.Hashes.HExists.name =>
+        val key   = input(0).asString
+        val field = input(1).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            exists = hash.keys.exists(_ == field)
+          } yield if (exists) RespValue.Integer(1L) else RespValue.Integer(0L)
+        )
+
+      case api.Hashes.HGet.name =>
+        val key   = input(0).asString
+        val field = input(1).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+            value = hash.get(field)
+          } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
+        )
+
+      case api.Hashes.HGetAll.name =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash   <- hashes.getOrElse(key, Map.empty)
+            results = hash.flatMap { case (k, v) => Iterable.apply(k, v) } map RespValue.bulkString
+          } yield RespValue.Array(Chunk.fromIterable(results))
+        )
+
+      case api.Hashes.HIncrBy.name =>
+        val key   = input(0).asString
+        val field = input(1).asString
+        val incr  = input(2).asString.toLong
+
+        orWrongType(isHash(key))(
+          (for {
+            hash     <- hashes.getOrElse(key, Map.empty)
+            newValue <- STM.fromTry(Try(hash.getOrElse(field, "0").toLong + incr))
+            newMap    = hash + (field -> newValue.toString)
+            _        <- hashes.put(key, newMap)
+          } yield newValue).fold(_ => Replies.Error, result => RespValue.Integer(result))
+        )
+
+      case api.Hashes.HIncrByFloat.name =>
+        val key   = input(0).asString
+        val field = input(1).asString
+        val incr  = input(2).asString.toDouble
+
+        orWrongType(isHash(key))(
+          (for {
+            hash     <- hashes.getOrElse(key, Map.empty)
+            newValue <- STM.fromTry(Try(hash.getOrElse(field, "0").toDouble + incr))
+            newHash   = hash + (field -> newValue.toString)
+            _        <- hashes.put(key, newHash)
+          } yield newValue).fold(_ => Replies.Error, result => RespValue.bulkString(result.toString))
+        )
+
+      case api.Hashes.HKeys.name =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+          } yield RespValue.Array(Chunk.fromIterable(hash.keys map RespValue.bulkString))
+        )
+
+      case api.Hashes.HLen.name =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+          } yield RespValue.Integer(hash.size.toLong)
+        )
+
+      case api.Hashes.HmGet.name =>
+        val key    = input(0).asString
+        val fields = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            result = fields.map(hash.get)
+          } yield RespValue.Array(result.map {
+            case None        => RespValue.NullBulkString
+            case Some(value) => RespValue.bulkString(value)
+          })
+        )
+
+      case api.Hashes.HmSet.name =>
+        val key    = input(0).asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            newMap = hash ++ values.grouped(2).map(g => (g(0), g(1)))
+            _     <- hashes.put(key, newMap)
+          } yield Replies.Ok
+        )
+
+      case api.Hashes.HScan.name =>
+        def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
+          key.asString match {
+            case "COUNT" => Some(value.asString.toInt)
+            case _       => None
+          }
+
+        val key = input.head.asString
+
+        orWrongType(isHash(key))(
+          {
+            val start = input(1).asString.toInt
+            val maybeRegex = if (input.size > 2) input(2).asString match {
+              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+              case _       => None
+            }
+            else None
+            val maybeCount =
+              if (input.size > 4) maybeGetCount(input(4), input(5))
+              else if (input.size > 2) maybeGetCount(input(2), input(3))
+              else None
+            val end = start + maybeCount.getOrElse(10)
+            for {
+              set <- hashes.getOrElse(key, Map.empty)
+              filtered =
+                maybeRegex.map(regex => set.filter { case (k, _) => regex.pattern.matcher(k).matches }).getOrElse(set)
+              resultSet = filtered.slice(start, end)
+              nextIndex = if (filtered.size <= end) 0 else end
+              results   = Replies.array(resultSet.flatMap { case (k, v) => Iterable(k, v) })
+            } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
+          }
+        )
+
+      case api.Hashes.HSet.name =>
+        val key    = input(0).asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash   <- hashes.getOrElse(key, Map.empty)
+            newHash = hash ++ values.grouped(2).map(g => (g(0), g(1)))
+            _      <- hashes.put(key, newHash)
+          } yield RespValue.Integer(newHash.size.toLong - hash.size.toLong)
+        )
+
+      case api.Hashes.HSetNx.name =>
+        val key   = input(0).asString
+        val field = input(1).asString
+        val value = input(2).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash    <- hashes.getOrElse(key, Map.empty)
+            contains = hash.contains(field)
+            newHash  = hash ++ (if (contains) Map.empty else Map(field -> value))
+            _       <- hashes.put(key, newHash)
+          } yield RespValue.Integer(if (contains) 0L else 1L)
+        )
+
+      case api.Hashes.HStrLen.name =>
+        val key   = input(0).asString
+        val field = input(1).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+            len   = hash.get(field).map(_.length.toLong).getOrElse(0L)
+          } yield RespValue.Integer(len)
+        )
+
+      case api.Hashes.HVals.name =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            values = hash.values map RespValue.bulkString
+          } yield RespValue.Array(Chunk.fromIterable(values))
+        )
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
@@ -788,7 +987,8 @@ private[redis] final class TestExecutor private (
       isString <- strings.contains(name)
       isList   <- lists.contains(name)
       isHyper  <- hyperLogLogs.contains(name)
-    } yield !isString && !isList && !isHyper
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isList && !isHyper && !isHash
 
   // check whether the key is a list or unused.
   private[this] def isList(name: String): STM[Nothing, Boolean] =
@@ -796,7 +996,8 @@ private[redis] final class TestExecutor private (
       isString <- strings.contains(name)
       isSet    <- sets.contains(name)
       isHyper  <- hyperLogLogs.contains(name)
-    } yield !isString && !isSet && !isHyper
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isHyper && !isHash
 
   //check whether the key is a hyperLogLog or unused.
   private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
@@ -804,7 +1005,17 @@ private[redis] final class TestExecutor private (
       isString <- strings.contains(name)
       isSet    <- sets.contains(name)
       isList   <- lists.contains(name)
-    } yield !isString && !isSet && !isList
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isList && !isHash
+
+  //check whether the key is a hash or unused.
+  private[this] def isHash(name: String): ZSTM[Any, Nothing, Boolean] =
+    for {
+      isString <- strings.contains(name)
+      isSet    <- sets.contains(name)
+      isList   <- lists.contains(name)
+      isHyper  <- hyperLogLogs.contains(name)
+    } yield !isString && !isSet && !isList && !isHyper
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
@@ -907,7 +1118,8 @@ private[redis] object TestExecutor {
       strings      <- TMap.empty[String, String].commit
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
       lists        <- TMap.empty[String, Chunk[String]].commit
-    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs)
+      hashes       <- TMap.empty[String, Map[String, String]].commit
+    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes)
 
     executor.toLayer
   }

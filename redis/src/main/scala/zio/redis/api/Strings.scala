@@ -348,6 +348,18 @@ trait Strings {
     val command = RedisCommand(StrLen, ArbitraryInput[K](), LongOutput)
     command.run(key)
   }
+
+  /**
+   * Get the longest common subsequence of values stored in the given keys
+   * @param command
+   */
+  final def stralgoLcs(
+    command: StrAlgoLCS,
+    keyA: String,
+    keyB: String,
+    lcsQueryType: Option[StrAlgoLcsQueryType] = None
+  ): ZIO[RedisExecutor, RedisError, LcsOutput] =
+    StralgoLcs.run((command, keyA, keyB, lcsQueryType))
 }
 
 private[redis] object Strings {
@@ -375,4 +387,11 @@ private[redis] object Strings {
   final val SetNx       = "SETNX"
   final val SetRange    = "SETRANGE"
   final val StrLen      = "STRLEN"
+
+  final val StralgoLcs: RedisCommand[(StrAlgoLCS, String, String, Option[StrAlgoLcsQueryType]), LcsOutput] =
+    RedisCommand(
+      "STRALGO",
+      Tuple4(StralgoCommandInput, StringInput, StringInput, OptionalInput(StralgoLcsQueryTypeInput)),
+      StrAlgoLcsOutput
+    )
 }
