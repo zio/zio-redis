@@ -4,6 +4,7 @@ import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
+import zio.schema.Schema
 import zio.{ Chunk, ZIO }
 
 trait Lists {
@@ -20,12 +21,19 @@ trait Lists {
    * @return the element being popped from source and pushed to destination.
    *         If timeout is reached, an empty reply is returned
    */
-  final def brPopLPush(
-    source: String,
-    destination: String,
+  final def brPopLPush[S: Schema, D: Schema, V: Schema](
+    source: S,
+    destination: D,
     timeout: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[String]] =
-    BrPopLPush.run((source, destination, timeout))
+  ): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(
+      BrPopLPush,
+      Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), DurationSecondsInput),
+      OptionalOutput(ArbitraryOutput[V]())
+    )
+
+    command.run((source, destination, timeout))
+  }
 
   /**
    * Returns the element at index in the list stored at key
@@ -35,7 +43,10 @@ trait Lists {
    *              Negative indices can be used to designate elements starting at the tail of the list
    * @return the requested element, or empty if the index is out of range
    */
-  final def lIndex(key: String, index: Long): ZIO[RedisExecutor, RedisError, Option[String]] = LIndex.run((key, index))
+  final def lIndex[K: Schema, V: Schema](key: K, index: Long): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(LIndex, Tuple2(ArbitraryInput[K](), LongInput), OptionalOutput(ArbitraryOutput[V]()))
+    command.run((key, index))
+  }
 
   /**
    * Returns the length of the list stored at key
@@ -43,7 +54,10 @@ trait Lists {
    * @param key the key identifier. If key does not exist, it is interpreted as an empty list and 0 is returned
    * @return the length of the list at key
    */
-  final def lLen(key: String): ZIO[RedisExecutor, RedisError, Long] = LLen.run(key)
+  final def lLen[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(LLen, ArbitraryInput[K](), LongOutput)
+    command.run(key)
+  }
 
   /**
    * Removes and returns the first element of the list stored at key
@@ -51,7 +65,10 @@ trait Lists {
    * @param key the key identifier
    * @return the value of the first element, or empty when key does not exist
    */
-  final def lPop(key: String): ZIO[RedisExecutor, RedisError, Option[String]] = LPop.run(key)
+  final def lPop[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(LPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))
+    command.run(key)
+  }
 
   /**
    * Prepends one or multiple elements to the list stored at key. If key does not exist, it is created as empty list
@@ -62,8 +79,10 @@ trait Lists {
    * @param elements the rest of elements to prepend
    * @return the length of the list after the push operation
    */
-  final def lPush(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
-    LPush.run((key, (element, elements.toList)))
+  final def lPush[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(LPush, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
+    command.run((key, (element, elements.toList)))
+  }
 
   /**
    * Prepends an element to a list, only if the list exists. In contrary to [[zio.redis.api.Lists#lPush]], no
@@ -74,8 +93,10 @@ trait Lists {
    * @param elements the rest of elements to prepends
    * @return the length of the list after the push operation
    */
-  final def lPushX(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
-    LPushX.run((key, (element, elements.toList)))
+  final def lPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(LPushX, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
+    command.run((key, (element, elements.toList)))
+  }
 
   /**
    * Gets a range of elements from the list stored at key
@@ -85,7 +106,10 @@ trait Lists {
    *              the list (the head of the list), 1 being the next element and so on
    * @return a chunk of elements in the specified range
    */
-  final def lRange(key: String, range: Range): ZIO[RedisExecutor, RedisError, Chunk[String]] = LRange.run((key, range))
+  final def lRange[K: Schema, V: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
+    val command = RedisCommand(LRange, Tuple2(ArbitraryInput[K](), RangeInput), ChunkOutput(ArbitraryOutput[V]()))
+    command.run((key, range))
+  }
 
   /**
    * Removes the first count occurrences of element from the list stored at key.
@@ -100,8 +124,10 @@ trait Lists {
    * @param element the element to be removed
    * @return the number of removed elements
    */
-  final def lRem(key: String, count: Long, element: String): ZIO[RedisExecutor, RedisError, Long] =
-    LRem.run((key, count, element))
+  final def lRem[K: Schema](key: K, count: Long, element: String): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(LRem, Tuple3(ArbitraryInput[K](), LongInput, StringInput), LongOutput)
+    command.run((key, count, element))
+  }
 
   /**
    * Sets the list element at index to element
@@ -112,8 +138,10 @@ trait Lists {
    * @param element the value to be inserted
    * @return the Unit value
    */
-  final def lSet(key: String, index: Long, element: String): ZIO[RedisExecutor, RedisError, Unit] =
-    LSet.run((key, index, element))
+  final def lSet[K: Schema, V: Schema](key: K, index: Long, element: V): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(LSet, Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[V]()), UnitOutput)
+    command.run((key, index, element))
+  }
 
   /**
    * Trims an existing list so that it will contain only the specified range of elements
@@ -123,7 +151,10 @@ trait Lists {
    *              list (the head of the list), 1 being the next element and so on
    * @return the Unit value
    */
-  final def lTrim(key: String, range: Range): ZIO[RedisExecutor, RedisError, Unit] = LTrim.run((key, range))
+  final def lTrim[K: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(LTrim, Tuple2(ArbitraryInput[K](), RangeInput), UnitOutput)
+    command.run((key, range))
+  }
 
   /**
    * Removes and returns the last element in the list stored at key
@@ -131,7 +162,10 @@ trait Lists {
    * @param key the key identifier
    * @return the value of the last element, or empty when key does not exist
    */
-  final def rPop(key: String): ZIO[RedisExecutor, RedisError, Option[String]] = RPop.run(key)
+  final def rPop[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(RPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))
+    command.run(key)
+  }
 
   /**
    * Atomically removes the last element in the list stored at source, prepends it to the list stored at destination
@@ -143,8 +177,14 @@ trait Lists {
    * @return the element being popped and pushed.
    *         If source does not exist, empty is returned and no operation is performed
    */
-  final def rPopLPush(source: String, destination: String): ZIO[RedisExecutor, RedisError, Option[String]] =
-    RPopLPush.run((source, destination))
+  final def rPopLPush[S: Schema, D: Schema, V: Schema](
+    source: S,
+    destination: D
+  ): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command =
+      RedisCommand(RPopLPush, Tuple2(ArbitraryInput[S](), ArbitraryInput[D]()), OptionalOutput(ArbitraryOutput[V]()))
+    command.run((source, destination))
+  }
 
   /**
    * Appends one or more elements to the list stored at key. If key does not exist, it is created as empty list before
@@ -155,8 +195,10 @@ trait Lists {
    * @param elements the rest of elements to append
    * @return the length of the list after the push operation
    */
-  final def rPush(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
-    RPush.run((key, (element, elements.toList)))
+  final def rPush[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(RPush, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
+    command.run((key, (element, elements.toList)))
+  }
 
   /**
    * Appends on or multiple elements to the list stored at key, only if the list exists.
@@ -167,8 +209,10 @@ trait Lists {
    * @param elements the rest of elements to append
    * @return the length of the list after the push operation
    */
-  final def rPushX(key: String, element: String, elements: String*): ZIO[RedisExecutor, RedisError, Long] =
-    RPushX.run((key, (element, elements.toList)))
+  final def rPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(RPushX, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
+    command.run((key, (element, elements.toList)))
+  }
 
   /**
    * Removes and gets the first element in a list, or blocks until one is available. An element is popped from the head
@@ -182,10 +226,16 @@ trait Lists {
    *         being the value of the popped element.
    *         An empty value is returned when no element could be popped and the timeout expired
    */
-  final def blPop(key: String, keys: String*)(
+  final def blPop[K: Schema, V: Schema](key: K, keys: K*)(
     timeout: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[(String, String)]] =
-    BlPop.run(((key, keys.toList), timeout))
+  ): ZIO[RedisExecutor, RedisError, Option[(K, V)]] = {
+    val command = RedisCommand(
+      BlPop,
+      Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
+      OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
+    )
+    command.run(((key, keys.toList), timeout))
+  }
 
   /**
    * Removes and gets the last element in a list, or block until one is available. An element is popped from the tail
@@ -199,10 +249,16 @@ trait Lists {
    *         being the value of the popped element.
    *         An empty value is returned when no element could be popped and the timeout expired
    */
-  final def brPop(key: String, keys: String*)(
+  final def brPop[K: Schema, V: Schema](key: K, keys: K*)(
     timeout: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[(String, String)]] =
-    BrPop.run(((key, keys.toList), timeout))
+  ): ZIO[RedisExecutor, RedisError, Option[(K, V)]] = {
+    val command = RedisCommand(
+      BrPop,
+      Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
+      OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
+    )
+    command.run(((key, keys.toList), timeout))
+  }
 
   /**
    * Inserts element in the list stored at key either before or after the reference value pivot
@@ -213,13 +269,19 @@ trait Lists {
    * @param element  the value to be inserted
    * @return the length of the list after the insert operation, or -1 when the value pivot was not found
    */
-  final def lInsert(
-    key: String,
+  final def lInsert[K: Schema, V: Schema](
+    key: K,
     position: Position,
-    pivot: String,
-    element: String
-  ): ZIO[RedisExecutor, RedisError, Long] =
-    LInsert.run((key, position, pivot, element))
+    pivot: V,
+    element: V
+  ): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(
+      LInsert,
+      Tuple4(ArbitraryInput[K](), PositionInput, ArbitraryInput[V](), ArbitraryInput[V]()),
+      LongOutput
+    )
+    command.run((key, position, pivot, element))
+  }
 
   /**
    * Atomically returns and removes the first/last element (head/tail depending on the
@@ -233,13 +295,19 @@ trait Lists {
    * @param destinationSide   the side where the element is inserted
    * @return the element which is moved or nil when the source is empty
    */
-  final def lMove(
-    source: String,
-    destination: String,
+  final def lMove[S: Schema, D: Schema, V: Schema](
+    source: S,
+    destination: D,
     sourceSide: Side,
     destinationSide: Side
-  ): ZIO[RedisExecutor, RedisError, Option[String]] =
-    LMove.run((source, destination, sourceSide, destinationSide))
+  ): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(
+      LMove,
+      Tuple4(ArbitraryInput[S](), ArbitraryInput[D](), SideInput, SideInput),
+      OptionalOutput(ArbitraryOutput[V]())
+    )
+    command.run((source, destination, sourceSide, destinationSide))
+  }
 
   /**
    * BLMOVE is the blocking variant of LMOVE. When source contains elements, this command
@@ -255,14 +323,21 @@ trait Lists {
    * @param timeout           the timeout in seconds
    * @return the element which is moved or nil when the timeout is reached
    */
-  final def blMove(
-    source: String,
-    destination: String,
+  final def blMove[S: Schema, D: Schema, V: Schema](
+    source: S,
+    destination: D,
     sourceSide: Side,
     destinationSide: Side,
     timeout: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[String]] =
-    BlMove.run((source, destination, sourceSide, destinationSide, timeout))
+  ): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(
+      BlMove,
+      Tuple5(ArbitraryInput[S](), ArbitraryInput[D](), SideInput, SideInput, DurationSecondsInput),
+      OptionalOutput(ArbitraryOutput[V]())
+    )
+
+    command.run((source, destination, sourceSide, destinationSide, timeout))
+  }
 
   /**
    * The command returns the index of matching elements inside a Redis list. By default, when no
@@ -277,124 +352,82 @@ trait Lists {
    * @param maxLen    limit the number of performed comparisons
    * @return Either an interger or an array depending on the count option
    */
-  final def lPos(
-    key: String,
-    element: String,
+  final def lPos[K: Schema, V: Schema](
+    key: K,
+    element: V,
     rank: Option[Rank] = None,
     maxLen: Option[ListMaxLen] = None
-  ): ZIO[RedisExecutor, RedisError, Option[Long]] =
-    LPos.run((key, element, rank, maxLen))
-
-  /**
-   * The command returns the index of matching elements inside a Redis list. By default, when no
-   * options are given, it will scan the list from head to tail, looking for the first match
-   * of "element". If the element is found, its index (the zero-based position in the list)
-   * is returned. Otherwise, if no match is found, NULL is returned.
-   *
-   * @param key       the key identifier
-   * @param element   the element to search for
-   * @param rank      the rank of the element
-   * @param count     return up count element indexes
-   * @param maxLen    limit the number of performed comparisons
-   * @return Either an interger or an array depending on the count option
-   */
-  final def lPosCount(
-    key: String,
-    element: String,
-    count: Count,
-    rank: Option[Rank] = None,
-    maxLen: Option[ListMaxLen] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[Long]] =
-    LPosCount.run((key, element, count, rank, maxLen))
-}
-
-private[redis] object Lists {
-  final val BrPopLPush: RedisCommand[(String, String, Duration), Option[String]] =
-    RedisCommand(
-      "BRPOPLPUSH",
-      Tuple3(StringInput, StringInput, DurationSecondsInput),
-      OptionalOutput(MultiStringOutput)
-    )
-
-  final val LIndex: RedisCommand[(String, Long), Option[String]] =
-    RedisCommand("LINDEX", Tuple2(StringInput, LongInput), OptionalOutput(MultiStringOutput))
-
-  final val LLen: RedisCommand[String, Long] = RedisCommand("LLEN", StringInput, LongOutput)
-
-  final val LPop: RedisCommand[String, Option[String]] =
-    RedisCommand("LPOP", StringInput, OptionalOutput(MultiStringOutput))
-
-  final val LPush: RedisCommand[(String, (String, List[String])), Long] =
-    RedisCommand("LPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-
-  final val LPushX: RedisCommand[(String, (String, List[String])), Long] =
-    RedisCommand("LPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-
-  final val LRange: RedisCommand[(String, Range), Chunk[String]] =
-    RedisCommand("LRANGE", Tuple2(StringInput, RangeInput), ChunkOutput)
-
-  final val LRem: RedisCommand[(String, Long, String), Long] =
-    RedisCommand("LREM", Tuple3(StringInput, LongInput, StringInput), LongOutput)
-
-  final val LSet: RedisCommand[(String, Long, String), Unit] =
-    RedisCommand("LSET", Tuple3(StringInput, LongInput, StringInput), UnitOutput)
-
-  final val LTrim: RedisCommand[(String, Range), Unit] =
-    RedisCommand("LTRIM", Tuple2(StringInput, RangeInput), UnitOutput)
-
-  final val RPop: RedisCommand[String, Option[String]] =
-    RedisCommand("RPOP", StringInput, OptionalOutput(MultiStringOutput))
-
-  final val RPopLPush: RedisCommand[(String, String), Option[String]] =
-    RedisCommand("RPOPLPUSH", Tuple2(StringInput, StringInput), OptionalOutput(MultiStringOutput))
-
-  final val RPush: RedisCommand[(String, (String, List[String])), Long] =
-    RedisCommand("RPUSH", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-
-  final val RPushX: RedisCommand[(String, (String, List[String])), Long] =
-    RedisCommand("RPUSHX", Tuple2(StringInput, NonEmptyList(StringInput)), LongOutput)
-
-  final val BlPop: RedisCommand[((String, List[String]), Duration), Option[(String, String)]] =
-    RedisCommand("BLPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
-
-  final val BrPop: RedisCommand[((String, List[String]), Duration), Option[(String, String)]] =
-    RedisCommand("BRPOP", Tuple2(NonEmptyList(StringInput), DurationSecondsInput), KeyElemOutput)
-
-  final val LInsert: RedisCommand[(String, Position, String, String), Long] =
-    RedisCommand("LINSERT", Tuple4(StringInput, PositionInput, StringInput, StringInput), LongOutput)
-
-  final val LMove: RedisCommand[(String, String, Side, Side), Option[String]] =
-    RedisCommand("LMOVE", Tuple4(StringInput, StringInput, SideInput, SideInput), OptionalOutput(MultiStringOutput))
-
-  final val BlMove: RedisCommand[(String, String, Side, Side, Duration), Option[String]] =
-    RedisCommand(
-      "BLMOVE",
-      Tuple5(StringInput, StringInput, SideInput, SideInput, DurationSecondsInput),
-      OptionalOutput(MultiStringOutput)
-    )
-
-  final val LPos: RedisCommand[(String, String, Option[Rank], Option[ListMaxLen]), Option[Long]] =
-    RedisCommand(
-      "LPOS",
+  ): ZIO[RedisExecutor, RedisError, Option[Long]] = {
+    val command = RedisCommand(
+      LPos,
       Tuple4(
-        StringInput,
-        StringInput,
+        ArbitraryInput[K](),
+        ArbitraryInput[V](),
         OptionalInput(RankInput),
         OptionalInput(ListMaxLenInput)
       ),
       OptionalOutput(LongOutput)
     )
 
-  final val LPosCount: RedisCommand[(String, String, Count, Option[Rank], Option[ListMaxLen]), Chunk[Long]] =
-    RedisCommand(
-      "LPOS",
+    command.run((key, element, rank, maxLen))
+  }
+
+  /**
+   * The command returns the index of matching elements inside a Redis list. By default, when no
+   * options are given, it will scan the list from head to tail, looking for the first match
+   * of "element". If the element is found, its index (the zero-based position in the list)
+   * is returned. Otherwise, if no match is found, NULL is returned.
+   *
+   * @param key       the key identifier
+   * @param element   the element to search for
+   * @param rank      the rank of the element
+   * @param count     return up count element indexes
+   * @param maxLen    limit the number of performed comparisons
+   * @return Either an interger or an array depending on the count option
+   */
+  final def lPosCount[K: Schema, V: Schema](
+    key: K,
+    element: V,
+    count: Count,
+    rank: Option[Rank] = None,
+    maxLen: Option[ListMaxLen] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[Long]] = {
+    val command = RedisCommand(
+      LPos,
       Tuple5(
-        StringInput,
-        StringInput,
+        ArbitraryInput[K](),
+        ArbitraryInput[V](),
         CountInput,
         OptionalInput(RankInput),
         OptionalInput(ListMaxLenInput)
       ),
-      ChunkLongOutput
+      ChunkOutput(LongOutput)
     )
+
+    command.run((key, element, count, rank, maxLen))
+  }
+}
+
+private[redis] object Lists {
+  final val BrPopLPush = "BRPOPLPUSH"
+  final val LIndex     = "LINDEX"
+  final val LLen       = "LLEN"
+  final val LPop       = "LPOP"
+  final val LPush      = "LPUSH"
+  final val LPushX     = "LPUSHX"
+  final val LRange     = "LRANGE"
+  final val LRem       = "LREM"
+  final val LSet       = "LSET"
+  final val LTrim      = "LTRIM"
+  final val RPop       = "RPOP"
+  final val RPopLPush  = "RPOPLPUSH"
+  final val RPush      = "RPUSH"
+  final val RPushX     = "RPUSHX"
+  final val BlPop      = "BLPOP"
+  final val BrPop      = "BRPOP"
+  final val LInsert    = "LINSERT"
+  final val LMove      = "LMOVE"
+  final val BlMove     = "BLMOVE"
+  final val LPos       = "LPOS"
+  final val LPosCount  = "LPOS"
 }

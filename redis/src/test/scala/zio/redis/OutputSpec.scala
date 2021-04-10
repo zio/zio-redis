@@ -38,13 +38,17 @@ object OutputSpec extends BaseSpec {
       suite("chunk")(
         testM("extract empty arrays") {
           for {
-            res <- Task(ChunkOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract non-empty arrays") {
           for {
             res <-
-              Task(ChunkOutput.unsafeDecode(RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))))
+              Task(
+                ChunkOutput(MultiStringOutput).unsafeDecode(
+                  RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
+                )
+              )
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),
@@ -117,20 +121,20 @@ object OutputSpec extends BaseSpec {
       suite("chunkLong")(
         testM("extract empty array") {
           for {
-            res <- Task(ChunkLongOutput.unsafeDecode(RespValue.NullArray))
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(equalTo(Chunk.empty))
         },
         testM("extract array of long values") {
           val respArray = RespValue.array(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L))
           for {
-            res <- Task(ChunkLongOutput.unsafeDecode(respArray))
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray))
           } yield assert(res)(equalTo(Chunk(1L, 2L, 3L)))
         },
         testM("fail when one value is not a long") {
           val respArray =
             RespValue.array(RespValue.Integer(1L), RespValue.bulkString("not a long"), RespValue.Integer(3L))
           for {
-            res <- Task(ChunkLongOutput.unsafeDecode(respArray)).run
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray)).run
           } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -153,7 +157,7 @@ object OutputSpec extends BaseSpec {
             RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           )
           for {
-            res <- Task(ScanOutput.unsafeDecode(input))
+            res <- Task(ScanOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(equalTo(5L -> Chunk("foo", "bar")))
         }
       ),
@@ -193,49 +197,52 @@ object OutputSpec extends BaseSpec {
       suite("multiStringChunk")(
         testM("extract one empty value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.NullBulkString))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.NullBulkString))
           } yield assert(res)(isEmpty)
         },
         testM("extract one multi-string value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.bulkString("ab")))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.bulkString("ab")))
           } yield assert(res)(hasSameElements(Chunk("ab")))
         },
         testM("extract one array value") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(input))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
         }
       ),
       suite("chunkOptionalMultiString")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.NullArray))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with one non-empty element") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.array(RespValue.bulkString("ab"))))
+            res <-
+              Task(
+                ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.array(RespValue.bulkString("ab")))
+              )
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
         testM("extract array with multiple non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
         testM("extract array with empty and non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.NullBulkString, RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
         }
       ),
       suite("chunkOptionalLong")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with empty and non-empty elements") {
@@ -246,7 +253,7 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
         },
         testM("extract array with non-empty elements") {
@@ -257,7 +264,7 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
         }
       ),
@@ -270,10 +277,11 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput.unsafeDecode(input)).map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
+          Task(StreamOutput[String, String, String]().unsafeDecode(input))
+            .map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
         },
         testM("extract empty map") {
-          Task(StreamOutput.unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
+          Task(StreamOutput[String, String, String]().unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
         },
         testM("error when array of field-value pairs has odd length") {
           val input = RespValue.array(
@@ -284,7 +292,8 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(StreamOutput[String, String, String]().unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message has more then two elements") {
           val input = RespValue.array(
@@ -294,7 +303,8 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(StreamOutput[String, String, String]().unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
       suite("xPending")(
@@ -460,7 +470,9 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).map(
+          Task(
+            KeyValueTwoOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+          ).map(
             assert(_)(
               equalTo(
                 Map(
@@ -485,7 +497,9 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(
+            KeyValueOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message doesn't have an ID") {
           val input = RespValue.array(
@@ -501,7 +515,9 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(
+            KeyValueOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when stream doesn't have an ID") {
           val input = RespValue.array(
@@ -517,7 +533,9 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(
+            KeyValueOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         suite("xInfoStream")(
           testM("extract valid value with first and last entry") {
@@ -550,7 +568,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamInfoOutput.unsafeDecode(resp)))(
+            assertM(Task(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfo(
                   1,
@@ -578,8 +596,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("0-0")
             )
 
-            assertM(Task(StreamInfoOutput.unsafeDecode(resp)))(
-              equalTo(StreamInfo(1, 2, 3, 1, "0-0", None, None))
+            assertM(Task(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
+              equalTo(StreamInfo[String, String, String](1, 2, 3, 1, "0-0", None, None))
             )
           }
         ),
@@ -689,7 +707,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamInfoFullOutput.unsafeDecode(resp)))(
+            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfoWithFull.FullStreamInfo(
                   1,
@@ -713,9 +731,9 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("last-generated-id"),
               RespValue.bulkString("0-0")
             )
-            assertM(Task(StreamInfoFullOutput.unsafeDecode(resp)))(
+            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
-                StreamInfoWithFull.FullStreamInfo(1, 2, 3, "0-0", Chunk.empty, Chunk.empty)
+                StreamInfoWithFull.FullStreamInfo[String, String, String](1, 2, 3, "0-0", Chunk.empty, Chunk.empty)
               )
             )
           },
@@ -797,7 +815,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamInfoFullOutput.unsafeDecode(resp)))(
+            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfoWithFull.FullStreamInfo(
                   1,

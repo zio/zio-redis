@@ -75,7 +75,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             _      <- sAdd(first, "a", "b", "c", "d")
             _      <- sAdd(second, "a", "c")
-            diff   <- sDiff(first, second)
+            diff   <- sDiff[String, String](first, second)
           } yield assert(diff)(hasSameElements(Chunk("b", "d")))
         },
         testM("non-empty set and empty set") {
@@ -83,7 +83,7 @@ trait SetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- sAdd(nonEmpty, "a", "b")
-            diff     <- sDiff(nonEmpty, empty)
+            diff     <- sDiff[String, String](nonEmpty, empty)
           } yield assert(diff)(hasSameElements(Chunk("a", "b")))
         },
         testM("empty set and non-empty set") {
@@ -91,14 +91,14 @@ trait SetsSpec extends BaseSpec {
             empty    <- uuid
             nonEmpty <- uuid
             _        <- sAdd(nonEmpty, "a", "b")
-            diff     <- sDiff(empty, nonEmpty)
+            diff     <- sDiff[String, String](empty, nonEmpty)
           } yield assert(diff)(isEmpty)
         },
         testM("empty when both sets are empty") {
           for {
             first  <- uuid
             second <- uuid
-            diff   <- sDiff(first, second)
+            diff   <- sDiff[String, String](first, second)
           } yield assert(diff)(isEmpty)
         },
         testM("non-empty set with multiple non-empty sets") {
@@ -109,7 +109,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(first, "a", "b", "c", "d")
             _      <- sAdd(second, "b", "d")
             _      <- sAdd(third, "b", "c")
-            diff   <- sDiff(first, second, third)
+            diff   <- sDiff[String, String](first, second, third)
           } yield assert(diff)(hasSameElements(Chunk("a")))
         },
         testM("error when first parameter is not set") {
@@ -118,7 +118,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(first, value)
-            diff   <- sDiff(first, second).either
+            diff   <- sDiff[String, String](first, second).either
           } yield assert(diff)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when second parameter is not set") {
@@ -127,7 +127,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(second, value)
-            diff   <- sDiff(first, second).either
+            diff   <- sDiff[String, String](first, second).either
           } yield assert(diff)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -208,7 +208,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             _      <- sAdd(first, "a", "b", "c", "d")
             _      <- sAdd(second, "a", "c", "e")
-            inter  <- sInter(first, second)
+            inter  <- sInter[String, String](first, second)
           } yield assert(inter)(hasSameElements(Chunk("a", "c")))
         },
         testM("empty when one of the sets is empty") {
@@ -216,14 +216,14 @@ trait SetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- sAdd(nonEmpty, "a", "b")
-            inter    <- sInter(nonEmpty, empty)
+            inter    <- sInter[String, String](nonEmpty, empty)
           } yield assert(inter)(isEmpty)
         },
         testM("empty when both sets are empty") {
           for {
             first  <- uuid
             second <- uuid
-            inter  <- sInter(first, second)
+            inter  <- sInter[String, String](first, second)
           } yield assert(inter)(isEmpty)
         },
         testM("non-empty set with multiple non-empty sets") {
@@ -234,7 +234,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(first, "a", "b", "c", "d")
             _      <- sAdd(second, "b", "d")
             _      <- sAdd(third, "b", "c")
-            inter  <- sInter(first, second, third)
+            inter  <- sInter[String, String](first, second, third)
           } yield assert(inter)(hasSameElements(Chunk("b")))
         },
         testM("error when first parameter is not set") {
@@ -243,7 +243,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(first, value)
-            inter  <- sInter(first, second).either
+            inter  <- sInter[String, String](first, second).either
           } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("empty with empty first set and second parameter is not set") {
@@ -252,7 +252,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(second, value)
-            inter  <- sInter(first, second)
+            inter  <- sInter[String, String](first, second)
           } yield assert(inter)(isEmpty)
         },
         testM("error with non-empty first set and second parameter is not set") {
@@ -262,7 +262,7 @@ trait SetsSpec extends BaseSpec {
             value  <- uuid
             _      <- sAdd(first, "a")
             _      <- set(second, value)
-            inter  <- sInter(first, second).either
+            inter  <- sInter[String, String](first, second).either
           } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -373,13 +373,13 @@ trait SetsSpec extends BaseSpec {
           for {
             key     <- uuid
             _       <- sAdd(key, "a", "b", "c")
-            members <- sMembers(key)
+            members <- sMembers[String, String](key)
           } yield assert(members)(hasSameElements(Chunk("a", "b", "c")))
         },
         testM("empty set") {
           for {
             key     <- uuid
-            members <- sMembers(key)
+            members <- sMembers[String, String](key)
           } yield assert(members)(isEmpty)
         },
         testM("when not set") {
@@ -387,7 +387,7 @@ trait SetsSpec extends BaseSpec {
             key     <- uuid
             value   <- uuid
             _       <- set(key, value)
-            members <- sMembers(key).either
+            members <- sMembers[String, String](key).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -470,13 +470,13 @@ trait SetsSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- sAdd(key, "a", "b", "c")
-            popped <- sPop(key)
+            popped <- sPop[String, String](key)
           } yield assert(popped)(isNonEmpty)
         },
         testM("one element from an empty set") {
           for {
             key    <- uuid
-            popped <- sPop(key)
+            popped <- sPop[String, String](key)
           } yield assert(popped)(isEmpty)
         },
         testM("error when poping one element from not set") {
@@ -484,27 +484,27 @@ trait SetsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            popped <- sPop(key).either
+            popped <- sPop[String, String](key).either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("multiple elements from non-empty set") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a", "b", "c")
-            popped <- sPop(key, Some(2L))
+            popped <- sPop[String, String](key, Some(2L))
           } yield assert(popped)(hasSize(equalTo(2)))
         },
         testM("more elements then there is in non-empty set") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a", "b", "c")
-            popped <- sPop(key, Some(5L))
+            popped <- sPop[String, String](key, Some(5L))
           } yield assert(popped)(hasSize(equalTo(3)))
         },
         testM("multiple elements from empty set") {
           for {
             key    <- uuid
-            popped <- sPop(key, Some(3))
+            popped <- sPop[String, String](key, Some(3))
           } yield assert(popped)(isEmpty)
         },
         testM("error when poping multiple elements from not set") {
@@ -512,7 +512,7 @@ trait SetsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            popped <- sPop(key, Some(3)).either
+            popped <- sPop[String, String](key, Some(3)).either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -521,13 +521,13 @@ trait SetsSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- sAdd(key, "a", "b", "c")
-            member <- sRandMember(key)
+            member <- sRandMember[String, String](key)
           } yield assert(member)(hasSize(equalTo(1)))
         },
         testM("one element from an empty set") {
           for {
             key    <- uuid
-            member <- sRandMember(key)
+            member <- sRandMember[String, String](key)
           } yield assert(member)(isEmpty)
         },
         testM("error when one element from not set") {
@@ -535,40 +535,40 @@ trait SetsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            member <- sRandMember(key).either
+            member <- sRandMember[String, String](key).either
           } yield assert(member)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("multiple elements from non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key, "a", "b", "c")
-            members <- sRandMember(key, Some(2L))
+            members <- sRandMember[String, String](key, Some(2L))
           } yield assert(members)(hasSize(equalTo(2)))
         },
         testM("more elements than there is present in the non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key, "a", "b", "c")
-            members <- sRandMember(key, Some(5L))
+            members <- sRandMember[String, String](key, Some(5L))
           } yield assert(members)(hasSize(equalTo(3)))
         },
         testM("multiple elements from an empty set") {
           for {
             key     <- uuid
-            members <- sRandMember(key, Some(3L))
+            members <- sRandMember[String, String](key, Some(3L))
           } yield assert(members)(isEmpty)
         },
         testM("repeated elements from non-empty set") {
           for {
             key     <- uuid
             _       <- sAdd(key, "a", "b", "c")
-            members <- sRandMember(key, Some(-5L))
+            members <- sRandMember[String, String](key, Some(-5L))
           } yield assert(members)(hasSize(equalTo(5)))
         },
         testM("repeated elements from an empty set") {
           for {
             key     <- uuid
-            members <- sRandMember(key, Some(-3L))
+            members <- sRandMember[String, String](key, Some(-3L))
           } yield assert(members)(isEmpty)
         },
         testM("error multiple elements from not set") {
@@ -576,7 +576,7 @@ trait SetsSpec extends BaseSpec {
             key     <- uuid
             value   <- uuid
             _       <- set(key, value)
-            members <- sRandMember(key, Some(3L)).either
+            members <- sRandMember[String, String](key, Some(3L)).either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -624,7 +624,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             _      <- sAdd(first, "a", "b", "c", "d")
             _      <- sAdd(second, "a", "c", "e")
-            union  <- sUnion(first, second)
+            union  <- sUnion[String, String](first, second)
           } yield assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
         },
         testM("equal to the non-empty set when the other one is empty") {
@@ -632,14 +632,14 @@ trait SetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- sAdd(nonEmpty, "a", "b")
-            union    <- sUnion(nonEmpty, empty)
+            union    <- sUnion[String, String](nonEmpty, empty)
           } yield assert(union)(hasSameElements(Chunk("a", "b")))
         },
         testM("empty when both sets are empty") {
           for {
             first  <- uuid
             second <- uuid
-            union  <- sUnion(first, second)
+            union  <- sUnion[String, String](first, second)
           } yield assert(union)(isEmpty)
         },
         testM("non-empty set with multiple non-empty sets") {
@@ -650,7 +650,7 @@ trait SetsSpec extends BaseSpec {
             _      <- sAdd(first, "a", "b", "c", "d")
             _      <- sAdd(second, "b", "d")
             _      <- sAdd(third, "b", "c", "e")
-            union  <- sUnion(first, second, third)
+            union  <- sUnion[String, String](first, second, third)
           } yield assert(union)(hasSameElements(Chunk("a", "b", "c", "d", "e")))
         },
         testM("error when first parameter is not set") {
@@ -659,7 +659,7 @@ trait SetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- set(first, value)
-            union  <- sUnion(first, second).either
+            union  <- sUnion[String, String](first, second).either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when the first parameter is set and the second parameter is not set") {
@@ -669,7 +669,7 @@ trait SetsSpec extends BaseSpec {
             value  <- uuid
             _      <- sAdd(first, "a")
             _      <- set(second, value)
-            union  <- sUnion(first, second).either
+            union  <- sUnion[String, String](first, second).either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -747,7 +747,7 @@ trait SetsSpec extends BaseSpec {
         testM("empty set") {
           for {
             key              <- uuid
-            scan             <- sScan(key, 0L)
+            scan             <- sScan[String, String](key, 0L)
             (cursor, members) = scan
           } yield assert(cursor)(isZero) &&
             assert(members)(isEmpty)
@@ -773,7 +773,7 @@ trait SetsSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            scan  <- sScan(key, 0L).either
+            scan  <- sScan[String, String](key, 0L).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
       )
@@ -786,7 +786,7 @@ trait SetsSpec extends BaseSpec {
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
-        sScan(key, cursor, pattern, count).map {
+        sScan[String, String](key, cursor, pattern, count).map {
           case (nc, nm) if nc == 0 => (nm, None)
           case (nc, nm)            => (nm, Some(nc))
         }

@@ -1,7 +1,6 @@
 package example
 
 import example.ApiError._
-import example.Contributor._
 import io.circe.parser.decode
 import io.circe.syntax._
 import sttp.client.asynchttpclient.zio.SttpClient
@@ -27,7 +26,7 @@ object ContributorsCache {
     }
 
   private[this] def read(repository: Repository): ZIO[RedisExecutor, ApiError, Contributors] =
-    get(repository.key)
+    get[String, String](repository.key)
       .someOrFail(ApiError.CacheMiss)
       .map(decode[Contributors])
       .rightOrFail(ApiError.CorruptedData)

@@ -20,20 +20,11 @@ trait Streams {
   sealed trait XGroupCommand
 
   object XGroupCommand {
-    sealed case class Create(key: String, group: String, id: String, mkStream: Boolean) extends XGroupCommand
-    sealed case class SetId(key: String, group: String, id: String)                     extends XGroupCommand
-    sealed case class Destroy(key: String, group: String)                               extends XGroupCommand
-    sealed case class CreateConsumer(key: String, group: String, consumer: String)      extends XGroupCommand
-    sealed case class DelConsumer(key: String, group: String, consumer: String)         extends XGroupCommand
-  }
-
-  sealed trait XInfoCommand
-
-  object XInfoCommand {
-    sealed case class Stream(key: String, full: Option[Full] = None) extends XInfoCommand
-    sealed case class Full(count: Option[Long])
-    sealed case class Groups(key: String)                   extends XInfoCommand
-    sealed case class Consumers(key: String, group: String) extends XInfoCommand
+    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I, mkStream: Boolean) extends XGroupCommand
+    sealed case class SetId[SK, SG, I](key: SK, group: SG, id: I)                     extends XGroupCommand
+    sealed case class Destroy[SK, SG](key: SK, group: SG)                             extends XGroupCommand
+    sealed case class CreateConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC)    extends XGroupCommand
+    sealed case class DelConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC)       extends XGroupCommand
   }
 
   case object MkStream {
@@ -56,7 +47,7 @@ trait Streams {
     counter: Long
   )
 
-  sealed case class Group(group: String, consumer: String)
+  sealed case class Group[G, C](group: G, consumer: C)
 
   case object NoAck {
     private[redis] def stringify: String = "NOACK"
@@ -66,20 +57,20 @@ trait Streams {
 
   sealed case class StreamMaxLen(approximate: Boolean, count: Long)
 
-  sealed case class StreamEntry(id: String, fields: Map[String, String])
+  sealed case class StreamEntry[I, K, V](id: I, fields: Map[K, V])
 
-  sealed case class StreamInfo(
+  sealed case class StreamInfo[I, K, V](
     length: Long,
     radixTreeKeys: Long,
     radixTreeNodes: Long,
     groups: Long,
     lastGeneratedId: String,
-    firstEntry: Option[StreamEntry],
-    lastEntry: Option[StreamEntry]
+    firstEntry: Option[StreamEntry[I, K, V]],
+    lastEntry: Option[StreamEntry[I, K, V]]
   )
 
   object StreamInfo {
-    def empty: StreamInfo = StreamInfo(0, 0, 0, 0, "", None, None)
+    def empty[I, K, V]: StreamInfo[I, K, V] = StreamInfo(0, 0, 0, 0, "", None, None)
   }
 
   sealed case class StreamGroupsInfo(
@@ -105,17 +96,17 @@ trait Streams {
 
   object StreamInfoWithFull {
 
-    sealed case class FullStreamInfo(
+    sealed case class FullStreamInfo[I, K, V](
       length: Long,
       radixTreeKeys: Long,
       radixTreeNodes: Long,
       lastGeneratedId: String,
-      entries: Chunk[StreamEntry],
+      entries: Chunk[StreamEntry[I, K, V]],
       groups: Chunk[ConsumerGroups]
     )
 
     object FullStreamInfo {
-      def empty: FullStreamInfo = FullStreamInfo(0, 0, 0, "", Chunk.empty, Chunk.empty)
+      def empty[I, K, V]: FullStreamInfo[I, K, V] = FullStreamInfo(0, 0, 0, "", Chunk.empty, Chunk.empty)
     }
 
     sealed case class ConsumerGroups(
