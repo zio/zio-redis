@@ -37,11 +37,11 @@ lazy val redis =
     .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-streams"     % Zio,
-        "dev.zio" %% "zio-logging"     % "0.5.8",
-        "dev.zio" %% "zio-schema-core" % "0.0.1+5-be72f2ee-SNAPSHOT",
-        "dev.zio" %% "zio-test"        % Zio % Test,
-        "dev.zio" %% "zio-test-sbt"    % Zio % Test
+        "dev.zio" %% "zio-streams"  % Zio,
+        "dev.zio" %% "zio-logging"  % "0.5.8",
+        "dev.zio" %% "zio-schema"   % "0.0.4",
+        "dev.zio" %% "zio-test"     % Zio % Test,
+        "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )

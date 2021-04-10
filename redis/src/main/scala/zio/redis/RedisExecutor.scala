@@ -45,7 +45,7 @@ object RedisExecutor {
     override val codec: Codec
   ) extends Service {
 
-    override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+    def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
       Promise
         .make[RedisError, RespValue]
         .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
