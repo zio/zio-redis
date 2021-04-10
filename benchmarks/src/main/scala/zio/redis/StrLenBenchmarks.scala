@@ -49,5 +49,5 @@ class StrLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(strLen))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(strLen[String]))
 }
