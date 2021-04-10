@@ -16,7 +16,7 @@ trait HashSpec extends BaseSpec {
             field  <- uuid
             value  <- uuid
             _      <- hSet(hash, field -> value)
-            result <- hGet(hash, field)
+            result <- hGet[String, String, String](hash, field)
           } yield assert(result)(isSome(equalTo(value)))
         },
         testM("set multiple fields for hash") {
@@ -35,7 +35,7 @@ trait HashSpec extends BaseSpec {
             field2 <- uuid
             value  <- uuid
             _      <- hSet(hash, field1 -> value, field2 -> value)
-            result <- hGetAll(hash)
+            result <- hGetAll[String, String, String](hash)
           } yield assert(Chunk.fromIterable(result.values))(hasSameElements(Chunk(value, value)))
         },
         testM("delete field for hash") {
@@ -45,7 +45,7 @@ trait HashSpec extends BaseSpec {
             value   <- uuid
             _       <- hSet(hash, field -> value)
             deleted <- hDel(hash, field)
-            result  <- hGet(hash, field)
+            result  <- hGet[String, String, String](hash, field)
           } yield assert(deleted)(equalTo(1L)) && assert(result)(isNone)
         },
         testM("delete multiple fields for hash") {
@@ -66,7 +66,7 @@ trait HashSpec extends BaseSpec {
             field  <- uuid
             value  <- uuid
             _      <- hmSet(hash, field -> value)
-            result <- hmGet(hash, field)
+            result <- hmGet[String, String, String](hash, field)
           } yield assert(result)(hasSameElements(Chunk(Some(value))))
         },
         testM("set multiple fields for hash") {
@@ -76,8 +76,8 @@ trait HashSpec extends BaseSpec {
             field2  <- uuid
             value   <- uuid
             _       <- hmSet(hash, field1 -> value, field2 -> value)
-            result1 <- hmGet(hash, field1)
-            result2 <- hmGet(hash, field2)
+            result1 <- hmGet[String, String, String](hash, field1)
+            result2 <- hmGet[String, String, String](hash, field2)
           } yield assert(result1)(hasSameElements(Chunk(Some(value)))) &&
             assert(result2)(hasSameElements(Chunk(Some(value))))
         },
@@ -89,7 +89,7 @@ trait HashSpec extends BaseSpec {
             value1 <- uuid
             value2 <- uuid
             _      <- hmSet(hash, field1 -> value1, field2 -> value2)
-            result <- hmGet(hash, field1, field2)
+            result <- hmGet[String, String, String](hash, field1, field2)
           } yield assert(result)(hasSameElements(Chunk(Some(value1), Some(value2))))
         },
         testM("delete field for hash") {
@@ -99,7 +99,7 @@ trait HashSpec extends BaseSpec {
             value   <- uuid
             _       <- hmSet(hash, field -> value)
             deleted <- hDel(hash, field)
-            result  <- hmGet(hash, field)
+            result  <- hmGet[String, String, String](hash, field)
           } yield assert(deleted)(equalTo(1L)) && assert(result)(hasSameElements(Chunk(None)))
         },
         testM("delete multiple fields for hash") {
@@ -111,7 +111,7 @@ trait HashSpec extends BaseSpec {
             value   <- uuid
             _       <- hmSet(hash, field1 -> value, field2 -> value, field3 -> value)
             deleted <- hDel(hash, field1, field3)
-            result  <- hmGet(hash, field1, field2, field3)
+            result  <- hmGet[String, String, String](hash, field1, field2, field3)
           } yield assert(deleted)(equalTo(2L)) &&
             assert(result)(hasSameElements(Chunk(None, Some(value), None)))
         }
@@ -180,13 +180,13 @@ trait HashSpec extends BaseSpec {
             field  <- uuid
             value  <- uuid
             _      <- hSet(hash, field -> value)
-            result <- hKeys(hash)
+            result <- hKeys[String, String](hash)
           } yield assert(result)(hasSameElements(Chunk(field)))
         },
         testM("get field names for non-existing hash") {
           for {
             hash   <- uuid
-            result <- hKeys(hash)
+            result <- hKeys[String, String](hash)
           } yield assert(result)(isEmpty)
         },
         testM("get field count for existing hash") {
@@ -249,13 +249,13 @@ trait HashSpec extends BaseSpec {
             field  <- uuid
             value  <- uuid
             _      <- hSet(hash, field -> value)
-            result <- hVals(hash)
+            result <- hVals[String, String](hash)
           } yield assert(result)(hasSameElements(Chunk(value)))
         },
         testM("get all values from non-existing hash") {
           for {
             hash   <- uuid
-            result <- hVals(hash)
+            result <- hVals[String, String](hash)
           } yield assert(result)(isEmpty)
         }
       ),
@@ -267,7 +267,7 @@ trait HashSpec extends BaseSpec {
               field           <- uuid
               value           <- uuid
               _               <- hSet(hash, field -> value)
-              scan            <- hScan(hash, 0L, pattern, count)
+              scan            <- hScan[String, String, String](hash, 0L, pattern, count)
               (next, elements) = scan
             } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         })

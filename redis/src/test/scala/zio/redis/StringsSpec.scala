@@ -290,6 +290,213 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
       ),
+      suite("Stralgo")(
+        testM("get LCS from 2 strings") {
+          val str1 = "foo"
+          val str2 = "fao"
+          assertM(stralgoLcs(StralgoLCS.Strings, str1, str2))(
+            equalTo(LcsOutput.Lcs("fo"))
+          )
+        },
+        testM("get LCS from 2 keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1   <- uuid
+            _      <- set(key1, str1, None, None, None)
+            key2   <- uuid
+            _      <- set(key2, str2, None, None, None)
+            result <- stralgoLcs(StralgoLCS.Keys, key1, key2)
+          } yield assert(result)(equalTo(LcsOutput.Lcs("fo")))
+        },
+        testM("get LCS from unknown keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1   <- uuid
+            _      <- set(key1, str1, None, None, None)
+            key2   <- uuid
+            _      <- set(key2, str2, None, None, None)
+            result <- stralgoLcs(StralgoLCS.Keys, "unknown", "unknown")
+          } yield assert(result)(equalTo(LcsOutput.Lcs("")))
+        },
+        testM("Get length of LCS for strings") {
+          val str1 = "foo"
+          val str2 = "fao"
+          assertM(
+            stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Len))
+          )(
+            equalTo(LcsOutput.Length(2))
+          )
+        },
+        testM("get length of LCS for keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1, None, None, None)
+            key2 <- uuid
+            _    <- set(key2, str2, None, None, None)
+            result <-
+              stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Len))
+          } yield assert(result)(equalTo(LcsOutput.Length(2)))
+        },
+        testM("get length of LCS for unknown keys") {
+          val str1 = "foo"
+          val str2 = "fao"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1, None, None, None)
+            key2 <- uuid
+            _    <- set(key2, str2, None, None, None)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                "unknown",
+                "unknown",
+                Some(StrAlgoLcsQueryType.Len)
+              )
+          } yield assert(result)(equalTo(LcsOutput.Length(0)))
+        },
+        testM("get index of LCS for strings") {
+          val str1 = "ohmytext"
+          val str2 = "mynewtext"
+          assertM(
+            stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Idx()))
+          )(
+            equalTo(
+              LcsOutput.Matches(
+                List(
+                  Match(matchIdxA = MatchIdx(4, 7), matchIdxB = MatchIdx(5, 8)),
+                  Match(matchIdxA = MatchIdx(2, 3), matchIdxB = MatchIdx(0, 1))
+                ),
+                6
+              )
+            )
+          )
+        },
+        testM("get index of LCS for keys") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Idx()))
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2)),
+                    Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        },
+        testM("get index of LCS for keys with MINMATCHLEN") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                key1,
+                key2,
+                Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2))
+              )
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        },
+        testM("get index of LCS for keys with WITHMATCHLEN") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                key1,
+                key2,
+                Some(StrAlgoLcsQueryType.Idx(withMatchLength = true))
+              )
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2)),
+                    Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0), matchLength = Some(1))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        },
+        testM("get index of LCS for keys with MINMATCHLEN and WITHMATCHLEN") {
+          val str1 = "!ohmytext"
+          val str2 = "!mynewtext"
+
+          for {
+            key1 <- uuid
+            _    <- set(key1, str1)
+            key2 <- uuid
+            _    <- set(key2, str2)
+            result <-
+              stralgoLcs(
+                StralgoLCS.Keys,
+                key1,
+                key2,
+                Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2, withMatchLength = true))
+              )
+          } yield {
+            assert(result)(
+              equalTo(
+                LcsOutput.Matches(
+                  List(
+                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
+                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2))
+                  ),
+                  7
+                )
+              )
+            )
+          }
+        }
+      ),
       suite("bitOp")(
         testM("AND over multiple non-empty strings") {
           for {
@@ -739,20 +946,20 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            result <- get(key)
+            result <- get[String, String](key)
           } yield assert(result)(isSome(equalTo("value")))
         },
         testM("emtpy string") {
           for {
             key    <- uuid
-            result <- get(key)
+            result <- get[String, String](key)
           } yield assert(result)(isNone)
         },
         testM("error when not string") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a")
-            result <- get(key).either
+            result <- get[String, String](key).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -796,90 +1003,90 @@ trait StringsSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            substr <- getRange(key, 1 to 3)
+            substr <- getRange[String, String](key, 1 to 3)
           } yield assert(substr)(equalTo("alu"))
         },
         testM("with range that exceeds non-empty string length") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            substr <- getRange(key, 1 to 10)
+            substr <- getRange[String, String](key, 1 to 10)
           } yield assert(substr)(equalTo("alue"))
         },
         testM("with range that is outside of non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            substr <- getRange(key, 10 to 15)
+            substr <- getRange[String, String](key, 10 to 15)
           } yield assert(substr)(equalTo(""))
         },
         testM("with inverse range of non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            substr <- getRange(key, 15 to 3)
+            substr <- getRange[String, String](key, 15 to 3)
           } yield assert(substr)(equalTo(""))
         },
         testM("with negative range end from non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            substr <- getRange(key, 1 to -1)
+            substr <- getRange[String, String](key, 1 to -1)
           } yield assert(substr)(equalTo("alue"))
         },
         testM("with start and end equal from non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            substr <- getRange(key, 1 to 1)
+            substr <- getRange[String, String](key, 1 to 1)
           } yield assert(substr)(equalTo("a"))
         },
         testM("from empty string") {
           for {
             key    <- uuid
-            substr <- getRange(key, 1 to 3)
+            substr <- getRange[String, String](key, 1 to 3)
           } yield assert(substr)(equalTo(""))
         },
         testM("error when not string") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a")
-            substr <- getRange(key, 1 to 3).either
+            substr <- getRange[String, String](key, 1 to 3).either
           } yield assert(substr)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
-      suite("getSet")(
+      suite("getSet[String, String, String]")(
         testM("non-empty value to the existing string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            oldVal <- getSet(key, "abc")
+            oldVal <- getSet[String, String, String](key, "abc")
           } yield assert(oldVal)(isSome(equalTo("value")))
         },
         testM("empty value to the existing string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
-            oldVal <- getSet(key, "")
+            oldVal <- getSet[String, String, String](key, "")
           } yield assert(oldVal)(isSome(equalTo("value")))
         },
         testM("non-empty value to the empty string") {
           for {
             key    <- uuid
-            oldVal <- getSet(key, "value")
+            oldVal <- getSet[String, String, String](key, "value")
           } yield assert(oldVal)(isNone)
         },
         testM("empty value to the empty string") {
           for {
             key    <- uuid
-            oldVal <- getSet(key, "")
+            oldVal <- getSet[String, String, String](key, "")
           } yield assert(oldVal)(isNone)
         },
         testM("error when not string") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a")
-            oldVal <- getSet(key, "value").either
+            oldVal <- getSet[String, String, String](key, "value").either
           } yield assert(oldVal)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -948,50 +1155,50 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
-      suite("incrByFloat")(
+      suite("incrByFloat[String, String]")(
         testM("3.4 when non-empty float") {
           for {
             key    <- uuid
             _      <- set(key, "5.1")
-            result <- incrByFloat(key, 3.4d)
+            result <- incrByFloat[String, String](key, 3.4d)
           } yield assert(result)(equalTo("8.5"))
         },
         testM("3.4 when empty float") {
           for {
             key    <- uuid
-            result <- incrByFloat(key, 3.4d)
+            result <- incrByFloat[String, String](key, 3.4d)
           } yield assert(result)(equalTo("3.4"))
         },
         testM("-3.4 when non-empty float") {
           for {
             key    <- uuid
             _      <- set(key, "5")
-            result <- incrByFloat(key, -3.4d)
+            result <- incrByFloat[String, String](key, -3.4d)
           } yield assert(result)(equalTo("1.6"))
         },
         testM("error when out of range value") {
           for {
             key    <- uuid
             _      <- set(key, s"${Double.MaxValue.toString}1234")
-            result <- incrByFloat(key, 3d).either
+            result <- incrByFloat[String, String](key, 3d).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
             _      <- set(key, "not-integer")
-            result <- incrByFloat(key, 3).either
+            result <- incrByFloat[String, String](key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
-      suite("mGet")(
+      suite("mGet[String, String]")(
         testM("from multiple non-empty strings") {
           for {
             first  <- uuid
             second <- uuid
             _      <- set(first, "1")
             _      <- set(second, "2")
-            result <- mGet(first, second)
+            result <- mGet[String, String](first, second)
           } yield assert(result)(equalTo(Chunk(Some("1"), Some("2"))))
         },
         testM("from one non-empty and one empty string") {
@@ -999,14 +1206,14 @@ trait StringsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- set(nonEmpty, "value")
-            result   <- mGet(nonEmpty, empty)
+            result   <- mGet[String, String](nonEmpty, empty)
           } yield assert(result)(equalTo(Chunk(Some("value"), None)))
         },
         testM("from two empty strings") {
           for {
             first  <- uuid
             second <- uuid
-            result <- mGet(first, second)
+            result <- mGet[String, String](first, second)
           } yield assert(result)(equalTo(Chunk(None, None)))
         },
         testM("from one string and one not string") {
@@ -1015,14 +1222,14 @@ trait StringsSpec extends BaseSpec {
             notStr <- uuid
             _      <- set(str, "value")
             _      <- sAdd(notStr, "a")
-            result <- mGet(str, notStr)
+            result <- mGet[String, String](str, notStr)
           } yield assert(result)(equalTo(Chunk(Some("value"), None)))
         },
         testM("from one not string") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a")
-            result <- mGet(key)
+            result <- mGet[String, String](key)
           } yield assert(result)(equalTo(Chunk(None)))
         }
       ),
@@ -1032,7 +1239,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- mSet((key, value))
-            result <- get(key)
+            result <- get[String, String](key)
           } yield assert(result)(isSome(equalTo(value)))
         },
         testM("multiple new values") {
@@ -1042,7 +1249,7 @@ trait StringsSpec extends BaseSpec {
             firstVal  <- uuid
             secondVal <- uuid
             _         <- mSet((first, firstVal), (second, secondVal))
-            result    <- mGet(first, second)
+            result    <- mGet[String, String](first, second)
           } yield assert(result)(equalTo(Chunk(Some(firstVal), Some(secondVal))))
         },
         testM("replace existing values") {
@@ -1054,7 +1261,7 @@ trait StringsSpec extends BaseSpec {
             replacement <- uuid
             _           <- mSet((first, firstVal), (second, secondVal))
             _           <- mSet((first, replacement), (second, replacement))
-            result      <- mGet(first, second)
+            result      <- mGet[String, String](first, second)
           } yield assert(result)(equalTo(Chunk(Some(replacement), Some(replacement))))
         },
         testM("one value multiple times at once") {
@@ -1063,7 +1270,7 @@ trait StringsSpec extends BaseSpec {
             firstVal  <- uuid
             secondVal <- uuid
             _         <- mSet((key, firstVal), (key, secondVal))
-            result    <- get(key)
+            result    <- get[String, String](key)
           } yield assert(result)(isSome(equalTo(secondVal)))
         },
         testM("replace not string value") {
@@ -1137,7 +1344,7 @@ trait StringsSpec extends BaseSpec {
             value      <- uuid
             _          <- set(key, "value")
             _          <- pSetEx(key, 1000.millis, value)
-            currentVal <- get(key)
+            currentVal <- get[String, String](key)
           } yield assert(currentVal)(isSome(equalTo(value)))
         },
         testM("override not string") {
@@ -1146,7 +1353,7 @@ trait StringsSpec extends BaseSpec {
             value      <- uuid
             _          <- sAdd(key, "a")
             _          <- pSetEx(key, 1000.millis, value)
-            currentVal <- get(key)
+            currentVal <- get[String, String](key)
           } yield assert(currentVal)(isSome(equalTo(value)))
         },
         testM("error when 0 milliseconds") {
@@ -1444,9 +1651,9 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- pSetEx(key, 10.millis, value)
-            exists <- getEx(key, true)
+            exists <- getEx[String, String](key, true)
             _      <- ZIO.sleep(20.millis)
-            res    <- get(key)
+            res    <- get[String, String](key)
           } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
         testM("not found value when set seconds ttl") {
@@ -1454,9 +1661,9 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getEx(key, Expire.SetExpireSeconds, 1.second)
+            exists <- getEx[String, String](key, Expire.SetExpireSeconds, 1.second)
             _      <- ZIO.sleep(1020.millis)
-            res    <- get(key)
+            res    <- get[String, String](key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
         testM("not found value when set milliseconds ttl") {
@@ -1464,9 +1671,9 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getEx(key, Expire.SetExpireMilliseconds, 10.millis)
+            exists <- getEx[String, String](key, Expire.SetExpireMilliseconds, 10.millis)
             _      <- ZIO.sleep(20.millis)
-            res    <- get(key)
+            res    <- get[String, String](key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
         testM("not found value when set seconds timestamp") {
@@ -1474,9 +1681,9 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getExAt(key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(10))
+            exists <- getEx[String, String](key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(10))
             _      <- ZIO.sleep(20.millis)
-            res    <- get(key)
+            res    <- get[String, String](key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
         testM("not found value when set milliseconds timestamp") {
@@ -1484,19 +1691,19 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            exists <- getExAt(key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
+            exists <- getEx[String, String](key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
             _      <- ZIO.sleep(20.millis)
-            res    <- get(key)
+            res    <- get[String, String](key)
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
         testM("key not found") {
           for {
             key   <- uuid
             value <- uuid
-            _     <- set(key, value)
-            res   <- getExAt(value, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
-            res2  <- getEx(value, Expire.SetExpireMilliseconds, 10.millis)
-            res3  <- getEx(value, true)
+            _     <- set[String, String](key, value)
+            res   <- getEx[String, String](value, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
+            res2  <- getEx[String, String](value, Expire.SetExpireMilliseconds, 10.millis)
+            res3  <- getEx[String, String](value, true)
           } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))
         } @@ eventually
       ),
@@ -1505,13 +1712,13 @@ trait StringsSpec extends BaseSpec {
           for {
             key <- uuid
             _   <- sAdd(key, "a")
-            res <- getDel(key).either
+            res <- getDel[String, String](key).either
           } yield assert(res)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("key not exists") {
           for {
             key <- uuid
-            res <- getDel(key)
+            res <- getDel[String, String](key)
           } yield assert(res)(equalTo(None))
         },
         testM("get and remove key") {
@@ -1519,8 +1726,8 @@ trait StringsSpec extends BaseSpec {
             key      <- uuid
             value    <- uuid
             _        <- set(key, value)
-            res      <- getDel(key)
-            notFound <- getDel(key)
+            res      <- getDel[String, String](key)
+            notFound <- getDel[String, String](key)
           } yield assert(res)(equalTo(Some(value))) && assert(notFound)(equalTo(None))
         }
       )

@@ -8,6 +8,8 @@ import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
 import zio.stm.{ random => _, _ }
 
 private[redis] final class TestExecutor private (
@@ -15,26 +17,29 @@ private[redis] final class TestExecutor private (
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
-  hyperLogLogs: TMap[String, Set[String]]
+  hyperLogLogs: TMap[String, Set[String]],
+  hashes: TMap[String, Map[String, String]]
 ) extends RedisExecutor.Service {
 
-  def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+  override val codec: Codec = StringUtf8Codec
+
+  override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
       result <- name.asString match {
-                  case api.Lists.BlPop.name =>
+                  case api.Lists.BlPop =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
 
-                  case api.Lists.BrPop.name =>
+                  case api.Lists.BrPop =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
 
-                  case api.Lists.BrPopLPush.name =>
+                  case api.Lists.BrPopLPush =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
-                  case api.Lists.BlMove.name =>
+                  case api.Lists.BlMove =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
@@ -82,7 +87,7 @@ private[redis] final class TestExecutor private (
       case api.Connection.Select.name =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
-      case api.Sets.SAdd.name =>
+      case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
           {
@@ -96,14 +101,14 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SCard.name =>
+      case api.Sets.SCard =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
           sets.get(key).map(_.fold(RespValue.Integer(0))(s => RespValue.Integer(s.size.toLong)))
         )
 
-      case api.Sets.SDiff.name =>
+      case api.Sets.SDiff =>
         val allkeys = input.map(_.asString)
         val mainKey = allkeys.head
         val others  = allkeys.tail
@@ -115,7 +120,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.array(result.map(RespValue.bulkString).toList: _*)
         )
 
-      case api.Sets.SDiffStore.name =>
+      case api.Sets.SDiffStore =>
         val allkeys = input.map(_.asString)
         val distkey = allkeys.head
         val mainKey = allkeys(1)
@@ -129,13 +134,13 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(result.size.toLong)
         )
 
-      case api.Sets.SInter.name =>
+      case api.Sets.SInter =>
         val keys      = input.map(_.asString)
         val mainKey   = keys.head
         val otherKeys = keys.tail
         sInter(mainKey, otherKeys).fold(_ => Replies.WrongType, Replies.array)
 
-      case api.Sets.SInterStore.name =>
+      case api.Sets.SInterStore =>
         val keys        = input.map(_.asString)
         val destination = keys.head
         val mainKey     = keys(1)
@@ -149,7 +154,7 @@ private[redis] final class TestExecutor private (
             } yield RespValue.Integer(s.size.toLong)
         )
 
-      case api.Sets.SIsMember.name =>
+      case api.Sets.SIsMember =>
         val key    = input.head.asString
         val member = input(1).asString
 
@@ -160,7 +165,7 @@ private[redis] final class TestExecutor private (
           } yield result
         )
 
-      case api.Sets.SMove.name =>
+      case api.Sets.SMove =>
         val sourceKey      = input.head.asString
         val destinationKey = input(1).asString
         val member         = input(2).asString
@@ -180,7 +185,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SPop.name =>
+      case api.Sets.SPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -192,14 +197,14 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(result)
         )
 
-      case api.Sets.SMembers.name =>
+      case api.Sets.SMembers =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
           sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_)))
         )
 
-      case api.Sets.SRandMember.name =>
+      case api.Sets.SRandMember =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
@@ -221,7 +226,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SRem.name =>
+      case api.Sets.SRem =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
@@ -236,7 +241,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SUnion.name =>
+      case api.Sets.SUnion =>
         val keys = input.map(_.asString)
 
         orWrongType(forAll(keys)(isSet))(
@@ -249,7 +254,7 @@ private[redis] final class TestExecutor private (
             .map(unionSet => Replies.array(unionSet))
         )
 
-      case api.Sets.SUnionStore.name =>
+      case api.Sets.SUnionStore =>
         val destination = input.head.asString
         val keys        = input.tail.map(_.asString)
 
@@ -265,7 +270,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(union.size.toLong)
         )
 
-      case api.Sets.SScan.name =>
+      case api.Sets.SScan =>
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
@@ -273,11 +278,12 @@ private[redis] final class TestExecutor private (
           }
 
         val key = input.head.asString
+
         orWrongType(isSet(key))(
           {
             val start = input(1).asString.toInt
             val maybeRegex = if (input.size > 2) input(2).asString match {
-              case "MATCH" => Some(input(3).asString.r)
+              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
               case _       => None
             }
             else None
@@ -296,13 +302,13 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Strings.Set.name =>
+      case api.Strings.Set =>
         // not a full implementation. Just enough to make set tests work
         val key   = input.head.asString
         val value = input(1).asString
         strings.put(key, value).as(Replies.Ok)
 
-      case api.HyperLogLog.PfAdd.name =>
+      case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString).toSet
 
@@ -314,7 +320,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(ret)
         )
 
-      case api.HyperLogLog.PfCount.name =>
+      case api.HyperLogLog.PfCount =>
         val keys = input.map(_.asString)
         orWrongType(forAll(keys)(isHyperLogLog))(
           STM
@@ -326,7 +332,7 @@ private[redis] final class TestExecutor private (
             .map(vs => RespValue.Integer(vs.size.toLong))
         )
 
-      case api.HyperLogLog.PfMerge.name =>
+      case api.HyperLogLog.PfMerge =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -343,7 +349,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.Ok
         )
 
-      case api.Lists.LIndex.name =>
+      case api.Lists.LIndex =>
         val key   = input.head.asString
         val index = input(1).asString.toInt
 
@@ -354,7 +360,7 @@ private[redis] final class TestExecutor private (
           } yield result.fold[RespValue](RespValue.NullBulkString)(value => RespValue.bulkString(value))
         )
 
-      case api.Lists.LInsert.name =>
+      case api.Lists.LInsert =>
         val key = input.head.asString
         val position = input(1).asString match {
           case "BEFORE" => Position.Before
@@ -397,7 +403,7 @@ private[redis] final class TestExecutor private (
           } yield result
         )
 
-      case api.Lists.LLen.name =>
+      case api.Lists.LLen =>
         val key = input.head.asString
 
         orWrongType(isList(key))(
@@ -406,7 +412,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(list.size.toLong)
         )
 
-      case api.Lists.LPush.name =>
+      case api.Lists.LPush =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -418,7 +424,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      case api.Lists.LPushX.name =>
+      case api.Lists.LPushX =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -430,7 +436,7 @@ private[redis] final class TestExecutor private (
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
-      case api.Lists.LRange.name =>
+      case api.Lists.LRange =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
         val end   = input(2).asString.toInt
@@ -442,7 +448,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(result)
         )
 
-      case api.Lists.LRem.name =>
+      case api.Lists.LRem =>
         val key     = input.head.asString
         val count   = input(1).asString.toInt
         val element = input(2).asString
@@ -459,7 +465,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer((list.size - result.size).toLong)
         )
 
-      case api.Lists.LSet.name =>
+      case api.Lists.LSet =>
         val key     = input.head.asString
         val index   = input(1).asString.toInt
         val element = input(2).asString
@@ -477,7 +483,7 @@ private[redis] final class TestExecutor private (
           } yield ()).fold(_ => RespValue.Error("ERR index out of range"), _ => RespValue.SimpleString("OK"))
         )
 
-      case api.Lists.LTrim.name =>
+      case api.Lists.LTrim =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
         val stop  = input(2).asString.toInt
@@ -496,7 +502,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.SimpleString("OK")
         )
 
-      case api.Lists.RPop.name =>
+      case api.Lists.RPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -512,7 +518,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Lists.RPopLPush.name =>
+      case api.Lists.RPopLPush =>
         val source      = input(0).asString
         val destination = input(1).asString
 
@@ -528,7 +534,7 @@ private[redis] final class TestExecutor private (
           } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
-      case api.Lists.RPush.name =>
+      case api.Lists.RPush =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -540,7 +546,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      case api.Lists.LPop.name =>
+      case api.Lists.LPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -556,7 +562,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Lists.RPushX.name =>
+      case api.Lists.RPushX =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -568,7 +574,7 @@ private[redis] final class TestExecutor private (
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
-      case api.Lists.BlPop.name =>
+      case api.Lists.BlPop =>
         val keys = input.dropRight(1).map(_.asString)
 
         orWrongType(forAll(keys)(isList))(
@@ -581,7 +587,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(Chunk(sk, sl.head))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.BrPop.name =>
+      case api.Lists.BrPop =>
         val keys = input.dropRight(1).map(_.asString)
 
         orWrongType(forAll(keys)(isList))(
@@ -594,7 +600,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(Chunk(sk, sl.last))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.BrPopLPush.name =>
+      case api.Lists.BrPopLPush =>
         val source      = input.head.asString
         val destination = input.tail.head.asString
 
@@ -611,7 +617,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.LMove.name =>
+      case api.Lists.LMove =>
         val source      = input(0).asString
         val destination = input(1).asString
         val sourceSide = input(2).asString match {
@@ -653,7 +659,7 @@ private[redis] final class TestExecutor private (
           } yield element).fold(_ => RespValue.NullBulkString, result => RespValue.bulkString(result))
         )
 
-      case api.Lists.BlMove.name =>
+      case api.Lists.BlMove =>
         val source      = input(0).asString
         val destination = input(1).asString
         val sourceSide = input(2).asString match {
@@ -695,7 +701,7 @@ private[redis] final class TestExecutor private (
           } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
-      case api.Lists.LPos.name =>
+      case api.Lists.LPos =>
         val key     = input(0).asString
         val element = input(1).asString
 
@@ -769,6 +775,203 @@ private[redis] final class TestExecutor private (
           )
         )
 
+      case api.Hashes.HDel =>
+        val key    = input(0).asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash       <- hashes.getOrElse(key, Map.empty)
+            countExists = hash.keys count values.contains
+            newHash     = hash -- values
+            _          <- if (newHash.isEmpty) hashes.delete(key) else hashes.put(key, newHash)
+          } yield RespValue.Integer(countExists.toLong)
+        )
+
+      case api.Hashes.HExists =>
+        val key   = input(0).asString
+        val field = input(1).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            exists = hash.keys.exists(_ == field)
+          } yield if (exists) RespValue.Integer(1L) else RespValue.Integer(0L)
+        )
+
+      case api.Hashes.HGet =>
+        val key   = input(0).asString
+        val field = input(1).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+            value = hash.get(field)
+          } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
+        )
+
+      case api.Hashes.HGetAll =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash   <- hashes.getOrElse(key, Map.empty)
+            results = hash.flatMap { case (k, v) => Iterable.apply(k, v) } map RespValue.bulkString
+          } yield RespValue.Array(Chunk.fromIterable(results))
+        )
+
+      case api.Hashes.HIncrBy =>
+        val key   = input(0).asString
+        val field = input(1).asString
+        val incr  = input(2).asString.toLong
+
+        orWrongType(isHash(key))(
+          (for {
+            hash     <- hashes.getOrElse(key, Map.empty)
+            newValue <- STM.fromTry(Try(hash.getOrElse(field, "0").toLong + incr))
+            newMap    = hash + (field -> newValue.toString)
+            _        <- hashes.put(key, newMap)
+          } yield newValue).fold(_ => Replies.Error, result => RespValue.Integer(result))
+        )
+
+      case api.Hashes.HIncrByFloat =>
+        val key   = input(0).asString
+        val field = input(1).asString
+        val incr  = input(2).asString.toDouble
+
+        orWrongType(isHash(key))(
+          (for {
+            hash     <- hashes.getOrElse(key, Map.empty)
+            newValue <- STM.fromTry(Try(hash.getOrElse(field, "0").toDouble + incr))
+            newHash   = hash + (field -> newValue.toString)
+            _        <- hashes.put(key, newHash)
+          } yield newValue).fold(_ => Replies.Error, result => RespValue.bulkString(result.toString))
+        )
+
+      case api.Hashes.HKeys =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+          } yield RespValue.Array(Chunk.fromIterable(hash.keys map RespValue.bulkString))
+        )
+
+      case api.Hashes.HLen =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+          } yield RespValue.Integer(hash.size.toLong)
+        )
+
+      case api.Hashes.HmGet =>
+        val key    = input(0).asString
+        val fields = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            result = fields.map(hash.get)
+          } yield RespValue.Array(result.map {
+            case None        => RespValue.NullBulkString
+            case Some(value) => RespValue.bulkString(value)
+          })
+        )
+
+      case api.Hashes.HmSet =>
+        val key    = input(0).asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            newMap = hash ++ values.grouped(2).map(g => (g(0), g(1)))
+            _     <- hashes.put(key, newMap)
+          } yield Replies.Ok
+        )
+
+      case api.Hashes.HScan =>
+        def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
+          key.asString match {
+            case "COUNT" => Some(value.asString.toInt)
+            case _       => None
+          }
+
+        val key = input.head.asString
+
+        orWrongType(isHash(key))(
+          {
+            val start = input(1).asString.toInt
+            val maybeRegex = if (input.size > 2) input(2).asString match {
+              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+              case _       => None
+            }
+            else None
+            val maybeCount =
+              if (input.size > 4) maybeGetCount(input(4), input(5))
+              else if (input.size > 2) maybeGetCount(input(2), input(3))
+              else None
+            val end = start + maybeCount.getOrElse(10)
+            for {
+              set <- hashes.getOrElse(key, Map.empty)
+              filtered =
+                maybeRegex.map(regex => set.filter { case (k, _) => regex.pattern.matcher(k).matches }).getOrElse(set)
+              resultSet = filtered.slice(start, end)
+              nextIndex = if (filtered.size <= end) 0 else end
+              results   = Replies.array(resultSet.flatMap { case (k, v) => Iterable(k, v) })
+            } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
+          }
+        )
+
+      case api.Hashes.HSet =>
+        val key    = input(0).asString
+        val values = input.tail.map(_.asString)
+
+        orWrongType(isHash(key))(
+          for {
+            hash   <- hashes.getOrElse(key, Map.empty)
+            newHash = hash ++ values.grouped(2).map(g => (g(0), g(1)))
+            _      <- hashes.put(key, newHash)
+          } yield RespValue.Integer(newHash.size.toLong - hash.size.toLong)
+        )
+
+      case api.Hashes.HSetNx =>
+        val key   = input(0).asString
+        val field = input(1).asString
+        val value = input(2).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash    <- hashes.getOrElse(key, Map.empty)
+            contains = hash.contains(field)
+            newHash  = hash ++ (if (contains) Map.empty else Map(field -> value))
+            _       <- hashes.put(key, newHash)
+          } yield RespValue.Integer(if (contains) 0L else 1L)
+        )
+
+      case api.Hashes.HStrLen =>
+        val key   = input(0).asString
+        val field = input(1).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash <- hashes.getOrElse(key, Map.empty)
+            len   = hash.get(field).map(_.length.toLong).getOrElse(0L)
+          } yield RespValue.Integer(len)
+        )
+
+      case api.Hashes.HVals =>
+        val key = input(0).asString
+
+        orWrongType(isHash(key))(
+          for {
+            hash  <- hashes.getOrElse(key, Map.empty)
+            values = hash.values map RespValue.bulkString
+          } yield RespValue.Array(Chunk.fromIterable(values))
+        )
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
@@ -784,7 +987,8 @@ private[redis] final class TestExecutor private (
       isString <- strings.contains(name)
       isList   <- lists.contains(name)
       isHyper  <- hyperLogLogs.contains(name)
-    } yield !isString && !isList && !isHyper
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isList && !isHyper && !isHash
 
   // check whether the key is a list or unused.
   private[this] def isList(name: String): STM[Nothing, Boolean] =
@@ -792,7 +996,8 @@ private[redis] final class TestExecutor private (
       isString <- strings.contains(name)
       isSet    <- sets.contains(name)
       isHyper  <- hyperLogLogs.contains(name)
-    } yield !isString && !isSet && !isHyper
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isHyper && !isHash
 
   //check whether the key is a hyperLogLog or unused.
   private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
@@ -800,7 +1005,17 @@ private[redis] final class TestExecutor private (
       isString <- strings.contains(name)
       isSet    <- sets.contains(name)
       isList   <- lists.contains(name)
-    } yield !isString && !isSet && !isList
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isList && !isHash
+
+  //check whether the key is a hash or unused.
+  private[this] def isHash(name: String): ZSTM[Any, Nothing, Boolean] =
+    for {
+      isString <- strings.contains(name)
+      isSet    <- sets.contains(name)
+      isList   <- lists.contains(name)
+      isHyper  <- hyperLogLogs.contains(name)
+    } yield !isString && !isSet && !isList && !isHyper
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
@@ -903,7 +1118,8 @@ private[redis] object TestExecutor {
       strings      <- TMap.empty[String, String].commit
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
       lists        <- TMap.empty[String, Chunk[String]].commit
-    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs)
+      hashes       <- TMap.empty[String, Map[String, String]].commit
+    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes)
 
     executor.toLayer
   }

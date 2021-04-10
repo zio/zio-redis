@@ -1,5 +1,6 @@
 package zio.redis
 
+import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test._
@@ -31,12 +32,13 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared((Logging.ignore >>> RedisExecutor.local.orDie) ++ Clock.live),
+      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
       suite("Test Executor")(
         connectionSuite,
         setsSuite,
         hyperLogLogSuite,
-        listSuite
+        listSuite,
+        hashSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
         .provideCustomLayerShared(RedisExecutor.test ++ Clock.live)

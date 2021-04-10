@@ -14,6 +14,8 @@ import zio.config.typesafe.TypesafeConfig
 import zio.console._
 import zio.logging.Logging
 import zio.redis.RedisExecutor
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
 
 object Main extends App {
 
@@ -25,7 +27,7 @@ object Main extends App {
       .exitCode
 
   private def makeLayer(rawConfig: Config): TaskLayer[HttpServer] = {
-    val config       = TypesafeConfig.fromTypesafeConfig(rawConfig, AppConfig.descriptor)
+    val config       = TypesafeConfig.fromTypesafeConfig[AppConfig](rawConfig, AppConfig.descriptor)
     val serverConfig = config.narrow(_.server)
     val redisConfig  = config.narrow(_.redis)
 
@@ -34,7 +36,8 @@ object Main extends App {
         .make(ZIO.succeed(ActorSystem("zio-redis-example")))(as => ZIO.fromFuture(_ => as.terminate()).either)
         .toLayer
 
-    val redis  = Logging.ignore ++ redisConfig >>> RedisExecutor.live
+    val codec  = ZLayer.succeed[Codec](StringUtf8Codec)
+    val redis  = Logging.ignore ++ redisConfig ++ codec >>> RedisExecutor.live
     val sttp   = AsyncHttpClientZioBackend.layer()
     val cache  = redis ++ sttp >>> ContributorsCache.live
     val api    = cache >>> Api.live
