@@ -1058,9 +1058,18 @@ private[redis] final class TestExecutor private (
         )
 
       case api.SortedSets.ZCount.name =>
+        val key = input(0).asString
+        val min = input(1).asLong
+        val max = input(2).asLong
 
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            result = sortedSet.filter(ms => ms.score >= min && ms.score <= max)
+          } yield RespValue.Integer(result.size)
+        )
 
-
+        
 
 
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
