@@ -1069,9 +1069,21 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(result.size)
         )
 
+      case api.SortedSets.ZIncrBy.name =>
+        val key = input(0).asString
+        val increment = input(1).asLong
+        val member = input(2).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            resultMember = sortedSet.find(ms => ms.member == member).map(ms => ms.copy(ms.score + increment, ms.member)).getOrElse(MemberScore(increment.toDouble, member))
+            resultSet = sortedSet + resultMember
+            _ <- sortedSets.put(key, resultSet)
+          } yield RespValue.bulkString(resultMember.score.toString)
+        )
+
         
-
-
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
