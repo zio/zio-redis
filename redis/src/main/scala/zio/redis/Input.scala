@@ -239,12 +239,12 @@ object Input {
   }
 
   final case class ArbitraryInput[A: Schema]() extends Input[A] {
-    private[redis] def encode(data: A)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+    def encode(data: A)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeBytes(data))
   }
 
   case object ByteInput extends Input[Chunk[Byte]] {
-    private[redis] def encode(data: Chunk[Byte])(implicit codec: Codec): Chunk[RespValue.BulkString] =
+    def encode(data: Chunk[Byte])(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(RespValue.BulkString(data))
   }
 
@@ -322,7 +322,7 @@ object Input {
   }
 
   final case class StreamsInput[K: Schema, V: Schema]() extends Input[((K, V), Chunk[(K, V)])] {
-    private[redis] def encode(data: ((K, V), Chunk[(K, V)]))(implicit codec: Codec): Chunk[RespValue.BulkString] = {
+    def encode(data: ((K, V), Chunk[(K, V)]))(implicit codec: Codec): Chunk[RespValue.BulkString] = {
       val (keys, ids) = (data._1 +: data._2).map { case (key, value) =>
         (encodeBytes(key), encodeBytes(value))
       }.unzip
@@ -349,12 +349,12 @@ object Input {
   }
 
   case object ListMaxLenInput extends Input[ListMaxLen] {
-    override def encode(data: ListMaxLen)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+    def encode(data: ListMaxLen)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("MAXLEN"), encodeString(data.count.toString))
   }
 
   case object RankInput extends Input[Rank] {
-    override def encode(data: Rank)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+    def encode(data: Rank)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("RANK"), encodeString(data.rank.toString))
   }
 
@@ -465,12 +465,12 @@ object Input {
       Chunk.single(encodeString(data.stringify))
   }
 
-  case class GetExPersistInput[K: Schema]() extends Input[(K, Boolean)] {
-    override private[redis] def encode(data: (K, Boolean))(implicit codec: Codec): Chunk[RespValue.BulkString] =
+  final case class GetExPersistInput[K: Schema]() extends Input[(K, Boolean)] {
+    def encode(data: (K, Boolean))(implicit codec: Codec): Chunk[RespValue.BulkString] =
       if (data._2) Chunk(encodeBytes(data._1), encodeString("PERSIST")) else Chunk(encodeBytes(data._1))
   }
-  case class GetExInput[K: Schema]() extends Input[(K, Expire, Duration)] {
-    override private[redis] def encode(
+  final case class GetExInput[K: Schema]() extends Input[(K, Expire, Duration)] {
+    def encode(
       data: (K, Expire, Duration)
     )(implicit codec: Codec): Chunk[RespValue.BulkString] =
       data match {
@@ -482,8 +482,8 @@ object Input {
       }
   }
 
-  case class GetExAtInput[K: Schema]() extends Input[(K, ExpiredAt, Instant)] {
-    override private[redis] def encode(
+  final case class GetExAtInput[K: Schema]() extends Input[(K, ExpiredAt, Instant)] {
+    def encode(
       data: (K, ExpiredAt, Instant)
     )(implicit codec: Codec): Chunk[RespValue.BulkString] =
       data match {
