@@ -3,12 +3,13 @@ package zio.redis
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
-
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
-import zio.stm.{ random => _, _ }
+import zio.stm.{random => _, _}
+
+import scala.collection.immutable.SortedSet
 
 private[redis] final class TestExecutor private (
   lists: TMap[String, Chunk[String]],
@@ -16,7 +17,8 @@ private[redis] final class TestExecutor private (
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
-  hashes: TMap[String, Map[String, String]]
+  hashes: TMap[String, Map[String, String]],
+  sortedSets: TMap[String, SortedSet[MemberScore]]
 ) extends RedisExecutor.Service {
 
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
@@ -968,9 +970,104 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(values))
         )
 
+      case api.SortedSets.BzPopMax.name =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          (for {
+            allSets <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, SortedSet.empty)))(identity)
+            nonEmptyLists <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, ss)      <- STM.fromOption(nonEmptyLists.headOption)
+            max            = ss.last
+            newSet         = ss.dropRight(1)
+            _             <- sortedSets.put(sk, newSet)
+          } yield Replies.array(Chunk(sk, max.member, max.score.toString)))
+            .foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.SortedSets.BzPopMin.name =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          (for {
+            allSets <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, SortedSet.empty)))(identity)
+            nonEmptyLists <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, ss)      <- STM.fromOption(nonEmptyLists.headOption)
+            min            = ss.head
+            newSet         = ss.drop(1)
+            _             <- sortedSets.put(sk, newSet)
+          } yield Replies.array(Chunk(sk, min.member, min.score.toString)))
+            .foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.SortedSets.ZAdd.name =>
+        val key = input(0).asString
+
+        def maybeUpdate(value: String) = value match {
+          case "XX" => Some(Update.SetExisting)
+          case "NX" => Some(Update.SetNew)
+          case "LT" => Some(Update.SetLessThan)
+          case "GT" => Some(Update.SetGreaterThan)
+          case _    => None
+        }
+
+        def maybeChanged(value: String) = value match {
+          case "CH" => Some(Changed)
+          case _ => None
+        }
+
+        val updateOption = maybeUpdate(input(1).asString) orElse maybeUpdate(input(2).asString)
+        val changedOption = maybeChanged(input(1).asString) orElse maybeChanged(input(2).asString)
+        val optionsCount = updateOption.map(_ => 1).getOrElse(0) + changedOption.map(_ => 1).getOrElse(0)
+
+        val values =
+          Chunk.fromIterator(
+            input
+              .drop(1 + optionsCount)
+              .map(_.asString)
+              .grouped(2)
+              .map(g => MemberScore(g(0).toDouble, g(1)))
+          )
+
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            valuesToAdd = updateOption.map {
+              case Update.SetExisting => values.filter(ms => sortedSet.exists(_.member == ms.member))
+              case Update.SetNew => values.filter(ms => !sortedSet.exists(_.member == ms.member))
+              case Update.SetLessThan => values.filter(ms => sortedSet.exists(m => m.member == ms.member && m.score > ms.score))
+              case Update.SetGreaterThan => values.filter(ms => sortedSet.exists(m => m.member == ms.member && m.score < ms.score))
+            }.getOrElse(values)
+
+            valuesChanged = changedOption.map(_ => valuesToAdd.size).getOrElse {
+              values.filter(ms => !sortedSet.exists(_.member == ms.member)).size
+            }
+          _ <- sortedSets.put(key, sortedSet ++ valuesToAdd)
+          } yield RespValue.Integer(valuesChanged)
+        )
+
+      case api.SortedSets.ZCard.name =>
+        val key = input(0).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+          } yield RespValue.Integer(sortedSet.size)
+        )
+
+      case api.SortedSets.ZCount.name =>
+
+
+
+
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
+
+  implicit val memberScoreOrdering: Ordering[MemberScore] = Ordering.by((memberScore: MemberScore) => memberScore.score)
 
   private[this] def orWrongType(predicate: USTM[Boolean])(
     program: => USTM[RespValue]
@@ -980,38 +1077,52 @@ private[redis] final class TestExecutor private (
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): STM[Nothing, Boolean] =
     for {
-      isString <- strings.contains(name)
-      isList   <- lists.contains(name)
-      isHyper  <- hyperLogLogs.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isList && !isHyper && !isHash
+      isString    <- strings.contains(name)
+      isList      <- lists.contains(name)
+      isHyper     <- hyperLogLogs.contains(name)
+      isHash      <- hashes.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isList && !isHyper && !isHash && !isSortedSet
 
   // check whether the key is a list or unused.
   private[this] def isList(name: String): STM[Nothing, Boolean] =
     for {
-      isString <- strings.contains(name)
-      isSet    <- sets.contains(name)
-      isHyper  <- hyperLogLogs.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isSet && !isHyper && !isHash
+      isString    <- strings.contains(name)
+      isSet       <- sets.contains(name)
+      isHyper     <- hyperLogLogs.contains(name)
+      isHash      <- hashes.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isSet && !isHyper && !isHash && !isSortedSet
 
   //check whether the key is a hyperLogLog or unused.
   private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
-      isString <- strings.contains(name)
-      isSet    <- sets.contains(name)
-      isList   <- lists.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isSet && !isList && !isHash
+      isString    <- strings.contains(name)
+      isSet       <- sets.contains(name)
+      isList      <- lists.contains(name)
+      isHash      <- hashes.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isSet && !isList && !isHash && !isSortedSet
 
   //check whether the key is a hash or unused.
   private[this] def isHash(name: String): ZSTM[Any, Nothing, Boolean] =
+    for {
+      isString    <- strings.contains(name)
+      isSet       <- sets.contains(name)
+      isList      <- lists.contains(name)
+      isHyper     <- hyperLogLogs.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isSet && !isList && !isHyper && !isSortedSet
+
+  //check whether the key is a hash or unused.
+  private[this] def isSortedSet(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
       isString <- strings.contains(name)
       isSet    <- sets.contains(name)
       isList   <- lists.contains(name)
       isHyper  <- hyperLogLogs.contains(name)
-    } yield !isString && !isSet && !isList && !isHyper
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isList && !isHyper && !isHash
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
@@ -1115,7 +1226,8 @@ private[redis] object TestExecutor {
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
       lists        <- TMap.empty[String, Chunk[String]].commit
       hashes       <- TMap.empty[String, Map[String, String]].commit
-    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes)
+      sortedSets   <- TMap.empty[String, SortedSet[MemberScore]].commit
+    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes, sortedSets)
 
     executor.toLayer
   }
