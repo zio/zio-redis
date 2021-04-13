@@ -1,5 +1,7 @@
 package zio.redis.api
 
+import java.time.Instant
+
 import zio.duration._
 import zio.redis.Input._
 import zio.redis.Output._
@@ -162,6 +164,63 @@ trait Strings {
     val command =
       RedisCommand(GetSet, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), OptionalOutput(ArbitraryOutput[R]()))
     command.run((key, value))
+  }
+
+  /**
+   * Get the string value of a key and delete it on success (if and only if the key's value type is a string)
+   *
+   * @param key Key to get the value of
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getDel[K: Schema, R: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[R]] = {
+    val command = RedisCommand(GetDel, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]()))
+    command.run(key)
+  }
+
+  /**
+   * Get the value of key and set its expiration
+   *
+   * @param key Key to get the value of
+   * @param expire The option which can modify command behavior. e.g. use `Expire.SetExpireSeconds` set the specified expire time in seconds
+   * @param expireTime Time in seconds/milliseconds until the string should expire
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getEx[K: Schema, R: Schema](
+    key: K,
+    expire: Expire,
+    expireTime: Duration
+  ): ZIO[RedisExecutor, RedisError, Option[R]] = {
+    val command = RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]()))
+    command.run((key, expire, expireTime))
+  }
+
+  /**
+   * Get the value of key and set its expiration
+   *
+   * @param key Key to get the value of
+   * @param expiredAt The option which can modify command behavior. e.g. use `Expire.SetExpireAtSeconds` set the specified Unix time at which the key will expire in seconds
+   * @param timestamp an absolute Unix timestamp (seconds/milliseconds since January 1, 1970)
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getEx[K: Schema, R: Schema](
+    key: K,
+    expiredAt: ExpiredAt,
+    timestamp: Instant
+  ): ZIO[RedisExecutor, RedisError, Option[R]] = {
+    val command = RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]()))
+    command.run((key, expiredAt, timestamp))
+  }
+
+  /**
+   * Get the value of key and remove the time to live associated with the key
+   *
+   * @param key Key to get the value of
+   * @param persist if true, remove the time to live associated with the key, otherwise not
+   * @return Returns the value of the string or None if it did not previously have a value
+   */
+  final def getEx[K: Schema, R: Schema](key: K, persist: Boolean): ZIO[RedisExecutor, RedisError, Option[R]] = {
+    val command = RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]()))
+    command.run((key, persist))
   }
 
   /**
@@ -399,4 +458,6 @@ private[redis] object Strings {
   final val SetRange    = "SETRANGE"
   final val StrLen      = "STRLEN"
   final val StrAlgoLcs  = "STRALGO LCS"
+  final val GetDel      = "GETDEL"
+  final val GetEx       = "GETEX"
 }

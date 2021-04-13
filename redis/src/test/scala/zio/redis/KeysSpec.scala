@@ -95,7 +95,7 @@ trait KeysSpec extends BaseSpec {
             (next, elements) = scan
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         }
-      ),
+      ) @@ flaky,
       testM("fetch random key") {
         for {
           key       <- uuid

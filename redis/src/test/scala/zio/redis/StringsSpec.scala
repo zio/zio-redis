@@ -1,5 +1,7 @@
 package zio.redis
 
+import java.time.Instant
+
 import zio.clock.Clock
 import zio.duration._
 import zio.redis.RedisError.{ ProtocolError, WrongType }
@@ -1641,6 +1643,92 @@ trait StringsSpec extends BaseSpec {
             _   <- sAdd(key, "a")
             len <- strLen(key).either
           } yield assert(len)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("getEx")(
+        testM("value exists after removing ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- pSetEx(key, 10.millis, value)
+            exists <- getEx[String, String](key, true)
+            _      <- ZIO.sleep(20.millis)
+            res    <- get[String, String](key)
+          } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set seconds ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx[String, String](key, Expire.SetExpireSeconds, 1.second)
+            _      <- ZIO.sleep(1020.millis)
+            res    <- get[String, String](key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set milliseconds ttl") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx[String, String](key, Expire.SetExpireMilliseconds, 10.millis)
+            _      <- ZIO.sleep(20.millis)
+            res    <- get[String, String](key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set seconds timestamp") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx[String, String](key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(10))
+            _      <- ZIO.sleep(20.millis)
+            res    <- get[String, String](key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("not found value when set milliseconds timestamp") {
+          for {
+            key    <- uuid
+            value  <- uuid
+            _      <- set(key, value)
+            exists <- getEx[String, String](key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
+            _      <- ZIO.sleep(20.millis)
+            res    <- get[String, String](key)
+          } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
+        } @@ eventually,
+        testM("key not found") {
+          for {
+            key   <- uuid
+            value <- uuid
+            _     <- set[String, String](key, value)
+            res   <- getEx[String, String](value, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10))
+            res2  <- getEx[String, String](value, Expire.SetExpireMilliseconds, 10.millis)
+            res3  <- getEx[String, String](value, true)
+          } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))
+        } @@ eventually
+      ),
+      suite("getDel")(
+        testM("error when not string") {
+          for {
+            key <- uuid
+            _   <- sAdd(key, "a")
+            res <- getDel[String, String](key).either
+          } yield assert(res)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("key not exists") {
+          for {
+            key <- uuid
+            res <- getDel[String, String](key)
+          } yield assert(res)(equalTo(None))
+        },
+        testM("get and remove key") {
+          for {
+            key      <- uuid
+            value    <- uuid
+            _        <- set(key, value)
+            res      <- getDel[String, String](key)
+            notFound <- getDel[String, String](key)
+          } yield assert(res)(equalTo(Some(value))) && assert(notFound)(equalTo(None))
         }
       )
     )
