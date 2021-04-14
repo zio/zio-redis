@@ -1083,9 +1083,69 @@ private[redis] final class TestExecutor private (
           } yield RespValue.bulkString(resultMember.score.toString)
         )
 
-        
+      case api.SortedSets.ZInterStore.name =>
+        val destination = input(0).asString
+        val numKeys = input(1).asLong.toInt
+        val keys = input.drop(2).take(numKeys).map(_.asString)
+
+        val options      = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options.find(_._1 == "AGGREGATE").map(_._2).map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double) _
+              case "MAX" => Math.max(_: Double, _: Double) _
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights  =
+          options
+            .find(_._1 == "WEIGHTS").map(_._2).map(idx => input.drop(idx + 1).tail.map(_.asLong))
+            .getOrElse(Chunk.empty)
+
+        orWrongType(forAll(keys + destination)(isSortedSet))(
+          for {
+            sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, SortedSet.empty))
+
+            weightedSets =
+              sourceSets
+                .zipAll(weights, SortedSet.empty, 1L)
+                .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight))}
+
+            destinationResult =
+              weightedSets
+                .flatMap(Chunk.fromIterable)
+                .groupBy(_.member)
+                .map { case (member, memberScores) => MemberScore(memberScores.map(_.score).fold(0.0)(aggregate), member) }
+
+            _ <- sortedSets.put(destination, SortedSet.from(destinationResult))
+          } yield RespValue.Integer(destinationResult.size.toLong)
+        )
+
+
+
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
+  }
+
+  object Parser {
+    def parseDestination =
+      for {
+        inputRef <- ZIO.environment[Ref[Chunk[BulkString]]]
+        input <- inputRef.get
+        destination <- ZIO.effect(input(0).asString)
+        _ <- inputRef.set(input.drop(1))
+      } yield destination
+
+    def parseNumKeys =
+      for {
+        inputRef <- ZIO.environment[Ref[Chunk[BulkString]]]
+        input <- inputRef.get
+        numkeys <- ZIO.effect(input(0).asLong.toInt)
+        keys <- ZIO.effect(input.drop(1).take(numkeys).map(_.asString))
+        _ <- inputRef
+      } yield ???
   }
 
   implicit val memberScoreOrdering: Ordering[MemberScore] = Ordering.by((memberScore: MemberScore) => memberScore.score)
