@@ -1134,7 +1134,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(destinationResult.size.toLong)
         )
 
-      case api.SortedSets.ZPopMax.name =>
+      case api.SortedSets.ZPopMin.name =>
         val key   = input(0).asString
         val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
 
@@ -1150,7 +1150,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.SortedSets.ZPopMin.name =>
+      case api.SortedSets.ZPopMax.name =>
         val key   = input(0).asString
         val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
 
@@ -1164,6 +1164,20 @@ private[redis] final class TestExecutor private (
               .fromIterable(results)
               .flatMap(ms => Chunk(RespValue.bulkString(ms.member), RespValue.bulkString(ms.score.toString)))
           )
+        )
+
+      case api.SortedSets.ZRank.name =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            rank = sortedSet.toIndexedSeq.map(_.member).indexOf(member) match {
+                     case -1  => None
+                     case idx => Some(idx)
+                   }
+          } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
         )
 
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
