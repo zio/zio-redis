@@ -7,7 +7,7 @@ import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
-import zio.stm.{random => _, _}
+import zio.stm.{ random => _, _ }
 
 import scala.collection.immutable.SortedSet
 
@@ -1015,12 +1015,12 @@ private[redis] final class TestExecutor private (
 
         def maybeChanged(value: String) = value match {
           case "CH" => Some(Changed)
-          case _ => None
+          case _    => None
         }
 
-        val updateOption = maybeUpdate(input(1).asString) orElse maybeUpdate(input(2).asString)
+        val updateOption  = maybeUpdate(input(1).asString) orElse maybeUpdate(input(2).asString)
         val changedOption = maybeChanged(input(1).asString) orElse maybeChanged(input(2).asString)
-        val optionsCount = updateOption.map(_ => 1).getOrElse(0) + changedOption.map(_ => 1).getOrElse(0)
+        val optionsCount  = updateOption.map(_ => 1).getOrElse(0) + changedOption.map(_ => 1).getOrElse(0)
 
         val values =
           Chunk.fromIterator(
@@ -1035,16 +1035,18 @@ private[redis] final class TestExecutor private (
           for {
             sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
             valuesToAdd = updateOption.map {
-              case Update.SetExisting => values.filter(ms => sortedSet.exists(_.member == ms.member))
-              case Update.SetNew => values.filter(ms => !sortedSet.exists(_.member == ms.member))
-              case Update.SetLessThan => values.filter(ms => sortedSet.exists(m => m.member == ms.member && m.score > ms.score))
-              case Update.SetGreaterThan => values.filter(ms => sortedSet.exists(m => m.member == ms.member && m.score < ms.score))
-            }.getOrElse(values)
+                            case Update.SetExisting => values.filter(ms => sortedSet.exists(_.member == ms.member))
+                            case Update.SetNew      => values.filter(ms => !sortedSet.exists(_.member == ms.member))
+                            case Update.SetLessThan =>
+                              values.filter(ms => sortedSet.exists(m => m.member == ms.member && m.score > ms.score))
+                            case Update.SetGreaterThan =>
+                              values.filter(ms => sortedSet.exists(m => m.member == ms.member && m.score < ms.score))
+                          }.getOrElse(values)
 
             valuesChanged = changedOption.map(_ => valuesToAdd.size).getOrElse {
-              values.filter(ms => !sortedSet.exists(_.member == ms.member)).size
-            }
-          _ <- sortedSets.put(key, sortedSet ++ valuesToAdd)
+                              values.filter(ms => !sortedSet.exists(_.member == ms.member)).size
+                            }
+            _ <- sortedSets.put(key, sortedSet ++ valuesToAdd)
           } yield RespValue.Integer(valuesChanged)
         )
 
@@ -1065,32 +1067,38 @@ private[redis] final class TestExecutor private (
         orWrongType(isSortedSet(key))(
           for {
             sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
-            result = sortedSet.filter(ms => ms.score >= min && ms.score <= max)
+            result     = sortedSet.filter(ms => ms.score >= min && ms.score <= max)
           } yield RespValue.Integer(result.size)
         )
 
       case api.SortedSets.ZIncrBy.name =>
-        val key = input(0).asString
+        val key       = input(0).asString
         val increment = input(1).asLong
-        val member = input(2).asString
+        val member    = input(2).asString
 
         orWrongType(isSortedSet(key))(
           for {
             sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
-            resultMember = sortedSet.find(ms => ms.member == member).map(ms => ms.copy(ms.score + increment, ms.member)).getOrElse(MemberScore(increment.toDouble, member))
+            resultMember = sortedSet
+                             .find(ms => ms.member == member)
+                             .map(ms => ms.copy(ms.score + increment, ms.member))
+                             .getOrElse(MemberScore(increment.toDouble, member))
             resultSet = sortedSet + resultMember
-            _ <- sortedSets.put(key, resultSet)
+            _        <- sortedSets.put(key, resultSet)
           } yield RespValue.bulkString(resultMember.score.toString)
         )
 
       case api.SortedSets.ZInterStore.name =>
         val destination = input(0).asString
-        val numKeys = input(1).asLong.toInt
-        val keys = input.drop(2).take(numKeys).map(_.asString)
+        val numKeys     = input(1).asLong.toInt
+        val keys        = input.drop(2).take(numKeys).map(_.asString)
 
-        val options      = input.map(_.asString).zipWithIndex
+        val options = input.map(_.asString).zipWithIndex
         val aggregate =
-          options.find(_._1 == "AGGREGATE").map(_._2).map(idx => input(idx + 1).asString)
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
             .map {
               case "SUM" => (_: Double) + (_: Double)
               case "MIN" => Math.min(_: Double, _: Double) _
@@ -1098,9 +1106,11 @@ private[redis] final class TestExecutor private (
             }
             .getOrElse((_: Double) + (_: Double))
 
-        val weights  =
+        val weights =
           options
-            .find(_._1 == "WEIGHTS").map(_._2).map(idx => input.drop(idx + 1).tail.map(_.asLong))
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx => input.drop(idx + 1).tail.map(_.asLong))
             .getOrElse(Chunk.empty)
 
         orWrongType(forAll(keys + destination)(isSortedSet))(
@@ -1110,20 +1120,51 @@ private[redis] final class TestExecutor private (
             weightedSets =
               sourceSets
                 .zipAll(weights, SortedSet.empty, 1L)
-                .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight))}
+                .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight)) }
 
             destinationResult =
               weightedSets
                 .flatMap(Chunk.fromIterable)
                 .groupBy(_.member)
-                .map { case (member, memberScores) => MemberScore(memberScores.map(_.score).fold(0.0)(aggregate), member) }
+                .map { case (member, memberScores) =>
+                  MemberScore(memberScores.map(_.score).fold(0.0)(aggregate), member)
+                }
 
             _ <- sortedSets.put(destination, SortedSet.from(destinationResult))
           } yield RespValue.Integer(destinationResult.size.toLong)
         )
 
+      case api.SortedSets.ZPopMax.name =>
+        val key   = input(0).asString
+        val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
 
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            results    = sortedSet.take(count)
+            _         <- sortedSets.put(key, sortedSet.drop(count))
+          } yield RespValue.Array(
+            Chunk
+              .fromIterable(results)
+              .flatMap(ms => Chunk(RespValue.bulkString(ms.member), RespValue.bulkString(ms.score.toString)))
+          )
+        )
 
+      case api.SortedSets.ZPopMin.name =>
+        val key   = input(0).asString
+        val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            results    = sortedSet.takeRight(count)
+            _         <- sortedSets.put(key, sortedSet.dropRight(count))
+          } yield RespValue.Array(
+            Chunk
+              .fromIterable(results)
+              .flatMap(ms => Chunk(RespValue.bulkString(ms.member), RespValue.bulkString(ms.score.toString)))
+          )
+        )
 
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
@@ -1132,19 +1173,19 @@ private[redis] final class TestExecutor private (
   object Parser {
     def parseDestination =
       for {
-        inputRef <- ZIO.environment[Ref[Chunk[BulkString]]]
-        input <- inputRef.get
+        inputRef    <- ZIO.environment[Ref[Chunk[BulkString]]]
+        input       <- inputRef.get
         destination <- ZIO.effect(input(0).asString)
-        _ <- inputRef.set(input.drop(1))
+        _           <- inputRef.set(input.drop(1))
       } yield destination
 
     def parseNumKeys =
       for {
         inputRef <- ZIO.environment[Ref[Chunk[BulkString]]]
-        input <- inputRef.get
-        numkeys <- ZIO.effect(input(0).asLong.toInt)
-        keys <- ZIO.effect(input.drop(1).take(numkeys).map(_.asString))
-        _ <- inputRef
+        input    <- inputRef.get
+        numkeys  <- ZIO.effect(input(0).asLong.toInt)
+        keys     <- ZIO.effect(input.drop(1).take(numkeys).map(_.asString))
+        _        <- inputRef
       } yield ???
   }
 
