@@ -1192,6 +1192,20 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(sortedSet.size.toLong - newSet.size.toLong)
         )
 
+      case api.SortedSets.ZRevRank.name =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
+            rank = sortedSet.toIndexedSeq.map(_.member).reverse.indexOf(member) match {
+              case -1  => None
+              case idx => Some(idx)
+            }
+          } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
+        )
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
