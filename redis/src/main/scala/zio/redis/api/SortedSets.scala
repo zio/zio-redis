@@ -620,6 +620,21 @@ trait SortedSets {
     )
     command.run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
   }
+
+  /**
+   * Returns the scores associated with the specified members in the sorted set stored at key.
+   *
+   * @param key Key of the set
+   * @param keys Keys of the rest sets
+   * @return list of scores or None associated with the specified member values (a double precision floating point number)
+   */
+  final def zMScore[K: Schema](
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Chunk[Option[Double]]] = {
+    val command = RedisCommand(Zmscore, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)))
+    command.run((key, keys.toList))
+  }
 }
 
 private[redis] object SortedSets {
@@ -648,4 +663,5 @@ private[redis] object SortedSets {
   final val ZScan            = "ZSCAN"
   final val ZScore           = "ZSCORE"
   final val ZUnionStore      = "ZUNIONSTORE"
+  final val Zmscore          = "ZMSCORE"
 }
