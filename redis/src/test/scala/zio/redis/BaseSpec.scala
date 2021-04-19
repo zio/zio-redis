@@ -6,8 +6,7 @@ import java.util.UUID
 import zio.UIO
 import zio.duration._
 import zio.random.Random
-import zio.redis.codec.StringUtf8Codec
-import zio.schema.codec.Codec
+import zio.schema.codec.{ Codec, ProtobufCodec }
 import zio.test.TestAspect.tag
 import zio.test._
 import zio.test.environment.Live
@@ -17,7 +16,7 @@ trait BaseSpec extends DefaultRunnableSpec {
 
   def instantOf(millis: Long): UIO[Instant] = UIO(Instant.now().plusMillis(millis))
 
-  implicit val codec: Codec = StringUtf8Codec
+  implicit val codec: Codec = ProtobufCodec
 
   val uuid: UIO[String] = UIO(UUID.randomUUID().toString)
 

@@ -196,7 +196,7 @@ trait Sets {
     val command = RedisCommand(
       SScan,
       Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-      Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[R]()))
+      Tuple2Output(MultiStringOutput.map(_.toLong), ChunkOutput(ArbitraryOutput[R]()))
     )
     command.run((key, cursor, pattern.map(Pattern), count))
   }

@@ -1004,48 +1004,48 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             _      <- set(key, "value")
             substr <- getRange[String, String](key, 1 to 3)
-          } yield assert(substr)(equalTo("alu"))
+          } yield assert(substr)(isSome(equalTo("alu")))
         },
         testM("with range that exceeds non-empty string length") {
           for {
             key    <- uuid
             _      <- set(key, "value")
             substr <- getRange[String, String](key, 1 to 10)
-          } yield assert(substr)(equalTo("alue"))
+          } yield assert(substr)(isSome(equalTo("alue")))
         },
         testM("with range that is outside of non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
             substr <- getRange[String, String](key, 10 to 15)
-          } yield assert(substr)(equalTo(""))
+          } yield assert(substr)(isNone)
         },
         testM("with inverse range of non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
             substr <- getRange[String, String](key, 15 to 3)
-          } yield assert(substr)(equalTo(""))
+          } yield assert(substr)(isNone)
         },
         testM("with negative range end from non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
             substr <- getRange[String, String](key, 1 to -1)
-          } yield assert(substr)(equalTo("alue"))
+          } yield assert(substr)(isSome(equalTo("alue")))
         },
         testM("with start and end equal from non-empty string") {
           for {
             key    <- uuid
             _      <- set(key, "value")
             substr <- getRange[String, String](key, 1 to 1)
-          } yield assert(substr)(equalTo("a"))
+          } yield assert(substr)(isSome(equalTo("a")))
         },
         testM("from empty string") {
           for {
             key    <- uuid
             substr <- getRange[String, String](key, 1 to 3)
-          } yield assert(substr)(equalTo(""))
+          } yield assert(substr)(isNone)
         },
         testM("error when not string") {
           for {
