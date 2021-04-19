@@ -997,8 +997,8 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(40d, "Kolkata"),
                    MemberScore(50d, "Chennai")
                  )
-            result <- zMScore(key, "Delhi", "Mumbai")
-          } yield assert(result)(equalTo(Chunk(Some(10d), Some(20d))))
+            result <- zMScore(key, "Delhi", "Mumbai", "notFound")
+          } yield assert(result)(equalTo(Chunk(Some(10d), Some(20d), None)))
         },
         testM("empty set") {
           for {
