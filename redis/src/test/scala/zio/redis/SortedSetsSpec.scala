@@ -986,6 +986,27 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(result)(isNone)
         }
       ),
+      suite("zMScore")(
+        testM("non-empty set") {
+          for {
+            key <- uuid
+            _ <- zAdd(key)(
+                   MemberScore(10d, "Delhi"),
+                   MemberScore(20d, "Mumbai"),
+                   MemberScore(30d, "Hyderabad"),
+                   MemberScore(40d, "Kolkata"),
+                   MemberScore(50d, "Chennai")
+                 )
+            result <- zMScore(key, "Delhi", "Mumbai", "notFound")
+          } yield assert(result)(equalTo(Chunk(Some(10d), Some(20d), None)))
+        },
+        testM("empty set") {
+          for {
+            key    <- uuid
+            result <- zMScore(key, "Hyderabad")
+          } yield assert(result)(equalTo(Chunk(None)))
+        }
+      ),
       suite("zUnionStore")(
         testM("two non-empty sets") {
           for {
