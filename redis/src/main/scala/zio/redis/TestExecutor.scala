@@ -1054,7 +1054,7 @@ private[redis] final class TestExecutor private (
                               values.filter(ms => !sortedSet.exists(_.member == ms.member)).size
                             }
             _ <- sortedSets.put(key, sortedSet ++ valuesToAdd)
-          } yield RespValue.Integer(valuesChanged)
+          } yield RespValue.Integer(valuesChanged.toLong)
         )
 
       case api.SortedSets.ZCard.name =>
@@ -1063,7 +1063,7 @@ private[redis] final class TestExecutor private (
         orWrongType(isSortedSet(key))(
           for {
             sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
-          } yield RespValue.Integer(sortedSet.size)
+          } yield RespValue.Integer(sortedSet.size.toLong)
         )
 
       case api.SortedSets.ZCount.name =>
@@ -1075,7 +1075,7 @@ private[redis] final class TestExecutor private (
           for {
             sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
             result     = sortedSet.filter(ms => ms.score >= min && ms.score <= max)
-          } yield RespValue.Integer(result.size)
+          } yield RespValue.Integer(result.size.toLong)
         )
 
       case api.SortedSets.ZIncrBy.name =>
@@ -1108,8 +1108,8 @@ private[redis] final class TestExecutor private (
             .map(idx => input(idx + 1).asString)
             .map {
               case "SUM" => (_: Double) + (_: Double)
-              case "MIN" => Math.min(_: Double, _: Double) _
-              case "MAX" => Math.max(_: Double, _: Double) _
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
             }
             .getOrElse((_: Double) + (_: Double))
 
@@ -1120,13 +1120,13 @@ private[redis] final class TestExecutor private (
             .map(idx => input.drop(idx + 1).tail.map(_.asLong))
             .getOrElse(Chunk.empty)
 
-        orWrongType(forAll(keys + destination)(isSortedSet))(
+        orWrongType(forAll(keys :+ destination)(isSortedSet))(
           for {
             sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, SortedSet.empty))
 
             weightedSets =
               sourceSets
-                .zipAll(weights, SortedSet.empty, 1L)
+                .zipAll(weights, SortedSet.empty[MemberScore], 1L)
                 .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight)) }
 
             destinationResult =
@@ -1278,8 +1278,8 @@ private[redis] final class TestExecutor private (
             .map(idx => input(idx + 1).asString)
             .map {
               case "SUM" => (_: Double) + (_: Double)
-              case "MIN" => Math.min(_: Double, _: Double) _
-              case "MAX" => Math.max(_: Double, _: Double) _
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
             }
             .getOrElse((_: Double) + (_: Double))
 
@@ -1290,13 +1290,13 @@ private[redis] final class TestExecutor private (
             .map(idx => input.drop(idx + 1).tail.map(_.asLong))
             .getOrElse(Chunk.empty)
 
-        orWrongType(forAll(keys + destination)(isSortedSet))(
+        orWrongType(forAll(keys :+ destination)(isSortedSet))(
           for {
             sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, SortedSet.empty))
 
             weightedSets =
               sourceSets
-                .zipAll(weights, SortedSet.empty, 1L)
+                .zipAll(weights, SortedSet.empty[MemberScore], 1L)
                 .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight)) }
 
             destinationResult =
