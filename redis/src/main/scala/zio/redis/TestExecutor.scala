@@ -269,27 +269,31 @@ private[redis] final class TestExecutor private (
         )
 
       case api.Sets.SScan.name =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2) input(2).asString match {
+            case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+            case _       => None
+          }
+          else None
+
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
             case _       => None
           }
 
-        val key = input.head.asString
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
 
         orWrongType(isSet(key))(
           {
-            val start = input(1).asString.toInt
-            val maybeRegex = if (input.size > 2) input(2).asString match {
-              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
-              case _       => None
-            }
-            else None
-            val maybeCount =
-              if (input.size > 4) maybeGetCount(input(4), input(5))
-              else if (input.size > 2) maybeGetCount(input(2), input(3))
-              else None
-            val end = start + maybeCount.getOrElse(10)
             for {
               set      <- sets.getOrElse(key, Set.empty)
               filtered  = maybeRegex.map(regex => set.filter(s => regex.pattern.matcher(s).matches)).getOrElse(set)
@@ -891,36 +895,39 @@ private[redis] final class TestExecutor private (
         )
 
       case api.Hashes.HScan.name =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2)
+            input(2).asString match {
+              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+              case _       => None
+            }
+          else None
+
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
             case _       => None
           }
 
-        val key = input.head.asString
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
 
         orWrongType(isHash(key))(
-          {
-            val start = input(1).asString.toInt
-            val maybeRegex = if (input.size > 2) input(2).asString match {
-              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
-              case _       => None
-            }
-            else None
-            val maybeCount =
-              if (input.size > 4) maybeGetCount(input(4), input(5))
-              else if (input.size > 2) maybeGetCount(input(2), input(3))
-              else None
-            val end = start + maybeCount.getOrElse(10)
-            for {
-              set <- hashes.getOrElse(key, Map.empty)
-              filtered =
-                maybeRegex.map(regex => set.filter { case (k, _) => regex.pattern.matcher(k).matches }).getOrElse(set)
-              resultSet = filtered.slice(start, end)
-              nextIndex = if (filtered.size <= end) 0 else end
-              results   = Replies.array(resultSet.flatMap { case (k, v) => Iterable(k, v) })
-            } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
-          }
+          for {
+            set <- hashes.getOrElse(key, Map.empty)
+            filtered =
+              maybeRegex.map(regex => set.filter { case (k, _) => regex.pattern.matcher(k).matches }).getOrElse(set)
+            resultSet = filtered.slice(start, end)
+            nextIndex = if (filtered.size <= end) 0 else end
+            results   = Replies.array(resultSet.flatMap { case (k, v) => Iterable(k, v) })
+          } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
         )
 
       case api.Hashes.HSet.name =>
@@ -1126,6 +1133,7 @@ private[redis] final class TestExecutor private (
               weightedSets
                 .flatMap(Chunk.fromIterable)
                 .groupBy(_.member)
+                .filterNot { case (_, memberScores) => memberScores.size > 1 }
                 .map { case (member, memberScores) =>
                   MemberScore(memberScores.map(_.score).fold(0.0)(aggregate), member)
                 }
@@ -1200,33 +1208,111 @@ private[redis] final class TestExecutor private (
           for {
             sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
             rank = sortedSet.toIndexedSeq.map(_.member).reverse.indexOf(member) match {
-              case -1  => None
-              case idx => Some(idx)
-            }
+                     case -1  => None
+                     case idx => Some(idx)
+                   }
           } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
+        )
+
+      case api.SortedSets.ZScan.name =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2) input(2).asString match {
+            case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+            case _       => None
+          }
+          else None
+
+        def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
+          key.asString match {
+            case "COUNT" => Some(value.asString.toInt)
+            case _       => None
+          }
+
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            set <- sortedSets.getOrElse(key, SortedSet.empty)
+            filtered =
+              maybeRegex.map(regex => set.filter(ms => regex.pattern.matcher(ms.member).matches)).getOrElse(set)
+            resultSet = filtered.slice(start, end)
+            nextIndex = if (filtered.size <= end) 0 else end
+            results =
+              RespValue.Array(
+                Chunk
+                  .fromIterable(resultSet)
+                  .flatMap(ms => Chunk(RespValue.bulkString(ms.member), RespValue.bulkString(ms.score.toString)))
+              )
+          } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
+        )
+
+      case api.SortedSets.ZScore.name =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            set       <- sortedSets.getOrElse(key, SortedSet.empty)
+            maybeScore = set.find(ms => ms.member == member).map(_.score)
+          } yield maybeScore.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result.toString))
+        )
+
+      case api.SortedSets.ZUnionStore.name =>
+        val destination = input(0).asString
+        val numKeys     = input(1).asLong.toInt
+        val keys        = input.drop(2).take(numKeys).map(_.asString)
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double) _
+              case "MAX" => Math.max(_: Double, _: Double) _
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx => input.drop(idx + 1).tail.map(_.asLong))
+            .getOrElse(Chunk.empty)
+
+        orWrongType(forAll(keys + destination)(isSortedSet))(
+          for {
+            sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, SortedSet.empty))
+
+            weightedSets =
+              sourceSets
+                .zipAll(weights, SortedSet.empty, 1L)
+                .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight)) }
+
+            destinationResult =
+              weightedSets
+                .flatMap(Chunk.fromIterable)
+                .groupBy(_.member)
+                .map { case (member, memberScores) =>
+                  MemberScore(memberScores.map(_.score).fold(0.0)(aggregate), member)
+                }
+
+            _ <- sortedSets.put(destination, SortedSet.from(destinationResult))
+          } yield RespValue.Integer(destinationResult.size.toLong)
         )
 
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
-  }
-
-  object Parser {
-    def parseDestination =
-      for {
-        inputRef    <- ZIO.environment[Ref[Chunk[BulkString]]]
-        input       <- inputRef.get
-        destination <- ZIO.effect(input(0).asString)
-        _           <- inputRef.set(input.drop(1))
-      } yield destination
-
-    def parseNumKeys =
-      for {
-        inputRef <- ZIO.environment[Ref[Chunk[BulkString]]]
-        input    <- inputRef.get
-        numkeys  <- ZIO.effect(input(0).asLong.toInt)
-        keys     <- ZIO.effect(input.drop(1).take(numkeys).map(_.asString))
-        _        <- inputRef
-      } yield ???
   }
 
   implicit val memberScoreOrdering: Ordering[MemberScore] = Ordering.by((memberScore: MemberScore) => memberScore.score)
