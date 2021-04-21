@@ -11,10 +11,11 @@ trait HyperLogLog {
 
   /**
    *  Adds the specified elements to the specified HyperLogLog.
+   *
    *  @param key HLL key where the elements will be added
    *  @param element element to count
    *  @param elements additional elements to count
-   *  @return boolean indicating if at least 1 HyperLogLog register was altered
+   *  @return boolean indicating if at least 1 HyperLogLog register was altered.
    */
   final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(PfAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), BoolOutput)
@@ -23,9 +24,10 @@ trait HyperLogLog {
 
   /**
    *  Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s).
+   *
    *  @param key HLL key
    *  @param keys additional keys
-   *  @return approximate number of unique elements observed via PFADD
+   *  @return approximate number of unique elements observed via PFADD.
    */
   final def pfCount[K: Schema](key: K, keys: K*): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(PfCount, NonEmptyList(ArbitraryInput[K]()), LongOutput)
@@ -34,6 +36,7 @@ trait HyperLogLog {
 
   /**
    *  Merge N different HyperLogLogs into a single one.
+   *
    *  @param destKey HLL key where the merged HLLs will be stored
    *  @param sourceKey HLL key to merge
    *  @param sourceKeys additional keys to merge

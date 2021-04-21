@@ -11,10 +11,11 @@ trait Geo {
 
   /**
    *  Adds the specified geospatial `items` (latitude, longitude, name) to the specified `key`.
+   *
    *  @param key sorted set where the items will be stored
    *  @param item tuple of (latitude, longitude, name) to add
    *  @param items additional items
-   *  @return number of new elements added to the sorted set
+   *  @return number of new elements added to the sorted set.
    */
   final def geoAdd[K: Schema, M: Schema](
     key: K,
@@ -31,11 +32,12 @@ trait Geo {
 
   /**
    *  Return the distance between two members in the geospatial index represented by the sorted set.
+   *
    *  @param key sorted set of geospatial members
    *  @param member1 member in set
    *  @param member2 member in set
    *  @param radiusUnit Unit of distance ("m", "km", "ft", "mi")
-   *  @return distance between the two specified members in the specified unit or None if either member is missing
+   *  @return distance between the two specified members in the specified unit or None if either member is missing.
    */
   final def geoDist[K: Schema, M: Schema](
     key: K,
@@ -54,10 +56,11 @@ trait Geo {
   /**
    *  Return valid Geohash strings representing the position of one or more elements in a sorted set value representing
    *  a geospatial index.
+   *
    *  @param key sorted set of geospatial members
    *  @param member member in set
    *  @param members additional members
-   *  @return chunk of geohashes, where value is `None` if a member is not in the set
+   *  @return chunk of geohashes, where value is `None` if a member is not in the set.
    */
   final def geoHash[K: Schema, M: Schema](
     key: K,
@@ -75,10 +78,11 @@ trait Geo {
   /**
    *  Return the positions (longitude, latitude) of all the specified members of the geospatial index represented by the
    *  sorted set at `key`.
+   *
    *  @param key sorted set of geospatial members
    *  @param member member in the set
    *  @param members additional members
-   *  @return chunk of positions, where value is `None` if a member is not in the set
+   *  @return chunk of positions, where value is `None` if a member is not in the set.
    */
   final def geoPos[K: Schema, M: Schema](
     key: K,
@@ -92,6 +96,7 @@ trait Geo {
   /**
    *  Return geospatial members of a sorted set which are within the area specified with a *center location* and the
    *  *maximum distance from the center*.
+   *
    *  @param key sorted set of geospatial members
    *  @param center position
    *  @param radius distance from the center
@@ -101,7 +106,7 @@ trait Geo {
    *  @param withHash flag to include raw geohash sorted set score of each member in the result
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
-   *  @return chunk of members within the specified are
+   *  @return chunk of members within the specified are.
    */
   final def geoRadius[K: Schema](
     key: K,
@@ -148,7 +153,7 @@ trait Geo {
    *  @param withHash flag to include raw geohash sorted set score of each member in the result
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
-   *  @return chunk of members within the specified are
+   *  @return chunk of members within the specified are.
    *
    *  We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
    */
@@ -189,6 +194,7 @@ trait Geo {
   /**
    *  Return geospatial members of a sorted set which are within the area specified with an *existing member* in the set
    *  and the *maximum distance from the location of that member*.
+   *
    *  @param key sorted set of geospatial members
    *  @param member member in the set
    *  @param radius distance from the member
@@ -198,8 +204,8 @@ trait Geo {
    *  @param withHash flag to include raw geohash sorted set score of each member in the result
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
-   *  number should be stored
-   *  @return chunk of members within the specified area, or an error if the member is not in the set
+   *               number should be stored
+   *  @return chunk of members within the specified area, or an error if the member is not in the set.
    */
   final def geoRadiusByMember[K: Schema, M: Schema](
     key: K,
@@ -246,7 +252,7 @@ trait Geo {
    *  @param withHash flag to include raw geohash sorted set score of each member in the result
    *  @param count limit the results to the first N matching items
    *  @param order sort returned items in the given `Order`
-   *  @return chunk of members within the specified area, or an error if the member is not in the set
+   *  @return chunk of members within the specified area, or an error if the member is not in the set.
    *
    *  We expect at least one of Option[Store] and Option[StoreDist] to be passed here.
    */
