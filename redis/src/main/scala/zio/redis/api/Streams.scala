@@ -96,7 +96,7 @@ trait Streams {
    * Returns the entire state of the stream, including entries, groups, consumers and PELs.
    *
    * @param key ID of the stream
-   * @param count limit the amount of stream/PEL entries that are returned (The first <count> entries are returned).
+   * @param count limit the amount of stream/PEL entries that are returned (The first <count> entries are returned)
    * @return General information about the stream stored at the specified key.
    */
   final def xInfoStreamFull[SK: Schema, RI: Schema, RK: Schema, RV: Schema](
@@ -179,7 +179,8 @@ trait Streams {
    * @param consumer ID of the consumer
    * @param minIdleTime minimum idle time of a message
    * @param idle idle time (last time it was delivered) of the message that will be set
-   * @param time same as idle but instead of a relative amount of milliseconds, it sets the idle time to a specific Unix time (in milliseconds)
+   * @param time same as idle but instead of a relative amount of milliseconds, it sets the idle time to a specific Unix
+   *             time (in milliseconds)
    * @param retryCount retry counter of a message that will be set
    * @param force flag that indicates that a message doesn't have to be in a pending entries list (PEL)
    * @param id ID of a message
@@ -223,7 +224,8 @@ trait Streams {
    * @param consumer ID of the consumer
    * @param minIdleTime minimum idle time of a message
    * @param idle idle time (last time it was delivered) of the message that will be set
-   * @param time same as idle but instead of a relative amount of milliseconds, it sets the idle time to a specific Unix time (in milliseconds)
+   * @param time same as idle but instead of a relative amount of milliseconds, it sets the idle time to a specific Unix
+   *             time (in milliseconds)
    * @param retryCount retry counter of a message that will be set
    * @param force flag that indicates that a message doesn't have to be in a pending entries list (PEL)
    * @param id ID of a message
@@ -357,7 +359,7 @@ trait Streams {
    * Fetches the number of entries inside a stream.
    *
    * @param key ID of the stream
-   * @return the number of entries inside a stream
+   * @return the number of entries inside a stream.
    */
   final def xLen[SK: Schema](key: SK): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(XLen, ArbitraryInput[SK](), LongOutput)
