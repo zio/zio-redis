@@ -11,10 +11,11 @@ trait Hashes {
 
   /**
    * Removes the specified fields from the hash stored at `key`.
-   * @param key
+   *
+   * @param key of the hash that should be removed
    * @param field field to remove
    * @param fields additional fields
-   * @return number of fields removed from the hash
+   * @return number of fields removed from the hash.
    */
   final def hDel[K: Schema, F: Schema](key: K, field: F, fields: F*): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(HDel, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[F]())), LongOutput)
@@ -23,9 +24,10 @@ trait Hashes {
 
   /**
    * Returns if `field` is an existing field in the hash stored at `key`.
-   * @param key
+   *
+   * @param key of the hash that should be inspected
    * @param field field to inspect
-   * @return boolean if the field exists
+   * @return true if the field exists, otherwise false.
    */
   final def hExists[K: Schema, F: Schema](key: K, field: F): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(HExists, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), BoolOutput)
@@ -34,9 +36,10 @@ trait Hashes {
 
   /**
    * Returns the value associated with `field` in the hash stored at `key`.
-   * @param key
-   * @param field
-   * @return value stored in the field, if any
+   *
+   * @param key of the hash whose field should be read
+   * @param field which value should be returned
+   * @return value stored in the field, if any.
    */
   final def hGet[K: Schema, F: Schema, O: Schema](key: K, field: F): ZIO[RedisExecutor, RedisError, Option[O]] = {
     val command =
@@ -46,8 +49,9 @@ trait Hashes {
 
   /**
    * Returns all fields and values of the hash stored at `key`.
-   * @param key
-   * @return map of `field -> value` pairs under the key
+   *
+   * @param key of the hash that should be read
+   * @return map of `field -> value` pairs under the key.
    */
   final def hGetAll[K: Schema, F: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Map[F, V]] = {
     val command = RedisCommand(HGetAll, ArbitraryInput[K](), KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]()))
@@ -57,10 +61,11 @@ trait Hashes {
   /**
    * Increments the number stored at `field` in the hash stored at `key` by `increment`. If field does not exist the
    * value is set to `increment`.
-   * @param key
+   *
+   * @param key of the hash that should be updated
    * @param field field containing an integer, or a new field
    * @param increment integer to increment with
-   * @return integer value after incrementing, or error if the field is not an integer
+   * @return integer value after incrementing, or error if the field is not an integer.
    */
   final def hIncrBy[K: Schema, F: Schema](key: K, field: F, increment: Long): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(HIncrBy, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), LongInput), LongOutput)
@@ -68,12 +73,13 @@ trait Hashes {
   }
 
   /**
-   * Increment the specified `field` of a hash stored at `key`, and representing a floating point number
-   * by the specified `increment`.
-   * @param key
+   * Increment the specified `field` of a hash stored at `key`, and representing a floating point number by the
+   * specified `increment`.
+   *
+   * @param key of the hash that should be updated
    * @param field field containing a float, or a new field
    * @param increment float to increment with
-   * @return float value after incrementing, or error if the field is not a float
+   * @return float value after incrementing, or error if the field is not a float.
    */
   final def hIncrByFloat[K: Schema, F: Schema](
     key: K,
@@ -87,8 +93,9 @@ trait Hashes {
 
   /**
    * Returns all field names in the hash stored at `key`.
-   * @param key
-   * @return chunk of field names
+   *
+   * @param key of the hash whose fields should be returned
+   * @return chunk of field names.
    */
   final def hKeys[K: Schema, F: Schema](key: K): ZIO[RedisExecutor, RedisError, Chunk[F]] = {
     val command = RedisCommand(HKeys, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[F]()))
@@ -97,8 +104,9 @@ trait Hashes {
 
   /**
    * Returns the number of fields contained in the hash stored at `key`.
-   * @param key
-   * @return number of fields
+   *
+   * @param key of the hash whose fields should be counted
+   * @return number of fields.
    */
   final def hLen[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(HLen, ArbitraryInput[K](), LongOutput)
@@ -107,10 +115,11 @@ trait Hashes {
 
   /**
    * Returns the values associated with the specified `fields` in the hash stored at `key`.
-   * @param key
+   *
+   * @param key of the hash whose values should be read
    * @param field fields to retrieve
    * @param fields additional fields
-   * @return chunk of values, where value is `None` if the field is not in the hash
+   * @return chunk of values, where value is `None` if the field is not in the hash.
    */
   final def hmGet[K: Schema, F: Schema, V: Schema](
     key: K,
@@ -128,10 +137,11 @@ trait Hashes {
   /**
    *  Sets the specified `field -> value` pairs in the hash stored at `key`.
    *  Deprecated: As per Redis 4.0.0, HMSET is considered deprecated. Please use `hSet` instead.
-   *  @param key hash key
+   *
+   *  @param key of the hash whose value should be set
    *  @param pair mapping of a field to value
    *  @param pairs additional pairs
-   *  @return unit if fields are successfully set
+   *  @return unit if fields are successfully set.
    */
   final def hmSet[K: Schema, F: Schema, V: Schema](
     key: K,
@@ -147,12 +157,13 @@ trait Hashes {
   }
 
   /**
-   * Iterates `fields` of Hash types and their associated values using a cursor-based iterator.
-   * @param key
+   * Iterates `fields` of Hash types and their associated values using a cursor-based iterator
+   *
+   * @param key of the hash that should be scanned
    * @param cursor integer representing iterator
    * @param pattern regular expression matching keys to scan
    * @param count approximate number of elements to return (see https://redis.io/commands/scan#the-count-option)
-   * @return pair containing the next cursor and list of elements scanned
+   * @return pair containing the next cursor and list of elements scanned.
    */
   final def hScan[K: Schema, F: Schema, V: Schema](
     key: K,
@@ -169,11 +180,12 @@ trait Hashes {
   }
 
   /**
-   * Sets `field -> value` pairs in the hash stored at `key`.
-   * @param key
+   * Sets `field -> value` pairs in the hash stored at `key`
+   *
+   * @param key of the hash whose value should be set
    * @param pair mapping of a field to value
    * @param pairs additional pairs
-   * @return number of fields added
+   * @return number of fields added.
    */
   final def hSet[K: Schema, F: Schema, V: Schema](
     key: K,
@@ -190,10 +202,11 @@ trait Hashes {
 
   /**
    * Sets `field` in the hash stored at `key` to `value`, only if `field` does not yet exist
-   * @param key
-   * @param field
-   * @param value
-   * @return true if `field` is a new field and value was set, otherwise false
+   *
+   * @param key of the hash whose value should be set
+   * @param field for which a value should be set
+   * @param value that should be set
+   * @return true if `field` is a new field and value was set, otherwise false.
    */
   final def hSetNx[K: Schema, F: Schema, V: Schema](
     key: K,
@@ -206,9 +219,10 @@ trait Hashes {
   }
 
   /**
-   * Returns the string length of the value associated with `field` in the hash stored at `key`.
-   * @param key
-   * @param field
+   * Returns the string length of the value associated with `field` in the hash stored at `key`
+   *
+   * @param key of the hash that should be read
+   * @param field which value length should be returned
    * @return string length of the value in field, or zero if either field or key do not exist.
    */
   final def hStrLen[K: Schema, F: Schema](key: K, field: F): ZIO[RedisExecutor, RedisError, Long] = {
@@ -217,8 +231,9 @@ trait Hashes {
   }
 
   /**
-   * Returns all values in the hash stored at `key`.
-   * @param key
+   * Returns all values in the hash stored at `key`
+   *
+   * @param key of the hash which values should be read
    * @return list of values in the hash, or an empty list when `key` does not exist.
    */
   final def hVals[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Chunk[V]] = {

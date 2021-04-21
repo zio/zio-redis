@@ -30,7 +30,7 @@ trait Keys {
    * Serialize the value stored at key in a Redis-specific format and return it to the user.
    *
    * @param key key
-   * @return bytes for value stored at key
+   * @return bytes for value stored at key.
    */
   final def dump[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Chunk[Byte]] = {
     val command = RedisCommand(Dump, ArbitraryInput[K](), BulkStringOutput)
@@ -55,7 +55,7 @@ trait Keys {
    *
    * @param key key
    * @param timeout timeout
-   * @return true, if the timeout was set, false if the key didn't exist
+   * @return true, if the timeout was set, false if the key didn't exist.
    *
    * @see [[expireAt]]
    */
@@ -69,7 +69,7 @@ trait Keys {
    *
    * @param key key
    * @param timestamp an absolute Unix timestamp (seconds since January 1, 1970)
-   * @return true, if the timeout was set, false if the key didn't exist
+   * @return true, if the timeout was set, false if the key didn't exist.
    *
    * @see [[expire]]
    */
@@ -82,7 +82,7 @@ trait Keys {
    * Returns all keys matching pattern.
    *
    * @param pattern string pattern
-   * @return keys matching pattern
+   * @return keys matching pattern.
    */
   final def keys[V: Schema](pattern: String): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
     val command = RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]()))
@@ -102,7 +102,7 @@ trait Keys {
    * @param copy copy option, to not remove the key from the local instance
    * @param replace replace option, to replace existing key on the remote instance
    * @param keys keys option, to migrate multiple keys, non empty list of keys
-   * @return string OK on success, or NOKEY if no keys were found in the source instance
+   * @return string OK on success, or NOKEY if no keys were found in the source instance.
    */
   final def migrate[K: Schema](
     host: String,
@@ -138,19 +138,19 @@ trait Keys {
    * exists in the destination database, or it does not exist in the source database, it does nothing.
    *
    * @param key key
-   * @param destination_db destination database id
-   * @return true if the key was moved
+   * @param destinationDb destination database id
+   * @return true if the key was moved.
    */
-  final def move[K: Schema](key: K, destination_db: Long): ZIO[RedisExecutor, RedisError, Boolean] = {
+  final def move[K: Schema](key: K, destinationDb: Long): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(Move, Tuple2(ArbitraryInput[K](), LongInput), BoolOutput)
-    command.run((key, destination_db))
+    command.run((key, destinationDb))
   }
 
   /**
-   * Remove the existing timeout on key
+   * Remove the existing timeout on key.
    *
    * @param key key
-   * @return true if timeout was removed, false if key does not exist or does not have an associated timeout
+   * @return true if timeout was removed, false if key does not exist or does not have an associated timeout.
    */
   final def persist[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(Persist, ArbitraryInput[K](), BoolOutput)
@@ -162,7 +162,7 @@ trait Keys {
    *
    * @param key key
    * @param timeout timeout
-   * @return true, if the timeout was set, false if the key didn't exist
+   * @return true, if the timeout was set, false if the key didn't exist.
    *
    * @see [[pExpireAt]]
    */
@@ -176,7 +176,7 @@ trait Keys {
    *
    * @param key key
    * @param timestamp an absolute Unix timestamp (milliseconds since January 1, 1970)
-   * @return true, if the timeout was set, false if the key didn't exist
+   * @return true, if the timeout was set, false if the key didn't exist.
    *
    * @see [[pExpire]]
    */
@@ -189,7 +189,7 @@ trait Keys {
    * Returns the remaining time to live of a key that has a timeout.
    *
    * @param key key
-   * @return remaining time to live of a key that has a timeout, error otherwise
+   * @return remaining time to live of a key that has a timeout, error otherwise.
    */
   final def pTtl[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Duration] = {
     val command = RedisCommand(PTtl, ArbitraryInput[K](), DurationMillisecondsOutput)
@@ -198,6 +198,7 @@ trait Keys {
 
   /**
    * Return a random key from the currently selected database.
+   *
    * @return key or None when the database is empty.
    */
   final def randomKey[V: Schema](): ZIO[RedisExecutor, RedisError, Option[V]] = {
@@ -210,7 +211,7 @@ trait Keys {
    *
    * @param key key to be renamed
    * @param newKey new name
-   * @return unit if successful, error otherwise
+   * @return unit if successful, error otherwise.
    */
   final def rename[K: Schema](key: K, newKey: K): ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(Rename, Tuple2(ArbitraryInput[K](), ArbitraryInput[K]()), UnitOutput)
@@ -222,7 +223,7 @@ trait Keys {
    *
    * @param key key to be renamed
    * @param newKey new name
-   * @return true if key was renamed to newKey, false if newKey already exists
+   * @return true if key was renamed to newKey, false if newKey already exists.
    */
   final def renameNx[K: Schema](key: K, newKey: K): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(RenameNx, Tuple2(ArbitraryInput[K](), ArbitraryInput[K]()), BoolOutput)
@@ -230,17 +231,18 @@ trait Keys {
   }
 
   /**
-   * Create a key associated with a value that is obtained by deserializing the provided serialized value. Error when key
-   * already exists unless you use the REPLACE option.
+   * Create a key associated with a value that is obtained by deserializing the provided serialized value. Error when
+   * key already exists unless you use the REPLACE option.
    *
    * @param key key
    * @param ttl time to live in milliseconds, 0 if without any expire
    * @param value serialized value
    * @param replace replace option, replace if existing
-   * @param absTtl absolute ttl option, ttl should represent an absolute Unix timestamp (in milliseconds) in which the key will expire.
+   * @param absTtl absolute ttl option, ttl should represent an absolute Unix timestamp (in milliseconds) in which the
+   *               key will expire
    * @param idleTime idle time based eviction policy
    * @param freq frequency based eviction policy
-   * @return unit on success
+   * @return unit on success.
    */
   final def restore[K: Schema](
     key: K,
@@ -275,7 +277,8 @@ trait Keys {
    * @param pattern key pattern
    * @param count count option, specifies number of returned elements per call
    * @param `type` type option, filter to only return objects that match a given type
-   * @return returns an updated cursor that the user needs to use as the cursor argument in the next call along with the values
+   * @return returns an updated cursor that the user needs to use as the cursor argument in the next call along with the
+   *         values.
    */
   final def scan[K: Schema](
     cursor: Long,
@@ -300,7 +303,7 @@ trait Keys {
    * @param order ordering option, sort descending instead of ascending
    * @param get get option, return the values referenced by the keys generated from the get patterns
    * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
-   * @return the sorted values, or the values found using the get patterns
+   * @return the sorted values, or the values found using the get patterns.
    */
   final def sort[K: Schema, V: Schema](
     key: K,
@@ -326,7 +329,8 @@ trait Keys {
   }
 
   /**
-   * Sorts the list, set, or sorted set stored at key. Stores the results at storeAt. Returns the number of values sorted.
+   * Sorts the list, set, or sorted set stored at key. Stores the results at storeAt. Returns the number of values
+   * sorted.
    *
    * The functions sort and sortStore are both implemented by the Redis command SORT. Because they have different return
    * types, they are split into two Scala functions.
@@ -337,8 +341,9 @@ trait Keys {
    * @param limit limit option, take only limit values, starting at position offset
    * @param order ordering option, sort descending instead of ascending
    * @param get get option, return the values referenced by the keys generated from the get patterns
-   * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point number
-   * @return the sorted values, or the values found using the get patterns
+   * @param alpha alpha option, sort the values alphanumerically, instead of by interpreting the value as floating point
+   *              number
+   * @return the sorted values, or the values found using the get patterns.
    */
   final def sortStore[K: Schema](
     key: K,
@@ -381,7 +386,7 @@ trait Keys {
    * Returns the remaining time to live of a key that has a timeout.
    *
    * @param key key
-   * @return remaining time to live of a key that has a timeout, error otherwise
+   * @return remaining time to live of a key that has a timeout, error otherwise.
    */
   final def ttl[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Duration] = {
     val command = RedisCommand(Ttl, ArbitraryInput[K](), DurationSecondsOutput)
@@ -392,7 +397,7 @@ trait Keys {
    * Returns the string representation of the type of the value stored at key.
    *
    * @param key key
-   * @return type of the value stored at key
+   * @return type of the value stored at key.
    */
   final def typeOf[K: Schema](key: K): ZIO[RedisExecutor, RedisError, RedisType] = {
     val command = RedisCommand(TypeOf, ArbitraryInput[K](), TypeOutput)
@@ -415,12 +420,12 @@ trait Keys {
   }
 
   /**
-   * This command blocks the current client until all the previous write commands are successfully transferred and acknowledged
-   * by at least the specified number of replicas.
+   * This command blocks the current client until all the previous write commands are successfully transferred and
+   * acknowledged by at least the specified number of replicas.
    *
    * @param replicas minimum replicas to reach
    * @param timeout specified as a Duration, 0 means to block forever
-   * @return the number of replicas reached both in case of failure and success
+   * @return the number of replicas reached both in case of failure and success.
    */
   final def wait_(replicas: Long, timeout: Duration): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(Wait, Tuple2(LongInput, LongInput), LongOutput)
