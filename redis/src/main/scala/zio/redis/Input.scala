@@ -192,7 +192,7 @@ object Input {
 
   final case class MemberScoreInput[M: Schema]() extends Input[MemberScore[M]] {
     def encode(data: MemberScore[M])(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      Chunk(encodeBytes(data.score), encodeBytes(data.member))
+      Chunk(encodeString(data.score.toString), encodeBytes(data.member))
   }
 
   case object NoInput extends Input[Unit] {
