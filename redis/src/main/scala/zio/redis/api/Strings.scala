@@ -149,8 +149,8 @@ trait Strings {
    * @param range Range of the substring
    * @return Returns the substring.
    */
-  final def getRange[K: Schema, R: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, R] = {
-    val command = RedisCommand(GetRange, Tuple2(ArbitraryInput[K](), RangeInput), ArbitraryOutput[R]())
+  final def getRange[K: Schema, R: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Option[R]] = {
+    val command = RedisCommand(GetRange, Tuple2(ArbitraryInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]()))
     command.run((key, range))
   }
 
