@@ -72,9 +72,8 @@ trait SortedSets {
   final def zAddWithIncr(key: String, update: Option[Update] = None, change: Option[Changed] = None)(
     increment: Increment,
     memberScore: MemberScore,
-    memberScores: MemberScore*
   ): ZIO[RedisExecutor, RedisError, Option[Double]] =
-    ZAddWithIncr.run((key, update, change, increment, (memberScore, memberScores.toList)))
+    ZAddWithIncr.run((key, update, change, increment, memberScore))
 
   /**
    * Get the number of members in a sorted set.
@@ -375,7 +374,7 @@ private[redis] object SortedSets {
     )
 
   final val ZAddWithIncr
-    : RedisCommand[(String, Option[Update], Option[Changed], Increment, (MemberScore, List[MemberScore])), Option[
+    : RedisCommand[(String, Option[Update], Option[Changed], Increment, MemberScore), Option[
       Double
     ]] =
     RedisCommand(
@@ -385,7 +384,7 @@ private[redis] object SortedSets {
         OptionalInput(UpdateInput),
         OptionalInput(ChangedInput),
         IncrementInput,
-        NonEmptyList(MemberScoreInput)
+        MemberScoreInput
       ),
       OptionalOutput(DoubleOutput)
     )

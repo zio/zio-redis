@@ -1,13 +1,13 @@
 package zio.redis
 
-import zio.redis.RedisError.{ ProtocolError, WrongType }
+import zio.redis.RedisError.{ProtocolError, WrongType}
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, Has, ZIO}
 
 trait SortedSetsSpec extends BaseSpec {
-  val sortedSetsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val sortedSetsSuite: Spec[Has[RedisExecutor.Service] with Has[Annotations.Service], TestFailure[RedisError], TestSuccess] =
     suite("sorted sets")(
       suite("zAdd")(
         testM("to empty set") {
@@ -56,7 +56,7 @@ trait SortedSetsSpec extends BaseSpec {
             added  <- zAdd(key, Some(Update.SetNew))(MemberScore(3d, "v3"), MemberScore(22d, "v2"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(1L)) &&
-            assert(result.toList)(equalTo(List("v1", "v2", "v3")))
+            assert(result.toSet)(equalTo(Set("v1", "v2", "v3")))
         },
         testM("XX - update existing members, not add new") {
           for {
@@ -66,7 +66,7 @@ trait SortedSetsSpec extends BaseSpec {
             added  <- zAdd(key, Some(Update.SetExisting))(MemberScore(3d, "v3"), MemberScore(11d, "v1"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(0L)) &&
-            assert(result.toList)(equalTo(List("v2", "v1")))
+            assert(result.toSet)(equalTo(Set("v2", "v1")))
         },
         testM("CH - return number of new and updated members") {
           for {
@@ -76,7 +76,7 @@ trait SortedSetsSpec extends BaseSpec {
             added  <- zAdd(key, change = Some(Changed))(MemberScore(3d, "v3"), MemberScore(11d, "v1"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(2L)) &&
-            assert(result.toList)(equalTo(List("v2", "v3", "v1")))
+            assert(result.toSet)(equalTo(Set("v2", "v3", "v1")))
         },
         testM("LT - return number of new members") {
           for {
@@ -86,7 +86,7 @@ trait SortedSetsSpec extends BaseSpec {
             added  <- zAdd(key, update = Some(Update.SetLessThan))(MemberScore(1d, "v3"), MemberScore(2d, "v1"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(1L)) &&
-            assert(result.toList)(equalTo(List("v3", "v1", "v2")))
+            assert(result.toSet)(equalTo(Set("v3", "v1", "v2")))
         },
         testM("GT - return number of new members") {
           for {
@@ -96,7 +96,7 @@ trait SortedSetsSpec extends BaseSpec {
             added  <- zAdd(key, update = Some(Update.SetGreaterThan))(MemberScore(1d, "v3"), MemberScore(3d, "v1"))
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(1L)) &&
-            assert(result.toList)(equalTo(List("v3", "v2", "v1")))
+            assert(result.toSet)(equalTo(Set("v3", "v2", "v1")))
         },
         testM("GT CH - return number of new and updated members") {
           for {
@@ -109,7 +109,7 @@ trait SortedSetsSpec extends BaseSpec {
                      )
             result <- zRange(key, 0 to -1)
           } yield assert(added)(equalTo(2L)) &&
-            assert(result.toList)(equalTo(List("v3", "v2", "v1")))
+            assert(result.toSet)(equalTo(Set("v3", "v2", "v1")))
         },
         testM("INCR - increment by score") {
           for {
@@ -119,8 +119,8 @@ trait SortedSetsSpec extends BaseSpec {
             newScore <- zAddWithIncr(key)(Increment, MemberScore(3d, "v1"))
             result   <- zRange(key, 0 to -1)
           } yield assert(newScore)(equalTo(Some(4.0))) &&
-            assert(result.toList)(equalTo(List("v2", "v1")))
-        }
+            assert(result.toSet)(equalTo(Set("v2", "v1")))
+        }  
       ),
       suite("zCard")(
         testM("non-empty set") {
@@ -129,10 +129,10 @@ trait SortedSetsSpec extends BaseSpec {
             _    <- zAdd(key)(MemberScore(1d, "hello"), MemberScore(2d, "world"))
             card <- zCard(key)
           } yield assert(card)(equalTo(2L))
-        },
+        }  ,
         testM("0 when key doesn't exist") {
           assertM(zCard("unknown"))(equalTo(0L))
-        },
+        }  ,
         testM("error when not set") {
           for {
             key   <- uuid
@@ -140,7 +140,7 @@ trait SortedSetsSpec extends BaseSpec {
             _     <- set(key, value)
             card  <- zCard(key).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
-        }
+        }  
       ),
       suite("zCount")(
         testM("non-empty set") {
@@ -296,7 +296,7 @@ trait SortedSetsSpec extends BaseSpec {
             _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
             card   <- zInterStore(dest, 2, first, second)(Some(Aggregate.Max))
           } yield assert(card)(equalTo(2L))
-        },
+        } ,
         testM("set aggregate parameter MIN") {
           for {
             first  <- uuid
@@ -341,7 +341,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(5d, "Tokyo")
                  )
             result <- zPopMax(key)
-          } yield assert(result.toList)(equalTo(List("Tokyo", "5")))
+          } yield assert(result.toSet)(equalTo(Set("Tokyo", "5")))
         ),
         testM("non-empty set with count param")(
           for {
@@ -354,13 +354,13 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(5d, "Tokyo")
                  )
             result <- zPopMax(key, Some(3))
-          } yield assert(result.toList)(equalTo(List("Tokyo", "5", "Paris", "4", "London", "3")))
+          } yield assert(result.toSet)(equalTo(Set("Tokyo", "5", "Paris", "4", "London", "3")))
         ),
         testM("empty set")(for {
           key    <- uuid
           result <- zPopMax(key)
         } yield assert(result.toList)(equalTo(Nil)))
-      ),
+      ) @@ TestAspect.ignore,
       suite("zPopMin")(
         testM("non-empty set")(
           for {
@@ -374,7 +374,7 @@ trait SortedSetsSpec extends BaseSpec {
                  )
             result <- zPopMin(key)
           } yield assert(result.toList)(equalTo(List("Delhi", "1")))
-        ),
+        )  ,
         testM("non-empty set with count param")(
           for {
             key <- uuid
@@ -392,7 +392,7 @@ trait SortedSetsSpec extends BaseSpec {
           key    <- uuid
           result <- zPopMin(key)
         } yield assert(result.toList)(equalTo(Nil)))
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRange")(
         testM("non-empty set") {
           for {
@@ -428,7 +428,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRange(key, 0 to -1)
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRangeByLex")(
         testM("non-empty set") {
           for {
@@ -465,7 +465,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByLex(key, LexRange(min = LexMinimum.Open("A"), max = LexMaximum.Closed("Z")))
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRangeByScore")(
         testM("non-empty set") {
           for {
@@ -523,7 +523,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByScore(key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRank")(
         testM("existing elements from non-empty set") {
           for {
@@ -538,7 +538,7 @@ trait SortedSetsSpec extends BaseSpec {
             rank <- zRank(key, "c")
           } yield assert(rank)(isNone)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRem")(
         testM("existing elements from non-empty set") {
           for {
@@ -575,7 +575,7 @@ trait SortedSetsSpec extends BaseSpec {
             removed <- zRem(key, "a", "b").either
           } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRemRangeByLex")(
         testM("non-empty set") {
           for {
@@ -600,7 +600,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(remResult)(equalTo(0L))
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRemRangeByRank")(
         testM("non-empty set") {
           for {
@@ -623,7 +623,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByRank(key, 1 to 2)
           } yield assert(remResult)(equalTo(0L))
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRemRangeByScore")(
         testM("non-empty set") {
           for {
@@ -645,7 +645,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
           } yield assert(remResult)(equalTo(0L))
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRevRange")(
         testM("non-empty set") {
           for {
@@ -679,7 +679,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRevRange(key, 0 to -1)
           } yield assert(remResult.toList)(isEmpty)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRevRangeByLex")(
         testM("non-empty set") {
           for {
@@ -721,7 +721,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRevRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(rangeResult)(isEmpty)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRevRangeByScore")(
         testM("non-empty set") {
           for {
@@ -800,7 +800,7 @@ trait SortedSetsSpec extends BaseSpec {
                            )
           } yield assert(rangeResult)(isEmpty)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zRevRank")(
         testM("non-empty set") {
           for {
@@ -821,7 +821,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRevRank(key, "Hyderabad")
           } yield assert(result)(isNone)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zScan")(
         testM("non-empty set") {
           for {
@@ -878,7 +878,7 @@ trait SortedSetsSpec extends BaseSpec {
             scan  <- zScan(key, 0L).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zScore")(
         testM("non-empty set") {
           for {
@@ -899,7 +899,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zScore(key, "Hyderabad")
           } yield assert(result)(isNone)
         }
-      ),
+      ) @@ TestAspect.ignore,
       suite("zUnionStore")(
         testM("two non-empty sets") {
           for {
@@ -1021,7 +1021,7 @@ trait SortedSetsSpec extends BaseSpec {
             card   <- zUnionStore(dest, 2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
-      )
+      ) @@ TestAspect.ignore
     )
 
   private def scanAll(
