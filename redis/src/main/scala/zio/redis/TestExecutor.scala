@@ -1277,20 +1277,20 @@ private[redis] final class TestExecutor private (
             _         <- sortedSets.put(key, newSet)
           } yield RespValue.Integer(scoreMap.size.toLong - newSet.size.toLong)
         )
-//
-//      case api.SortedSets.ZRevRank.name =>
-//        val key    = input(0).asString
-//        val member = input(1).asString
-//
-//        orWrongType(isSortedSet(key))(
-//          for {
-//            sortedSet <- sortedSets.getOrElse(key, SortedSet.empty)
-//            rank = sortedSet.toIndexedSeq.map(_.member).reverse.indexOf(member) match {
-//                     case -1  => None
-//                     case idx => Some(idx)
-//                   }
-//          } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
-//        )
+
+      case api.SortedSets.ZRevRank.name =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            rank = scoreMap.toArray.sortBy(_._2).reverse.map(_._1).indexOf(member) match {
+              case -1  => None
+              case idx => Some(idx)
+            }
+          } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
+        )
 //
 //      case api.SortedSets.ZScan.name =>
 //        val key   = input.head.asString
@@ -1332,16 +1332,16 @@ private[redis] final class TestExecutor private (
 //          } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
 //        )
 //
-//      case api.SortedSets.ZScore.name =>
-//        val key    = input(0).asString
-//        val member = input(1).asString
-//
-//        orWrongType(isSortedSet(key))(
-//          for {
-//            set       <- sortedSets.getOrElse(key, SortedSet.empty)
-//            maybeScore = set.find(ms => ms.member == member).map(_.score)
-//          } yield maybeScore.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result.toString))
-//        )
+      case api.SortedSets.ZScore.name =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap       <- sortedSets.getOrElse(key, Map.empty)
+            maybeScore = scoreMap.get(member)
+          } yield maybeScore.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result.toString))
+        )
 //
 //      case api.SortedSets.ZUnionStore.name =>
 //        val destination = input(0).asString

@@ -721,7 +721,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRevRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(rangeResult)(isEmpty)
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRevRangeByScore")(
         testM("non-empty set") {
           for {
@@ -800,7 +800,7 @@ trait SortedSetsSpec extends BaseSpec {
                            )
           } yield assert(rangeResult)(isEmpty)
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRevRank")(
         testM("non-empty set") {
           for {
@@ -821,7 +821,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRevRank(key, "Hyderabad")
           } yield assert(result)(isNone)
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zScan")(
         testM("non-empty set") {
           for {
@@ -899,7 +899,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zScore(key, "Hyderabad")
           } yield assert(result)(isNone)
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zUnionStore")(
         testM("two non-empty sets") {
           for {
