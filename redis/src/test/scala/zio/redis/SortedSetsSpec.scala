@@ -360,7 +360,7 @@ trait SortedSetsSpec extends BaseSpec {
           key    <- uuid
           result <- zPopMax(key)
         } yield assert(result.toList)(equalTo(Nil)))
-      ) @@ TestAspect.ignore,
+      ),
       suite("zPopMin")(
         testM("non-empty set")(
           for {
@@ -392,7 +392,7 @@ trait SortedSetsSpec extends BaseSpec {
           key    <- uuid
           result <- zPopMin(key)
         } yield assert(result.toList)(equalTo(Nil)))
-      ) @@ TestAspect.ignore,
+      ),
       suite("zRange")(
         testM("non-empty set") {
           for {
@@ -428,7 +428,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRange(key, 0 to -1)
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zRangeByLex")(
         testM("non-empty set") {
           for {
@@ -465,7 +465,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByLex(key, LexRange(min = LexMinimum.Open("A"), max = LexMaximum.Closed("Z")))
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRangeByScore")(
         testM("non-empty set") {
           for {
@@ -523,7 +523,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByScore(key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRank")(
         testM("existing elements from non-empty set") {
           for {
@@ -538,7 +538,7 @@ trait SortedSetsSpec extends BaseSpec {
             rank <- zRank(key, "c")
           } yield assert(rank)(isNone)
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zRem")(
         testM("existing elements from non-empty set") {
           for {
@@ -575,7 +575,7 @@ trait SortedSetsSpec extends BaseSpec {
             removed <- zRem(key, "a", "b").either
           } yield assert(removed)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zRemRangeByLex")(
         testM("non-empty set") {
           for {
@@ -600,7 +600,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(remResult)(equalTo(0L))
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRemRangeByRank")(
         testM("non-empty set") {
           for {
@@ -623,7 +623,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByRank(key, 1 to 2)
           } yield assert(remResult)(equalTo(0L))
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRemRangeByScore")(
         testM("non-empty set") {
           for {
@@ -645,7 +645,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
           } yield assert(remResult)(equalTo(0L))
         }
-      ) @@ TestAspect.ignore,
+      ) @@ testExecutorUnsupported,
       suite("zRevRange")(
         testM("non-empty set") {
           for {
@@ -679,7 +679,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRevRange(key, 0 to -1)
           } yield assert(remResult.toList)(isEmpty)
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zRevRangeByLex")(
         testM("non-empty set") {
           for {
