@@ -878,7 +878,7 @@ trait SortedSetsSpec extends BaseSpec {
             scan  <- zScan(key, 0L).either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
-      ) @@ TestAspect.ignore,
+      ),
       suite("zScore")(
         testM("non-empty set") {
           for {

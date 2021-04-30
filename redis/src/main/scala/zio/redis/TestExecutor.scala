@@ -1431,6 +1431,43 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(result) map RespValue.bulkString)
         )
 
+      case api.SortedSets.ZScan.name =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2) input(2).asString match {
+            case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+            case _       => None
+          }
+          else None
+
+        def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
+          key.asString match {
+            case "COUNT" => Some(value.asString.toInt)
+            case _       => None
+          }
+
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
+
+        orWrongType(isSortedSet(key))(
+          {
+            for {
+              scoreMap  <- sortedSets.getOrElse(key, Map.empty)
+              filtered  = maybeRegex.map(regex => scoreMap.filter(s => regex.pattern.matcher(s._1).matches)).getOrElse(scoreMap)
+              resultSet = filtered.toArray.sortBy(_._2).slice(start, end)
+              nextIndex = if (filtered.size <= end) 0 else end
+              expand    = resultSet.flatMap(v => Array(v._1, v._2.toString.stripSuffix(".0")))
+              results   = Replies.array(expand)
+            } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
+          }
+        )
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
