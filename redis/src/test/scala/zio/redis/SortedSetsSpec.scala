@@ -1021,7 +1021,7 @@ trait SortedSetsSpec extends BaseSpec {
             card   <- zUnionStore(dest, 2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
-      ) @@ TestAspect.ignore
+      )
     )
 
   private def scanAll(
