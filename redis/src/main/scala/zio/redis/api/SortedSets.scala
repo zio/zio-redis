@@ -602,6 +602,37 @@ trait SortedSets {
   }
 
   /**
+   * Add multiple sorted sets and return each member.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return Chunk of all members in each sorted set
+   */
+  final def zUnion[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    weights: Option[::[Double]] = None,
+    aggregate: Option[Aggregate] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+    val command =
+      RedisCommand(
+        ZUnion,
+        Tuple4(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]()),
+          OptionalInput(WeightsInput),
+          OptionalInput(AggregateInput)
+        ),
+        ChunkOutput(ArbitraryOutput[M]())
+      )
+    command.run((inputKeysNum, (key, keys.toList), weights, aggregate))
+  }
+
+  /**
    * Add multiple sorted sets and store the resulting sorted set in a new key.
    *
    * @param destination Key of the output
