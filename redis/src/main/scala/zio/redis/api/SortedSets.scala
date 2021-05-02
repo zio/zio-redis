@@ -645,7 +645,7 @@ trait SortedSets {
    * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
    * @return Chunk of all members with their scores in each sorted set
    */
-  final def zUnionWithScore[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zUnionWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
   ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {

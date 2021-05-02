@@ -1117,14 +1117,14 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(members)(equalTo(Chunk("M", "N", "P", "O")))
         }
       ),
-      suite("zUnionWithScore")(
+      suite("zUnionWithScores")(
         testM("two non-empty sets") {
           for {
             first   <- uuid
             second  <- uuid
             _       <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- zUnionWithScore[String, String](2, first, second)()
+            members <- zUnionWithScores[String, String](2, first, second)()
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1142,14 +1142,14 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            members  <- zUnionWithScore[String, String](2, nonEmpty, empty)()
+            members  <- zUnionWithScores[String, String](2, nonEmpty, empty)()
           } yield assert(members)(equalTo(Chunk(MemberScore(1d, "a"), MemberScore(2d, "b"))))
         },
         testM("empty when both sets are empty") {
           for {
             first   <- uuid
             second  <- uuid
-            members <- zUnionWithScore[String, String](2, first, second)()
+            members <- zUnionWithScores[String, String](2, first, second)()
           } yield assert(members)(isEmpty)
         },
         testM("non-empty set with multiple non-empty sets") {
@@ -1160,7 +1160,7 @@ trait SortedSetsSpec extends BaseSpec {
             _       <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
             _       <- zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- zUnionWithScore[String, String](3, first, second, third)()
+            members <- zUnionWithScores[String, String](3, first, second, third)()
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1179,7 +1179,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- set(first, value)
-            members <- zUnionWithScore[String, String](2, first, second)().either
+            members <- zUnionWithScores[String, String](2, first, second)().either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error when the first parameter is set and the second parameter is not set") {
@@ -1189,7 +1189,7 @@ trait SortedSetsSpec extends BaseSpec {
             value   <- uuid
             _       <- zAdd(first)(MemberScore(1, "a"))
             _       <- set(second, value)
-            members <- zUnionWithScore[String, String](2, first, second)().either
+            members <- zUnionWithScores[String, String](2, first, second)().either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("parameter weights provided") {
@@ -1198,7 +1198,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- zUnionWithScore[String, String](2, first, second)(Some(::(2, List(3))))
+            members <- zUnionWithScores[String, String](2, first, second)(Some(::(2, List(3))))
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1216,7 +1216,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- zUnionWithScore[String, String](2, first, second)(Some(::(2, Nil))).either
+            members <- zUnionWithScores[String, String](2, first, second)(Some(::(2, Nil))).either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid weights provided ( more than sets number )") {
@@ -1225,7 +1225,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- zUnionWithScore[String, String](2, first, second)(Some(::(2, List(3, 5)))).either
+            members <- zUnionWithScores[String, String](2, first, second)(Some(::(2, List(3, 5)))).either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("set aggregate parameter MAX") {
@@ -1234,7 +1234,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- zUnionWithScore[String, String](2, first, second)(aggregate = Some(Aggregate.Max))
+            members <- zUnionWithScores[String, String](2, first, second)(aggregate = Some(Aggregate.Max))
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1252,7 +1252,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- zUnionWithScore[String, String](2, first, second)(aggregate = Some(Aggregate.Min))
+            members <- zUnionWithScores[String, String](2, first, second)(aggregate = Some(Aggregate.Min))
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1270,7 +1270,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- zUnionWithScore[String, String](2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
+            members <- zUnionWithScores[String, String](2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(members)(
             equalTo(
               Chunk(
