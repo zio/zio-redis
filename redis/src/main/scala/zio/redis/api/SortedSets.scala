@@ -612,7 +612,7 @@ trait SortedSets {
    *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
    *                multiplication factors default to 1
    * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @return Chunk of all members in each sorted set
+   * @return Chunk of all members in each sorted set.
    */
   final def zUnion[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
@@ -643,7 +643,7 @@ trait SortedSets {
    *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
    *                multiplication factors default to 1
    * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @return Chunk of all members with their scores in each sorted set
+   * @return Chunk of all members with their scores in each sorted set.
    */
   final def zUnionWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
