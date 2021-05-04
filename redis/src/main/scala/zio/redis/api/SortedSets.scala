@@ -146,6 +146,14 @@ trait SortedSets {
     command.run((key, range))
   }
 
+  /**
+   * Subtract multiple sorted sets and return members.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences between the first and successive input sorted sets.
+   */
   final def zDiff[K: Schema, M: Schema](
     inputKeysNum: Long,
     key: K,
@@ -163,6 +171,14 @@ trait SortedSets {
     command.run((inputKeysNum, (key, keys.toList)))
   }
 
+  /**
+   * Subtract multiple sorted sets and return members and their associated score.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences and scores between the first and successive input sorted sets.
+   */
   final def zDiffWithScores[K: Schema, M: Schema](
     inputKeysNum: Long,
     key: K,
