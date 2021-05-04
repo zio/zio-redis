@@ -236,6 +236,232 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(count)(equalTo(0L)) && assert(incrRes)(equalTo(10.0))
         }
       ),
+      suite("zInter")(
+        testM("two non-empty sets") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _       <- zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
+            members <- zInter[String, String](2, first, second)()
+          } yield assert(members)(equalTo(Chunk("a", "c")))
+        },
+        testM("empty when one of the sets is empty") {
+          for {
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
+            members  <- zInter[String, String](2, nonEmpty, empty)()
+          } yield assert(members)(isEmpty)
+        },
+        testM("empty when both sets are empty") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            members <- zInter[String, String](2, first, second)()
+          } yield assert(members)(isEmpty)
+        },
+        testM("non-empty set with multiple non-empty sets") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            third   <- uuid
+            _       <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _       <- zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
+            _       <- zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
+            members <- zInter[String, String](3, first, second, third)()
+          } yield assert(members)(
+            equalTo(Chunk("b"))
+          )
+        },
+        testM("error when first parameter is not set") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            value   <- uuid
+            _       <- set(first, value)
+            members <- zInter[String, String](2, first, second)().either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error with empty first set and second parameter is not set") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            value   <- uuid
+            _       <- set(second, value)
+            members <- zInter[String, String](2, first, second)().either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error with non-empty first set and second parameter is not set") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            value   <- uuid
+            _       <- zAdd(first)(MemberScore(1d, "a"))
+            _       <- set(second, value)
+            members <- zInter[String, String](2, first, second)().either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("parameter weights provided") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInter[String, String](2, first, second)(weights = Some(::(2.0, 3.0 :: Nil)))
+          } yield assert(members)(equalTo(Chunk("O", "N")))
+        },
+        testM("error when invalid weights provided ( less than sets number )") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInter[String, String](2, first, second)(weights = Some(::(2, Nil))).either
+          } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when invalid weights provided ( more than sets number )") {
+          for {
+            first  <- uuid
+            second <- uuid
+            _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <-
+              zInter[String, String](2, first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).either
+          } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("set aggregate parameter MAX") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInter[String, String](2, first, second)(Some(Aggregate.Max))
+          } yield assert(members)(equalTo(Chunk("N", "O")))
+        },
+        testM("set aggregate parameter MIN") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInter[String, String](2, first, second)(Some(Aggregate.Min))
+          } yield assert(members)(equalTo(Chunk("O", "N")))
+        }
+      ),
+      suite("zInterWithScores")(
+        testM("two non-empty sets") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _       <- zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
+            members <- zInterWithScores[String, String](2, first, second)()
+          } yield assert(members)(equalTo(Chunk(MemberScore(2d, "a"), MemberScore(6d, "c"))))
+        },
+        testM("empty when one of the sets is empty") {
+          for {
+            nonEmpty <- uuid
+            empty    <- uuid
+            _        <- zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
+            members  <- zInterWithScores[String, String](2, nonEmpty, empty)()
+          } yield assert(members)(isEmpty)
+        },
+        testM("empty when both sets are empty") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            members <- zInterWithScores[String, String](2, first, second)()
+          } yield assert(members)(isEmpty)
+        },
+        testM("non-empty set with multiple non-empty sets") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            third   <- uuid
+            _       <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _       <- zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
+            _       <- zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
+            members <- zInterWithScores[String, String](3, first, second, third)()
+          } yield assert(members)(
+            equalTo(Chunk(MemberScore(6d, "b")))
+          )
+        },
+        testM("error when first parameter is not set") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            value   <- uuid
+            _       <- set(first, value)
+            members <- zInterWithScores[String, String](2, first, second)().either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error with empty first set and second parameter is not set") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            value   <- uuid
+            _       <- set(second, value)
+            members <- zInterWithScores[String, String](2, first, second)().either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("error with non-empty first set and second parameter is not set") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            value   <- uuid
+            _       <- zAdd(first)(MemberScore(1d, "a"))
+            _       <- set(second, value)
+            members <- zInterWithScores[String, String](2, first, second)().either
+          } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
+        },
+        testM("parameter weights provided") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInterWithScores[String, String](2, first, second)(weights = Some(::(2.0, 3.0 :: Nil)))
+          } yield assert(members)(equalTo(Chunk(MemberScore(20d, "O"), MemberScore(21d, "N"))))
+        },
+        testM("error when invalid weights provided ( less than sets number )") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInterWithScores[String, String](2, first, second)(weights = Some(::(2, Nil))).either
+          } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("error when invalid weights provided ( more than sets number )") {
+          for {
+            first  <- uuid
+            second <- uuid
+            _      <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _      <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <-
+              zInterWithScores[String, String](2, first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).either
+          } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        testM("set aggregate parameter MAX") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInterWithScores[String, String](2, first, second)(Some(Aggregate.Max))
+          } yield assert(members)(equalTo(Chunk(MemberScore(6d, "N"), MemberScore(7d, "O"))))
+        },
+        testM("set aggregate parameter MIN") {
+          for {
+            first   <- uuid
+            second  <- uuid
+            _       <- zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _       <- zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <- zInterWithScores[String, String](2, first, second)(Some(Aggregate.Min))
+          } yield assert(members)(equalTo(Chunk(MemberScore(2d, "O"), MemberScore(3d, "N"))))
+        }
+      ),
       suite("zInterStore")(
         testM("two non-empty sets") {
           for {

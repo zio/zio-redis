@@ -164,6 +164,68 @@ trait SortedSets {
   }
 
   /**
+   * Intersect multiple sorted sets and return members.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of the rest sorted sets
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @return Chunk containing the intersection of members.
+   */
+  final def zInter[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    aggregate: Option[Aggregate] = None,
+    weights: Option[::[Double]] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+    val command = RedisCommand(
+      ZInter,
+      Tuple4(
+        LongInput,
+        NonEmptyList(ArbitraryInput[K]()),
+        OptionalInput(AggregateInput),
+        OptionalInput(WeightsInput)
+      ),
+      ChunkOutput(ArbitraryOutput[M]())
+    )
+    command.run((inputKeysNum, (key, keys.toList), aggregate, weights))
+  }
+
+  /**
+   * Intersect multiple sorted sets and return members and their associated score.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of the rest sorted sets
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @return Chunk containing the intersection of members with their score.
+   */
+  final def zInterWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    aggregate: Option[Aggregate] = None,
+    weights: Option[::[Double]] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+    val command = RedisCommand(
+      ZInter,
+      Tuple5(
+        LongInput,
+        NonEmptyList(ArbitraryInput[K]()),
+        OptionalInput(AggregateInput),
+        OptionalInput(WeightsInput),
+        ArbitraryInput[String]()
+      ),
+      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+        .map(_.map { case (m, s) => MemberScore(s, m) })
+    )
+    command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
+  }
+
+  /**
    * Intersect multiple sorted sets and store the resulting sorted set in a new key.
    *
    * @param destination Key of the output
@@ -721,6 +783,7 @@ private[redis] object SortedSets {
   final val ZCard            = "ZCARD"
   final val ZCount           = "ZCOUNT"
   final val ZIncrBy          = "ZINCRBY"
+  final val ZInter           = "ZINTER"
   final val ZInterStore      = "ZINTERSTORE"
   final val ZLexCount        = "ZLEXCOUNT"
   final val ZPopMax          = "ZPOPMAX"
