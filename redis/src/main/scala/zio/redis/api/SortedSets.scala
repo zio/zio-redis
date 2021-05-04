@@ -147,6 +147,34 @@ trait SortedSets {
   }
 
   /**
+   * Subtract multiple sorted sets and store the resulting sorted set in a destination key.
+   *
+   * @param destination Key of the output
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences between the first and successive input sorted sets.
+   */
+  final def zDiffStore[DK: Schema, K: Schema](
+    destination: DK,
+    inputKeysNum: Long,
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Long] = {
+    val command =
+      RedisCommand(
+        ZDiffStore,
+        Tuple3(
+          ArbitraryInput[DK](),
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]())
+        ),
+        LongOutput
+      )
+    command.run((destination, inputKeysNum, (key, keys.toList)))
+  }
+
+  /**
    * Increment the score of a member in a sorted set.
    *
    * @param key Key of a sorted set
@@ -782,6 +810,7 @@ private[redis] object SortedSets {
   final val ZAdd             = "ZADD"
   final val ZCard            = "ZCARD"
   final val ZCount           = "ZCOUNT"
+  final val ZDiffStore       = "ZDIFFSTORE"
   final val ZIncrBy          = "ZINCRBY"
   final val ZInter           = "ZINTER"
   final val ZInterStore      = "ZINTERSTORE"
