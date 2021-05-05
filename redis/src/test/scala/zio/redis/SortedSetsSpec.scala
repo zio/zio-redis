@@ -1667,6 +1667,55 @@ trait SortedSetsSpec extends BaseSpec {
             card   <- zUnionStore(dest, 2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
+      ),
+      suite("zRandMember")(
+        testM("key does not exist") {
+          for {
+            first     <- uuid
+            notExists <- uuid
+            _         <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret       <- zRandMember[String, String](notExists)
+          } yield assert(ret)(isNone)
+        },
+        testM("key does not exist with count") {
+          for {
+            first     <- uuid
+            notExists <- uuid
+            _         <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret       <- zRandMember[String, String](notExists, 1)
+          } yield assert(ret)(isNone)
+        },
+        testM("get an element") {
+          for {
+            first <- uuid
+            _     <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret   <- zRandMember[String, String](first)
+          } yield assert(ret)(isSome)
+        },
+        testM("get elements with count") {
+          for {
+            first <- uuid
+            _     <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret   <- zRandMember[String, String](first, 2)
+          } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
+        }
+      ),
+      suite("zRandMemberWithScores")(
+        testM("key does not exist") {
+          for {
+            first     <- uuid
+            notExists <- uuid
+            _         <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret       <- zRandMemberWithScores[String, String](notExists, 1)
+          } yield assert(ret)(isNone)
+        },
+        testM("get elements with count") {
+          for {
+            first <- uuid
+            _     <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret   <- zRandMemberWithScores[String, String](first, 2)
+          } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
+        }
       )
     )
 
