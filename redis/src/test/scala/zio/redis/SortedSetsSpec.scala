@@ -213,6 +213,43 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(count)(equalTo(0L))
         }
       ),
+      suite("zDiffStore")(
+        testM("empty sets") {
+          for {
+            dest <- uuid
+            key1 <- uuid
+            key2 <- uuid
+            key3 <- uuid
+            card <- zDiffStore(dest, 3, key1, key2, key3)
+          } yield assert(card)(equalTo(0L))
+        },
+        testM("non-empty set with empty set") {
+          for {
+            dest <- uuid
+            key1 <- uuid
+            key2 <- uuid
+            _ <- zAdd(key1)(
+                   MemberScore(1d, "a"),
+                   MemberScore(2d, "b")
+                 )
+            card <- zDiffStore(dest, 2, key1, key2)
+          } yield assert(card)(equalTo(2L))
+        },
+        testM("non-empty sets") {
+          for {
+            dest <- uuid
+            key1 <- uuid
+            key2 <- uuid
+            _ <- zAdd(key1)(
+                   MemberScore(1d, "a"),
+                   MemberScore(2d, "b"),
+                   MemberScore(3d, "c")
+                 )
+            _    <- zAdd(key2)(MemberScore(1d, "a"), MemberScore(2d, "b"))
+            card <- zDiffStore(dest, 2, key1, key2)
+          } yield assert(card)(equalTo(1L))
+        }
+      ),
       suite("zIncrBy")(
         testM("non-empty set") {
           for {
