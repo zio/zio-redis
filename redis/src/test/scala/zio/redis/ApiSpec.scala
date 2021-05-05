@@ -26,7 +26,7 @@ object ApiSpec
         keysSuite,
         listSuite,
         setsSuite,
-        sortedSetsSuite
+        sortedSetsSuite,
         stringsSuite,
         geoSuite,
         hyperLogLogSuite,
