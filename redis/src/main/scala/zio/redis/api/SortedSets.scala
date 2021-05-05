@@ -815,7 +815,7 @@ trait SortedSets {
   }
 
   /**
-   * Return elements from the sorted set value stored at key.
+   * Return random elements from the sorted set value stored at key.
    *
    * @param key Key of a sorted set
    * @param count If the provided count argument is positive, return an array of distinct elements.
@@ -832,7 +832,7 @@ trait SortedSets {
   }
 
   /**
-   * Return a random element from the sorted set value stored at key.
+   * Return random elements from the sorted set value stored at key.
    *
    * @param key Key of a sorted set
    * @param count If the provided count argument is positive, return an array of distinct elements.
