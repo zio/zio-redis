@@ -147,6 +147,58 @@ trait SortedSets {
   }
 
   /**
+   * Subtract multiple sorted sets and return members.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences between the first and successive input sorted sets.
+   */
+  final def zDiff[K: Schema, M: Schema](
+    inputKeysNum: Long,
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+    val command =
+      RedisCommand(
+        ZDiff,
+        Tuple2(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]())
+        ),
+        ChunkOutput(ArbitraryOutput[M]())
+      )
+    command.run((inputKeysNum, (key, keys.toList)))
+  }
+
+  /**
+   * Subtract multiple sorted sets and return members and their associated score.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences and scores between the first and successive input sorted sets.
+   */
+  final def zDiffWithScores[K: Schema, M: Schema](
+    inputKeysNum: Long,
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+    val command =
+      RedisCommand(
+        ZDiff,
+        Tuple3(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]()),
+          ArbitraryInput[String]()
+        ),
+        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          .map(_.map { case (m, s) => MemberScore(s, m) })
+      )
+    command.run((inputKeysNum, (key, keys.toList), WithScores.stringify))
+  }
+
+  /**
    * Subtract multiple sorted sets and store the resulting sorted set in a destination key.
    *
    * @param destination Key of the output
@@ -810,6 +862,7 @@ private[redis] object SortedSets {
   final val ZAdd             = "ZADD"
   final val ZCard            = "ZCARD"
   final val ZCount           = "ZCOUNT"
+  final val ZDiff            = "ZDIFF"
   final val ZDiffStore       = "ZDIFFSTORE"
   final val ZIncrBy          = "ZINCRBY"
   final val ZInter           = "ZINTER"

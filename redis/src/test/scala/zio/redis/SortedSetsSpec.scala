@@ -213,6 +213,71 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(count)(equalTo(0L))
         }
       ),
+      suite("zDiff")(
+        testM("empty sets") {
+          for {
+            key1 <- uuid
+            key2 <- uuid
+            key3 <- uuid
+            diff <- zDiff[String, String](3, key1, key2, key3)
+          } yield assert(diff)(isEmpty)
+        },
+        testM("non-empty set with empty set") {
+          for {
+            key1 <- uuid
+            key2 <- uuid
+            _ <- zAdd(key1)(
+                   MemberScore(1d, "a"),
+                   MemberScore(2d, "b")
+                 )
+            diff <- zDiff[String, String](2, key1, key2)
+          } yield assert(diff)(hasSameElements(Chunk("a", "b")))
+        },
+        testM("non-empty sets") {
+          for {
+            key1 <- uuid
+            key2 <- uuid
+            _ <- zAdd(key1)(
+                   MemberScore(1d, "a"),
+                   MemberScore(2d, "b"),
+                   MemberScore(3d, "c")
+                 )
+            _    <- zAdd(key2)(MemberScore(1d, "a"), MemberScore(2d, "b"))
+            diff <- zDiff[String, String](2, key1, key2)
+          } yield assert(diff)(hasSameElements(Chunk("c")))
+        }
+      ),
+      suite("zDiffWithScores")(
+        testM("empty sets") {
+          for {
+            key1 <- uuid
+            key2 <- uuid
+            key3 <- uuid
+            diff <- zDiffWithScores[String, String](3, key1, key2, key3)
+          } yield assert(diff)(isEmpty)
+        },
+        testM("non-empty set with empty set") {
+          for {
+            key1 <- uuid
+            key2 <- uuid
+            _    <- zAdd(key1)(MemberScore(1d, "a"), MemberScore(2d, "b"))
+            diff <- zDiffWithScores[String, String](2, key1, key2)
+          } yield assert(diff)(hasSameElements(Chunk(MemberScore(1d, "a"), MemberScore(2d, "b"))))
+        },
+        testM("non-empty sets") {
+          for {
+            key1 <- uuid
+            key2 <- uuid
+            _ <- zAdd(key1)(
+                   MemberScore(1d, "a"),
+                   MemberScore(2d, "b"),
+                   MemberScore(3d, "c")
+                 )
+            _    <- zAdd(key2)(MemberScore(1d, "a"), MemberScore(2d, "b"))
+            diff <- zDiffWithScores[String, String](2, key1, key2)
+          } yield assert(diff)(hasSameElements(Chunk(MemberScore(3d, "c"))))
+        }
+      ),
       suite("zDiffStore")(
         testM("empty sets") {
           for {
