@@ -844,7 +844,7 @@ trait SortedSets {
    *
    * @param key Key of the set
    * @param keys Keys of the rest sets
-   * @return list of scores or None associated with the specified member values (a double precision floating point
+   * @return List of scores or None associated with the specified member values (a double precision floating point
    *         number).
    */
   final def zMScore[K: Schema](
@@ -853,6 +853,58 @@ trait SortedSets {
   ): ZIO[RedisExecutor, RedisError, Chunk[Option[Double]]] = {
     val command = RedisCommand(Zmscore, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)))
     command.run((key, keys.toList))
+  }
+
+  /**
+   * Return a random element from the sorted set value stored at key.
+   *
+   * @param key Key of a sorted set
+   * @return Return a random element from the sorted set value stored at key.
+   */
+  final def zRandMember[K: Schema, M: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[M]] = {
+    val command = RedisCommand(ZRandMember, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[M]()))
+    command.run(key)
+  }
+
+  /**
+   * Return random elements from the sorted set value stored at key.
+   *
+   * @param key Key of a sorted set
+   * @param count If the provided count argument is positive, return an array of distinct elements.
+   *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return Return an array of elements from the sorted set value stored at key.
+   */
+  final def zRandMember[K: Schema, M: Schema](key: K, count: Long): ZIO[RedisExecutor, RedisError, Option[Chunk[M]]] = {
+    val command = RedisCommand(
+      ZRandMember,
+      Tuple2(ArbitraryInput[K](), LongInput),
+      OptionalOutput(ChunkOutput(ArbitraryOutput[M]()))
+    )
+    command.run((key, count))
+  }
+
+  /**
+   * Return random elements from the sorted set value stored at key.
+   *
+   * @param key Key of a sorted set
+   * @param count If the provided count argument is positive, return an array of distinct elements.
+   *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return When the additional count argument is passed, the command returns an array of elements, or an empty array when key does not exist.
+   *         If the WITHSCORES modifier is used, the reply is a list elements and their scores from the sorted set.
+   */
+  final def zRandMemberWithScores[K: Schema, M: Schema](
+    key: K,
+    count: Long
+  ): ZIO[RedisExecutor, RedisError, Option[Chunk[MemberScore[M]]]] = {
+    val command = RedisCommand(
+      ZRandMember,
+      Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[String]()),
+      OptionalOutput(
+        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          .map(_.map { case (m, s) => MemberScore(s, m) })
+      )
+    )
+    command.run((key, count, WithScores.stringify))
   }
 }
 
@@ -887,4 +939,5 @@ private[redis] object SortedSets {
   final val ZUnion           = "ZUNION"
   final val ZUnionStore      = "ZUNIONSTORE"
   final val Zmscore          = "ZMSCORE"
+  final val ZRandMember      = "ZRANDMEMBER"
 }
