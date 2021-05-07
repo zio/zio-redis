@@ -240,6 +240,41 @@ trait Hashes {
     val command = RedisCommand(HVals, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[V]()))
     command.run(key)
   }
+
+  /**
+   * Returns a random field from the hash value stored at `key`.
+   *
+   * @param key of the hash which fields should be read
+   * @return random field in the hash or None when `key` does not exist.
+   */
+  final def hRandField[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))
+    command.run(key)
+  }
+
+  /**
+   * Return an array of distinct fields. The array's length is either `count` or the hash's number of fields if `count` is greater.
+   * If called with a negative count, the behavior changes and the command is allowed to return the same field multiple times.
+   * In this case, the number of returned fields is the absolute value of the specified count.
+   * The `withValues` parameter changes the reply so it includes the respective values of the randomly selected hash fields.
+   *
+   * @param key of the hash which fields should be read
+   * @param count of the hash which fields should be read
+   * @param withValues when true includes the respective values of the randomly selected hash fields.
+   * @return when `withValues` is false it returns a list of fields, if `withValues` is false it returns a list with fields and values intercalated.
+   */
+  final def hRandField[K: Schema, V: Schema](
+    key: K,
+    count: Long,
+    withValues: Boolean = false
+  ): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
+    val command = RedisCommand(
+      HRandField,
+      Tuple3(ArbitraryInput[K](), LongInput, OptionalInput(StringInput)),
+      ChunkOutput(ArbitraryOutput[V]())
+    )
+    command.run((key, count, if (withValues) Some("WITHVALUES") else None))
+  }
 }
 
 private[redis] object Hashes {
@@ -258,4 +293,5 @@ private[redis] object Hashes {
   final val HSetNx       = "HSETNX"
   final val HStrLen      = "HSTRLEN"
   final val HVals        = "HVALS"
+  final val HRandField   = "HRANDFIELD"
 }

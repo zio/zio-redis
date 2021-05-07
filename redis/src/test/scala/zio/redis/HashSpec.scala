@@ -271,6 +271,72 @@ trait HashSpec extends BaseSpec {
               (next, elements) = scan
             } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         })
+      ),
+      suite("hRandField")(
+        testM("randomly select one field") {
+          for {
+            hash   <- uuid
+            field1 <- uuid
+            value1 <- uuid
+            field2 <- uuid
+            value2 <- uuid
+            _      <- hSet(hash, field1 -> value1, field2 -> value2)
+            field  <- hRandField[String, String](hash)
+          } yield assert(Seq(field1, field2))(contains(field.get))
+        },
+        testM("returns None if key does not exists") {
+          for {
+            hash    <- uuid
+            field   <- uuid
+            value   <- uuid
+            badHash <- uuid
+            _       <- hSet(hash, field -> value)
+            field   <- hRandField[String, String](badHash)
+          } yield assert(field)(isNone)
+        },
+        testM("returns n different fields if count is provided") {
+          for {
+            hash   <- uuid
+            field1 <- uuid
+            value1 <- uuid
+            field2 <- uuid
+            value2 <- uuid
+            _      <- hSet(hash, field1 -> value1, field2 -> value2)
+            fields <- hRandField[String, String](hash, 2)
+          } yield assert(fields)(hasSize(equalTo(2)))
+        },
+        testM("returns all hash fields if count is provided and is greater or equal than hash size") {
+          for {
+            hash   <- uuid
+            field1 <- uuid
+            value1 <- uuid
+            field2 <- uuid
+            value2 <- uuid
+            _      <- hSet(hash, field1 -> value1, field2 -> value2)
+            fields <- hRandField[String, String](hash, 4)
+          } yield assert(fields)(hasSize(equalTo(2)))
+        },
+        testM("returns repeated fields if count is negative") {
+          for {
+            hash   <- uuid
+            field  <- uuid
+            value  <- uuid
+            _      <- hSet(hash, field -> value)
+            fields <- hRandField[String, String](hash, -2)
+            // } yield assert(fields)(hasSize(equalTo(2)))
+          } yield assert(fields)(hasSameElements(Chunk(field, field)))
+        },
+        testM("returns n different fields and values with 'withvalues' option") {
+          for {
+            hash   <- uuid
+            field1 <- uuid
+            value1 <- uuid
+            field2 <- uuid
+            value2 <- uuid
+            _      <- hSet(hash, field1 -> value1, field2 -> value2)
+            fields <- hRandField[String, String](hash, 4, withValues = true)
+          } yield assert(fields)(hasSize(equalTo(4)))
+        }
       )
     )
 }
