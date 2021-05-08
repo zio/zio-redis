@@ -323,7 +323,6 @@ trait HashSpec extends BaseSpec {
             value  <- uuid
             _      <- hSet(hash, field -> value)
             fields <- hRandField[String, String](hash, -2)
-            // } yield assert(fields)(hasSize(equalTo(2)))
           } yield assert(fields)(hasSameElements(Chunk(field, field)))
         },
         testM("returns n different fields and values with 'withvalues' option") {

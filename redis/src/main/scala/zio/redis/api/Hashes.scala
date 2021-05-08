@@ -242,10 +242,10 @@ trait Hashes {
   }
 
   /**
-   * Returns a random field from the hash value stored at `key`.
+   * Returns a random field from the hash value stored at `key`
    *
    * @param key of the hash which fields should be read
-   * @return random field in the hash or None when `key` does not exist.
+   * @return random field in the hash or `None` when `key` does not exist.
    */
   final def hRandField[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[V]] = {
     val command = RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))
@@ -253,15 +253,15 @@ trait Hashes {
   }
 
   /**
-   * Return an array of distinct fields. The array's length is either `count` or the hash's number of fields if `count` is greater.
-   * If called with a negative count, the behavior changes and the command is allowed to return the same field multiple times.
-   * In this case, the number of returned fields is the absolute value of the specified count.
-   * The `withValues` parameter changes the reply so it includes the respective values of the randomly selected hash fields.
+   * Returns an array of at most `count` distinct fields randomly. If called with a negative `count`, the command
+   * will return exactly `count` fields, allowing repeats. If `withValues` is true it will return fields
+   * with his values intercalated.
    *
    * @param key of the hash which fields should be read
-   * @param count of the hash which fields should be read
-   * @param withValues when true includes the respective values of the randomly selected hash fields.
-   * @return when `withValues` is false it returns a list of fields, if `withValues` is false it returns a list with fields and values intercalated.
+   * @param count maximum number of different fields to return if positive or the exact number, in absolute value
+   *              if negative
+   * @param withValues when true includes the respective values of the randomly selected hash fields
+   * @return a list of fields or fields and values if `withValues` is true.
    */
   final def hRandField[K: Schema, V: Schema](
     key: K,
