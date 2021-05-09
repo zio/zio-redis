@@ -1,6 +1,7 @@
 package zio.redis
 
 import zio._
+import zio.clock.Clock
 import zio.logging._
 import zio.schema.codec.Codec
 
@@ -17,7 +18,7 @@ object RedisExecutor {
   lazy val local: ZLayer[Logging with Has[Codec], RedisError.IOError, RedisExecutor] =
     ZLayer.identity[Logging] ++ ByteStream.default ++ ZLayer.identity[Has[Codec]] >>> StreamedExecutor
 
-  lazy val test: URLayer[zio.random.Random, RedisExecutor] = TestExecutor.live
+  lazy val test: URLayer[zio.random.Random with Clock, RedisExecutor] = TestExecutor.live
 
   private[this] final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 

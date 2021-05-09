@@ -1,10 +1,13 @@
 package zio.redis
 
+import java.time.Instant
+
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
 
 import zio._
+import zio.clock.Clock
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
@@ -19,7 +22,9 @@ private[redis] final class TestExecutor private (
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
-  hashes: TMap[String, Map[String, String]]
+  hashes: TMap[String, Map[String, String]],
+  expirations: TMap[String, Instant],
+  testClock: Clock
 ) extends RedisExecutor.Service {
 
   override val codec: Codec = StringUtf8Codec
@@ -27,24 +32,30 @@ private[redis] final class TestExecutor private (
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
+      now  <- testClock.get.instant
+      _    <- clearExpired(now)
       result <- name.asString match {
                   case api.Lists.BlPop =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray, now)
+                      .provide(testClock)
 
                   case api.Lists.BrPop =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray, now)
+                      .provide(testClock)
 
                   case api.Lists.BrPopLPush =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
+                      .provide(testClock)
 
                   case api.Lists.BlMove =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
+                      .provide(testClock)
 
-                  case _ => runCommand(name.asString, command.tail).commit
+                  case _ => runCommand(name.asString, command.tail, now).commit
                 }
     } yield result
 
@@ -52,15 +63,15 @@ private[redis] final class TestExecutor private (
     name: String,
     input: Chunk[RespValue.BulkString],
     timeout: Int,
-    respValue: RespValue
-  ): UIO[RespValue] =
+    respValue: RespValue,
+    now: Instant
+  ): URIO[Clock, RespValue] =
     if (timeout > 0)
-      runCommand(name, input).commit
+      runCommand(name, input, now).commit
         .timeout(timeout.seconds)
         .map(_.getOrElse(respValue))
-        .provideLayer(zio.clock.Clock.live)
     else
-      runCommand(name, input).commit
+      runCommand(name, input, now).commit
 
   private def errResponse(cmd: String): RespValue.BulkString =
     RespValue.bulkString(s"(error) ERR wrong number of arguments for '$cmd' command")
@@ -69,7 +80,7 @@ private[redis] final class TestExecutor private (
     res: => RespValue.BulkString
   ): USTM[BulkString] = STM.succeedNow(if (input.isEmpty) errResponse(command) else res)
 
-  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): USTM[RespValue] = {
+  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString], now: Instant): USTM[RespValue] = {
     name match {
       case api.Connection.Ping.name =>
         STM.succeedNow {
@@ -1011,6 +1022,13 @@ private[redis] final class TestExecutor private (
     }
   }
 
+  /** Removes all expired keys from each data structure */
+  private def clearExpired(now: Instant): UIO[Unit] =
+    expirations.foreach { (key, exp) =>
+      if (now.isBefore(exp)) STM.unit
+      else delete(key).unit
+    }.commit
+
   private[this] def delete(key: String): USTM[Int] =
     STM.ifM(keys.contains(key))(
       for {
@@ -1020,6 +1038,7 @@ private[redis] final class TestExecutor private (
         _ <- STM.whenM(isHyperLogLog(key))(hyperLogLogs.delete(key))
         _ <- STM.whenM(isHash(key))(hashes.delete(key))
         _ <- keys.delete(key)
+        _ <- expirations.delete(key)
       } yield 1,
       STM.succeedNow(0)
     )
@@ -1076,23 +1095,23 @@ private[redis] final class TestExecutor private (
 
   // Puts element into list and removes its expiration, if any.
   private[this] def putList(key: String, value: Chunk[String]): USTM[Unit] =
-    lists.put(key, value) <* keys.put(key)
+    lists.put(key, value) <* keys.put(key) <* expirations.delete(key)
 
   // Puts element into set and removes its expiration, if any.
   private[this] def putSet(key: String, value: Set[String]): USTM[Unit] =
-    sets.put(key, value) <* keys.put(key)
+    sets.put(key, value) <* keys.put(key) <* expirations.delete(key)
 
   // Saves string and removes its expiration, if any.
   private[this] def putString(key: String, value: String): USTM[Unit] =
-    strings.put(key, value) <* keys.put(key)
+    strings.put(key, value) <* keys.put(key) <* expirations.delete(key)
 
   // Puts element into hyperLogLog and removes its expiration, if any.
   private[this] def putHyperLogLog(key: String, value: Set[String]): USTM[Unit] =
-    hyperLogLogs.put(key, value) <* keys.put(key)
+    hyperLogLogs.put(key, value) <* keys.put(key) <* expirations.delete(key)
 
   // Puts element into hash and removes its expiration, if any.
   private[this] def putHash(key: String, value: Map[String, String]): USTM[Unit] =
-    hashes.put(key, value) <* keys.put(key)
+    hashes.put(key, value) <* keys.put(key) <* expirations.delete(key)
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
@@ -1185,7 +1204,7 @@ private[redis] final class TestExecutor private (
 }
 
 private[redis] object TestExecutor {
-  lazy val live: URLayer[zio.random.Random, RedisExecutor] = {
+  lazy val live: URLayer[zio.random.Random with Clock, RedisExecutor] = {
     val executor = for {
       seed         <- random.nextInt
       sRandom       = new scala.util.Random(seed)
@@ -1197,9 +1216,12 @@ private[redis] object TestExecutor {
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
       lists        <- TMap.empty[String, Chunk[String]].commit
       hashes       <- TMap.empty[String, Map[String, String]].commit
-    } yield new TestExecutor(keys, lists, sets, strings, randomPick, hyperLogLogs, hashes)
+      expirations  <- TMap.empty[String, Instant].commit
+      testClock    <- ZIO.identity[Clock]
+    } yield new TestExecutor(keys, lists, sets, strings, randomPick, hyperLogLogs, hashes, expirations, testClock)
 
     executor.toLayer
   }
 
 }
+
