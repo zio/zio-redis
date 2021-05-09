@@ -130,6 +130,41 @@ private[redis] final class TestExecutor private (
           pick <- selectOne(ks.toVector, randomPick)
         } yield pick.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString)
 
+      case api.Keys.Persist =>
+        val key = input.head.asString
+        expirations
+          .get(key)
+          .flatMap(_.fold(STM.succeedNow(0L))(_ => expirations.delete(key).as(1L)))
+          .map(RespValue.Integer)
+
+      case api.Keys.Expire =>
+        val key      = input(0).asString
+        val unixtime = now.plusSeconds(input(1).asLong)
+        STM
+          .ifM(keys.contains(key))(expirations.put(key, unixtime).as(1L), STM.succeedNow(0L))
+          .map(RespValue.Integer)
+
+      case api.Keys.ExpireAt =>
+        val key      = input(0).asString
+        val unixtime = Instant.ofEpochSecond(input(1).asLong)
+        STM
+          .ifM(keys.contains(key))(expirations.put(key, unixtime).as(1L), STM.succeedNow(0L))
+          .map(RespValue.Integer)
+
+      case api.Keys.PExpire =>
+        val key      = input(0).asString
+        val unixtime = now.plusMillis(input(1).asLong)
+        STM
+          .ifM(keys.contains(key))(expirations.put(key, unixtime).as(1L), STM.succeedNow(0L))
+          .map(RespValue.Integer)
+
+      case api.Keys.PExpireAt =>
+        val key      = input(0).asString
+        val unixtime = Instant.ofEpochMilli(input(1).asLong)
+        STM
+          .ifM(keys.contains(key))(expirations.put(key, unixtime).as(1L), STM.succeedNow(0L))
+          .map(RespValue.Integer)
+
       case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
