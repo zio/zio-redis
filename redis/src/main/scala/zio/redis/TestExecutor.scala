@@ -1,3 +1,4 @@
+
 package zio.redis
 
 import java.time.Instant
@@ -129,6 +130,24 @@ private[redis] final class TestExecutor private (
           ks   <- keys.toList
           pick <- selectOne(ks.toVector, randomPick)
         } yield pick.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString)
+
+      case api.Keys.Ttl =>
+        val key = input.head.asString
+        STM
+          .ifM(keys.contains(key))(
+            ttlOf(key, now).map(_.fold(-1L)(_.toSeconds)),
+            STM.succeedNow(-2L)
+          )
+          .map(RespValue.Integer)
+
+      case api.Keys.PTtl =>
+        val key = input.head.asString
+        STM
+          .ifM(keys.contains(key))(
+            ttlOf(key, now).map(_.fold(-1L)(_.toMillis)),
+            STM.succeedNow(-2L)
+          )
+          .map(RespValue.Integer)
 
       case api.Keys.Persist =>
         val key = input.head.asString
@@ -1147,6 +1166,16 @@ private[redis] final class TestExecutor private (
   // Puts element into hash and removes its expiration, if any.
   private[this] def putHash(key: String, value: Map[String, String]): USTM[Unit] =
     hashes.put(key, value) <* keys.put(key) <* expirations.delete(key)
+
+  /**
+   * Returns the time-to-live of a key, if any.
+   *  @return `Duration` between the key's expiration and the current time.
+   */
+  private[this] def ttlOf(key: String, now: Instant): USTM[Option[Duration]] =
+    expirations.get(key).flatMap {
+      case Some(exp) => STM.some(Duration.fromInterval(exp, now))
+      case None      => STM.none
+    }
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
