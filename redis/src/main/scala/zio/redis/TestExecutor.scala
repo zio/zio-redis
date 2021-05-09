@@ -88,6 +88,37 @@ private[redis] final class TestExecutor private (
       case api.Connection.Select.name =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
+      case api.Keys.Exists =>
+        val allkeys = input.map(_.asString)
+        STM
+          .foldLeft(allkeys)(0L) { case (acc, key) =>
+            STM.ifM(keys.contains(key))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
+          }
+          .map(RespValue.Integer)
+
+      case api.Keys.Del =>
+        val allkeys = input.map(_.asString)
+        STM
+          .foldLeft(allkeys)(0L) { case (acc, key) => delete(key).map(acc + _) }
+          .map(RespValue.Integer)
+
+      case api.Keys.TypeOf =>
+        val key = input.head.asString
+        val matchedType = for {
+          a <- STM.ifM(isList(key))(STM.some(RedisType.List), STM.none)
+          b <- STM.ifM(isSet(key))(STM.some(RedisType.Set), STM.none)
+          c <- STM.ifM(isString(key))(STM.some(RedisType.String), STM.none)
+          d <- STM.ifM(isHyperLogLog(key))(STM.some(RedisType.String), STM.none)
+          e <- STM.ifM(isHash(key))(STM.some(RedisType.Hash), STM.none)
+        } yield a orElse b orElse c orElse d orElse e
+        matchedType.map(_.fold("none")(_.stringify)).map(RespValue.SimpleString)
+
+      case api.Keys.RandomKey =>
+        for {
+          ks   <- keys.toList
+          pick <- selectOne(ks.toVector, randomPick)
+        } yield pick.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString)
+
       case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
@@ -1043,18 +1074,23 @@ private[redis] final class TestExecutor private (
       isHyper  <- hyperLogLogs.contains(name)
     } yield !isString && !isSet && !isList && !isHyper
 
+  // Puts element into list and removes its expiration, if any.
   private[this] def putList(key: String, value: Chunk[String]): USTM[Unit] =
     lists.put(key, value) <* keys.put(key)
 
+  // Puts element into set and removes its expiration, if any.
   private[this] def putSet(key: String, value: Set[String]): USTM[Unit] =
     sets.put(key, value) <* keys.put(key)
 
+  // Saves string and removes its expiration, if any.
   private[this] def putString(key: String, value: String): USTM[Unit] =
     strings.put(key, value) <* keys.put(key)
 
+  // Puts element into hyperLogLog and removes its expiration, if any.
   private[this] def putHyperLogLog(key: String, value: Set[String]): USTM[Unit] =
     hyperLogLogs.put(key, value) <* keys.put(key)
 
+  // Puts element into hash and removes its expiration, if any.
   private[this] def putHash(key: String, value: Map[String, String]): USTM[Unit] =
     hashes.put(key, value) <* keys.put(key)
 
