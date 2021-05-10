@@ -974,7 +974,7 @@ private[redis] final class TestExecutor private (
 
       case api.Hashes.HRandField =>
         val key        = input(0).asString
-        val count      = if (input.size == 1) None else input(1).asString.toLongOption
+        val count      = if (input.size == 1) None else Some(input(1).asString.toLong)
         val withValues = if (input.size == 3) input(2).asString == "WITHVALUES" else false
 
         def selectValues[T](n: Long, values: Vector[T]) = {
@@ -998,7 +998,7 @@ private[redis] final class TestExecutor private (
             for {
               kvs            <- keysAndValues
               fields         <- selectValues(count.get, kvs.toVector)
-              fieldsAndValues = fields.map { case (k, v) => Seq(k, v) }.flatten
+              fieldsAndValues = fields.flatMap { case (k, v) => Seq(k, v) }
             } yield RespValue.Array(Chunk.fromIterable(fieldsAndValues))
           } else if (count.isDefined) {
             for {
@@ -1009,7 +1009,7 @@ private[redis] final class TestExecutor private (
           } else {
             for {
               kvs <- keysAndValues
-              keys = kvs.map(_._1)
+              keys = kvs.map { case (k, _) => k }
               key <- selectOne[zio.redis.RespValue.BulkString](keys.toVector, randomPick)
             } yield key.getOrElse(RespValue.NullBulkString)
           }
