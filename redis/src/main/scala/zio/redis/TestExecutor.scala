@@ -6,7 +6,7 @@ import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.stm.{random => _, _}
+import zio.stm.{ random => _, _ }
 
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
@@ -1234,7 +1234,7 @@ private[redis] final class TestExecutor private (
         orWrongType(isSortedSet(key))(
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
-            results   = scoreMap.toArray.sortBy(_._2).take(count)
+            results   = scoreMap.toArray.sortBy { case (_, score) => score }.take(count)
             _        <- sortedSets.put(key, scoreMap -- results.map(_._1))
           } yield RespValue.Array(
             Chunk
@@ -1250,7 +1250,7 @@ private[redis] final class TestExecutor private (
         orWrongType(isSortedSet(key))(
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
-            results   = scoreMap.toArray.sortBy(_._2).takeRight(count)
+            results   = scoreMap.toArray.sortBy { case (_, score) => score }.reverse.take(count)
             _        <- sortedSets.put(key, scoreMap -- results.map(_._1))
           } yield RespValue.Array(
             Chunk

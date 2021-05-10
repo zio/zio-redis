@@ -35,7 +35,7 @@ trait SortedSetsSpec extends BaseSpec {
             result  <- bzPopMax[String, String](duration, key)
           } yield assert(result)(isNone)
         )
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("bzPopMin")(
         testM("non-empty set")(
           for {
@@ -58,7 +58,7 @@ trait SortedSetsSpec extends BaseSpec {
             result  <- bzPopMin[String, String](duration, key)
           } yield assert(result)(isNone)
         )
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zAdd")(
         testM("to empty set") {
           for {
@@ -246,7 +246,7 @@ trait SortedSetsSpec extends BaseSpec {
             diff <- zDiff[String, String](2, key1, key2)
           } yield assert(diff)(hasSameElements(Chunk("c")))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zDiffWithScores")(
         testM("empty sets") {
           for {
@@ -277,7 +277,7 @@ trait SortedSetsSpec extends BaseSpec {
             diff <- zDiffWithScores[String, String](2, key1, key2)
           } yield assert(diff)(hasSameElements(Chunk(MemberScore(3d, "c"))))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zDiffStore")(
         testM("empty sets") {
           for {
@@ -314,7 +314,7 @@ trait SortedSetsSpec extends BaseSpec {
             card <- zDiffStore(dest, 2, key1, key2)
           } yield assert(card)(equalTo(1L))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zIncrBy")(
         testM("non-empty set") {
           for {
@@ -450,7 +450,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zInter[String, String](2, first, second)(Some(Aggregate.Min))
           } yield assert(members)(equalTo(Chunk("O", "N")))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zInterWithScores")(
         testM("two non-empty sets") {
           for {
@@ -563,7 +563,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zInterWithScores[String, String](2, first, second)(Some(Aggregate.Min))
           } yield assert(members)(equalTo(Chunk(MemberScore(2d, "O"), MemberScore(3d, "N"))))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zInterStore")(
         testM("two non-empty sets") {
           for {
@@ -707,7 +707,7 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(count)(equalTo(0L))
         }
       ),
-      suite("zPopMax")(
+      suite("zPop+Max")(
         testM("non-empty set")(
           for {
             key    <- uuid
@@ -809,7 +809,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeWithScores[String, String](key, 0 to -1)
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRangeByLex")(
         testM("non-empty set") {
           for {
@@ -854,7 +854,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRangeByLex[String, String](key, LexRange(min = LexMinimum.Open("A"), max = LexMaximum.Closed("Z")))
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRangeByScore")(
         testM("non-empty set") {
           for {
@@ -891,7 +891,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByScore[String, String](key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRangeByScoreWithScores")(
         testM("non-empty set") {
           for {
@@ -928,7 +928,7 @@ trait SortedSetsSpec extends BaseSpec {
             result    <- zRangeByScoreWithScores[String, String](key, scoreRange)
           } yield assert(result.toList)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRank")(
         testM("existing elements from non-empty set") {
           for {
@@ -1006,7 +1006,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(remResult)(equalTo(0L))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRemRangeByRank")(
         testM("non-empty set") {
           for {
@@ -1029,7 +1029,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByRank(key, 1 to 2)
           } yield assert(remResult)(equalTo(0L))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRemRangeByScore")(
         testM("non-empty set") {
           for {
@@ -1052,7 +1052,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
           } yield assert(remResult)(equalTo(0L))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRevRange")(
         testM("non-empty set") {
           for {
@@ -1093,7 +1093,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRevRange[String, String](key, 0 to -1)
           } yield assert(remResult.toList)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRevRangeByLex")(
         testM("non-empty set") {
           for {
@@ -1132,7 +1132,7 @@ trait SortedSetsSpec extends BaseSpec {
             rangeResult <- zRevRangeByLex[String, String](key, lexRange)
           } yield assert(rangeResult)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRevRangeByScore")(
         testM("non-empty set") {
           for {
@@ -1171,7 +1171,7 @@ trait SortedSetsSpec extends BaseSpec {
             rangeResult <- zRevRangeByScore[String, String](key, scoreRange)
           } yield assert(rangeResult)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRevRangeByScoreWithScores")(
         testM("non-empty set") {
           for {
@@ -1208,7 +1208,7 @@ trait SortedSetsSpec extends BaseSpec {
             rangeResult <- zRevRangeByScoreWithScores[String, String](key, scoreRange)
           } yield assert(rangeResult)(isEmpty)
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRevRank")(
         testM("non-empty set") {
           for {
@@ -1334,7 +1334,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zMScore(key, "Hyderabad")
           } yield assert(result)(equalTo(Chunk(None)))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zUnion")(
         testM("two non-empty sets") {
           for {
@@ -1444,7 +1444,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zUnion[String, String](2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(members)(equalTo(Chunk("M", "N", "P", "O")))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zUnionWithScores")(
         testM("two non-empty sets") {
           for {
@@ -1610,7 +1610,7 @@ trait SortedSetsSpec extends BaseSpec {
             )
           )
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zUnionStore")(
         testM("two non-empty sets") {
           for {
@@ -1764,7 +1764,7 @@ trait SortedSetsSpec extends BaseSpec {
             ret   <- zRandMember[String, String](first, 2)
           } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
         }
-      ),
+      ) @@ ApiSpec.testExecutorUnsupported,
       suite("zRandMemberWithScores")(
         testM("key does not exist") {
           for {
@@ -1781,7 +1781,7 @@ trait SortedSetsSpec extends BaseSpec {
             ret   <- zRandMemberWithScores[String, String](first, 2)
           } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
         }
-      )
+      ) @@ ApiSpec.testExecutorUnsupported
     )
 
   private def scanAll(
