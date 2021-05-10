@@ -9,7 +9,6 @@ import zio.test._
 import zio.{ Chunk, Task }
 
 object InputSpec extends BaseSpec {
-  import StralgoLCS._
   import StrAlgoLcsQueryType._
   import BitFieldCommand._
   import BitFieldType._
@@ -75,16 +74,6 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Stralgocommand")(
-        test("lcs keys") {
-          assert(StralgoCommandInput.encode(Keys))(
-            equalTo(respArgs("LCS", "KEYS"))
-          )
-        },
-        test("lcs strings") {
-          assert(StralgoCommandInput.encode(Strings))(
-            equalTo(respArgs("LCS", "STRINGS"))
-          )
-        },
         test("length option") {
           assert(StralgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
             equalTo(respArgs("LEN"))
@@ -395,47 +384,74 @@ object InputSpec extends BaseSpec {
       suite("LexRange")(
         testM("with unbound min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "+")))
         },
         testM("with open min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "+")))
         },
         testM("with closed min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "+")))
         },
         testM("with unbound min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "(z")))
         },
         testM("with open min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "(z")))
         },
         testM("with closed min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "(z")))
         },
         testM("with unbound min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "[z")))
         },
         testM("with open min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "[z")))
         },
         testM("with closed min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "[z")))
         }
       ),
@@ -493,32 +509,32 @@ object InputSpec extends BaseSpec {
       suite("MemberScore")(
         testM("with positive score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
           } yield assert(result)(equalTo(respArgs("4.2", "")))
         },
         testM("with negative score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
           } yield assert(result)(equalTo(respArgs("-4.2", "")))
         },
         testM("with zero score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(0d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "")))
           } yield assert(result)(equalTo(respArgs("0.0", "")))
         },
         testM("with positive score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("4.2", "member")))
         },
         testM("with negative score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("-4.2", "member")))
         },
         testM("with zero score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(0d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
           } yield assert(result)(equalTo(respArgs("0.0", "member")))
         }
       ),
@@ -643,47 +659,74 @@ object InputSpec extends BaseSpec {
       suite("ScoreRange")(
         testM("with infinite min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "+inf")))
         },
         testM("with open min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "+inf")))
         },
         testM("with closed min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "+inf")))
         },
         testM("with infinite min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "(5.2")))
         },
         testM("with open min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "(5.2")))
         },
         testM("with closed min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "(5.2")))
         },
         testM("with infinite min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "5.2")))
         },
         testM("with open min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "5.2")))
         },
         testM("with closed min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "5.2")))
         }
       ),
@@ -962,35 +1005,51 @@ object InputSpec extends BaseSpec {
       ),
       suite("XGroupCreate")(
         testM("without mkStream") {
-          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = false)))
+          Task(
+            XGroupCreateInput[String, String, String]().encode(
+              XGroupCommand.Create("key", "group", "id", mkStream = false)
+            )
+          )
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id"))))
         },
         testM("with mkStream") {
-          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = true)))
+          Task(
+            XGroupCreateInput[String, String, String]().encode(
+              XGroupCommand.Create("key", "group", "id", mkStream = true)
+            )
+          )
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id", "MKSTREAM"))))
         }
       ),
       suite("XGroupSetId")(
         testM("valid value") {
-          Task(XGroupSetIdInput.encode(XGroupCommand.SetId("key", "group", "id")))
+          Task(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
             .map(assert(_)(equalTo(respArgs("SETID", "key", "group", "id"))))
         }
       ),
       suite("XGroupDestroy")(
         testM("valid value") {
-          Task(XGroupDestroyInput.encode(XGroupCommand.Destroy("key", "group")))
+          Task(XGroupDestroyInput[String, String]().encode(XGroupCommand.Destroy("key", "group")))
             .map(assert(_)(equalTo(respArgs("DESTROY", "key", "group"))))
         }
       ),
       suite("XGroupCreateConsumer")(
         testM("valid value") {
-          Task(XGroupCreateConsumerInput.encode(XGroupCommand.CreateConsumer("key", "group", "consumer")))
+          Task(
+            XGroupCreateConsumerInput[String, String, String]().encode(
+              XGroupCommand.CreateConsumer("key", "group", "consumer")
+            )
+          )
             .map(assert(_)(equalTo(respArgs("CREATECONSUMER", "key", "group", "consumer"))))
         }
       ),
       suite("XGroupDelConsumer")(
         testM("valid value") {
-          Task(XGroupDelConsumerInput.encode(XGroupCommand.DelConsumer("key", "group", "consumer")))
+          Task(
+            XGroupDelConsumerInput[String, String, String]().encode(
+              XGroupCommand.DelConsumer("key", "group", "consumer")
+            )
+          )
             .map(assert(_)(equalTo(respArgs("DELCONSUMER", "key", "group", "consumer"))))
         }
       ),
@@ -1010,46 +1069,12 @@ object InputSpec extends BaseSpec {
       ),
       suite("Streams")(
         testM("with one pair") {
-          Task(StreamsInput.encode(("a" -> "b", Chunk.empty)))
+          Task(StreamsInput[String, String]().encode(("a" -> "b", Chunk.empty)))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "b"))))
         },
         testM("with multiple pairs") {
-          Task(StreamsInput.encode(("a" -> "b", Chunk.single("c" -> "d"))))
+          Task(StreamsInput[String, String]().encode(("a" -> "b", Chunk.single("c" -> "d"))))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
-        }
-      ),
-      suite("XInfoStream")(
-        testM("valid value") {
-          assertM(Task(XInfoStreamInput.encode(XInfoCommand.Stream("key"))))(
-            equalTo(respArgs("STREAM", "key"))
-          )
-        }
-      ),
-      suite("XInfoStreamFull")(
-        testM("valid value") {
-          assertM(Task(XInfoStreamInput.encode(XInfoCommand.Stream("key", Some(XInfoCommand.Full(Some(10)))))))(
-            equalTo(respArgs("STREAM", "key", "FULL", "COUNT", "10"))
-          )
-        }
-      ),
-      suite("XInfoGroups")(
-        testM("valid value") {
-          assertM(Task(XInfoGroupsInput.encode(XInfoCommand.Groups("key"))))(
-            equalTo(respArgs("GROUPS", "key"))
-          )
-        }
-      ),
-      suite("XInfoConsumers")(
-        testM("valid value") {
-          assertM(Task(XInfoConsumersInput.encode(XInfoCommand.Consumers("key", "group"))))(
-            equalTo(respArgs("CONSUMERS", "key", "group"))
-          )
-        }
-      ),
-      suite("Group")(
-        testM("valid value") {
-          Task(GroupInput.encode(Group("group", "consumer")))
-            .map(assert(_)(equalTo(respArgs("GROUP", "group", "consumer"))))
         }
       ),
       suite("NoAck")(
@@ -1097,6 +1122,43 @@ object InputSpec extends BaseSpec {
       suite("Rank")(
         testM("valid value") {
           Task(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(respArgs("RANK", "10"))))
+        }
+      ),
+      suite("GetEx")(
+        testM("GetExInput - valid value") {
+          for {
+            resultSeconds <-
+              Task(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
+            resultMilliseconds <-
+              Task(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
+          } yield assert(resultSeconds)(equalTo(respArgs("key", "EX", "1"))) && assert(resultMilliseconds)(
+            equalTo(respArgs("key", "PX", "100"))
+          )
+        },
+        testM("GetExAtInput - valid value") {
+          for {
+            resultSeconds <-
+              Task(
+                GetExAtInput[String]().encode(
+                  scala.Tuple3("key", ExpiredAt.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
+                )
+              )
+            resultMilliseconds <-
+              Task(
+                GetExAtInput[String]().encode(
+                  scala.Tuple3("key", ExpiredAt.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
+                )
+              )
+          } yield assert(resultSeconds)(equalTo(respArgs("key", "EXAT", "1617667200"))) && assert(resultMilliseconds)(
+            equalTo(respArgs("key", "PXAT", "1617667200000"))
+          )
+        },
+        testM("GetExPersistInput - valid value") {
+          for {
+            result              <- Task(GetExPersistInput[String]().encode("key" -> true))
+            resultWithoutOption <- Task(GetExPersistInput[String]().encode("key" -> false))
+          } yield assert(result)(equalTo(respArgs("key", "PERSIST"))) &&
+            assert(resultWithoutOption)(equalTo(respArgs("key")))
         }
       )
     )

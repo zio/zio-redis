@@ -18,12 +18,12 @@ trait ListSpec extends BaseSpec {
           for {
             key    <- uuid
             _      <- lPush(key, "world", "hello")
-            popped <- lPop(key)
+            popped <- lPop[String, String](key)
           } yield assert(popped)(isSome(equalTo("hello")))
         },
         testM("lPop empty list") {
           for {
-            popped <- lPop("unknown")
+            popped <- lPop[String, String]("unknown")
           } yield assert(popped)(isNone)
         },
         testM("lPop error not list") {
@@ -31,19 +31,19 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            pop   <- lPop(key).either
+            pop   <- lPop[String, String](key).either
           } yield assert(pop)(isLeft)
         },
         testM("rPop non-empty list") {
           for {
             key <- uuid
             _   <- rPush(key, "world", "hello")
-            pop <- rPop(key)
+            pop <- rPop[String, String](key)
           } yield assert(pop)(isSome(equalTo("hello")))
         },
         testM("rPop empty list") {
           for {
-            pop <- rPop("unknown")
+            pop <- rPop[String, String]("unknown")
           } yield assert(pop)(isNone)
         },
         testM("rPop error not list") {
@@ -51,7 +51,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            pop   <- rPop(key).either
+            pop   <- rPop[String, String](key).either
           } yield assert(pop)(isLeft)
         }
       ),
@@ -60,14 +60,14 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             push  <- lPush(key, "hello")
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(push)(equalTo(1L)) && assert(range)(equalTo(Chunk("hello")))
         },
         testM("lPush multiple elements onto empty list") {
           for {
             key   <- uuid
             push  <- lPush(key, "hello", "world")
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(push)(equalTo(2L)) && assert(range)(equalTo(Chunk("world", "hello")))
         },
         testM("lPush error when not list") {
@@ -83,7 +83,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world")
             px    <- lPushX(key, "hello")
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(px)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lPushX nothing when key doesn't exist") {
@@ -104,14 +104,14 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             push  <- rPush(key, "hello")
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(push)(equalTo(1L)) && assert(range)(equalTo(Chunk("hello")))
         },
         testM("rPush multiple elements onto empty list") {
           for {
             key   <- uuid
             push  <- rPush(key, "hello", "world")
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(push)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("rPush error when not list") {
@@ -127,7 +127,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- rPush(key, "world")
             px    <- rPushX(key, "hello")
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(px)(equalTo(2L)) && assert(range)(equalTo(Chunk("world", "hello")))
         },
         testM("rPushX nothing when key doesn't exist") {
@@ -152,9 +152,9 @@ trait ListSpec extends BaseSpec {
             dest <- uuid
             _    <- rPush(key, "one", "two", "three")
             _    <- rPush(dest, "four")
-            _    <- rPopLPush(key, dest)
-            r    <- lRange(key, 0 to -1)
-            l    <- lRange(dest, 0 to -1)
+            _    <- rPopLPush[String, String, String](key, dest)
+            r    <- lRange[String, String](key, 0 to -1)
+            l    <- lRange[String, String](dest, 0 to -1)
           } yield assert(r)(equalTo(Chunk("one", "two"))) && assert(l)(equalTo(Chunk("three", "four")))
         },
         testM("rPopLPush nothing when source does not exist") {
@@ -162,8 +162,8 @@ trait ListSpec extends BaseSpec {
             key  <- uuid
             dest <- uuid
             _    <- rPush(dest, "four")
-            _    <- rPopLPush(key, dest)
-            l    <- lRange(dest, 0 to -1)
+            _    <- rPopLPush[String, String, String](key, dest)
+            l    <- lRange[String, String](dest, 0 to -1)
           } yield assert(l)(equalTo(Chunk("four")))
         },
         testM("rPopLPush error when not list") {
@@ -172,7 +172,7 @@ trait ListSpec extends BaseSpec {
             dest  <- uuid
             value <- uuid
             _     <- set(key, value)
-            rpp   <- rPopLPush(key, dest).either
+            rpp   <- rPopLPush[String, String, String](key, dest).either
           } yield assert(rpp)(isLeft)
         }
       ),
@@ -183,9 +183,9 @@ trait ListSpec extends BaseSpec {
             dest <- uuid
             _    <- rPush(key, "one", "two", "three")
             _    <- rPush(dest, "four")
-            _    <- brPopLPush(key, dest, 1.seconds)
-            r    <- lRange(key, 0 to -1)
-            l    <- lRange(dest, 0 to -1)
+            _    <- brPopLPush[String, String, String](key, dest, 1.seconds)
+            r    <- lRange[String, String](key, 0 to -1)
+            l    <- lRange[String, String](dest, 0 to -1)
           } yield assert(r)(equalTo(Chunk("one", "two"))) && assert(l)(equalTo(Chunk("three", "four")))
         },
         testM("brPopLPush block for 1 second when source does not exist") {
@@ -194,7 +194,7 @@ trait ListSpec extends BaseSpec {
             dest    <- uuid
             _       <- rPush(dest, "four")
             st      <- currentTime(TimeUnit.SECONDS)
-            s       <- brPopLPush(key, dest, 1.seconds)
+            s       <- brPopLPush[String, String, String](key, dest, 1.seconds)
             endTime <- currentTime(TimeUnit.SECONDS)
           } yield assert(s)(isNone) && assert(endTime - st)(isGreaterThanEqualTo(1L))
         },
@@ -204,7 +204,7 @@ trait ListSpec extends BaseSpec {
             dest  <- uuid
             value <- uuid
             _     <- set(key, value)
-            bpp   <- brPopLPush(key, dest, 1.seconds).either
+            bpp   <- brPopLPush[String, String, String](key, dest, 1.seconds).either
           } yield assert(bpp)(isLeft)
         }
       ),
@@ -214,7 +214,7 @@ trait ListSpec extends BaseSpec {
             key     <- uuid
             _       <- lPush(key, "world", "hello", "hello", "hello")
             removed <- lRem(key, 2, "hello")
-            range   <- lRange(key, 0 to 1)
+            range   <- lRange[String, String](key, 0 to 1)
           } yield assert(removed)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRem 2 elements moving from tail") {
@@ -222,7 +222,7 @@ trait ListSpec extends BaseSpec {
             key     <- uuid
             _       <- lPush(key, "hello", "hello", "world", "hello")
             removed <- lRem(key, -2, "hello")
-            range   <- lRange(key, 0 to 1)
+            range   <- lRange[String, String](key, 0 to 1)
           } yield assert(removed)(equalTo(2L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRem all 3 'hello' elements") {
@@ -230,7 +230,7 @@ trait ListSpec extends BaseSpec {
             key     <- uuid
             _       <- lPush(key, "hello", "hello", "world", "hello")
             removed <- lRem(key, 0, "hello")
-            range   <- lRange(key, 0 to 1)
+            range   <- lRange[String, String](key, 0 to 1)
           } yield assert(removed)(equalTo(3L)) && assert(range)(equalTo(Chunk("world")))
         },
         testM("lRem nothing when key does not exist") {
@@ -238,7 +238,7 @@ trait ListSpec extends BaseSpec {
             key     <- uuid
             _       <- lPush(key, "world", "hello")
             removed <- lRem(key, 0, "goodbye")
-            range   <- lRange(key, 0 to 1)
+            range   <- lRange[String, String](key, 0 to 1)
           } yield assert(removed)(equalTo(0L)) && assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRem error when not list") {
@@ -255,7 +255,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
             _     <- lSet(key, 1, "goodbye")
-            range <- lRange(key, 0 to 1)
+            range <- lRange[String, String](key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello", "goodbye")))
         },
         testM("lSet error when index out of bounds") {
@@ -300,35 +300,35 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            range <- lRange(key, 0 to 1)
+            range <- lRange[String, String](key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRange two elements negative indices") {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            range <- lRange(key, -2 to -1)
+            range <- lRange[String, String](key, -2 to -1)
           } yield assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lRange start out of bounds") {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            range <- lRange(key, 2 to 3)
+            range <- lRange[String, String](key, 2 to 3)
           } yield assert(range)(equalTo(Chunk()))
         },
         testM("lRange end out of bounds") {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            range <- lRange(key, 1 to 2)
+            range <- lRange[String, String](key, 1 to 2)
           } yield assert(range)(equalTo(Chunk("world")))
         },
         testM("lRange error when not list") {
           for {
             key   <- uuid
             _     <- set(key, "hello")
-            range <- lRange(key, 1 to 2).either
+            range <- lRange[String, String](key, 1 to 2).either
           } yield assert(range)(isLeft)
         }
       ),
@@ -337,21 +337,21 @@ trait ListSpec extends BaseSpec {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            index <- lIndex(key, 0L)
+            index <- lIndex[String, String](key, 0L)
           } yield assert(index)(isSome(equalTo("hello")))
         },
         testM("lIndex last element") {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            index <- lIndex(key, -1L)
+            index <- lIndex[String, String](key, -1L)
           } yield assert(index)(isSome(equalTo("world")))
         },
         testM("lIndex no existing element") {
           for {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
-            index <- lIndex(key, 3)
+            index <- lIndex[String, String](key, 3)
           } yield assert(index)(isNone)
         },
         testM("lIndex error when not list") {
@@ -359,7 +359,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            index <- lIndex(key, -1L).either
+            index <- lIndex[String, String](key, -1L).either
           } yield assert(index)(isLeft)
         }
       ),
@@ -369,7 +369,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 0 to 0)
-            range <- lRange(key, 0 to -1)
+            range <- lRange[String, String](key, 0 to -1)
           } yield assert(range)(equalTo(Chunk("hello")))
         },
         testM("lTrim start index out of bounds") {
@@ -377,7 +377,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 2 to 5)
-            range <- lRange(key, 0 to 1)
+            range <- lRange[String, String](key, 0 to 1)
           } yield assert(range)(equalTo(Chunk()))
         },
         testM("lTrim end index out of bounds") {
@@ -385,7 +385,7 @@ trait ListSpec extends BaseSpec {
             key   <- uuid
             _     <- lPush(key, "world", "hello")
             _     <- lTrim(key, 0 to 3)
-            range <- lRange(key, 0 to 1)
+            range <- lRange[String, String](key, 0 to 1)
           } yield assert(range)(equalTo(Chunk("hello", "world")))
         },
         testM("lTrim error when not list") {
@@ -401,7 +401,7 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- blPop(key)(1.second).some
+            popped     <- blPop[String, String](key)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("c"))
@@ -411,7 +411,7 @@ trait ListSpec extends BaseSpec {
             empty      <- uuid
             nonEmpty   <- uuid
             _          <- lPush(nonEmpty, "a", "b", "c")
-            popped     <- blPop(empty, nonEmpty)(1.second).some
+            popped     <- blPop[String, String](empty, nonEmpty)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(nonEmpty)) &&
             assert(elem)(equalTo("c"))
@@ -419,21 +419,21 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key    <- uuid
-            popped <- blPop(key)(1.second)
+            popped <- blPop[String, String](key)(1.second)
           } yield assert(popped)(isNone)
         },
         testM("from multiple empty lists") {
           for {
             first  <- uuid
             second <- uuid
-            popped <- blPop(first, second)(1.second)
+            popped <- blPop[String, String](first, second)(1.second)
           } yield assert(popped)(isNone)
         },
         testM("from non-empty list with timeout 0s") {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- blPop(key)(0.seconds).some
+            popped     <- blPop[String, String](key)(0.seconds).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("c"))
@@ -443,7 +443,7 @@ trait ListSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            popped <- blPop(key)(1.second).either
+            popped <- blPop[String, String](key)(1.second).either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -452,7 +452,7 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- brPop(key)(1.second).some
+            popped     <- brPop[String, String](key)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("a"))
@@ -462,7 +462,7 @@ trait ListSpec extends BaseSpec {
             empty      <- uuid
             nonEmpty   <- uuid
             _          <- lPush(nonEmpty, "a", "b", "c")
-            popped     <- brPop(empty, nonEmpty)(1.second).some
+            popped     <- brPop[String, String](empty, nonEmpty)(1.second).some
             (src, elem) = popped
           } yield assert(src)(equalTo(nonEmpty)) &&
             assert(elem)(equalTo("a"))
@@ -470,21 +470,21 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key    <- uuid
-            popped <- brPop(key)(1.second)
+            popped <- brPop[String, String](key)(1.second)
           } yield assert(popped)(isNone)
         },
         testM("from multiple empty lists") {
           for {
             first  <- uuid
             second <- uuid
-            popped <- brPop(first, second)(1.second)
+            popped <- brPop[String, String](first, second)(1.second)
           } yield assert(popped)(isNone)
         },
         testM("from non-empty list with timeout 0s") {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- brPop(key)(0.seconds).some
+            popped     <- brPop[String, String](key)(0.seconds).some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("a"))
@@ -494,7 +494,7 @@ trait ListSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            popped <- brPop(key)(1.second).either
+            popped <- brPop[String, String](key)(1.second).either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -563,9 +563,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- lMove(source, destination, Side.Left, Side.Right)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- lMove[String, String, String](source, destination, Side.Left, Side.Right)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
             assert(destinationRange)(equalTo(Chunk("d", "a")))
@@ -576,9 +576,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- lMove(source, destination, Side.Right, Side.Left)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- lMove[String, String, String](source, destination, Side.Right, Side.Left)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
             assert(destinationRange)(equalTo(Chunk("c", "d")))
@@ -589,9 +589,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- lMove(source, destination, Side.Left, Side.Left)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- lMove[String, String, String](source, destination, Side.Left, Side.Left)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
             assert(destinationRange)(equalTo(Chunk("a", "d")))
@@ -602,9 +602,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- lMove(source, destination, Side.Right, Side.Right)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- lMove[String, String, String](source, destination, Side.Right, Side.Right)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
             assert(destinationRange)(equalTo(Chunk("d", "c")))
@@ -613,8 +613,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- lMove(source, source, Side.Left, Side.Right)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- lMove[String, String, String](source, source, Side.Left, Side.Right)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("b", "c", "a")))
         },
@@ -622,8 +622,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- lMove(source, source, Side.Right, Side.Left)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- lMove[String, String, String](source, source, Side.Right, Side.Left)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("c", "a", "b")))
         },
@@ -631,8 +631,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- lMove(source, source, Side.Left, Side.Left)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- lMove[String, String, String](source, source, Side.Left, Side.Left)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
         },
@@ -640,8 +640,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- lMove(source, source, Side.Right, Side.Right)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- lMove[String, String, String](source, source, Side.Right, Side.Right)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
         },
@@ -650,7 +650,7 @@ trait ListSpec extends BaseSpec {
             source      <- uuid
             destination <- uuid
             _           <- rPush(destination, "d")
-            moved       <- lMove(source, destination, Side.Left, Side.Right)
+            moved       <- lMove[String, String, String](source, destination, Side.Left, Side.Right)
           } yield assert(moved)(isNone)
         }
       ),
@@ -661,9 +661,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- blMove(source, destination, Side.Left, Side.Right, 1.second)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- blMove[String, String, String](source, destination, Side.Left, Side.Right, 1.second)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
             assert(destinationRange)(equalTo(Chunk("d", "a")))
@@ -674,9 +674,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- blMove(source, destination, Side.Right, Side.Left, 1.second)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- blMove[String, String, String](source, destination, Side.Right, Side.Left, 1.second)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
             assert(destinationRange)(equalTo(Chunk("c", "d")))
@@ -687,9 +687,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- blMove(source, destination, Side.Left, Side.Left, 1.second)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- blMove[String, String, String](source, destination, Side.Left, Side.Left, 1.second)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("b", "c"))) &&
             assert(destinationRange)(equalTo(Chunk("a", "d")))
@@ -700,9 +700,9 @@ trait ListSpec extends BaseSpec {
             destination      <- uuid
             _                <- rPush(source, "a", "b", "c")
             _                <- rPush(destination, "d")
-            moved            <- blMove(source, destination, Side.Right, Side.Right, 1.second)
-            sourceRange      <- lRange(source, 0 to -1)
-            destinationRange <- lRange(destination, 0 to -1)
+            moved            <- blMove[String, String, String](source, destination, Side.Right, Side.Right, 1.second)
+            sourceRange      <- lRange[String, String](source, 0 to -1)
+            destinationRange <- lRange[String, String](destination, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b"))) &&
             assert(destinationRange)(equalTo(Chunk("d", "c")))
@@ -711,8 +711,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- blMove(source, source, Side.Left, Side.Right, 1.second)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- blMove[String, String, String](source, source, Side.Left, Side.Right, 1.second)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("b", "c", "a")))
         },
@@ -720,8 +720,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- blMove(source, source, Side.Right, Side.Left, 1.second)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- blMove[String, String, String](source, source, Side.Right, Side.Left, 1.second)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("c", "a", "b")))
         },
@@ -729,8 +729,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- blMove(source, source, Side.Left, Side.Left, 1.second)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- blMove[String, String, String](source, source, Side.Left, Side.Left, 1.second)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("a"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
         },
@@ -738,8 +738,8 @@ trait ListSpec extends BaseSpec {
           for {
             source      <- uuid
             _           <- rPush(source, "a", "b", "c")
-            moved       <- blMove(source, source, Side.Right, Side.Right, 1.second)
-            sourceRange <- lRange(source, 0 to -1)
+            moved       <- blMove[String, String, String](source, source, Side.Right, Side.Right, 1.second)
+            sourceRange <- lRange[String, String](source, 0 to -1)
           } yield assert(moved)(isSome(equalTo("c"))) &&
             assert(sourceRange)(equalTo(Chunk("a", "b", "c")))
         },
@@ -749,7 +749,7 @@ trait ListSpec extends BaseSpec {
             destination <- uuid
             _           <- rPush(destination, "d")
             startTime   <- currentTime(TimeUnit.SECONDS)
-            moved       <- blMove(source, destination, Side.Left, Side.Right, 1.second)
+            moved       <- blMove[String, String, String](source, destination, Side.Left, Side.Right, 1.second)
             endTime     <- currentTime(TimeUnit.SECONDS)
           } yield assert(moved)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
         }

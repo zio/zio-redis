@@ -4,7 +4,9 @@ import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.BulkString
-import zio.stm.{ random => _, _ }
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
+import zio.stm.{random => _, _}
 
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
@@ -20,23 +22,25 @@ private[redis] final class TestExecutor private (
   sortedSets: TMap[String, Map[String, Double]]
 ) extends RedisExecutor.Service {
 
-  def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+  override val codec: Codec = StringUtf8Codec
+
+  override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
       result <- name.asString match {
-                  case api.Lists.BlPop.name =>
+                  case api.Lists.BlPop =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
 
-                  case api.Lists.BrPop.name =>
+                  case api.Lists.BrPop =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
 
-                  case api.Lists.BrPopLPush.name =>
+                  case api.Lists.BrPopLPush =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
-                  case api.Lists.BlMove.name =>
+                  case api.Lists.BlMove =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
@@ -84,7 +88,7 @@ private[redis] final class TestExecutor private (
       case api.Connection.Select.name =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
-      case api.Sets.SAdd.name =>
+      case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
           {
@@ -98,14 +102,14 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SCard.name =>
+      case api.Sets.SCard =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
           sets.get(key).map(_.fold(RespValue.Integer(0))(s => RespValue.Integer(s.size.toLong)))
         )
 
-      case api.Sets.SDiff.name =>
+      case api.Sets.SDiff =>
         val allkeys = input.map(_.asString)
         val mainKey = allkeys.head
         val others  = allkeys.tail
@@ -117,7 +121,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.array(result.map(RespValue.bulkString).toList: _*)
         )
 
-      case api.Sets.SDiffStore.name =>
+      case api.Sets.SDiffStore =>
         val allkeys = input.map(_.asString)
         val distkey = allkeys.head
         val mainKey = allkeys(1)
@@ -131,13 +135,13 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(result.size.toLong)
         )
 
-      case api.Sets.SInter.name =>
+      case api.Sets.SInter =>
         val keys      = input.map(_.asString)
         val mainKey   = keys.head
         val otherKeys = keys.tail
         sInter(mainKey, otherKeys).fold(_ => Replies.WrongType, Replies.array)
 
-      case api.Sets.SInterStore.name =>
+      case api.Sets.SInterStore =>
         val keys        = input.map(_.asString)
         val destination = keys.head
         val mainKey     = keys(1)
@@ -151,7 +155,7 @@ private[redis] final class TestExecutor private (
             } yield RespValue.Integer(s.size.toLong)
         )
 
-      case api.Sets.SIsMember.name =>
+      case api.Sets.SIsMember =>
         val key    = input.head.asString
         val member = input(1).asString
 
@@ -162,7 +166,7 @@ private[redis] final class TestExecutor private (
           } yield result
         )
 
-      case api.Sets.SMove.name =>
+      case api.Sets.SMove =>
         val sourceKey      = input.head.asString
         val destinationKey = input(1).asString
         val member         = input(2).asString
@@ -182,7 +186,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SPop.name =>
+      case api.Sets.SPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -194,14 +198,14 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(result)
         )
 
-      case api.Sets.SMembers.name =>
+      case api.Sets.SMembers =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
           sets.get(key).map(_.fold(Replies.EmptyArray)(Replies.array(_)))
         )
 
-      case api.Sets.SRandMember.name =>
+      case api.Sets.SRandMember =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
@@ -223,7 +227,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SRem.name =>
+      case api.Sets.SRem =>
         val key = input.head.asString
 
         orWrongType(isSet(key))(
@@ -238,7 +242,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Sets.SUnion.name =>
+      case api.Sets.SUnion =>
         val keys = input.map(_.asString)
 
         orWrongType(forAll(keys)(isSet))(
@@ -251,7 +255,7 @@ private[redis] final class TestExecutor private (
             .map(unionSet => Replies.array(unionSet))
         )
 
-      case api.Sets.SUnionStore.name =>
+      case api.Sets.SUnionStore =>
         val destination = input.head.asString
         val keys        = input.tail.map(_.asString)
 
@@ -267,7 +271,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(union.size.toLong)
         )
 
-      case api.Sets.SScan.name =>
+      case api.Sets.SScan =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
 
@@ -303,13 +307,13 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Strings.Set.name =>
+      case api.Strings.Set =>
         // not a full implementation. Just enough to make set tests work
         val key   = input.head.asString
         val value = input(1).asString
         strings.put(key, value).as(Replies.Ok)
 
-      case api.HyperLogLog.PfAdd.name =>
+      case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString).toSet
 
@@ -321,7 +325,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(ret)
         )
 
-      case api.HyperLogLog.PfCount.name =>
+      case api.HyperLogLog.PfCount =>
         val keys = input.map(_.asString)
         orWrongType(forAll(keys)(isHyperLogLog))(
           STM
@@ -333,7 +337,7 @@ private[redis] final class TestExecutor private (
             .map(vs => RespValue.Integer(vs.size.toLong))
         )
 
-      case api.HyperLogLog.PfMerge.name =>
+      case api.HyperLogLog.PfMerge =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -350,7 +354,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.Ok
         )
 
-      case api.Lists.LIndex.name =>
+      case api.Lists.LIndex =>
         val key   = input.head.asString
         val index = input(1).asString.toInt
 
@@ -361,7 +365,7 @@ private[redis] final class TestExecutor private (
           } yield result.fold[RespValue](RespValue.NullBulkString)(value => RespValue.bulkString(value))
         )
 
-      case api.Lists.LInsert.name =>
+      case api.Lists.LInsert =>
         val key = input.head.asString
         val position = input(1).asString match {
           case "BEFORE" => Position.Before
@@ -404,7 +408,7 @@ private[redis] final class TestExecutor private (
           } yield result
         )
 
-      case api.Lists.LLen.name =>
+      case api.Lists.LLen =>
         val key = input.head.asString
 
         orWrongType(isList(key))(
@@ -413,7 +417,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(list.size.toLong)
         )
 
-      case api.Lists.LPush.name =>
+      case api.Lists.LPush =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -425,7 +429,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      case api.Lists.LPushX.name =>
+      case api.Lists.LPushX =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -437,7 +441,7 @@ private[redis] final class TestExecutor private (
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
-      case api.Lists.LRange.name =>
+      case api.Lists.LRange =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
         val end   = input(2).asString.toInt
@@ -449,7 +453,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(result)
         )
 
-      case api.Lists.LRem.name =>
+      case api.Lists.LRem =>
         val key     = input.head.asString
         val count   = input(1).asString.toInt
         val element = input(2).asString
@@ -466,7 +470,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer((list.size - result.size).toLong)
         )
 
-      case api.Lists.LSet.name =>
+      case api.Lists.LSet =>
         val key     = input.head.asString
         val index   = input(1).asString.toInt
         val element = input(2).asString
@@ -484,7 +488,7 @@ private[redis] final class TestExecutor private (
           } yield ()).fold(_ => RespValue.Error("ERR index out of range"), _ => RespValue.SimpleString("OK"))
         )
 
-      case api.Lists.LTrim.name =>
+      case api.Lists.LTrim =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
         val stop  = input(2).asString.toInt
@@ -503,7 +507,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.SimpleString("OK")
         )
 
-      case api.Lists.RPop.name =>
+      case api.Lists.RPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -519,7 +523,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Lists.RPopLPush.name =>
+      case api.Lists.RPopLPush =>
         val source      = input(0).asString
         val destination = input(1).asString
 
@@ -535,7 +539,7 @@ private[redis] final class TestExecutor private (
           } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
-      case api.Lists.RPush.name =>
+      case api.Lists.RPush =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -547,7 +551,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
-      case api.Lists.LPop.name =>
+      case api.Lists.LPop =>
         val key   = input.head.asString
         val count = if (input.size == 1) 1 else input(1).asString.toInt
 
@@ -563,7 +567,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.Lists.RPushX.name =>
+      case api.Lists.RPushX =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString)
 
@@ -575,7 +579,7 @@ private[redis] final class TestExecutor private (
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
-      case api.Lists.BlPop.name =>
+      case api.Lists.BlPop =>
         val keys = input.dropRight(1).map(_.asString)
 
         orWrongType(forAll(keys)(isList))(
@@ -588,7 +592,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(Chunk(sk, sl.head))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.BrPop.name =>
+      case api.Lists.BrPop =>
         val keys = input.dropRight(1).map(_.asString)
 
         orWrongType(forAll(keys)(isList))(
@@ -601,7 +605,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.array(Chunk(sk, sl.last))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.BrPopLPush.name =>
+      case api.Lists.BrPopLPush =>
         val source      = input.head.asString
         val destination = input.tail.head.asString
 
@@ -618,7 +622,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
-      case api.Lists.LMove.name =>
+      case api.Lists.LMove =>
         val source      = input(0).asString
         val destination = input(1).asString
         val sourceSide = input(2).asString match {
@@ -660,7 +664,7 @@ private[redis] final class TestExecutor private (
           } yield element).fold(_ => RespValue.NullBulkString, result => RespValue.bulkString(result))
         )
 
-      case api.Lists.BlMove.name =>
+      case api.Lists.BlMove =>
         val source      = input(0).asString
         val destination = input(1).asString
         val sourceSide = input(2).asString match {
@@ -702,7 +706,7 @@ private[redis] final class TestExecutor private (
           } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
-      case api.Lists.LPos.name =>
+      case api.Lists.LPos =>
         val key     = input(0).asString
         val element = input(1).asString
 
@@ -776,7 +780,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.Hashes.HDel.name =>
+      case api.Hashes.HDel =>
         val key    = input(0).asString
         val values = input.tail.map(_.asString)
 
@@ -789,7 +793,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(countExists.toLong)
         )
 
-      case api.Hashes.HExists.name =>
+      case api.Hashes.HExists =>
         val key   = input(0).asString
         val field = input(1).asString
 
@@ -800,7 +804,7 @@ private[redis] final class TestExecutor private (
           } yield if (exists) RespValue.Integer(1L) else RespValue.Integer(0L)
         )
 
-      case api.Hashes.HGet.name =>
+      case api.Hashes.HGet =>
         val key   = input(0).asString
         val field = input(1).asString
 
@@ -811,7 +815,7 @@ private[redis] final class TestExecutor private (
           } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
-      case api.Hashes.HGetAll.name =>
+      case api.Hashes.HGetAll =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -821,7 +825,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(results))
         )
 
-      case api.Hashes.HIncrBy.name =>
+      case api.Hashes.HIncrBy =>
         val key   = input(0).asString
         val field = input(1).asString
         val incr  = input(2).asString.toLong
@@ -835,7 +839,7 @@ private[redis] final class TestExecutor private (
           } yield newValue).fold(_ => Replies.Error, result => RespValue.Integer(result))
         )
 
-      case api.Hashes.HIncrByFloat.name =>
+      case api.Hashes.HIncrByFloat =>
         val key   = input(0).asString
         val field = input(1).asString
         val incr  = input(2).asString.toDouble
@@ -849,7 +853,7 @@ private[redis] final class TestExecutor private (
           } yield newValue).fold(_ => Replies.Error, result => RespValue.bulkString(result.toString))
         )
 
-      case api.Hashes.HKeys.name =>
+      case api.Hashes.HKeys =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -858,7 +862,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(hash.keys map RespValue.bulkString))
         )
 
-      case api.Hashes.HLen.name =>
+      case api.Hashes.HLen =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -867,7 +871,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(hash.size.toLong)
         )
 
-      case api.Hashes.HmGet.name =>
+      case api.Hashes.HmGet =>
         val key    = input(0).asString
         val fields = input.tail.map(_.asString)
 
@@ -881,7 +885,7 @@ private[redis] final class TestExecutor private (
           })
         )
 
-      case api.Hashes.HmSet.name =>
+      case api.Hashes.HmSet =>
         val key    = input(0).asString
         val values = input.tail.map(_.asString)
 
@@ -893,7 +897,7 @@ private[redis] final class TestExecutor private (
           } yield Replies.Ok
         )
 
-      case api.Hashes.HScan.name =>
+      case api.Hashes.HScan =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
 
@@ -929,7 +933,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
         )
 
-      case api.Hashes.HSet.name =>
+      case api.Hashes.HSet =>
         val key    = input(0).asString
         val values = input.tail.map(_.asString)
 
@@ -941,7 +945,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(newHash.size.toLong - hash.size.toLong)
         )
 
-      case api.Hashes.HSetNx.name =>
+      case api.Hashes.HSetNx =>
         val key   = input(0).asString
         val field = input(1).asString
         val value = input(2).asString
@@ -955,7 +959,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(if (contains) 0L else 1L)
         )
 
-      case api.Hashes.HStrLen.name =>
+      case api.Hashes.HStrLen =>
         val key   = input(0).asString
         val field = input(1).asString
 
@@ -966,7 +970,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(len)
         )
 
-      case api.Hashes.HVals.name =>
+      case api.Hashes.HVals =>
         val key = input(0).asString
 
         orWrongType(isHash(key))(
@@ -1008,7 +1012,7 @@ private[redis] final class TestExecutor private (
 //            .foldM(_ => STM.retry, result => STM.succeed(result))
 //        )
 //
-      case api.SortedSets.ZAdd.name =>
+      case api.SortedSets.ZAdd =>
         val key = input(0).asString
 
         val updateOption = input.map(_.asString).find {
@@ -1086,7 +1090,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.SortedSets.ZCard.name =>
+      case api.SortedSets.ZCard =>
         val key = input(0).asString
 
         orWrongType(isSortedSet(key))(
@@ -1095,7 +1099,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(scoreMap.size.toLong)
         )
 
-      case api.SortedSets.ZCount.name =>
+      case api.SortedSets.ZCount =>
         val key = input(0).asString
         val min = input(1).asLong
         val max = input(2).asLong
@@ -1107,7 +1111,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(result.size.toLong)
         )
 
-      case api.SortedSets.ZIncrBy.name =>
+      case api.SortedSets.ZIncrBy =>
         val key       = input(0).asString
         val increment = input(1).asLong
         val member    = input(2).asString
@@ -1125,7 +1129,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.bulkString(resultScore.toString)
         )
 
-      case api.SortedSets.ZInterStore.name =>
+      case api.SortedSets.ZInterStore =>
         val destination = input(0).asString
         val numKeys     = input(1).asLong.toInt
         val keys        = input.drop(2).take(numKeys).map(_.asString)
@@ -1180,7 +1184,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.SortedSets.ZLexCount.name =>
+      case api.SortedSets.ZLexCount =>
         val key = input(0).asString
         val min = input(1).asString match {
           case "-"                    => LexMinimum.Unbounded
@@ -1223,7 +1227,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(result.toLong)
         )
 
-      case api.SortedSets.ZPopMin.name =>
+      case api.SortedSets.ZPopMin =>
         val key   = input(0).asString
         val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
 
@@ -1239,7 +1243,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.SortedSets.ZPopMax.name =>
+      case api.SortedSets.ZPopMax =>
         val key   = input(0).asString
         val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
 
@@ -1255,7 +1259,7 @@ private[redis] final class TestExecutor private (
           )
         )
 
-      case api.SortedSets.ZRank.name =>
+      case api.SortedSets.ZRank =>
         val key    = input(0).asString
         val member = input(1).asString
 
@@ -1269,7 +1273,7 @@ private[redis] final class TestExecutor private (
           } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
         )
 
-      case api.SortedSets.ZRem.name =>
+      case api.SortedSets.ZRem =>
         val key     = input(0).asString
         val members = input.tail.map(_.asString)
 
@@ -1281,7 +1285,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Integer(scoreMap.size.toLong - newSet.size.toLong)
         )
 
-      case api.SortedSets.ZRevRank.name =>
+      case api.SortedSets.ZRevRank =>
         val key    = input(0).asString
         val member = input(1).asString
 
@@ -1335,7 +1339,7 @@ private[redis] final class TestExecutor private (
 //          } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
 //        )
 //
-      case api.SortedSets.ZScore.name =>
+      case api.SortedSets.ZScore =>
         val key    = input(0).asString
         val member = input(1).asString
 
@@ -1392,7 +1396,7 @@ private[redis] final class TestExecutor private (
 //          } yield RespValue.Integer(destinationResult.size.toLong)
 //        )
 //
-      case api.SortedSets.ZRange.name =>
+      case api.SortedSets.ZRange =>
         val key              = input.head.asString
         val start            = input(1).asString.toInt
         val end              = input(2).asString.toInt
@@ -1413,7 +1417,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(result) map RespValue.bulkString)
         )
 
-      case api.SortedSets.ZRevRange.name =>
+      case api.SortedSets.ZRevRange =>
         val key              = input.head.asString
         val start            = input(1).asString.toInt
         val end              = input(2).asString.toInt
@@ -1434,7 +1438,7 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(result) map RespValue.bulkString)
         )
 
-      case api.SortedSets.ZScan.name =>
+      case api.SortedSets.ZScan =>
         val key   = input.head.asString
         val start = input(1).asString.toInt
 
@@ -1472,7 +1476,7 @@ private[redis] final class TestExecutor private (
           }
         )
 
-      case api.SortedSets.ZUnionStore.name =>
+      case api.SortedSets.ZUnionStore =>
         val destination = input(0).asString
         val numKeys     = input(1).asLong.toInt
         val keys        = input.drop(2).take(numKeys).map(_.asString)
@@ -1530,9 +1534,6 @@ private[redis] final class TestExecutor private (
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
-
-  implicit val memberScoreOrdering: Ordering[MemberScore] =
-    (x: MemberScore, y: MemberScore) => if (x.member == y.member) 0 else x.score.compare(y.score)
 
   private[this] def orWrongType(predicate: USTM[Boolean])(
     program: => USTM[RespValue]

@@ -17,9 +17,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xAck(stream, group, id)
           } yield assert(result)(equalTo(1L))
         },
@@ -28,10 +28,10 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- xAdd(stream, "*", "a" -> "b")
-            second   <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            first    <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xAck(stream, group, first, second)
           } yield assert(result)(equalTo(2L))
         },
@@ -47,7 +47,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xAck(stream, group, id)
           } yield assert(result)(equalTo(0L))
         },
@@ -56,9 +56,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xAck(stream, group, "0-0")
           } yield assert(result)(equalTo(0L))
         },
@@ -67,7 +67,7 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             group  <- uuid
             id     <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             result <- xAck(stream, group, id).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
@@ -86,28 +86,28 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             id      = "1-0"
-            result <- xAdd(stream, id, "a" -> "b")
+            result <- xAdd[String, String, String, String, String](stream, id, "a" -> "b")
           } yield assert(result)(equalTo(id))
         },
         testM("object with multiple fields") {
           for {
             stream <- uuid
             id      = "1-0"
-            result <- xAdd(stream, id, "a" -> "b", "c" -> "d")
+            result <- xAdd[String, String, String, String, String](stream, id, "a" -> "b", "c" -> "d")
           } yield assert(result)(equalTo(id))
         },
         testM("error when ID should be greater") {
           for {
             stream <- uuid
             id      = "0-0"
-            result <- xAdd(stream, id, "a" -> "b").either
+            result <- xAdd[String, String, String, String, String](stream, id, "a" -> "b").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid ID format") {
           for {
             stream <- uuid
             id     <- uuid
-            result <- xAdd(stream, id, "a" -> "b").either
+            result <- xAdd[String, String, String, String, String](stream, id, "a" -> "b").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not stream") {
@@ -115,7 +115,7 @@ trait StreamsSpec extends BaseSpec {
             nonStream <- uuid
             id         = "1-0"
             _         <- set(nonStream, "value")
-            result    <- xAdd(nonStream, id, "a" -> "b").either
+            result    <- xAdd[String, String, String, String, String](nonStream, id, "a" -> "b").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -124,28 +124,31 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             id      = "1-0"
-            result <- xAddWithMaxLen(stream, id, 10)("a" -> "b")
+            result <- xAddWithMaxLen[String, String, String, String, String](stream, id, 10)("a" -> "b")
           } yield assert(result)(equalTo(id))
         },
         testM("with positive count and with approximate") {
           for {
             stream <- uuid
             id      = "1-0"
-            result <- xAddWithMaxLen(stream, id, 10, approximate = true)("a" -> "b")
+            result <-
+              xAddWithMaxLen[String, String, String, String, String](stream, id, 10, approximate = true)("a" -> "b")
           } yield assert(result)(equalTo(id))
         },
         testM("error with negative count and without approximate") {
           for {
             stream <- uuid
             id      = "1-0"
-            result <- xAddWithMaxLen(stream, id, -10)("a" -> "b").either
+            result <- xAddWithMaxLen[String, String, String, String, String](stream, id, -10)("a" -> "b").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error with negative count and with approximate") {
           for {
             stream <- uuid
             id      = "1-0"
-            result <- xAddWithMaxLen(stream, id, -10, approximate = true)("a" -> "b").either
+            result <- xAddWithMaxLen[String, String, String, String, String](stream, id, -10, approximate = true)(
+                        "a" -> "b"
+                      ).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -156,10 +159,10 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](stream, group, second, 0.millis)(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("multiple pending messages") {
@@ -168,11 +171,11 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            id1    <- xAdd(stream, "*", "c" -> "d", "e" -> "f")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis)(id, id1)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            id1    <- xAdd[String, String, String, String, String](stream, "*", "c" -> "d", "e" -> "f")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](stream, group, second, 0.millis)(id, id1)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"), id1 -> Map("c" -> "d", "e" -> "f"))))
         },
         testM("non-existent message") {
@@ -180,8 +183,8 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            result   <- xClaim(stream, group, consumer, 0.millis)("1-0")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            result   <- xClaim[String, String, String, String, String, String](stream, group, consumer, 0.millis)("1-0")
           } yield assert(result)(isEmpty)
         },
         testM("existing message that is not in pending state") {
@@ -189,9 +192,9 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             group  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            result <- xClaim(stream, group, second, 0.millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xClaim[String, String, String, String, String, String](stream, group, second, 0.millis)(id)
           } yield assert(result)(isEmpty)
         },
         testM("with non-existent group") {
@@ -199,7 +202,8 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            result   <- xClaim(stream, group, consumer, 0.millis)("1-0").either
+            result <-
+              xClaim[String, String, String, String, String, String](stream, group, consumer, 0.millis)("1-0").either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
         testM("with positive min idle time") {
@@ -208,10 +212,10 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 360000.millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](stream, group, second, 360000.millis)(id)
           } yield assert(result)(isEmpty)
         },
         testM("with negative min idle time") {
@@ -220,10 +224,11 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, (-360000).millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <-
+              xClaim[String, String, String, String, String, String](stream, group, second, (-360000).millis)(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with positive idle time") {
@@ -232,10 +237,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis, Some(360000.millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        Some(360000.millis)
+                      )(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with negative idle time") {
@@ -244,10 +255,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis, Some((-360000).millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        Some((-360000).millis)
+                      )(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with positive time") {
@@ -256,10 +273,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis, time = Some(360000.millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        time = Some(360000.millis)
+                      )(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with negative time") {
@@ -268,10 +291,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis, time = Some((-360000).millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        time = Some((-360000).millis)
+                      )(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with positive retry count") {
@@ -280,10 +309,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis, retryCount = Some(3))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        retryCount = Some(3)
+                      )(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with negative retry count") {
@@ -292,10 +327,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaim(stream, group, second, 0.millis, retryCount = Some(-3))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaim[String, String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        retryCount = Some(-3)
+                      )(id)
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with force when message is not in the pending state") {
@@ -303,9 +344,12 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            result   <- xClaim(stream, group, consumer, 0.millis, force = true)(id)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <-
+              xClaim[String, String, String, String, String, String](stream, group, consumer, 0.millis, force = true)(
+                id
+              )
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("when not stream") {
@@ -314,7 +358,13 @@ trait StreamsSpec extends BaseSpec {
             group     <- uuid
             consumer  <- uuid
             _         <- set(nonStream, "value")
-            result    <- xClaim(nonStream, group, consumer, 0.millis, force = true)("1-0").either
+            result <- xClaim[String, String, String, String, String, String](
+                        nonStream,
+                        group,
+                        consumer,
+                        0.millis,
+                        force = true
+                      )("1-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -325,10 +375,10 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](stream, group, second, 0.millis)(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("multiple pending messages") {
@@ -337,11 +387,11 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            id1    <- xAdd(stream, "*", "c" -> "d", "e" -> "f")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis)(id, id1)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            id1    <- xAdd[String, String, String, String, String](stream, "*", "c" -> "d", "e" -> "f")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](stream, group, second, 0.millis)(id, id1)
           } yield assert(result)(hasSameElements(Chunk(id, id1)))
         },
         testM("non-existent message") {
@@ -349,8 +399,8 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            result   <- xClaimWithJustId(stream, group, consumer, 0.millis)("1-0")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            result   <- xClaimWithJustId[String, String, String, String, String](stream, group, consumer, 0.millis)("1-0")
           } yield assert(result)(isEmpty)
         },
         testM("existing message that is not in pending state") {
@@ -358,9 +408,9 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             group  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            result <- xClaimWithJustId(stream, group, second, 0.millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xClaimWithJustId[String, String, String, String, String](stream, group, second, 0.millis)(id)
           } yield assert(result)(isEmpty)
         },
         testM("with non-existent group") {
@@ -368,7 +418,8 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            result   <- xClaimWithJustId(stream, group, consumer, 0.millis)("1-0").either
+            result <-
+              xClaimWithJustId[String, String, String, String, String](stream, group, consumer, 0.millis)("1-0").either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
         testM("with positive min idle time") {
@@ -377,10 +428,10 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 360000.millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](stream, group, second, 360000.millis)(id)
           } yield assert(result)(isEmpty)
         },
         testM("with negative min idle time") {
@@ -389,10 +440,11 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, (-360000).millis)(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <-
+              xClaimWithJustId[String, String, String, String, String](stream, group, second, (-360000).millis)(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with positive idle time") {
@@ -401,10 +453,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis, Some(360000.millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        Some(360000.millis)
+                      )(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with negative idle time") {
@@ -413,10 +471,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis, Some((-360000).millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        Some((-360000).millis)
+                      )(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with positive time") {
@@ -425,10 +489,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis, time = Some(360000.millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        time = Some(360000.millis)
+                      )(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with negative time") {
@@ -437,10 +507,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis, time = Some((-360000).millis))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        time = Some((-360000).millis)
+                      )(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with positive retry count") {
@@ -449,10 +525,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis, retryCount = Some(3))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        retryCount = Some(3)
+                      )(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with negative retry count") {
@@ -461,10 +543,16 @@ trait StreamsSpec extends BaseSpec {
             group  <- uuid
             first  <- uuid
             second <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xReadGroup(group, first)(stream -> ">")
-            result <- xClaimWithJustId(stream, group, second, 0.millis, retryCount = Some(-3))(id)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        stream,
+                        group,
+                        second,
+                        0.millis,
+                        retryCount = Some(-3)
+                      )(id)
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("with force when message is not in the pending state") {
@@ -472,9 +560,12 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            result   <- xClaimWithJustId(stream, group, consumer, 0.millis, force = true)(id)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <-
+              xClaimWithJustId[String, String, String, String, String](stream, group, consumer, 0.millis, force = true)(
+                id
+              )
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
         testM("when not stream") {
@@ -483,7 +574,13 @@ trait StreamsSpec extends BaseSpec {
             group     <- uuid
             consumer  <- uuid
             _         <- set(nonStream, "value")
-            result    <- xClaimWithJustId(nonStream, group, consumer, 0.millis, force = true)("1-0").either
+            result <- xClaimWithJustId[String, String, String, String, String](
+                        nonStream,
+                        group,
+                        consumer,
+                        0.millis,
+                        force = true
+                      )("1-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -491,7 +588,7 @@ trait StreamsSpec extends BaseSpec {
         testM("an existing message") {
           for {
             stream <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xDel(stream, id)
           } yield assert(result)(equalTo(1L))
         },
@@ -521,14 +618,14 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            result <- xGroupCreate(stream, group, "$", mkStream = true).either
+            result <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true).either
           } yield assert(result)(isRight)
         },
         testM("error when stream doesn't exist") {
           for {
             stream <- uuid
             group  <- uuid
-            result <- xGroupCreate(stream, group, "$").either
+            result <- xGroupCreate[String, String, String](stream, group, "$").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when invalid ID") {
@@ -536,15 +633,15 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             group  <- uuid
             id     <- uuid
-            result <- xGroupCreate(stream, group, id, mkStream = true).either
+            result <- xGroupCreate[String, String, String](stream, group, id, mkStream = true).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when group already exists") {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            result <- xGroupCreate(stream, group, "$").either
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            result <- xGroupCreate[String, String, String](stream, group, "$").either
           } yield assert(result)(isLeft(isSubtype[BusyGroup](anything)))
         },
         testM("error when not stream") {
@@ -552,7 +649,7 @@ trait StreamsSpec extends BaseSpec {
             nonStream <- uuid
             group     <- uuid
             _         <- set(nonStream, "value")
-            result    <- xGroupCreate(nonStream, group, "$").either
+            result    <- xGroupCreate[String, String, String](nonStream, group, "$").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -561,8 +658,8 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xGroupCreate(stream, group, "$")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xGroupCreate[String, String, String](stream, group, "$")
             result <- xGroupSetId(stream, group, id).either
           } yield assert(result)(isRight)
         },
@@ -570,7 +667,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xGroupSetId(stream, group, id).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
@@ -595,7 +692,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             result <- xGroupDestroy(stream, group)
           } yield assert(result)(isTrue)
         },
@@ -603,7 +700,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xGroupDestroy(stream, group)
           } yield assert(result)(isFalse)
         },
@@ -630,8 +727,8 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            result   <- xGroupCreateConsumer(stream, group, consumer).either
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            result   <- xGroupCreateConsumer[String, String, String](stream, group, consumer).either
           } yield assert(result)(isRight)
         },
         testM("error when group doesn't exist") {
@@ -639,7 +736,7 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            result   <- xGroupCreateConsumer(stream, group, consumer).either
+            result   <- xGroupCreateConsumer[String, String, String](stream, group, consumer).either
           } yield assert(result)(isLeft)
         },
         testM("error when not stream") {
@@ -648,7 +745,7 @@ trait StreamsSpec extends BaseSpec {
             group     <- uuid
             consumer  <- uuid
             _         <- set(nonStream, "value")
-            result    <- xGroupCreateConsumer(nonStream, group, consumer).either
+            result    <- xGroupCreateConsumer[String, String, String](nonStream, group, consumer).either
           } yield assert(result)(isLeft)
         }
       ) @@ ignore,
@@ -658,7 +755,7 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             result   <- xGroupDelConsumer(stream, group, consumer)
           } yield assert(result)(equalTo(0L))
         },
@@ -667,9 +764,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xGroupDelConsumer(stream, group, consumer)
           } yield assert(result)(equalTo(1L))
         },
@@ -678,10 +775,10 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xGroupDelConsumer(stream, group, consumer)
           } yield assert(result)(equalTo(2L))
         },
@@ -698,7 +795,7 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xAdd(stream, "*", "a" -> "b")
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result   <- xGroupDelConsumer(stream, group, consumer).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
@@ -717,14 +814,14 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             result <- xLen(stream)
           } yield assert(result)(equalTo(0L))
         },
         testM("non-empty stream") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xLen(stream)
           } yield assert(result)(equalTo(1L))
         },
@@ -741,7 +838,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             result <- xPending(stream, group)
           } yield assert(result)(equalTo(PendingInfo(0L, None, None, Map.empty[String, Long])))
         },
@@ -750,9 +847,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xPending(stream, group)
           } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
         },
@@ -762,11 +859,11 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             first    <- uuid
             second   <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            firstMsg <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, first)(stream -> ">")
-            lastMsg  <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, second)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            firstMsg <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            lastMsg  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, second)(stream -> ">")
             result   <- xPending(stream, group)
           } yield assert(result)(
             equalTo(PendingInfo(2L, Some(firstMsg), Some(lastMsg), Map(first -> 1L, second -> 1L)))
@@ -778,9 +875,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xPending(stream, group, 0.millis)
           } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
         } @@ ignore,
@@ -789,9 +886,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
             result   <- xPending(stream, group, 1.minute)
           } yield assert(result)(equalTo(PendingInfo(1L, None, None, Map.empty[String, Long])))
         } @@ ignore,
@@ -799,7 +896,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xPending(stream, group).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
@@ -816,10 +913,10 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
-            messages <- xPending(stream, group, "-", "+", 10L)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            messages <- xPending[String, String, String, String](stream, group, "-", "+", 10L)
             result    = messages.head
           } yield assert(messages)(hasSize(equalTo(1))) &&
             assert(result.id)(equalTo(id)) &&
@@ -833,12 +930,12 @@ trait StreamsSpec extends BaseSpec {
             group                      <- uuid
             first                      <- uuid
             second                     <- uuid
-            _                          <- xGroupCreate(stream, group, "$", mkStream = true)
-            firstMsg                   <- xAdd(stream, "*", "a" -> "b")
-            _                          <- xReadGroup(group, first)(stream -> ">")
-            secondMsg                  <- xAdd(stream, "*", "a" -> "b")
-            _                          <- xReadGroup(group, second)(stream -> ">")
-            messages                   <- xPending(stream, group, "-", "+", 10L)
+            _                          <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            firstMsg                   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _                          <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            secondMsg                  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _                          <- xReadGroup[String, String, String, String, String, String](group, second)(stream -> ">")
+            messages                   <- xPending[String, String, String, String](stream, group, "-", "+", 10L)
             (firstResult, secondResult) = (messages(0), messages(1))
           } yield assert(messages)(hasSize(equalTo(2))) &&
             assert(firstResult.id)(equalTo(firstMsg)) &&
@@ -856,12 +953,12 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             first    <- uuid
             second   <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, first)(stream -> ">")
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, second)(stream -> ">")
-            messages <- xPending(stream, group, "-", "+", 10L, Some(first))
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, second)(stream -> ">")
+            messages <- xPending[String, String, String, String](stream, group, "-", "+", 10L, Some(first))
             result    = messages.head
           } yield assert(messages)(hasSize(equalTo(1))) &&
             assert(result.id)(equalTo(id)) &&
@@ -873,7 +970,7 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            result <- xPending(stream, group, "-", "invalid", 10L).either
+            result <- xPending[String, String, String, String](stream, group, "-", "invalid", 10L).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -881,57 +978,57 @@ trait StreamsSpec extends BaseSpec {
         testM("with an unlimited start and an unlimited end") {
           for {
             stream <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
-            result <- xRange(stream, "-", "+")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRange[String, String, String, String](stream, "-", "+")
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with the positive count") {
           for {
             stream <- uuid
-            first  <- xAdd(stream, "*", "a" -> "b")
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRange(stream, "-", "+", 1L)
+            first  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRange[String, String, String, String](stream, "-", "+", 1L)
           } yield assert(result)(equalTo(Map(first -> Map("a" -> "b"))))
         },
         testM("with the negative count") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRange(stream, "-", "+", -1L)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRange[String, String, String, String](stream, "-", "+", -1L)
           } yield assert(result)(isEmpty)
         },
         testM("with the zero count") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRange(stream, "-", "+", 0L)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRange[String, String, String, String](stream, "-", "+", 0L)
           } yield assert(result)(isEmpty)
         },
         testM("when stream doesn't exist") {
           for {
             stream <- uuid
-            result <- xRange(stream, "-", "+")
+            result <- xRange[String, String, String, String](stream, "-", "+")
           } yield assert(result)(isEmpty)
         },
         testM("when start is greater than an end") {
           for {
             stream <- uuid
-            result <- xRange(stream, "+", "-")
+            result <- xRange[String, String, String, String](stream, "+", "-")
           } yield assert(result)(isEmpty)
         },
         testM("error when invalid ID") {
           for {
             stream <- uuid
-            result <- xRange(stream, "invalid", "+").either
+            result <- xRange[String, String, String, String](stream, "invalid", "+").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not stream") {
           for {
             nonStream <- uuid
             _         <- set(nonStream, "value")
-            result    <- xRange(nonStream, "-", "+").either
+            result    <- xRange[String, String, String, String](nonStream, "-", "+").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -939,23 +1036,23 @@ trait StreamsSpec extends BaseSpec {
         testM("from the non-empty stream") {
           for {
             stream <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
-            result <- xRead()(stream -> "0-0")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRead[String, String, String, String]()(stream -> "0-0")
           } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
         },
         testM("from the stream that doesn't exist") {
           for {
             stream <- uuid
-            result <- xRead()(stream -> "0-0")
+            result <- xRead[String, String, String, String]()(stream -> "0-0")
           } yield assert(result)(isEmpty)
         },
         testM("from the multiple streams") {
           for {
             first     <- uuid
             second    <- uuid
-            firstMsg  <- xAdd(first, "*", "a" -> "b")
-            secondMsg <- xAdd(second, "*", "a" -> "b")
-            result    <- xRead()(first -> "0-0", second -> "0-0")
+            firstMsg  <- xAdd[String, String, String, String, String](first, "*", "a" -> "b")
+            secondMsg <- xAdd[String, String, String, String, String](second, "*", "a" -> "b")
+            result    <- xRead[String, String, String, String]()(first -> "0-0", second -> "0-0")
           } yield assert(result)(
             equalTo(Map(first -> Map(firstMsg -> Map("a" -> "b")), second -> Map(secondMsg -> Map("a" -> "b"))))
           )
@@ -963,61 +1060,61 @@ trait StreamsSpec extends BaseSpec {
         testM("with the positive count") {
           for {
             stream <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRead(Some(1L))(stream -> "0-0")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRead[String, String, String, String](Some(1L))(stream -> "0-0")
           } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
         },
         testM("with the zero count") {
           for {
             stream    <- uuid
-            firstMsg  <- xAdd(stream, "*", "a" -> "b")
-            secondMsg <- xAdd(stream, "*", "a" -> "b")
-            result    <- xRead(Some(0L))(stream -> "0-0")
+            firstMsg  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            secondMsg <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result    <- xRead[String, String, String, String](Some(0L))(stream -> "0-0")
           } yield assert(result)(equalTo(Map(stream -> Map(firstMsg -> Map("a" -> "b"), secondMsg -> Map("a" -> "b")))))
         },
         testM("with the negative count") {
           for {
             stream    <- uuid
-            firstMsg  <- xAdd(stream, "*", "a" -> "b")
-            secondMsg <- xAdd(stream, "*", "a" -> "b")
-            result    <- xRead(Some(-1L))(stream -> "0-0")
+            firstMsg  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            secondMsg <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result    <- xRead[String, String, String, String](Some(-1L))(stream -> "0-0")
           } yield assert(result)(equalTo(Map(stream -> Map(firstMsg -> Map("a" -> "b"), secondMsg -> Map("a" -> "b")))))
         },
         // TODO: can be unignored when connection pool is introduced
         testM("with the 1 second block") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRead(block = Some(1.second))(stream -> "$")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRead[String, String, String, String](block = Some(1.second))(stream -> "$")
           } yield assert(result)(isEmpty)
         } @@ ignore,
         testM("with the 0 second block") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRead(block = Some(0.second))(stream -> "$")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRead[String, String, String, String](block = Some(0.second))(stream -> "$")
           } yield assert(result)(isEmpty)
         } @@ ignore,
         testM("with the -1 second block") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRead(block = Some((-1).second))(stream -> "$")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRead[String, String, String, String](block = Some((-1).second))(stream -> "$")
           } yield assert(result)(isEmpty)
         } @@ ignore,
         testM("error when an invalid ID") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRead()(stream -> "invalid").either
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRead[String, String, String, String]()(stream -> "invalid").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not stream") {
           for {
             nonStream <- uuid
             _         <- set(nonStream, "value")
-            result    <- xRead()(nonStream -> "0-0").either
+            result    <- xRead[String, String, String, String]()(nonStream -> "0-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1027,9 +1124,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            result   <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
           } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
         },
         testM("when stream has multiple messages") {
@@ -1037,10 +1134,10 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- xAdd(stream, "*", "a" -> "b")
-            second   <- xAdd(stream, "*", "a" -> "b")
-            result   <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            first    <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
           } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
         },
         testM("when empty stream") {
@@ -1048,8 +1145,8 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            result   <- xReadGroup(group, consumer)(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
           } yield assert(result)(isEmpty)
         },
         testM("when multiple streams") {
@@ -1058,11 +1155,12 @@ trait StreamsSpec extends BaseSpec {
             second    <- uuid
             group     <- uuid
             consumer  <- uuid
-            _         <- xGroupCreate(first, group, "$", mkStream = true)
-            _         <- xGroupCreate(second, group, "$", mkStream = true)
-            firstMsg  <- xAdd(first, "*", "a" -> "b")
-            secondMsg <- xAdd(second, "*", "a" -> "b")
-            result    <- xReadGroup(group, consumer)(first -> ">", second -> ">")
+            _         <- xGroupCreate[String, String, String](first, group, "$", mkStream = true)
+            _         <- xGroupCreate[String, String, String](second, group, "$", mkStream = true)
+            firstMsg  <- xAdd[String, String, String, String, String](first, "*", "a" -> "b")
+            secondMsg <- xAdd[String, String, String, String, String](second, "*", "a" -> "b")
+            result <-
+              xReadGroup[String, String, String, String, String, String](group, consumer)(first -> ">", second -> ">")
           } yield assert(result)(
             equalTo(Map(first -> Map(firstMsg -> Map("a" -> "b")), second -> Map(secondMsg -> Map("a" -> "b"))))
           )
@@ -1072,10 +1170,11 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- xAdd(stream, "*", "a" -> "b")
-            _        <- xAdd(stream, "*", "a" -> "b")
-            result   <- xReadGroup(group, consumer, Some(1L))(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            first    <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <-
+              xReadGroup[String, String, String, String, String, String](group, consumer, Some(1L))(stream -> ">")
           } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b")))))
         },
         testM("with zero count") {
@@ -1083,10 +1182,11 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- xAdd(stream, "*", "a" -> "b")
-            second   <- xAdd(stream, "*", "a" -> "b")
-            result   <- xReadGroup(group, consumer, Some(0L))(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            first    <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <-
+              xReadGroup[String, String, String, String, String, String](group, consumer, Some(0L))(stream -> ">")
           } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
         },
         testM("with negative count") {
@@ -1094,10 +1194,11 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- xAdd(stream, "*", "a" -> "b")
-            second   <- xAdd(stream, "*", "a" -> "b")
-            result   <- xReadGroup(group, consumer, Some(-1L))(stream -> ">")
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            first    <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <-
+              xReadGroup[String, String, String, String, String, String](group, consumer, Some(-1L))(stream -> ">")
           } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
         },
         testM("with NOACK flag") {
@@ -1105,9 +1206,10 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xReadGroup(group, consumer, noAck = true)(stream -> ">")
-            result   <- xPending(stream, group)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _ <-
+              xReadGroup[String, String, String, String, String, String](group, consumer, noAck = true)(stream -> ">")
+            result <- xPending(stream, group)
           } yield assert(result.total)(equalTo(0L))
         },
         testM("error when group doesn't exist") {
@@ -1115,7 +1217,7 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            result   <- xReadGroup(group, consumer)(stream -> ">").either
+            result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">").either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
         testM("error when invalid ID") {
@@ -1123,8 +1225,9 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            result   <- xReadGroup(group, consumer)(stream -> "invalid").either
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            result <-
+              xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> "invalid").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not stream") {
@@ -1133,7 +1236,7 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             consumer <- uuid
             _        <- set(stream, "value")
-            result   <- xReadGroup(group, consumer)(stream -> ">").either
+            result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1141,57 +1244,57 @@ trait StreamsSpec extends BaseSpec {
         testM("with an unlimited start and an unlimited end") {
           for {
             stream <- uuid
-            id     <- xAdd(stream, "*", "a" -> "b")
-            result <- xRevRange(stream, "+", "-")
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRevRange[String, String, String, String](stream, "+", "-")
           } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
         },
         testM("with the positive count") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            second <- xAdd(stream, "*", "a" -> "b")
-            result <- xRevRange(stream, "+", "-", 1L)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            second <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRevRange[String, String, String, String](stream, "+", "-", 1L)
           } yield assert(result)(equalTo(Map(second -> Map("a" -> "b"))))
         },
         testM("with the negative count") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRevRange(stream, "+", "-", -1L)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRevRange[String, String, String, String](stream, "+", "-", -1L)
           } yield assert(result)(isEmpty)
         },
         testM("with the zero count") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xRevRange(stream, "+", "-", 0L)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xRevRange[String, String, String, String](stream, "+", "-", 0L)
           } yield assert(result)(isEmpty)
         },
         testM("when stream doesn't exist") {
           for {
             stream <- uuid
-            result <- xRevRange(stream, "+", "-")
+            result <- xRevRange[String, String, String, String](stream, "+", "-")
           } yield assert(result)(isEmpty)
         },
         testM("when start is greater than an end") {
           for {
             stream <- uuid
-            result <- xRevRange(stream, "-", "+")
+            result <- xRevRange[String, String, String, String](stream, "-", "+")
           } yield assert(result)(isEmpty)
         },
         testM("error when invalid ID") {
           for {
             stream <- uuid
-            result <- xRevRange(stream, "invalid", "-").either
+            result <- xRevRange[String, String, String, String](stream, "invalid", "-").either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not stream") {
           for {
             nonStream <- uuid
             _         <- set(nonStream, "value")
-            result    <- xRevRange(nonStream, "+", "-").either
+            result    <- xRevRange[String, String, String, String](nonStream, "+", "-").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1205,21 +1308,21 @@ trait StreamsSpec extends BaseSpec {
         testM("a non-empty stream") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b").repeatN(3)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b").repeatN(3)
             result <- xTrim(stream, 2L)
           } yield assert(result)(equalTo(2L))
         },
         testM("a non-empty stream with an approximate") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xTrim(stream, 1000L, approximate = true)
           } yield assert(result)(equalTo(0L))
         },
         testM("error when negative count") {
           for {
             stream <- uuid
-            _      <- xAdd(stream, "*", "a" -> "b")
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xTrim(stream, -1000L).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
@@ -1236,22 +1339,22 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- xAdd(stream, "*", "a" -> "b")
-            result <- xInfoStream(stream)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xInfoStream[String, String, String, String](stream)
           } yield assert(result.lastEntry.map(_.id))(isSome(equalTo(id)))
         },
         testM("error when no such key") {
           for {
             stream <- uuid
-            result <- xInfoStream(stream).either
+            result <- xInfoStream[String, String, String, String](stream).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not a stream") {
           for {
             nonStream <- uuid
             _         <- set(nonStream, "helloworld")
-            result    <- xInfoStream(nonStream).either
+            result    <- xInfoStream[String, String, String, String](nonStream).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1260,22 +1363,22 @@ trait StreamsSpec extends BaseSpec {
           for {
             stream <- uuid
             group  <- uuid
-            _      <- xGroupCreate(stream, group, "$", mkStream = true)
-            _      <- xAdd(stream, "*", "a" -> "b")
-            result <- xInfoGroups(stream)
+            _      <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            result <- xInfoGroups[String](stream)
           } yield assert(result.toList.head.name)(equalTo(group))
         },
         testM("error when no such key") {
           for {
             stream <- uuid
-            result <- xInfoGroups(stream).either
+            result <- xInfoGroups[String](stream).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not a stream") {
           for {
             nonStream <- uuid
             _         <- set(nonStream, "helloworld")
-            result    <- xInfoGroups(nonStream).either
+            result    <- xInfoGroups[String](nonStream).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1285,17 +1388,17 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
-            result   <- xInfoConsumers(stream, group)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            result   <- xInfoConsumers[String, String](stream, group)
           } yield assert(result.toList.head.name)(equalTo(consumer))
         },
         testM("error when no such key") {
           for {
             stream <- uuid
             group  <- uuid
-            result <- xInfoConsumers(stream, group).either
+            result <- xInfoConsumers[String, String](stream, group).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not a stream") {
@@ -1303,7 +1406,7 @@ trait StreamsSpec extends BaseSpec {
             nonStream <- uuid
             group     <- uuid
             _         <- set(nonStream, "helloworld")
-            result    <- xInfoConsumers(nonStream, group).either
+            result    <- xInfoConsumers[String, String](nonStream, group).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1313,10 +1416,10 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- xAdd(stream, "*", "a" -> "b")
-            _        <- xReadGroup(group, consumer)(stream -> ">")
-            result   <- xInfoStreamFull(stream)
+            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            result   <- xInfoStreamFull[String, String, String, String](stream)
           } yield assert {
             val entries       = result.entries
             val length        = result.length
@@ -1328,14 +1431,14 @@ trait StreamsSpec extends BaseSpec {
         testM("error when no such key") {
           for {
             stream <- uuid
-            result <- xInfoStreamFull(stream).either
+            result <- xInfoStreamFull[String, String, String, String](stream).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not a stream") {
           for {
             nonStream <- uuid
             _         <- set(nonStream, "helloworld")
-            result    <- xInfoStreamFull(nonStream).either
+            result    <- xInfoStreamFull[String, String, String, String](nonStream).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       )
