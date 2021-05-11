@@ -3,10 +3,10 @@ package zio.redis
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.{BulkString, bulkString}
+import zio.redis.RespValue.{ BulkString, bulkString }
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.stm.{random => _, _}
+import zio.stm.{ random => _, _ }
 
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
@@ -1112,17 +1112,19 @@ private[redis] final class TestExecutor private (
         )
 
       case api.SortedSets.ZDiff =>
-        val numkeys = input(0).asLong
-        val keys = input.drop(1).take(numkeys.toInt).map(_.asString)
+        val numkeys          = input(0).asLong
+        val keys             = input.drop(1).take(numkeys.toInt).map(_.asString)
         val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
 
-        orWrongType(forAll(keys)(isSortedSet)) (
+        orWrongType(forAll(keys)(isSortedSet))(
           for {
-            sourceMaps <-STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
-            diffMap = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet)}
+            sourceMaps <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+            diffMap     = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet) }
             result =
               if (withScoresOption.isDefined)
-                Chunk.fromIterable(diffMap.toArray.flatMap { case (v, s) => Chunk(bulkString(v), bulkString(s.toString)) })
+                Chunk.fromIterable(diffMap.toArray.flatMap { case (v, s) =>
+                  Chunk(bulkString(v), bulkString(s.toString))
+                })
               else
                 Chunk.fromIterable(diffMap.keys.map(bulkString))
           } yield RespValue.Array(result)
@@ -1130,14 +1132,14 @@ private[redis] final class TestExecutor private (
 
       case api.SortedSets.ZDiffStore =>
         val destination = input(0).asString
-        val numkeys = input(1).asLong
-        val keys = input.drop(2).take(numkeys.toInt).map(_.asString)
+        val numkeys     = input(1).asLong
+        val keys        = input.drop(2).take(numkeys.toInt).map(_.asString)
 
-        orWrongType(forAll(keys :+ destination)(isSortedSet)) (
+        orWrongType(forAll(keys :+ destination)(isSortedSet))(
           for {
-            sourceMaps <-STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
-            diffMap = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet)}
-            _ <- sortedSets.put(destination, diffMap)
+            sourceMaps <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+            diffMap     = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet) }
+            _          <- sortedSets.put(destination, diffMap)
           } yield RespValue.Integer(diffMap.size.toLong)
         )
 
@@ -1160,8 +1162,8 @@ private[redis] final class TestExecutor private (
         )
 
       case api.SortedSets.ZInter =>
-        val numKeys = input(0).asLong
-        val keys = input.drop(1).take(numKeys.toInt).map(_.asString)
+        val numKeys          = input(0).asLong
+        val keys             = input.drop(1).take(numKeys.toInt).map(_.asString)
         val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
 
         val options = input.map(_.asString).zipWithIndex
@@ -1211,7 +1213,9 @@ private[redis] final class TestExecutor private (
 
               result =
                 if (withScoresOption.isDefined)
-                  Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).flatMap { case (v, s) => Chunk(bulkString(v), bulkString(s.toString)) })
+                  Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).flatMap { case (v, s) =>
+                    Chunk(bulkString(v), bulkString(s.toString))
+                  })
                 else
                   Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).map(e => bulkString(e._1)))
 
@@ -1292,23 +1296,25 @@ private[redis] final class TestExecutor private (
         orWrongType(isSortedSet(key))(
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
-            lexKeys = scoreMap.keys.toArray.sorted
+            lexKeys   = scoreMap.keys.toArray.sorted
 
-            minPredicate = (s: String) => min match {
-              case LexMinimum.Unbounded => true
-              case LexMinimum.Open(key) => s > key
-              case LexMinimum.Closed(key) => s >= key
-            }
+            minPredicate = (s: String) =>
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s > key
+                               case LexMinimum.Closed(key) => s >= key
+                             }
 
-            maxPredicate = (s: String) => max match {
-              case LexMaximum.Unbounded => true
-              case LexMaximum.Open(key) => s < key
-              case LexMaximum.Closed(key) => s <= key
-            }
+            maxPredicate = (s: String) =>
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s < key
+                               case LexMaximum.Closed(key) => s <= key
+                             }
 
             filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
 
-            result =  Chunk.fromIterable(filtered.map(bulkString))
+            result = Chunk.fromIterable(filtered.map(bulkString))
           } yield RespValue.Integer(result.size.toLong)
         )
 
@@ -1328,51 +1334,121 @@ private[redis] final class TestExecutor private (
         }
 
         val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
-          case -1 => None
+          case -1  => None
           case idx => Some(idx)
         }
 
         val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
-        val countOption = limitOptionIdx.map(idx => input(idx + 2).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
 
         orWrongType(isSortedSet(key))(
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
 
             limitKeys = for {
-              offset <- offsetOption
-              count <- countOption
-            } yield {
-              scoreMap
-                .toArray
-                .sortBy(_._2).slice(offset.toInt, offset.toInt + count.toInt)
-                .map(_._1)
-            }
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                            .map(_._1)
+                        }
 
             lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted)
 
-            minPredicate = (s: String) => min match {
-              case LexMinimum.Unbounded => true
-              case LexMinimum.Open(key) => s > key
-              case LexMinimum.Closed(key) => s >= key
-            }
+            minPredicate = (s: String) =>
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s > key
+                               case LexMinimum.Closed(key) => s >= key
+                             }
 
-            maxPredicate = (s: String) => max match {
-              case LexMaximum.Unbounded => true
-              case LexMaximum.Open(key) => s < key
-              case LexMaximum.Closed(key) => s <= key
-            }
+            maxPredicate = (s: String) =>
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s < key
+                               case LexMaximum.Closed(key) => s <= key
+                             }
 
             filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
 
             bounds = (min, max) match {
-              case (LexMinimum.Unbounded, LexMaximum.Unbounded) => filtered
-              case (LexMinimum.Unbounded, _) => filtered.dropRight(1)
-              case (_, LexMaximum.Unbounded) => filtered.drop(1)
-              case (_, _) => filtered.drop(1).dropRight(1)
-            }
+                       case (LexMinimum.Unbounded, LexMaximum.Unbounded) => filtered
+                       case (LexMinimum.Unbounded, _)                    => filtered.dropRight(1)
+                       case (_, LexMaximum.Unbounded)                    => filtered.drop(1)
+                       case (_, _)                                       => filtered.drop(1).dropRight(1)
+                     }
 
-            result =  Chunk.fromIterable(bounds.map(bulkString))
+            result = Chunk.fromIterable(bounds.map(bulkString))
+          } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZRangeByScore =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-inf"                 => ScoreMinimum.Infinity
+          case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
+          case s if s.startsWith("[") => ScoreMinimum.Closed(s.drop(1).toDouble)
+        }
+
+        val max = input(2).asString match {
+          case "+inf"                 => ScoreMaximum.Infinity
+          case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
+          case s if s.startsWith("[") => ScoreMaximum.Closed(s.drop(1).toDouble)
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        val withScoresOption = input.map(_.asString).indexOf("WITHSCORES") match {
+          case -1 => false
+          case _  => true
+        }
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2))
+
+            minPredicate = (s: Double) =>
+                             min match {
+                               case _: ScoreMinimum.Infinity.type => true
+                               case ScoreMinimum.Open(key)        => s > key
+                               case ScoreMinimum.Closed(key)      => s >= key
+                             }
+
+            maxPredicate = (s: Double) =>
+                             max match {
+                               case _: ScoreMaximum.Infinity.type => true
+                               case ScoreMaximum.Open(key)        => s < key
+                               case ScoreMaximum.Closed(key)      => s <= key
+                             }
+
+            filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
+
+            result =
+              if (withScoresOption)
+                Chunk.fromIterable(filtered.flatMap { case (k, s) => bulkString(k) :: bulkString(s.toString) :: Nil })
+              else
+                Chunk.fromIterable(filtered.map { case (k, _) => bulkString(k) })
+
           } yield RespValue.Array(result)
         )
 

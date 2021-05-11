@@ -862,7 +862,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
-                   MemberScore(1800d, "Micromax"),
+                   MemberScore(1801d, "Micromax"),
                    MemberScore(2200d, "Sunsui"),
                    MemberScore(1800d, "MicroSoft"),
                    MemberScore(2500d, "LG")
@@ -876,7 +876,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
-                   MemberScore(1800d, "Micromax"),
+                   MemberScore(1801d, "Micromax"),
                    MemberScore(2200d, "Sunsui"),
                    MemberScore(1800d, "MicroSoft"),
                    MemberScore(2500d, "LG")
@@ -891,14 +891,14 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeByScore[String, String](key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRangeByScoreWithScores")(
         testM("non-empty set") {
           for {
             key       <- uuid
             samsung    = MemberScore(1556d, "Samsung")
             nokia      = MemberScore(2000d, "Nokia")
-            micromax   = MemberScore(1800d, "Micromax")
+            micromax   = MemberScore(1801d, "Micromax")
             sunsui     = MemberScore(2200d, "Sunsui")
             microSoft  = MemberScore(1800d, "MicroSoft")
             lg         = MemberScore(2500d, "LG")
@@ -912,7 +912,7 @@ trait SortedSetsSpec extends BaseSpec {
             key       <- uuid
             samsung    = MemberScore(1556d, "Samsung")
             nokia      = MemberScore(2000d, "Nokia")
-            micromax   = MemberScore(1800d, "Micromax")
+            micromax   = MemberScore(1801d, "Micromax")
             sunsui     = MemberScore(2200d, "Sunsui")
             microSoft  = MemberScore(1800d, "MicroSoft")
             lg         = MemberScore(2500d, "LG")
@@ -928,7 +928,7 @@ trait SortedSetsSpec extends BaseSpec {
             result    <- zRangeByScoreWithScores[String, String](key, scoreRange)
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRank")(
         testM("existing elements from non-empty set") {
           for {
