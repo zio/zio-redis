@@ -854,7 +854,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRangeByLex[String, String](key, LexRange(min = LexMinimum.Open("A"), max = LexMaximum.Closed("Z")))
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRangeByScore")(
         testM("non-empty set") {
           for {
