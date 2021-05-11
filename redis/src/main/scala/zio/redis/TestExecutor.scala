@@ -1128,6 +1128,19 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(result)
         )
 
+      case api.SortedSets.ZDiffStore =>
+        val destination = input(0).asString
+        val numkeys = input(1).asLong
+        val keys = input.drop(2).take(numkeys.toInt).map(_.asString)
+
+        orWrongType(forAll(keys :+ destination)(isSortedSet)) (
+          for {
+            sourceMaps <-STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+            diffMap = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet)}
+            _ <- sortedSets.put(destination, diffMap)
+          } yield RespValue.Integer(diffMap.size.toLong)
+        )
+
       case api.SortedSets.ZIncrBy =>
         val key       = input(0).asString
         val increment = input(1).asLong

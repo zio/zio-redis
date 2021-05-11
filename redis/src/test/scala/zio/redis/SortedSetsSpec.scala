@@ -314,7 +314,7 @@ trait SortedSetsSpec extends BaseSpec {
             card <- zDiffStore(dest, 2, key1, key2)
           } yield assert(card)(equalTo(1L))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zIncrBy")(
         testM("non-empty set") {
           for {
