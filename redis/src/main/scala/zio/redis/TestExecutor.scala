@@ -3,10 +3,10 @@ package zio.redis
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.{ BulkString, bulkString }
+import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.stm.{ random => _, _ }
+import zio.stm.{random => _, _}
 
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
@@ -1382,6 +1382,65 @@ private[redis] final class TestExecutor private (
 
             result = Chunk.fromIterable(bounds.map(bulkString))
           } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZRemRangeByLex =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-"                    => LexMinimum.Unbounded
+          case s if s.startsWith("(") => LexMinimum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMinimum.Closed(s.drop(1))
+        }
+
+        val max = input(2).asString match {
+          case "+"                    => LexMaximum.Unbounded
+          case s if s.startsWith("(") => LexMaximum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMaximum.Closed(s.drop(1))
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+              offset <- offsetOption
+              count  <- countOption
+            } yield {
+              scoreMap.toArray
+                .sortBy(_._2)
+                .slice(offset.toInt, offset.toInt + count.toInt)
+                .map(_._1)
+            }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted)
+
+            minPredicate = (s: String) =>
+              min match {
+                case LexMinimum.Unbounded   => true
+                case LexMinimum.Open(key)   => s > key
+                case LexMinimum.Closed(key) => s >= key
+              }
+
+            maxPredicate = (s: String) =>
+              max match {
+                case LexMaximum.Unbounded   => true
+                case LexMaximum.Open(key)   => s < key
+                case LexMaximum.Closed(key) => s <= key
+              }
+
+            filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
+
+          _ <- sortedSets.put(key, scoreMap -- filtered)
+          } yield RespValue.Integer(filtered.size.toLong)
         )
 
       case api.SortedSets.ZRangeByScore =>

@@ -1006,7 +1006,7 @@ trait SortedSetsSpec extends BaseSpec {
               zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(remResult)(equalTo(0L))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRemRangeByRank")(
         testM("non-empty set") {
           for {
