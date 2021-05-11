@@ -240,6 +240,41 @@ trait Hashes {
     val command = RedisCommand(HVals, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[V]()))
     command.run(key)
   }
+
+  /**
+   * Returns a random field from the hash value stored at `key`
+   *
+   * @param key of the hash which fields should be read
+   * @return random field in the hash or `None` when `key` does not exist.
+   */
+  final def hRandField[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[V]] = {
+    val command = RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))
+    command.run(key)
+  }
+
+  /**
+   * Returns an array of at most `count` distinct fields randomly. If called with a negative `count`, the command
+   * will return exactly `count` fields, allowing repeats. If `withValues` is true it will return fields
+   * with his values intercalated.
+   *
+   * @param key of the hash which fields should be read
+   * @param count maximum number of different fields to return if positive or the exact number, in absolute value
+   *              if negative
+   * @param withValues when true includes the respective values of the randomly selected hash fields
+   * @return a list of fields or fields and values if `withValues` is true.
+   */
+  final def hRandField[K: Schema, V: Schema](
+    key: K,
+    count: Long,
+    withValues: Boolean = false
+  ): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
+    val command = RedisCommand(
+      HRandField,
+      Tuple3(ArbitraryInput[K](), LongInput, OptionalInput(StringInput)),
+      ChunkOutput(ArbitraryOutput[V]())
+    )
+    command.run((key, count, if (withValues) Some("WITHVALUES") else None))
+  }
 }
 
 private[redis] object Hashes {
@@ -258,4 +293,5 @@ private[redis] object Hashes {
   final val HSetNx       = "HSETNX"
   final val HStrLen      = "HSTRLEN"
   final val HVals        = "HVALS"
+  final val HRandField   = "HRANDFIELD"
 }
