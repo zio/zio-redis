@@ -450,7 +450,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zInter[String, String](2, first, second)(Some(Aggregate.Min))
           } yield assert(members)(equalTo(Chunk("O", "N")))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zInterWithScores")(
         testM("two non-empty sets") {
           for {
@@ -563,7 +563,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zInterWithScores[String, String](2, first, second)(Some(Aggregate.Min))
           } yield assert(members)(equalTo(Chunk(MemberScore(2d, "O"), MemberScore(3d, "N"))))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zInterStore")(
         testM("two non-empty sets") {
           for {
@@ -809,7 +809,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zRangeWithScores[String, String](key, 0 to -1)
           } yield assert(result.toList)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRangeByLex")(
         testM("non-empty set") {
           for {

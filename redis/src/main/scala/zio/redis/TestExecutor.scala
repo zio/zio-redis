@@ -1159,6 +1159,66 @@ private[redis] final class TestExecutor private (
           } yield RespValue.bulkString(resultScore.toString)
         )
 
+      case api.SortedSets.ZInter =>
+        val numKeys = input(0).asLong
+        val keys = input.drop(1).take(numKeys.toInt).map(_.asString)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx =>
+              input
+                .drop(idx + 1)
+                .takeWhile(v => Try(v.asString.stripSuffix(".0").toLong).isSuccess)
+                .map(_.asString.stripSuffix(".0").toLong)
+            )
+            .getOrElse(Chunk.empty)
+
+        orInvalidParameter(STM.succeed(!(weights.nonEmpty && weights.size != numKeys)))(
+          orWrongType(forAll(keys)(isSortedSet))(
+            for {
+              sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+
+              intersectionKeys =
+                sourceSets.map(_.keySet).reduce(_.intersect(_))
+
+              weightedSets =
+                sourceSets
+                  .map(m => m.filter(m => intersectionKeys.contains(m._1)))
+                  .zipAll(weights, Map.empty, 1L)
+                  .map { case (scoreMap, weight) => scoreMap.map { case (member, score) => member -> score * weight } }
+
+              intersectionMap =
+                weightedSets
+                  .flatMap(Chunk.fromIterable)
+                  .groupBy(_._1)
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
+
+              result =
+                if (withScoresOption.isDefined)
+                  Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).flatMap { case (v, s) => Chunk(bulkString(v), bulkString(s.toString)) })
+                else
+                  Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).map(e => bulkString(e._1)))
+
+            } yield RespValue.Array(result)
+          )
+        )
+
       case api.SortedSets.ZInterStore =>
         val destination = input(0).asString
         val numKeys     = input(1).asLong.toInt
@@ -1207,7 +1267,7 @@ private[redis] final class TestExecutor private (
                 weightedSets
                   .flatMap(Chunk.fromIterable)
                   .groupBy(_._1)
-                  .map { case (member, scores) => member -> scores.map(_._2).fold(0d)(aggregate) }
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
 
               _ <- sortedSets.put(destination, Map.from(destinationResult))
             } yield RespValue.Integer(destinationResult.size.toLong)
@@ -1554,7 +1614,7 @@ private[redis] final class TestExecutor private (
                 weightedSets
                   .flatMap(Chunk.fromIterable)
                   .groupBy(_._1)
-                  .map { case (member, scores) => member -> scores.map(_._2).fold(0d)(aggregate) }
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
 
               _ <- sortedSets.put(destination, Map.from(destinationResult))
             } yield RespValue.Integer(destinationResult.size.toLong)
