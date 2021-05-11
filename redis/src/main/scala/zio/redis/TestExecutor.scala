@@ -3,10 +3,10 @@ package zio.redis
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.BulkString
+import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.stm.{ random => _, _ }
+import zio.stm.{random => _, _}
 
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
@@ -1109,6 +1109,23 @@ private[redis] final class TestExecutor private (
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
             result    = scoreMap.filter { case (_, score) => score >= min && score <= max }
           } yield RespValue.Integer(result.size.toLong)
+        )
+
+      case api.SortedSets.ZDiff =>
+        val numkeys = input(0).asLong
+        val keys = input.drop(1).take(numkeys.toInt).map(_.asString)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        orWrongType(forAll(keys)(isSortedSet)) (
+          for {
+            sourceMaps <-STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+            diffMap = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet)}
+            result =
+              if (withScoresOption.isDefined)
+                Chunk.fromIterable(diffMap.toArray.flatMap { case (v, s) => Chunk(bulkString(v), bulkString(s.toString)) })
+              else
+                Chunk.fromIterable(diffMap.keys.map(bulkString))
+          } yield RespValue.Array(result)
         )
 
       case api.SortedSets.ZIncrBy =>

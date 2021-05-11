@@ -246,7 +246,7 @@ trait SortedSetsSpec extends BaseSpec {
             diff <- zDiff[String, String](2, key1, key2)
           } yield assert(diff)(hasSameElements(Chunk("c")))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zDiffWithScores")(
         testM("empty sets") {
           for {
@@ -277,7 +277,7 @@ trait SortedSetsSpec extends BaseSpec {
             diff <- zDiffWithScores[String, String](2, key1, key2)
           } yield assert(diff)(hasSameElements(Chunk(MemberScore(3d, "c"))))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zDiffStore")(
         testM("empty sets") {
           for {
