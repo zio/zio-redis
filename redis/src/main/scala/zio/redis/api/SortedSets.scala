@@ -147,6 +147,86 @@ trait SortedSets {
   }
 
   /**
+   * Subtract multiple sorted sets and return members.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences between the first and successive input sorted sets.
+   */
+  final def zDiff[K: Schema, M: Schema](
+    inputKeysNum: Long,
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+    val command =
+      RedisCommand(
+        ZDiff,
+        Tuple2(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]())
+        ),
+        ChunkOutput(ArbitraryOutput[M]())
+      )
+    command.run((inputKeysNum, (key, keys.toList)))
+  }
+
+  /**
+   * Subtract multiple sorted sets and return members and their associated score.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences and scores between the first and successive input sorted sets.
+   */
+  final def zDiffWithScores[K: Schema, M: Schema](
+    inputKeysNum: Long,
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+    val command =
+      RedisCommand(
+        ZDiff,
+        Tuple3(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]()),
+          ArbitraryInput[String]()
+        ),
+        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          .map(_.map { case (m, s) => MemberScore(s, m) })
+      )
+    command.run((inputKeysNum, (key, keys.toList), WithScores.stringify))
+  }
+
+  /**
+   * Subtract multiple sorted sets and store the resulting sorted set in a destination key.
+   *
+   * @param destination Key of the output
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @return Chunk of differences between the first and successive input sorted sets.
+   */
+  final def zDiffStore[DK: Schema, K: Schema](
+    destination: DK,
+    inputKeysNum: Long,
+    key: K,
+    keys: K*
+  ): ZIO[RedisExecutor, RedisError, Long] = {
+    val command =
+      RedisCommand(
+        ZDiffStore,
+        Tuple3(
+          ArbitraryInput[DK](),
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]())
+        ),
+        LongOutput
+      )
+    command.run((destination, inputKeysNum, (key, keys.toList)))
+  }
+
+  /**
    * Increment the score of a member in a sorted set.
    *
    * @param key Key of a sorted set
@@ -161,6 +241,68 @@ trait SortedSets {
   ): ZIO[RedisExecutor, RedisError, Double] = {
     val command = RedisCommand(ZIncrBy, Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[M]()), DoubleOutput)
     command.run((key, increment, member))
+  }
+
+  /**
+   * Intersect multiple sorted sets and return members.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of the rest sorted sets
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @return Chunk containing the intersection of members.
+   */
+  final def zInter[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    aggregate: Option[Aggregate] = None,
+    weights: Option[::[Double]] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+    val command = RedisCommand(
+      ZInter,
+      Tuple4(
+        LongInput,
+        NonEmptyList(ArbitraryInput[K]()),
+        OptionalInput(AggregateInput),
+        OptionalInput(WeightsInput)
+      ),
+      ChunkOutput(ArbitraryOutput[M]())
+    )
+    command.run((inputKeysNum, (key, keys.toList), aggregate, weights))
+  }
+
+  /**
+   * Intersect multiple sorted sets and return members and their associated score.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of the rest sorted sets
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @return Chunk containing the intersection of members with their score.
+   */
+  final def zInterWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    aggregate: Option[Aggregate] = None,
+    weights: Option[::[Double]] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+    val command = RedisCommand(
+      ZInter,
+      Tuple5(
+        LongInput,
+        NonEmptyList(ArbitraryInput[K]()),
+        OptionalInput(AggregateInput),
+        OptionalInput(WeightsInput),
+        ArbitraryInput[String]()
+      ),
+      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+        .map(_.map { case (m, s) => MemberScore(s, m) })
+    )
+    command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
   }
 
   /**
@@ -602,6 +744,70 @@ trait SortedSets {
   }
 
   /**
+   * Add multiple sorted sets and return each member.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return Chunk of all members in each sorted set.
+   */
+  final def zUnion[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    weights: Option[::[Double]] = None,
+    aggregate: Option[Aggregate] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+    val command =
+      RedisCommand(
+        ZUnion,
+        Tuple4(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]()),
+          OptionalInput(WeightsInput),
+          OptionalInput(AggregateInput)
+        ),
+        ChunkOutput(ArbitraryOutput[M]())
+      )
+    command.run((inputKeysNum, (key, keys.toList), weights, aggregate))
+  }
+
+  /**
+   * Add multiple sorted sets and return each member and associated score.
+   *
+   * @param inputKeysNum Number of input keys
+   * @param key Key of a sorted set
+   * @param keys Keys of other sorted sets
+   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
+   *                set. This means that the score of every element in every input sorted set is multiplied by this
+   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
+   *                multiplication factors default to 1
+   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return Chunk of all members with their scores in each sorted set.
+   */
+  final def zUnionWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+    weights: Option[::[Double]] = None,
+    aggregate: Option[Aggregate] = None
+  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+    val command =
+      RedisCommand(
+        ZUnion,
+        Tuple5(
+          LongInput,
+          NonEmptyList(ArbitraryInput[K]()),
+          OptionalInput(WeightsInput),
+          OptionalInput(AggregateInput),
+          ArbitraryInput[String]()
+        ),
+        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          .map(_.map { case (m, s) => MemberScore(s, m) })
+      )
+    command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.stringify))
+  }
+
+  /**
    * Add multiple sorted sets and store the resulting sorted set in a new key.
    *
    * @param destination Key of the output
@@ -638,7 +844,7 @@ trait SortedSets {
    *
    * @param key Key of the set
    * @param keys Keys of the rest sets
-   * @return list of scores or None associated with the specified member values (a double precision floating point
+   * @return List of scores or None associated with the specified member values (a double precision floating point
    *         number).
    */
   final def zMScore[K: Schema](
@@ -648,6 +854,58 @@ trait SortedSets {
     val command = RedisCommand(Zmscore, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)))
     command.run((key, keys.toList))
   }
+
+  /**
+   * Return a random element from the sorted set value stored at key.
+   *
+   * @param key Key of a sorted set
+   * @return Return a random element from the sorted set value stored at key.
+   */
+  final def zRandMember[K: Schema, M: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[M]] = {
+    val command = RedisCommand(ZRandMember, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[M]()))
+    command.run(key)
+  }
+
+  /**
+   * Return random elements from the sorted set value stored at key.
+   *
+   * @param key Key of a sorted set
+   * @param count If the provided count argument is positive, return an array of distinct elements.
+   *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return Return an array of elements from the sorted set value stored at key.
+   */
+  final def zRandMember[K: Schema, M: Schema](key: K, count: Long): ZIO[RedisExecutor, RedisError, Option[Chunk[M]]] = {
+    val command = RedisCommand(
+      ZRandMember,
+      Tuple2(ArbitraryInput[K](), LongInput),
+      OptionalOutput(ChunkOutput(ArbitraryOutput[M]()))
+    )
+    command.run((key, count))
+  }
+
+  /**
+   * Return random elements from the sorted set value stored at key.
+   *
+   * @param key Key of a sorted set
+   * @param count If the provided count argument is positive, return an array of distinct elements.
+   *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return When the additional count argument is passed, the command returns an array of elements, or an empty array when key does not exist.
+   *         If the WITHSCORES modifier is used, the reply is a list elements and their scores from the sorted set.
+   */
+  final def zRandMemberWithScores[K: Schema, M: Schema](
+    key: K,
+    count: Long
+  ): ZIO[RedisExecutor, RedisError, Option[Chunk[MemberScore[M]]]] = {
+    val command = RedisCommand(
+      ZRandMember,
+      Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[String]()),
+      OptionalOutput(
+        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          .map(_.map { case (m, s) => MemberScore(s, m) })
+      )
+    )
+    command.run((key, count, WithScores.stringify))
+  }
 }
 
 private[redis] object SortedSets {
@@ -656,7 +914,10 @@ private[redis] object SortedSets {
   final val ZAdd             = "ZADD"
   final val ZCard            = "ZCARD"
   final val ZCount           = "ZCOUNT"
+  final val ZDiff            = "ZDIFF"
+  final val ZDiffStore       = "ZDIFFSTORE"
   final val ZIncrBy          = "ZINCRBY"
+  final val ZInter           = "ZINTER"
   final val ZInterStore      = "ZINTERSTORE"
   final val ZLexCount        = "ZLEXCOUNT"
   final val ZPopMax          = "ZPOPMAX"
@@ -675,6 +936,8 @@ private[redis] object SortedSets {
   final val ZRevRank         = "ZREVRANK"
   final val ZScan            = "ZSCAN"
   final val ZScore           = "ZSCORE"
+  final val ZUnion           = "ZUNION"
   final val ZUnionStore      = "ZUNIONSTORE"
   final val Zmscore          = "ZMSCORE"
+  final val ZRandMember      = "ZRANDMEMBER"
 }

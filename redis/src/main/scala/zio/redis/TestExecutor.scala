@@ -972,6 +972,49 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(values))
         )
 
+      case api.Hashes.HRandField =>
+        val key        = input(0).asString
+        val count      = if (input.size == 1) None else Some(input(1).asString.toLong)
+        val withValues = if (input.size == 3) input(2).asString == "WITHVALUES" else false
+
+        def selectValues[T](n: Long, values: Vector[T]) = {
+          val repeatedAllowed = n < 0
+          val count           = Math.abs(n)
+          val t               = count - values.length
+
+          if (repeatedAllowed && t > 0) {
+            selectNWithReplacement[T](values, count, randomPick)
+          } else {
+            selectN[T](values, count, randomPick)
+          }
+        }
+
+        orWrongType(isHash(key)) {
+          val keysAndValues = for {
+            hash <- hashes.getOrElse(key, Map.empty)
+          } yield (hash.keys map RespValue.bulkString) zip (hash.values map RespValue.bulkString)
+
+          if (count.isDefined && withValues) {
+            for {
+              kvs            <- keysAndValues
+              fields         <- selectValues(count.get, kvs.toVector)
+              fieldsAndValues = fields.flatMap { case (k, v) => Seq(k, v) }
+            } yield RespValue.Array(Chunk.fromIterable(fieldsAndValues))
+          } else if (count.isDefined) {
+            for {
+              kvs    <- keysAndValues
+              keys    = kvs.map(_._1)
+              fields <- selectValues(count.get, keys.toVector)
+            } yield RespValue.Array(Chunk.fromIterable(fields))
+          } else {
+            for {
+              kvs <- keysAndValues
+              keys = kvs.map { case (k, _) => k }
+              key <- selectOne[zio.redis.RespValue.BulkString](keys.toVector, randomPick)
+            } yield key.getOrElse(RespValue.NullBulkString)
+          }
+        }
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
