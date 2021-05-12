@@ -100,7 +100,7 @@ private[redis] final class TestExecutor private (
       case api.Connection.Select.name =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
-      case api.Keys.Exists =>
+      case api.Keys.Exists | api.Keys.Touch =>
         val allkeys = input.map(_.asString)
         STM
           .foldLeft(allkeys)(0L) { case (acc, key) =>
@@ -108,7 +108,7 @@ private[redis] final class TestExecutor private (
           }
           .map(RespValue.Integer)
 
-      case api.Keys.Del =>
+      case api.Keys.Del | api.Keys.Unlink =>
         val allkeys = input.map(_.asString)
         STM
           .foldLeft(allkeys)(0L) { case (acc, key) => delete(key).map(acc + _) }
@@ -131,6 +131,23 @@ private[redis] final class TestExecutor private (
           pick <- selectOne(ks.toVector, randomPick)
         } yield pick.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString)
 
+      case api.Keys.Rename =>
+        val key    = input(0).asString
+        val newkey = input(1).asString
+        STM.ifM(keys.contains(key))(
+          rename(key, newkey).as(Replies.Ok),
+          STM.succeedNow(Replies.Error)
+        )
+
+      case api.Keys.RenameNx =>
+        val key    = input(0).asString
+        val newkey = input(1).asString
+        STM.ifM(keys.contains(key))(
+          STM
+            .ifM(keys.contains(newkey))(STM.succeedNow(0L), rename(key, newkey).as(1L))
+            .map(RespValue.Integer),
+          STM.succeedNow(Replies.Error)
+        )
       case api.Keys.Ttl =>
         val key = input.head.asString
         STM
@@ -399,14 +416,29 @@ private[redis] final class TestExecutor private (
           }
         )
 
+      case api.Strings.Get =>
+        val key = input.head.asString
+        orWrongType(isString(key))(
+          strings.get(key).map(_.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString))
+        )
       case api.Strings.Set =>
         // not a full implementation. Just enough to make set tests work
-        val key   = input.head.asString
+        val key   = input(0).asString
         val value = input(1).asString
         orWrongType(isString(key))(
           putString(key, value).as(Replies.Ok)
         )
 
+      case api.Strings.PSetEx =>
+        val key      = input(0).asString
+        val unixtime = Instant.ofEpochMilli(input(1).asLong)
+        val value    = input(2).asString
+        orWrongType(isString(key))(
+          for {
+            _ <- putString(key, value)
+            _ <- expirations.put(key, unixtime)
+          } yield Replies.Ok
+        )
       case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString).toSet
