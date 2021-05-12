@@ -1384,6 +1384,65 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(result)
         )
 
+      case api.SortedSets.ZRevRangeByLex =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-"                    => LexMinimum.Unbounded
+          case s if s.startsWith("(") => LexMinimum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMinimum.Closed(s.drop(1))
+        }
+
+        val max = input(2).asString match {
+          case "+"                    => LexMaximum.Unbounded
+          case s if s.startsWith("(") => LexMaximum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMaximum.Closed(s.drop(1))
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+              offset <- offsetOption
+              count  <- countOption
+            } yield {
+              scoreMap.toArray
+                .sortBy(_._1)
+                .slice(offset.toInt, offset.toInt + count.toInt)
+                .map(_._1)
+            }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted).reverse
+
+            minPredicate = (s: String) =>
+              min match {
+                case LexMinimum.Unbounded   => true
+                case LexMinimum.Open(key)   => s < key
+                case LexMinimum.Closed(key) => s <= key
+              }
+
+            maxPredicate = (s: String) =>
+              max match {
+                case LexMaximum.Unbounded   => true
+                case LexMaximum.Open(key)   => s > key
+                case LexMaximum.Closed(key) => s >= key
+              }
+
+            filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
+
+            result = Chunk.fromIterable(filtered.map(bulkString))
+          } yield RespValue.Array(result)
+        )
+
       case api.SortedSets.ZRemRangeByLex =>
         val key = input(0).asString
 
