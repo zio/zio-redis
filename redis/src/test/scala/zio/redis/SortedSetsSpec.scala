@@ -1093,7 +1093,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRevRange[String, String](key, 0 to -1)
           } yield assert(remResult.toList)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRevRangeByLex")(
         testM("non-empty set") {
           for {
