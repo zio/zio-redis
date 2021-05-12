@@ -1,4 +1,3 @@
-
 package zio.redis
 
 import java.time.Instant
@@ -34,7 +33,7 @@ private[redis] final class TestExecutor private (
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
       now  <- testClock.get.instant
-      _    <- clearExpired(now)
+      _    <- clearExpired(now).commit
       result <- name.asString match {
                   case api.Lists.BlPop =>
                     val timeout = command.tail.last.asString.toInt
@@ -116,14 +115,7 @@ private[redis] final class TestExecutor private (
 
       case api.Keys.TypeOf =>
         val key = input.head.asString
-        val matchedType = for {
-          a <- STM.ifM(isList(key))(STM.some(RedisType.List), STM.none)
-          b <- STM.ifM(isSet(key))(STM.some(RedisType.Set), STM.none)
-          c <- STM.ifM(isString(key))(STM.some(RedisType.String), STM.none)
-          d <- STM.ifM(isHyperLogLog(key))(STM.some(RedisType.String), STM.none)
-          e <- STM.ifM(isHash(key))(STM.some(RedisType.Hash), STM.none)
-        } yield a orElse b orElse c orElse d orElse e
-        matchedType.map(_.fold("none")(_.stringify)).map(RespValue.SimpleString)
+        typeOf(key).map(_.fold("none")(_.stringify)).map(RespValue.SimpleString)
 
       case api.Keys.RandomKey =>
         for {
@@ -148,6 +140,7 @@ private[redis] final class TestExecutor private (
             .map(RespValue.Integer),
           STM.succeedNow(Replies.Error)
         )
+
       case api.Keys.Ttl =>
         val key = input.head.asString
         STM
@@ -421,6 +414,7 @@ private[redis] final class TestExecutor private (
         orWrongType(isString(key))(
           strings.get(key).map(_.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString))
         )
+
       case api.Strings.Set =>
         // not a full implementation. Just enough to make set tests work
         val key   = input(0).asString
@@ -439,6 +433,7 @@ private[redis] final class TestExecutor private (
             _ <- expirations.put(key, unixtime)
           } yield Replies.Ok
         )
+
       case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
         val values = input.tail.map(_.asString).toSet
@@ -1108,27 +1103,6 @@ private[redis] final class TestExecutor private (
     }
   }
 
-  /** Removes all expired keys from each data structure */
-  private def clearExpired(now: Instant): UIO[Unit] =
-    expirations.foreach { (key, exp) =>
-      if (now.isBefore(exp)) STM.unit
-      else delete(key).unit
-    }.commit
-
-  private[this] def delete(key: String): USTM[Int] =
-    STM.ifM(keys.contains(key))(
-      for {
-        _ <- STM.whenM(isList(key))(lists.delete(key))
-        _ <- STM.whenM(isSet(key))(sets.delete(key))
-        _ <- STM.whenM(isString(key))(strings.delete(key))
-        _ <- STM.whenM(isHyperLogLog(key))(hyperLogLogs.delete(key))
-        _ <- STM.whenM(isHash(key))(hashes.delete(key))
-        _ <- keys.delete(key)
-        _ <- expirations.delete(key)
-      } yield 1,
-      STM.succeedNow(0)
-    )
-
   private[this] def orWrongType(predicate: USTM[Boolean])(
     program: => USTM[RespValue]
   ): USTM[RespValue] =
@@ -1179,6 +1153,15 @@ private[redis] final class TestExecutor private (
       isHyper  <- hyperLogLogs.contains(name)
     } yield !isString && !isSet && !isList && !isHyper
 
+  def typeOf(key: String): USTM[Option[RedisType]] =
+    for {
+      a <- STM.ifM(isList(key))(STM.some(RedisType.List), STM.none)
+      b <- STM.ifM(isSet(key))(STM.some(RedisType.Set), STM.none)
+      c <- STM.ifM(isString(key))(STM.some(RedisType.String), STM.none)
+      d <- STM.ifM(isHyperLogLog(key))(STM.some(RedisType.String), STM.none)
+      e <- STM.ifM(isHash(key))(STM.some(RedisType.Hash), STM.none)
+    } yield a orElse b orElse c orElse d orElse e
+
   // Puts element into list and removes its expiration, if any.
   private[this] def putList(key: String, value: Chunk[String]): USTM[Unit] =
     lists.put(key, value) <* keys.put(key) <* expirations.delete(key)
@@ -1200,12 +1183,57 @@ private[redis] final class TestExecutor private (
     hashes.put(key, value) <* keys.put(key) <* expirations.delete(key)
 
   /**
+   * Rename key by altering underlying data and metadata structures.
+   * Note: RENAME retains the data's expiration
+   */
+  def rename(key: String, newkey: String): ZSTM[Any,Nothing,Unit] =
+    for {
+      _ <- STM.ifM(keys.contains(newkey))(delete(newkey), STM.unit)
+      _ <- keys.delete(key)
+      _ <- keys.put(newkey)
+      _ <- STM.whenCaseM(expirations.get(key)) { case Some(v) =>
+             expirations.delete(key) *> expirations.put(newkey, v)
+           }
+
+      _ <- STM.whenCaseM(lists.get(key)) { case Some(v) => lists.delete(key) *> lists.put(newkey, v) }
+      _ <- STM.whenCaseM(sets.get(key)) { case Some(v) => sets.delete(key) *> sets.put(newkey, v) }
+      _ <- STM.whenCaseM(strings.get(key)) { case Some(v) => strings.delete(key) *> strings.put(newkey, v) }
+      _ <- STM.whenCaseM(hyperLogLogs.get(key)) { case Some(v) =>
+             hyperLogLogs.delete(key) *> hyperLogLogs.put(newkey, v)
+           }
+      _ <- STM.whenCaseM(hashes.get(key)) { case Some(v) => hashes.delete(key) *> hashes.put(newkey, v) }
+    } yield ()
+
+  /** Deletes key from underlying data and metadata structures. */
+  private[this] def delete(key: String): USTM[Int] =
+    STM.ifM(keys.contains(key))(
+      for {
+        _ <- STM.whenM(isList(key))(lists.delete(key))
+        _ <- STM.whenM(isSet(key))(sets.delete(key))
+        _ <- STM.whenM(isString(key))(strings.delete(key))
+        _ <- STM.whenM(isHyperLogLog(key))(hyperLogLogs.delete(key))
+        _ <- STM.whenM(isHash(key))(hashes.delete(key))
+        _ <- keys.delete(key)
+        _ <- expirations.delete(key)
+      } yield 1,
+      STM.succeedNow(0)
+    )
+
+  /** Deletes all expired keys */
+  private def clearExpired(now: Instant): USTM[Unit] =
+    expirations.foreach { (key, exp) =>
+      val ttl = Duration.fromInterval(now, exp).toMillis
+      if (ttl <= 0) delete(key).unit
+      else STM.unit
+    }
+
+  /**
    * Returns the time-to-live of a key, if any.
    *  @return `Duration` between the key's expiration and the current time.
    */
   private[this] def ttlOf(key: String, now: Instant): USTM[Option[Duration]] =
     expirations.get(key).flatMap {
-      case Some(exp) => STM.some(Duration.fromInterval(exp, now))
+      case Some(exp) => STM.some(Duration.fromInterval(now, exp))
       case None      => STM.none
     }
 
@@ -1320,4 +1348,3 @@ private[redis] object TestExecutor {
   }
 
 }
-
