@@ -10,7 +10,8 @@ import zio.schema.codec.Codec
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ Chunk, ZIO, ZLayer }
+import zio.test.environment.TestClock
+import zio.{ Chunk, ZIO, ZLayer, clock }
 
 trait KeysSpec extends BaseSpec {
 
@@ -209,22 +210,24 @@ trait KeysSpec extends BaseSpec {
             _         <- set(key, value)
             exp       <- pExpire(key, 2000.millis)
             response1 <- exists(key)
-            _         <- ZIO.sleep(2050.millis)
+            fiber     <- ZIO.sleep(2050.millis).fork <* TestClock.adjust(2050.millis)
+            _         <- fiber.join
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
-        } @@ eventually,
+        },
         testM("set key expiration with pExpireAt command") {
           for {
             key       <- uuid
             value     <- uuid
-            expiresAt <- instantOf(2000)
+            expiresAt <- clock.instant.map(_.plusMillis(2000.millis.toMillis))
             _         <- set(key, value)
             exp       <- pExpireAt(key, expiresAt)
             response1 <- exists(key)
-            _         <- ZIO.sleep(2050.millis)
+            fiber     <- ZIO.sleep(2050.millis).fork <* TestClock.adjust(2050.millis)
+            _         <- fiber.join
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
-        } @@ eventually,
+        },
         testM("expire followed by persist") {
           for {
             key       <- uuid
@@ -238,14 +241,15 @@ trait KeysSpec extends BaseSpec {
           for {
             key       <- uuid
             value     <- uuid
-            expiresAt <- instantOf(2000)
+            expiresAt <- clock.instant.map(_.plusMillis(2000.millis.toMillis))
             _         <- set(key, value)
             exp       <- expireAt(key, expiresAt)
             response1 <- exists(key)
-            _         <- ZIO.sleep(2050.millis)
+            fiber     <- ZIO.sleep(2050.millis).fork <* TestClock.adjust(2050.millis)
+            _         <- fiber.join
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
-        } @@ eventually
+        }
       ),
       suite("renaming")(
         testM("rename existing key") {

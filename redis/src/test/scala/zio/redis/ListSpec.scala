@@ -2,16 +2,16 @@ package zio.redis
 
 import java.util.concurrent.TimeUnit
 
+import zio.Chunk
 import zio.clock.{ Clock, currentTime }
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Has }
+import zio.test.environment.TestClock
 
 trait ListSpec extends BaseSpec {
-  val listSuite
-    : Spec[Has[Clock.Service] with Has[RedisExecutor.Service], TestFailure[java.io.Serializable], TestSuccess] =
+  val listSuite: Spec[Clock with TestClock with RedisExecutor, TestFailure[java.io.Serializable], TestSuccess] =
     suite("lists")(
       suite("pop")(
         testM("lPop non-empty list") {
@@ -179,13 +179,15 @@ trait ListSpec extends BaseSpec {
       suite("blocking poppush")(
         testM("brPopLPush") {
           for {
-            key  <- uuid
-            dest <- uuid
-            _    <- rPush(key, "one", "two", "three")
-            _    <- rPush(dest, "four")
-            _    <- brPopLPush[String, String, String](key, dest, 1.seconds)
-            r    <- lRange[String, String](key, 0 to -1)
-            l    <- lRange[String, String](dest, 0 to -1)
+            key   <- uuid
+            dest  <- uuid
+            _     <- rPush(key, "one", "two", "three")
+            _     <- rPush(dest, "four")
+            fiber <- brPopLPush[String, String, String](key, dest, 1.seconds).fork
+            _     <- TestClock.adjust(1.second)
+            _     <- fiber.join
+            r     <- lRange[String, String](key, 0 to -1)
+            l     <- lRange[String, String](dest, 0 to -1)
           } yield assert(r)(equalTo(Chunk("one", "two"))) && assert(l)(equalTo(Chunk("three", "four")))
         },
         testM("brPopLPush block for 1 second when source does not exist") {
@@ -194,7 +196,9 @@ trait ListSpec extends BaseSpec {
             dest    <- uuid
             _       <- rPush(dest, "four")
             st      <- currentTime(TimeUnit.SECONDS)
-            s       <- brPopLPush[String, String, String](key, dest, 1.seconds)
+            fiber   <- brPopLPush[String, String, String](key, dest, 1.seconds).fork
+            _       <- TestClock.adjust(1.second)
+            s       <- fiber.join
             endTime <- currentTime(TimeUnit.SECONDS)
           } yield assert(s)(isNone) && assert(endTime - st)(isGreaterThanEqualTo(1L))
         },
@@ -401,7 +405,9 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- blPop[String, String](key)(1.second).some
+            fiber      <- blPop[String, String](key)(1.second).fork
+            _          <- TestClock.adjust(1.second)
+            popped     <- fiber.join.some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("c"))
@@ -411,7 +417,9 @@ trait ListSpec extends BaseSpec {
             empty      <- uuid
             nonEmpty   <- uuid
             _          <- lPush(nonEmpty, "a", "b", "c")
-            popped     <- blPop[String, String](empty, nonEmpty)(1.second).some
+            fiber      <- blPop[String, String](empty, nonEmpty)(1.second).fork
+            _          <- TestClock.adjust(1.second)
+            popped     <- fiber.join.some
             (src, elem) = popped
           } yield assert(src)(equalTo(nonEmpty)) &&
             assert(elem)(equalTo("c"))
@@ -419,14 +427,18 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key    <- uuid
-            popped <- blPop[String, String](key)(1.second)
+            fiber  <- blPop[String, String](key)(1.second).fork
+            _      <- TestClock.adjust(1.second)
+            popped <- fiber.join
           } yield assert(popped)(isNone)
         },
         testM("from multiple empty lists") {
           for {
             first  <- uuid
             second <- uuid
-            popped <- blPop[String, String](first, second)(1.second)
+            fiber  <- blPop[String, String](first, second)(1.second).fork
+            _      <- TestClock.adjust(1.second)
+            popped <- fiber.join
           } yield assert(popped)(isNone)
         },
         testM("from non-empty list with timeout 0s") {
@@ -452,7 +464,9 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- brPop[String, String](key)(1.second).some
+            fiber      <- brPop[String, String](key)(1.second).fork
+            _          <- TestClock.adjust(1.second)
+            popped     <- fiber.join.some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) &&
             assert(elem)(equalTo("a"))
@@ -470,14 +484,18 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key    <- uuid
-            popped <- brPop[String, String](key)(1.second)
+            fiber  <- brPop[String, String](key)(1.second).fork
+            _      <- TestClock.adjust(1.second)
+            popped <- fiber.join
           } yield assert(popped)(isNone)
         },
         testM("from multiple empty lists") {
           for {
             first  <- uuid
             second <- uuid
-            popped <- brPop[String, String](first, second)(1.second)
+            fiber  <- brPop[String, String](first, second)(1.second).fork
+            _      <- TestClock.adjust(1.second)
+            popped <- fiber.join
           } yield assert(popped)(isNone)
         },
         testM("from non-empty list with timeout 0s") {
@@ -749,7 +767,9 @@ trait ListSpec extends BaseSpec {
             destination <- uuid
             _           <- rPush(destination, "d")
             startTime   <- currentTime(TimeUnit.SECONDS)
-            moved       <- blMove[String, String, String](source, destination, Side.Left, Side.Right, 1.second)
+            fiber       <- blMove[String, String, String](source, destination, Side.Left, Side.Right, 1.second).fork
+            _           <- TestClock.adjust(1.second)
+            moved       <- fiber.join
             endTime     <- currentTime(TimeUnit.SECONDS)
           } yield assert(moved)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
         }
