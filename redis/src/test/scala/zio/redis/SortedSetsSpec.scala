@@ -1029,7 +1029,7 @@ trait SortedSetsSpec extends BaseSpec {
             remResult <- zRemRangeByRank(key, 1 to 2)
           } yield assert(remResult)(equalTo(0L))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRemRangeByScore")(
         testM("non-empty set") {
           for {
