@@ -1162,7 +1162,7 @@ trait SortedSetsSpec extends BaseSpec {
                  )
             scoreRange   = ScoreRange(ScoreMinimum.Closed(2000), ScoreMaximum.Open(2500))
             rangeResult <- zRevRangeByScore[String, String](key, scoreRange, Some(Limit(1, 2)))
-          } yield assert(rangeResult.toList)(equalTo(List("Nokia")))
+          } yield assert(rangeResult.toList)(equalTo(List("Sunsui", "Nokia")))
         },
         testM("empty set") {
           for {
@@ -1171,7 +1171,7 @@ trait SortedSetsSpec extends BaseSpec {
             rangeResult <- zRevRangeByScore[String, String](key, scoreRange)
           } yield assert(rangeResult)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRevRangeByScoreWithScores")(
         testM("non-empty set") {
           for {
@@ -1199,7 +1199,7 @@ trait SortedSetsSpec extends BaseSpec {
             _           <- zAdd(key)(samsung, nokia, micromax, sunsui, nicroSoft, lg)
             scoreRange   = ScoreRange(ScoreMinimum.Closed(2000), ScoreMaximum.Open(2500))
             rangeResult <- zRevRangeByScoreWithScores[String, String](key, scoreRange, Some(Limit(1, 2)))
-          } yield assert(rangeResult.toList)(equalTo(List(nokia)))
+          } yield assert(rangeResult.toList)(equalTo(List(sunsui, nokia)))
         },
         testM("empty set") {
           for {
@@ -1208,7 +1208,7 @@ trait SortedSetsSpec extends BaseSpec {
             rangeResult <- zRevRangeByScoreWithScores[String, String](key, scoreRange)
           } yield assert(rangeResult)(isEmpty)
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRevRank")(
         testM("non-empty set") {
           for {

@@ -1584,6 +1584,74 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(result)
         )
 
+      case api.SortedSets.ZRevRangeByScore =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-inf"                 => ScoreMinimum.Infinity
+          case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
+          case s if s.startsWith("[") => ScoreMinimum.Closed(s.drop(1).toDouble)
+        }
+
+        val max = input(2).asString match {
+          case "+inf"                 => ScoreMaximum.Infinity
+          case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
+          case s if s.startsWith("[") => ScoreMaximum.Closed(s.drop(1).toDouble)
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        val withScoresOption = input.map(_.asString).indexOf("WITHSCORES") match {
+          case -1 => false
+          case _  => true
+        }
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+              offset <- offsetOption
+              count  <- countOption
+            } yield {
+              scoreMap.toArray
+                .sortBy(_._2).reverse
+                .slice(offset.toInt, offset.toInt + count.toInt)
+            }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2).reverse)
+
+            minPredicate = (s: Double) =>
+              min match {
+                case _: ScoreMinimum.Infinity.type => true
+                case ScoreMinimum.Open(key)        => s < key
+                case ScoreMinimum.Closed(key)      => s <= key
+              }
+
+            maxPredicate = (s: Double) =>
+              max match {
+                case _: ScoreMaximum.Infinity.type => true
+                case ScoreMaximum.Open(key)        => s > key
+                case ScoreMaximum.Closed(key)      => s >= key
+              }
+
+            filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
+
+            result =
+              if (withScoresOption)
+                Chunk.fromIterable(filtered.flatMap { case (k, s) => bulkString(k) :: bulkString(s.toString) :: Nil })
+              else
+                Chunk.fromIterable(filtered.map { case (k, _) => bulkString(k) })
+
+          } yield RespValue.Array(result)
+        )
+
       case api.SortedSets.ZRemRangeByScore =>
         val key = input(0).asString
 
