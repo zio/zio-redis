@@ -6,7 +6,7 @@ import scalafix.sbt.ScalafixPlugin.autoImport._
 
 object BuildHelper {
   val Scala212 = "2.12.13"
-  val Scala213 = "2.13.5"
+  val Scala213 = "2.13.6"
   val Zio      = "1.0.7"
 
   def buildInfoSettings(packageName: String) =
