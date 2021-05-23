@@ -10,10 +10,7 @@ inThisBuild(
     developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
-    ),
-    pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
-    pgpPublicRing := file("/tmp/public.asc"),
-    pgpSecretRing := file("/tmp/secret.asc")
+    )
   )
 )
 
@@ -26,7 +23,7 @@ addCommandAlias("fixCheck", "scalafixAll --check")
 lazy val root =
   project
     .in(file("."))
-    .settings(skip in publish := true)
+    .settings(publish / skip := true)
     .aggregate(redis, benchmarks, example)
 
 lazy val redis =
@@ -38,7 +35,7 @@ lazy val redis =
     .settings(
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
-        "dev.zio" %% "zio-logging"  % "0.5.8",
+        "dev.zio" %% "zio-logging"  % "0.5.9",
         "dev.zio" %% "zio-schema"   % "0.0.5",
         "dev.zio" %% "zio-test"     % Zio % Test,
         "dev.zio" %% "zio-test-sbt" % Zio % Test
@@ -52,13 +49,13 @@ lazy val benchmarks =
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
-      skip in publish := true,
+      publish / skip := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.13.1",
         "io.chrisdavenport" %% "rediculous"         % "0.0.12",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
-      scalacOptions in Compile := Seq("-Xlint:unused")
+      Compile / scalacOptions := Seq("-Xlint:unused")
     )
 
 lazy val example =
@@ -67,7 +64,7 @@ lazy val example =
     .settings(stdSettings("example"))
     .dependsOn(redis)
     .settings(
-      skip in publish := true,
+      publish / skip := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
@@ -75,10 +72,10 @@ lazy val example =
         "dev.zio"                      %% "zio-streams"                   % Zio,
         "dev.zio"                      %% "zio-config-magnolia"           % "1.0.5",
         "dev.zio"                      %% "zio-config-typesafe"           % "1.0.5",
-        "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC4",
+        "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC5",
         "io.circe"                     %% "circe-core"                    % "0.13.0",
         "io.circe"                     %% "circe-generic"                 % "0.13.0",
         "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0"
       ),
-      scalacOptions in Compile := Seq("-Xlint:unused")
+      Compile / scalacOptions := Seq("-Xlint:unused")
     )
