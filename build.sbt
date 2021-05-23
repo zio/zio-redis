@@ -26,7 +26,7 @@ addCommandAlias("fixCheck", "scalafixAll --check")
 lazy val root =
   project
     .in(file("."))
-    .settings(skip in publish := true)
+    .settings(publish / skip := true)
     .aggregate(redis, benchmarks, example)
 
 lazy val redis =
@@ -52,13 +52,13 @@ lazy val benchmarks =
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
-      skip in publish := true,
+      publish / skip := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "0.13.1",
         "io.chrisdavenport" %% "rediculous"         % "0.0.12",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
       ),
-      scalacOptions in Compile := Seq("-Xlint:unused")
+      Compile / scalacOptions := Seq("-Xlint:unused")
     )
 
 lazy val example =
@@ -67,7 +67,7 @@ lazy val example =
     .settings(stdSettings("example"))
     .dependsOn(redis)
     .settings(
-      skip in publish := true,
+      publish / skip := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
@@ -80,5 +80,5 @@ lazy val example =
         "io.circe"                     %% "circe-generic"                 % "0.13.0",
         "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0"
       ),
-      scalacOptions in Compile := Seq("-Xlint:unused")
+      Compile / scalacOptions := Seq("-Xlint:unused")
     )

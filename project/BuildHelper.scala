@@ -41,7 +41,7 @@ object BuildHelper {
         "com.github.liancheng" %% "organize-imports" % "0.5.0",
         "com.github.vovapolu"  %% "scaluzzi"         % "0.1.18"
       ),
-      parallelExecution in Test := true,
+      Test / parallelExecution := true,
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true
     )
