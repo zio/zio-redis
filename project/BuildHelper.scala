@@ -20,7 +20,7 @@ object BuildHelper {
 
   val Scala212: String = versions("2.12")
   val Scala213: String = versions("2.13")
-  val Zio: String      = "1.0.7"
+  val Zio: String      = "1.0.8"
 
   def buildInfoSettings(packageName: String) =
     Seq(
