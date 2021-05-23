@@ -5,9 +5,22 @@ import BuildInfoKeys._
 import scalafix.sbt.ScalafixPlugin.autoImport._
 
 object BuildHelper {
-  val Scala212 = "2.12.13"
-  val Scala213 = "2.13.5"
-  val Zio      = "1.0.8"
+  private val versions: Map[String, String] = {
+    import org.snakeyaml.engine.v2.api.{ Load, LoadSettings }
+
+    import java.util.{ List => JList, Map => JMap }
+    import scala.jdk.CollectionConverters._
+
+    val doc = new Load(LoadSettings.builder().build())
+      .loadFromReader(scala.io.Source.fromFile(".github/workflows/ci.yml").bufferedReader())
+    val yaml = doc.asInstanceOf[JMap[String, JMap[String, JMap[String, JMap[String, JMap[String, JList[String]]]]]]]
+    val list = yaml.get("jobs").get("test").get("strategy").get("matrix").get("scala").asScala
+    list.map(v => (v.split('.').take(2).mkString("."), v)).toMap
+  }
+
+  val Scala212: String = versions("2.12")
+  val Scala213: String = versions("2.13")
+  val Zio: String      = "1.0.8"
 
   def buildInfoSettings(packageName: String) =
     Seq(
@@ -29,7 +42,7 @@ object BuildHelper {
         "com.github.liancheng" %% "organize-imports" % "0.5.0",
         "com.github.vovapolu"  %% "scaluzzi"         % "0.1.18"
       ),
-      parallelExecution in Test := true,
+      Test / parallelExecution := true,
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true
     )
