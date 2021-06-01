@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Scala and Java
-        uses: olafurpg/setup-scala@v11
+        uses: olafurpg/setup-scala@v12
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Lint code
@@ -42,7 +42,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Scala and Java
-        uses: olafurpg/setup-scala@v11
+        uses: olafurpg/setup-scala@v12
         with:
           java-version: ${{ matrix.java }}
       - name: Cache scala dependencies
@@ -70,7 +70,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Scala and Java 
-        uses: olafurpg/setup-scala@v11
+        uses: olafurpg/setup-scala@v12
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Release artifacts
