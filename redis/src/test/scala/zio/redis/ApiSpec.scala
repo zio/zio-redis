@@ -4,6 +4,7 @@ import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
 import zio.test._
+import zio.test.environment._
 
 object ApiSpec
     extends ConnectionSpec
@@ -32,15 +33,18 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
+      ).provideCustomLayerShared(
+        (Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live
+      ),
       suite("Test Executor")(
         connectionSuite,
+        keysSuite,
         setsSuite,
         hyperLogLogSuite,
         listSuite,
         hashSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
-        .provideCustomLayerShared(RedisExecutor.test ++ Clock.live)
+        .provideSomeLayer[TestEnvironment](RedisExecutor.test)
     )
 }
