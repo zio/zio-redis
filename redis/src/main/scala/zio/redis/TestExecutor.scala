@@ -1499,7 +1499,7 @@ private[redis] final class TestExecutor private (
             filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
 
             _ <- sortedSets.put(key, scoreMap -- filtered)
-          } yield RespValue.Integer(filtered.size.toLong)
+          } yield RespValue.Integer(filtered.length.toLong)
         )
 
       case api.SortedSets.ZRemRangeByRank =>
@@ -1832,6 +1832,22 @@ private[redis] final class TestExecutor private (
             maybeScore = scoreMap.get(member)
           } yield maybeScore.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result.toString))
         )
+
+      case api.SortedSets.Zmscore =>
+        val key     = input(0).asString
+        val members = input.tail.map(_.asString)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap  <- sortedSets.getOrElse(key, Map.empty)
+            maybeScores = members.map(m => scoreMap.get(m))
+            result = maybeScores.map {
+              case Some(v) => RespValue.bulkString(v.toString)
+              case None => RespValue.NullBulkString
+            }
+          } yield RespValue.array(result: _*)
+        )
+
 //
 //      case api.SortedSets.ZUnionStore.name =>
 //        val destination = input(0).asString
@@ -2011,6 +2027,68 @@ private[redis] final class TestExecutor private (
 
               _ <- sortedSets.put(destination, Map.from(destinationResult))
             } yield RespValue.Integer(destinationResult.size.toLong)
+          )
+        )
+
+      case api.SortedSets.ZUnion =>
+        val numKeys     = input(0).asLong.toInt
+        val keys        = input.drop(1).take(numKeys).map(_.asString)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx =>
+              input
+                .drop(idx + 1)
+                .takeWhile(v => Try(v.asString.stripSuffix(".0").toLong).isSuccess)
+                .map(_.asString.stripSuffix(".0").toLong)
+            )
+            .getOrElse(Chunk.empty)
+
+        orInvalidParameter(STM.succeed(!(weights.nonEmpty && weights.size != numKeys)))(
+          orWrongType(forAll(keys)(isSortedSet))(
+            for {
+              sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+
+              unionKeys =
+                sourceSets.map(_.keySet).reduce(_.union(_))
+
+              weightedSets =
+                sourceSets
+                  .map(m => m.filter(m => unionKeys.contains(m._1)))
+                  .zipAll(weights, Map.empty, 1L)
+                  .map { case (scoreMap, weight) => scoreMap.map { case (member, score) => member -> score * weight } }
+
+              unionMap =
+                weightedSets
+                  .flatMap(Chunk.fromIterable)
+                  .groupBy(_._1)
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
+
+              result =
+                if (withScoresOption.isDefined)
+                  Chunk.fromIterable(unionMap.toArray.sortBy(_._2).flatMap { case (v, s) =>
+                    Chunk(bulkString(v), bulkString(s.toString))
+                  })
+                else
+                  Chunk.fromIterable(unionMap.toArray.sortBy(_._2).map(e => bulkString(e._1)))
+                  
+            } yield RespValue.Array(result)
           )
         )
 

@@ -1334,7 +1334,7 @@ trait SortedSetsSpec extends BaseSpec {
             result <- zMScore(key, "Hyderabad")
           } yield assert(result)(equalTo(Chunk(None)))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zUnion")(
         testM("two non-empty sets") {
           for {
@@ -1444,7 +1444,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zUnion[String, String](2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(members)(equalTo(Chunk("M", "N", "P", "O")))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zUnionWithScores")(
         testM("two non-empty sets") {
           for {
@@ -1610,7 +1610,7 @@ trait SortedSetsSpec extends BaseSpec {
             )
           )
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zUnionStore")(
         testM("two non-empty sets") {
           for {
