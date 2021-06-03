@@ -2109,11 +2109,11 @@ private[redis] final class TestExecutor private (
 
               case Some(n) if n > 0 => selectN(asVector, n, randomPick).map[RespValue] { values =>
                 if (withScoresOption.isDefined) {
-                  val flatMemeberScore = values.flatMap { case (m, s) => m :: s.toString :: Nil }
-                  if (flatMemeberScore.isEmpty)
+                  val flatMemberScores = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                  if (flatMemberScores.isEmpty)
                     RespValue.NullArray
                   else
-                    Replies.array(flatMemeberScore)
+                    Replies.array(flatMemberScores)
                 } else {
                   if (values.isEmpty)
                     RespValue.NullArray
