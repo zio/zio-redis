@@ -1764,7 +1764,7 @@ trait SortedSetsSpec extends BaseSpec {
             ret   <- zRandMember[String, String](first, 2)
           } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
         }
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zRandMemberWithScores")(
         testM("key does not exist") {
           for {
@@ -1781,7 +1781,7 @@ trait SortedSetsSpec extends BaseSpec {
             ret   <- zRandMemberWithScores[String, String](first, 2)
           } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
         }
-      ) @@ ApiSpec.testExecutorUnsupported
+      )
     )
 
   private def scanAll(

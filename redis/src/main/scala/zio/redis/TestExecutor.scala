@@ -1412,30 +1412,30 @@ private[redis] final class TestExecutor private (
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
 
             limitKeys = for {
-              offset <- offsetOption
-              count  <- countOption
-            } yield {
-              scoreMap.toArray
-                .sortBy(_._1)
-                .slice(offset.toInt, offset.toInt + count.toInt)
-                .map(_._1)
-            }
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._1)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                            .map(_._1)
+                        }
 
             lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted).reverse
 
             minPredicate = (s: String) =>
-              min match {
-                case LexMinimum.Unbounded   => true
-                case LexMinimum.Open(key)   => s < key
-                case LexMinimum.Closed(key) => s <= key
-              }
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s < key
+                               case LexMinimum.Closed(key) => s <= key
+                             }
 
             maxPredicate = (s: String) =>
-              max match {
-                case LexMaximum.Unbounded   => true
-                case LexMaximum.Open(key)   => s > key
-                case LexMaximum.Closed(key) => s >= key
-              }
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s > key
+                               case LexMaximum.Closed(key) => s >= key
+                             }
 
             filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
 
@@ -1617,29 +1617,30 @@ private[redis] final class TestExecutor private (
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
 
             limitKeys = for {
-              offset <- offsetOption
-              count  <- countOption
-            } yield {
-              scoreMap.toArray
-                .sortBy(_._2).reverse
-                .slice(offset.toInt, offset.toInt + count.toInt)
-            }
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .reverse
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                        }
 
             lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2).reverse)
 
             minPredicate = (s: Double) =>
-              min match {
-                case _: ScoreMinimum.Infinity.type => true
-                case ScoreMinimum.Open(key)        => s < key
-                case ScoreMinimum.Closed(key)      => s <= key
-              }
+                             min match {
+                               case _: ScoreMinimum.Infinity.type => true
+                               case ScoreMinimum.Open(key)        => s < key
+                               case ScoreMinimum.Closed(key)      => s <= key
+                             }
 
             maxPredicate = (s: Double) =>
-              max match {
-                case _: ScoreMaximum.Infinity.type => true
-                case ScoreMaximum.Open(key)        => s > key
-                case ScoreMaximum.Closed(key)      => s >= key
-              }
+                             max match {
+                               case _: ScoreMaximum.Infinity.type => true
+                               case ScoreMaximum.Open(key)        => s > key
+                               case ScoreMaximum.Closed(key)      => s >= key
+                             }
 
             filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
 
@@ -1680,33 +1681,33 @@ private[redis] final class TestExecutor private (
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
 
             limitKeys = for {
-              offset <- offsetOption
-              count  <- countOption
-            } yield {
-              scoreMap.toArray
-                .sortBy(_._2)
-                .slice(offset.toInt, offset.toInt + count.toInt)
-            }
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                        }
 
             lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2))
 
             minPredicate = (s: Double) =>
-              min match {
-                case _: ScoreMinimum.Infinity.type => true
-                case ScoreMinimum.Open(key)        => s > key
-                case ScoreMinimum.Closed(key)      => s >= key
-              }
+                             min match {
+                               case _: ScoreMinimum.Infinity.type => true
+                               case ScoreMinimum.Open(key)        => s > key
+                               case ScoreMinimum.Closed(key)      => s >= key
+                             }
 
             maxPredicate = (s: Double) =>
-              max match {
-                case _: ScoreMaximum.Infinity.type => true
-                case ScoreMaximum.Open(key)        => s < key
-                case ScoreMaximum.Closed(key)      => s <= key
-              }
+                             max match {
+                               case _: ScoreMaximum.Infinity.type => true
+                               case ScoreMaximum.Open(key)        => s < key
+                               case ScoreMaximum.Closed(key)      => s <= key
+                             }
 
             filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
 
-          _ <- sortedSets.put(key, scoreMap -- filtered.map(_._1))
+            _ <- sortedSets.put(key, scoreMap -- filtered.map(_._1))
           } yield RespValue.Integer(filtered.length.toLong)
         )
 
@@ -1839,12 +1840,12 @@ private[redis] final class TestExecutor private (
 
         orWrongType(isSortedSet(key))(
           for {
-            scoreMap  <- sortedSets.getOrElse(key, Map.empty)
+            scoreMap   <- sortedSets.getOrElse(key, Map.empty)
             maybeScores = members.map(m => scoreMap.get(m))
             result = maybeScores.map {
-              case Some(v) => RespValue.bulkString(v.toString)
-              case None => RespValue.NullBulkString
-            }
+                       case Some(v) => RespValue.bulkString(v.toString)
+                       case None    => RespValue.NullBulkString
+                     }
           } yield RespValue.array(result: _*)
         )
 
@@ -2031,8 +2032,8 @@ private[redis] final class TestExecutor private (
         )
 
       case api.SortedSets.ZUnion =>
-        val numKeys     = input(0).asLong.toInt
-        val keys        = input.drop(1).take(numKeys).map(_.asString)
+        val numKeys          = input(0).asLong.toInt
+        val keys             = input.drop(1).take(numKeys).map(_.asString)
         val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
 
         val options = input.map(_.asString).zipWithIndex
@@ -2087,9 +2088,58 @@ private[redis] final class TestExecutor private (
                   })
                 else
                   Chunk.fromIterable(unionMap.toArray.sortBy(_._2).map(e => bulkString(e._1)))
-                  
+
             } yield RespValue.Array(result)
           )
+        )
+
+      case api.SortedSets.ZRandMember =>
+        val key              = input(0).asString
+        val maybeCount        = input.tail.headOption.map(b => b.asString.toLong)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            asVector = scoreMap.toVector
+            res <- maybeCount match {
+              case None => selectOne(asVector, randomPick).map {
+                _.fold(RespValue.NullBulkString: RespValue)(s => RespValue.bulkString(s._1))
+              }
+
+              case Some(n) if n > 0 => selectN(asVector, n, randomPick).map[RespValue] { values =>
+                if (withScoresOption.isDefined) {
+                  val flatMemeberScore = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                  if (flatMemeberScore.isEmpty)
+                    RespValue.NullArray
+                  else
+                    Replies.array(flatMemeberScore)
+                } else {
+                  if (values.isEmpty)
+                    RespValue.NullArray
+                  else
+                    Replies.array(values.map(_._1))
+                }
+              }
+
+              case Some(n) if n < 0 => selectNWithReplacement(asVector, -n, randomPick).map[RespValue] { values =>
+                if (withScoresOption.isDefined) {
+                  val flatMemeberScore = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                  if (flatMemeberScore.isEmpty)
+                    RespValue.NullArray
+                  else
+                    Replies.array(flatMemeberScore)
+                } else {
+                  if (values.isEmpty)
+                    RespValue.NullArray
+                  else
+                    Replies.array(values.map(_._1))
+                }
+              }
+
+              case Some(_) => STM.succeedNow(RespValue.NullBulkString)
+            }
+          } yield res
         )
 
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
