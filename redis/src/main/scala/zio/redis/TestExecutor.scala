@@ -44,6 +44,14 @@ private[redis] final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
+                  case api.SortedSets.BzPopMax =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+
+                  case api.SortedSets.BzPopMin =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+
                   case _ => runCommand(name.asString, command.tail).commit
                 }
     } yield result
@@ -980,38 +988,34 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(values))
         )
 
-//      case api.SortedSets.BzPopMax.name =>
-//        val keys = input.dropRight(1).map(_.asString)
-//
-//        orWrongType(forAll(keys)(isSortedSet))(
-//          (for {
-//            allSets <-
-//              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, SortedSet.empty)))(identity)
-//            nonEmptyLists <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
-//            (sk, ss)      <- STM.fromOption(nonEmptyLists.headOption)
-//            max            = ss.last
-//            newSet         = ss.dropRight(1)
-//            _             <- sortedSets.put(sk, newSet)
-//          } yield Replies.array(Chunk(sk, max.member, max.score.toString)))
-//            .foldM(_ => STM.retry, result => STM.succeed(result))
-//        )
-//
-//      case api.SortedSets.BzPopMin.name =>
-//        val keys = input.dropRight(1).map(_.asString)
-//
-//        orWrongType(forAll(keys)(isSortedSet))(
-//          (for {
-//            allSets <-
-//              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, SortedSet.empty)))(identity)
-//            nonEmptyLists <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
-//            (sk, ss)      <- STM.fromOption(nonEmptyLists.headOption)
-//            min            = ss.head
-//            newSet         = ss.drop(1)
-//            _             <- sortedSets.put(sk, newSet)
-//          } yield Replies.array(Chunk(sk, min.member, min.score.toString)))
-//            .foldM(_ => STM.retry, result => STM.succeed(result))
-//        )
-//
+      case api.SortedSets.BzPopMax =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          (for {
+            allSets <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
+            nonEmpty <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)      <- STM.fromOption(nonEmpty.headOption)
+            (maxM, maxV) = sl.toList.maxBy(_._2)
+            _             <- sortedSets.put(sk, sl - maxM)
+          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.SortedSets.BzPopMin =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          (for {
+            allSets <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
+            nonEmpty <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)      <- STM.fromOption(nonEmpty.headOption)
+            (maxM, maxV) = sl.toList.minBy(_._2)
+            _             <- sortedSets.put(sk, sl - maxM)
+          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
       case api.SortedSets.ZAdd =>
         val key = input(0).asString
 

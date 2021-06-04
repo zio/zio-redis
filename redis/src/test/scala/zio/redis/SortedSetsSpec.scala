@@ -35,7 +35,7 @@ trait SortedSetsSpec extends BaseSpec {
             result  <- bzPopMax[String, String](duration, key)
           } yield assert(result)(isNone)
         )
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("bzPopMin")(
         testM("non-empty set")(
           for {
@@ -58,7 +58,7 @@ trait SortedSetsSpec extends BaseSpec {
             result  <- bzPopMin[String, String](duration, key)
           } yield assert(result)(isNone)
         )
-      ) @@ ApiSpec.testExecutorUnsupported,
+      ),
       suite("zAdd")(
         testM("to empty set") {
           for {
@@ -707,7 +707,7 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(count)(equalTo(0L))
         }
       ),
-      suite("zPop+Max")(
+      suite("zPopMax")(
         testM("non-empty set")(
           for {
             key    <- uuid
