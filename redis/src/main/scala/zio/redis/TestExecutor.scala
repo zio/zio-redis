@@ -1,5 +1,9 @@
 package zio.redis
 
+import scala.annotation.tailrec
+import scala.collection.compat.immutable.LazyList
+import scala.util.Try
+
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
@@ -7,10 +11,6 @@ import zio.redis.RespValue.{ BulkString, bulkString }
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
 import zio.stm.{ random => _, _ }
-
-import scala.annotation.tailrec
-import scala.collection.compat.immutable.LazyList
-import scala.util.Try
 
 private[redis] final class TestExecutor private (
   lists: TMap[String, Chunk[String]],
