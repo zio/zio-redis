@@ -1,7 +1,7 @@
 package zio.redis.options
 
 trait SortedSets {
-  sealed trait Aggregate { self =>
+  sealed trait Aggregate extends Product { self =>
     private[redis] final def stringify: String =
       self match {
         case Aggregate.Max => "MAX"
