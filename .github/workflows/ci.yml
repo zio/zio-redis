@@ -1,5 +1,9 @@
 name: CI
 
+env:
+  JDK_JAVA_OPTIONS: -XX:+PrintCommandLineFlags # JDK_JAVA_OPTIONS is _the_ env. variable to use for modern Java
+  JVM_OPTS: -XX:+PrintCommandLineFlags # for Java 8 only (sadly, it is not modern enough for JDK_JAVA_OPTIONS)
+
 on:
   pull_request:
   push:
@@ -18,9 +22,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Scala and Java
-        uses: olafurpg/setup-scala@v10
+        uses: olafurpg/setup-scala@v12
       - name: Cache scala dependencies
-        uses: coursier/cache-action@v5
+        uses: coursier/cache-action@v6
       - name: Lint code
         run: sbt fmtCheck fixCheck
 
@@ -38,20 +42,27 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Scala and Java
-        uses: olafurpg/setup-scala@v10
+        uses: olafurpg/setup-scala@v12
         with:
           java-version: ${{ matrix.java }}
       - name: Cache scala dependencies
-        uses: coursier/cache-action@v5
+        uses: coursier/cache-action@v6
       - name: Run test containers
         run: docker-compose up -d
       - name: Run tests
         run: sbt ++${{ matrix.scala }}! test
 
+  ci:
+    runs-on: ubuntu-20.04
+    needs: [lint, test]
+    steps:
+      - name: Aggregate outcomes
+        run: echo "build succeeded"
+
   publish:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
-    needs: [lint, test]
+    needs: [ci]
     if: github.event_name != 'pull_request'
     steps:
       - name: Checkout current branch
@@ -59,9 +70,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Scala and Java 
-        uses: olafurpg/setup-scala@v10
+        uses: olafurpg/setup-scala@v12
       - name: Cache scala dependencies
-        uses: coursier/cache-action@v5
+        uses: coursier/cache-action@v6
       - name: Release artifacts
         run: sbt ci-release
         env:

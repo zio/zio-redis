@@ -1,11 +1,11 @@
 package zio.redis
 
 import zio.duration.Duration
-import zio.redis.RedisError.{ProtocolError, WrongType}
+import zio.redis.RedisError.{ ProtocolError, WrongType }
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, ZIO}
+import zio.{ Chunk, ZIO }
 
 trait SortedSetsSpec extends BaseSpec {
   val sortedSetsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
@@ -181,7 +181,7 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(card)(equalTo(2L))
         },
         testM("0 when key doesn't exist") {
-          assertM(zCard("unknown"))(equalTo(0L))
+          assertM(zCard("unknownSet"))(equalTo(0L))
         },
         testM("error when not set") {
           for {
@@ -1162,7 +1162,7 @@ trait SortedSetsSpec extends BaseSpec {
                  )
             scoreRange   = ScoreRange(ScoreMinimum.Closed(2000), ScoreMaximum.Open(2500))
             rangeResult <- zRevRangeByScore[String, String](key, scoreRange, Some(Limit(1, 2)))
-          } yield assert(rangeResult.toList)(equalTo(List("Sunsui", "Nokia")))
+          } yield assert(rangeResult.toList)(equalTo(List("Nokia")))
         },
         testM("empty set") {
           for {
@@ -1199,7 +1199,7 @@ trait SortedSetsSpec extends BaseSpec {
             _           <- zAdd(key)(samsung, nokia, micromax, sunsui, nicroSoft, lg)
             scoreRange   = ScoreRange(ScoreMinimum.Closed(2000), ScoreMaximum.Open(2500))
             rangeResult <- zRevRangeByScoreWithScores[String, String](key, scoreRange, Some(Limit(1, 2)))
-          } yield assert(rangeResult.toList)(equalTo(List(sunsui, nokia)))
+          } yield assert(rangeResult.toList)(equalTo(List(nokia)))
         },
         testM("empty set") {
           for {

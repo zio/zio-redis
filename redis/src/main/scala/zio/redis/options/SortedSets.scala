@@ -67,7 +67,7 @@ trait SortedSets {
       self match {
         case ScoreMaximum.Infinity      => "+inf"
         case ScoreMaximum.Open(value)   => s"($value"
-        case ScoreMaximum.Closed(value) => s"[$value"
+        case ScoreMaximum.Closed(value) => s"$value"
       }
   }
 
@@ -82,7 +82,7 @@ trait SortedSets {
       self match {
         case ScoreMinimum.Infinity      => "-inf"
         case ScoreMinimum.Open(value)   => s"($value"
-        case ScoreMinimum.Closed(value) => s"[$value"
+        case ScoreMinimum.Closed(value) => s"$value"
       }
   }
 

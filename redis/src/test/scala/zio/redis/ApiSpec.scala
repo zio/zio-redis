@@ -32,13 +32,13 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live) @@ TestAspect.ignore,
+      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
       suite("Test Executor")(
-        connectionSuite @@ TestAspect.ignore,
-        setsSuite @@ TestAspect.ignore,
-        hyperLogLogSuite @@ TestAspect.ignore,
-        listSuite @@ TestAspect.ignore,
-        hashSuite @@ TestAspect.ignore,
+        connectionSuite,
+        setsSuite,
+        hyperLogLogSuite,
+        listSuite,
+        hashSuite,
         sortedSetsSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get

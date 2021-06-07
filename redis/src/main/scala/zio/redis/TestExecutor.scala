@@ -988,6 +988,49 @@ private[redis] final class TestExecutor private (
           } yield RespValue.Array(Chunk.fromIterable(values))
         )
 
+      case api.Hashes.HRandField =>
+        val key        = input(0).asString
+        val count      = if (input.size == 1) None else Some(input(1).asString.toLong)
+        val withValues = if (input.size == 3) input(2).asString == "WITHVALUES" else false
+
+        def selectValues[T](n: Long, values: Vector[T]) = {
+          val repeatedAllowed = n < 0
+          val count           = Math.abs(n)
+          val t               = count - values.length
+
+          if (repeatedAllowed && t > 0) {
+            selectNWithReplacement[T](values, count, randomPick)
+          } else {
+            selectN[T](values, count, randomPick)
+          }
+        }
+
+        orWrongType(isHash(key)) {
+          val keysAndValues = for {
+            hash <- hashes.getOrElse(key, Map.empty)
+          } yield (hash.keys map RespValue.bulkString) zip (hash.values map RespValue.bulkString)
+
+          if (count.isDefined && withValues) {
+            for {
+              kvs            <- keysAndValues
+              fields         <- selectValues(count.get, kvs.toVector)
+              fieldsAndValues = fields.flatMap { case (k, v) => Seq(k, v) }
+            } yield RespValue.Array(Chunk.fromIterable(fieldsAndValues))
+          } else if (count.isDefined) {
+            for {
+              kvs    <- keysAndValues
+              keys    = kvs.map(_._1)
+              fields <- selectValues(count.get, keys.toVector)
+            } yield RespValue.Array(Chunk.fromIterable(fields))
+          } else {
+            for {
+              kvs <- keysAndValues
+              keys = kvs.map { case (k, _) => k }
+              key <- selectOne[zio.redis.RespValue.BulkString](keys.toVector, randomPick)
+            } yield key.getOrElse(RespValue.NullBulkString)
+          }
+        }
+
       case api.SortedSets.BzPopMax =>
         val keys = input.dropRight(1).map(_.asString)
 
@@ -995,10 +1038,10 @@ private[redis] final class TestExecutor private (
           (for {
             allSets <-
               STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
-            nonEmpty <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
-            (sk, sl)      <- STM.fromOption(nonEmpty.headOption)
+            nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
             (maxM, maxV) = sl.toList.maxBy(_._2)
-            _             <- sortedSets.put(sk, sl - maxM)
+            _           <- sortedSets.put(sk, sl - maxM)
           } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1009,10 +1052,10 @@ private[redis] final class TestExecutor private (
           (for {
             allSets <-
               STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
-            nonEmpty <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
-            (sk, sl)      <- STM.fromOption(nonEmpty.headOption)
+            nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
             (maxM, maxV) = sl.toList.minBy(_._2)
-            _             <- sortedSets.put(sk, sl - maxM)
+            _           <- sortedSets.put(sk, sl - maxM)
           } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1526,13 +1569,13 @@ private[redis] final class TestExecutor private (
         val min = input(1).asString match {
           case "-inf"                 => ScoreMinimum.Infinity
           case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
-          case s if s.startsWith("[") => ScoreMinimum.Closed(s.drop(1).toDouble)
+          case s                      => ScoreMinimum.Closed(s.toDouble)
         }
 
         val max = input(2).asString match {
           case "+inf"                 => ScoreMaximum.Infinity
           case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
-          case s if s.startsWith("[") => ScoreMaximum.Closed(s.drop(1).toDouble)
+          case s                      => ScoreMaximum.Closed(s.toDouble)
         }
 
         val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
@@ -1594,13 +1637,13 @@ private[redis] final class TestExecutor private (
         val min = input(1).asString match {
           case "-inf"                 => ScoreMinimum.Infinity
           case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
-          case s if s.startsWith("[") => ScoreMinimum.Closed(s.drop(1).toDouble)
+          case s                      => ScoreMinimum.Closed(s.toDouble)
         }
 
         val max = input(2).asString match {
           case "+inf"                 => ScoreMaximum.Infinity
           case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
-          case s if s.startsWith("[") => ScoreMaximum.Closed(s.drop(1).toDouble)
+          case s                      => ScoreMaximum.Closed(s.toDouble)
         }
 
         val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
@@ -1621,7 +1664,7 @@ private[redis] final class TestExecutor private (
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
 
             limitKeys = for {
-                          offset <- offsetOption
+                          offset <- offsetOption.map(_ + 1)
                           count  <- countOption
                         } yield {
                           scoreMap.toArray
@@ -1786,47 +1829,7 @@ private[redis] final class TestExecutor private (
                    }
           } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
         )
-//
-//      case api.SortedSets.ZScan.name =>
-//        val key   = input.head.asString
-//        val start = input(1).asString.toInt
-//
-//        val maybeRegex =
-//          if (input.size > 2) input(2).asString match {
-//            case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
-//            case _       => None
-//          }
-//          else None
-//
-//        def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
-//          key.asString match {
-//            case "COUNT" => Some(value.asString.toInt)
-//            case _       => None
-//          }
-//
-//        val maybeCount =
-//          if (input.size > 4) maybeGetCount(input(4), input(5))
-//          else if (input.size > 2) maybeGetCount(input(2), input(3))
-//          else None
-//
-//        val end = start + maybeCount.getOrElse(10)
-//
-//        orWrongType(isSortedSet(key))(
-//          for {
-//            set <- sortedSets.getOrElse(key, SortedSet.empty)
-//            filtered =
-//              maybeRegex.map(regex => set.filter(ms => regex.pattern.matcher(ms.member).matches)).getOrElse(set)
-//            resultSet = filtered.slice(start, end)
-//            nextIndex = if (filtered.size <= end) 0 else end
-//            results =
-//              RespValue.Array(
-//                Chunk
-//                  .fromIterable(resultSet)
-//                  .flatMap(ms => Chunk(RespValue.bulkString(ms.member), RespValue.bulkString(ms.score.toString)))
-//              )
-//          } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
-//        )
-//
+
       case api.SortedSets.ZScore =>
         val key    = input(0).asString
         val member = input(1).asString
@@ -1853,53 +1856,6 @@ private[redis] final class TestExecutor private (
           } yield RespValue.array(result: _*)
         )
 
-//
-//      case api.SortedSets.ZUnionStore.name =>
-//        val destination = input(0).asString
-//        val numKeys     = input(1).asLong.toInt
-//        val keys        = input.drop(2).take(numKeys).map(_.asString)
-//
-//        val options = input.map(_.asString).zipWithIndex
-//        val aggregate =
-//          options
-//            .find(_._1 == "AGGREGATE")
-//            .map(_._2)
-//            .map(idx => input(idx + 1).asString)
-//            .map {
-//              case "SUM" => (_: Double) + (_: Double)
-//              case "MIN" => Math.min(_: Double, _: Double)
-//              case "MAX" => Math.max(_: Double, _: Double)
-//            }
-//            .getOrElse((_: Double) + (_: Double))
-//
-//        val weights =
-//          options
-//            .find(_._1 == "WEIGHTS")
-//            .map(_._2)
-//            .map(idx => input.drop(idx + 1).tail.map(_.asLong))
-//            .getOrElse(Chunk.empty)
-//
-//        orWrongType(forAll(keys :+ destination)(isSortedSet))(
-//          for {
-//            sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, SortedSet.empty))
-//
-//            weightedSets =
-//              sourceSets
-//                .zipAll(weights, SortedSet.empty[MemberScore], 1L)
-//                .map { case (set, weight) => set.map(ms => ms.copy(score = ms.score * weight)) }
-//
-//            destinationResult =
-//              weightedSets
-//                .flatMap(Chunk.fromIterable)
-//                .groupBy(_.member)
-//                .map { case (member, memberScores) =>
-//                  MemberScore(memberScores.map(_.score).fold(0.0)(aggregate), member)
-//                }
-//
-//            _ <- sortedSets.put(destination, SortedSet.from(destinationResult))
-//          } yield RespValue.Integer(destinationResult.size.toLong)
-//        )
-//
       case api.SortedSets.ZRange =>
         val key              = input.head.asString
         val start            = input(1).asString.toInt
@@ -2099,50 +2055,53 @@ private[redis] final class TestExecutor private (
 
       case api.SortedSets.ZRandMember =>
         val key              = input(0).asString
-        val maybeCount        = input.tail.headOption.map(b => b.asString.toLong)
+        val maybeCount       = input.tail.headOption.map(b => b.asString.toLong)
         val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
 
         orWrongType(isSortedSet(key))(
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
-            asVector = scoreMap.toVector
+            asVector  = scoreMap.toVector
             res <- maybeCount match {
-              case None => selectOne(asVector, randomPick).map {
-                _.fold(RespValue.NullBulkString: RespValue)(s => RespValue.bulkString(s._1))
-              }
+                     case None =>
+                       selectOne(asVector, randomPick).map {
+                         _.fold(RespValue.NullBulkString: RespValue)(s => RespValue.bulkString(s._1))
+                       }
 
-              case Some(n) if n > 0 => selectN(asVector, n, randomPick).map[RespValue] { values =>
-                if (withScoresOption.isDefined) {
-                  val flatMemberScores = values.flatMap { case (m, s) => m :: s.toString :: Nil }
-                  if (flatMemberScores.isEmpty)
-                    RespValue.NullArray
-                  else
-                    Replies.array(flatMemberScores)
-                } else {
-                  if (values.isEmpty)
-                    RespValue.NullArray
-                  else
-                    Replies.array(values.map(_._1))
-                }
-              }
+                     case Some(n) if n > 0 =>
+                       selectN(asVector, n, randomPick).map[RespValue] { values =>
+                         if (withScoresOption.isDefined) {
+                           val flatMemberScores = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                           if (flatMemberScores.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(flatMemberScores)
+                         } else {
+                           if (values.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(values.map(_._1))
+                         }
+                       }
 
-              case Some(n) if n < 0 => selectNWithReplacement(asVector, -n, randomPick).map[RespValue] { values =>
-                if (withScoresOption.isDefined) {
-                  val flatMemeberScore = values.flatMap { case (m, s) => m :: s.toString :: Nil }
-                  if (flatMemeberScore.isEmpty)
-                    RespValue.NullArray
-                  else
-                    Replies.array(flatMemeberScore)
-                } else {
-                  if (values.isEmpty)
-                    RespValue.NullArray
-                  else
-                    Replies.array(values.map(_._1))
-                }
-              }
+                     case Some(n) if n < 0 =>
+                       selectNWithReplacement(asVector, -n, randomPick).map[RespValue] { values =>
+                         if (withScoresOption.isDefined) {
+                           val flatMemeberScore = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                           if (flatMemeberScore.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(flatMemeberScore)
+                         } else {
+                           if (values.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(values.map(_._1))
+                         }
+                       }
 
-              case Some(_) => STM.succeedNow(RespValue.NullBulkString)
-            }
+                     case Some(_) => STM.succeedNow(RespValue.NullBulkString)
+                   }
           } yield res
         )
 
@@ -2173,12 +2132,11 @@ private[redis] final class TestExecutor private (
   // check whether the key is a list or unused.
   private[this] def isList(name: String): STM[Nothing, Boolean] =
     for {
-      isString    <- strings.contains(name)
-      isSet       <- sets.contains(name)
-      isHyper     <- hyperLogLogs.contains(name)
-      isHash      <- hashes.contains(name)
-      isSortedSet <- sortedSets.contains(name)
-    } yield !isString && !isSet && !isHyper && !isHash && !isSortedSet
+      isString <- strings.contains(name)
+      isSet    <- sets.contains(name)
+      isHyper  <- hyperLogLogs.contains(name)
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isHyper && !isHash
 
   //check whether the key is a hyperLogLog or unused.
   private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
