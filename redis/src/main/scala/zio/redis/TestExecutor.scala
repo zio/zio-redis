@@ -7,7 +7,7 @@ import scala.util.Try
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.BulkString
+import zio.redis.RespValue.{ BulkString, bulkString }
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
 import zio.stm.{ random => _, _ }
@@ -18,7 +18,8 @@ private[redis] final class TestExecutor private (
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
-  hashes: TMap[String, Map[String, String]]
+  hashes: TMap[String, Map[String, String]],
+  sortedSets: TMap[String, Map[String, Double]]
 ) extends RedisExecutor.Service {
 
   override val codec: Codec = StringUtf8Codec
@@ -40,6 +41,14 @@ private[redis] final class TestExecutor private (
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
                   case api.Lists.BlMove =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+
+                  case api.SortedSets.BzPopMax =>
+                    val timeout = command.tail.last.asString.toInt
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+
+                  case api.SortedSets.BzPopMin =>
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
@@ -271,27 +280,31 @@ private[redis] final class TestExecutor private (
         )
 
       case api.Sets.SScan =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2) input(2).asString match {
+            case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+            case _       => None
+          }
+          else None
+
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
             case _       => None
           }
 
-        val key = input.head.asString
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
 
         orWrongType(isSet(key))(
           {
-            val start = input(1).asString.toInt
-            val maybeRegex = if (input.size > 2) input(2).asString match {
-              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
-              case _       => None
-            }
-            else None
-            val maybeCount =
-              if (input.size > 4) maybeGetCount(input(4), input(5))
-              else if (input.size > 2) maybeGetCount(input(2), input(3))
-              else None
-            val end = start + maybeCount.getOrElse(10)
             for {
               set      <- sets.getOrElse(key, Set.empty)
               filtered  = maybeRegex.map(regex => set.filter(s => regex.pattern.matcher(s).matches)).getOrElse(set)
@@ -893,36 +906,39 @@ private[redis] final class TestExecutor private (
         )
 
       case api.Hashes.HScan =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2)
+            input(2).asString match {
+              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+              case _       => None
+            }
+          else None
+
         def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
           key.asString match {
             case "COUNT" => Some(value.asString.toInt)
             case _       => None
           }
 
-        val key = input.head.asString
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
 
         orWrongType(isHash(key))(
-          {
-            val start = input(1).asString.toInt
-            val maybeRegex = if (input.size > 2) input(2).asString match {
-              case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
-              case _       => None
-            }
-            else None
-            val maybeCount =
-              if (input.size > 4) maybeGetCount(input(4), input(5))
-              else if (input.size > 2) maybeGetCount(input(2), input(3))
-              else None
-            val end = start + maybeCount.getOrElse(10)
-            for {
-              set <- hashes.getOrElse(key, Map.empty)
-              filtered =
-                maybeRegex.map(regex => set.filter { case (k, _) => regex.pattern.matcher(k).matches }).getOrElse(set)
-              resultSet = filtered.slice(start, end)
-              nextIndex = if (filtered.size <= end) 0 else end
-              results   = Replies.array(resultSet.flatMap { case (k, v) => Iterable(k, v) })
-            } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
-          }
+          for {
+            set <- hashes.getOrElse(key, Map.empty)
+            filtered =
+              maybeRegex.map(regex => set.filter { case (k, _) => regex.pattern.matcher(k).matches }).getOrElse(set)
+            resultSet = filtered.slice(start, end)
+            nextIndex = if (filtered.size <= end) 0 else end
+            results   = Replies.array(resultSet.flatMap { case (k, v) => Iterable(k, v) })
+          } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
         )
 
       case api.Hashes.HSet =>
@@ -1015,6 +1031,1080 @@ private[redis] final class TestExecutor private (
           }
         }
 
+      case api.SortedSets.BzPopMax =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          (for {
+            allSets <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
+            nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
+            (maxM, maxV) = sl.toList.maxBy(_._2)
+            _           <- sortedSets.put(sk, sl - maxM)
+          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.SortedSets.BzPopMin =>
+        val keys = input.dropRight(1).map(_.asString)
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          (for {
+            allSets <-
+              STM.foreach(keys.map(key => STM.succeedNow(key) &&& sortedSets.getOrElse(key, Map.empty)))(identity)
+            nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
+            (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
+            (maxM, maxV) = sl.toList.minBy(_._2)
+            _           <- sortedSets.put(sk, sl - maxM)
+          } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
+        )
+
+      case api.SortedSets.ZAdd =>
+        val key = input(0).asString
+
+        val updateOption = input.map(_.asString).find {
+          case "XX" => true
+          case "NX" => true
+          case "LT" => true
+          case "GT" => true
+          case _    => false
+        }
+
+        val changedOption = input.map(_.asString).find {
+          case "CH" => true
+          case _    => false
+        }
+
+        val incrOption = input.map(_.asString).find {
+          case "INCR" => true
+          case _      => false
+        }
+
+        val optionsCount = updateOption.map(_ => 1).getOrElse(0) + changedOption.map(_ => 1).getOrElse(0) + incrOption
+          .map(_ => 1)
+          .getOrElse(0)
+
+        val values =
+          Chunk.fromIterator(
+            input
+              .drop(1 + optionsCount)
+              .map(_.asString)
+              .grouped(2)
+              .map(g => MemberScore(g(0).toDouble, g(1)))
+          )
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            valuesToAdd = updateOption.map {
+                            case "XX" =>
+                              values.filter(ms => scoreMap.contains(ms.member))
+
+                            case "NX" =>
+                              values.filter(ms => !scoreMap.contains(ms.member))
+
+                            case "LT" =>
+                              values.filter(ms =>
+                                scoreMap.exists { case (member, score) =>
+                                  (member == ms.member && score > ms.score) || (ms.member != member)
+                                }
+                              )
+
+                            case "GT" =>
+                              values.filter(ms =>
+                                scoreMap.exists { case (member, score) =>
+                                  (member == ms.member && score < ms.score) || (ms.member != member)
+                                }
+                              )
+                          }.getOrElse(values)
+
+            newScoreMap =
+              if (incrOption.isDefined) {
+                val ms = values.head
+                scoreMap + (ms.member -> (scoreMap.getOrElse(ms.member, 0d) + ms.score))
+              } else
+                scoreMap ++ valuesToAdd.map(ms => ms.member -> ms.score)
+
+            incrScore = incrOption.map { _ =>
+                          val ms = values.head
+                          scoreMap.getOrElse(ms.member, 0d) + ms.score
+                        }
+
+            valuesChanged = changedOption.map(_ => valuesToAdd.size).getOrElse(newScoreMap.size - scoreMap.size)
+            _            <- sortedSets.put(key, newScoreMap)
+          } yield incrScore.fold[RespValue](RespValue.Integer(valuesChanged.toLong))(result =>
+            RespValue.bulkString(result.toString)
+          )
+        )
+
+      case api.SortedSets.ZCard =>
+        val key = input(0).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+          } yield RespValue.Integer(scoreMap.size.toLong)
+        )
+
+      case api.SortedSets.ZCount =>
+        val key = input(0).asString
+        val min = input(1).asLong
+        val max = input(2).asLong
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            result    = scoreMap.filter { case (_, score) => score >= min && score <= max }
+          } yield RespValue.Integer(result.size.toLong)
+        )
+
+      case api.SortedSets.ZDiff =>
+        val numkeys          = input(0).asLong
+        val keys             = input.drop(1).take(numkeys.toInt).map(_.asString)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        orWrongType(forAll(keys)(isSortedSet))(
+          for {
+            sourceMaps <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+            diffMap     = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet) }
+            result =
+              if (withScoresOption.isDefined)
+                Chunk.fromIterable(diffMap.toArray.flatMap { case (v, s) =>
+                  Chunk(bulkString(v), bulkString(s.toString))
+                })
+              else
+                Chunk.fromIterable(diffMap.keys.map(bulkString))
+          } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZDiffStore =>
+        val destination = input(0).asString
+        val numkeys     = input(1).asLong
+        val keys        = input.drop(2).take(numkeys.toInt).map(_.asString)
+
+        orWrongType(forAll(keys :+ destination)(isSortedSet))(
+          for {
+            sourceMaps <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+            diffMap     = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet) }
+            _          <- sortedSets.put(destination, diffMap)
+          } yield RespValue.Integer(diffMap.size.toLong)
+        )
+
+      case api.SortedSets.ZIncrBy =>
+        val key       = input(0).asString
+        val increment = input(1).asLong
+        val member    = input(2).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            resultScore = scoreMap
+                            .get(member)
+                            .map(score => score + increment)
+                            .getOrElse(increment.toDouble)
+
+            resultSet = scoreMap + (member -> resultScore)
+            _        <- sortedSets.put(key, resultSet)
+          } yield RespValue.bulkString(resultScore.toString)
+        )
+
+      case api.SortedSets.ZInter =>
+        val numKeys          = input(0).asLong
+        val keys             = input.drop(1).take(numKeys.toInt).map(_.asString)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx =>
+              input
+                .drop(idx + 1)
+                .takeWhile(v => Try(v.asString.stripSuffix(".0").toLong).isSuccess)
+                .map(_.asString.stripSuffix(".0").toLong)
+            )
+            .getOrElse(Chunk.empty)
+
+        orInvalidParameter(STM.succeed(!(weights.nonEmpty && weights.size != numKeys)))(
+          orWrongType(forAll(keys)(isSortedSet))(
+            for {
+              sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+
+              intersectionKeys =
+                sourceSets.map(_.keySet).reduce(_.intersect(_))
+
+              weightedSets =
+                sourceSets
+                  .map(m => m.filter(m => intersectionKeys.contains(m._1)))
+                  .zipAll(weights, Map.empty, 1L)
+                  .map { case (scoreMap, weight) => scoreMap.map { case (member, score) => member -> score * weight } }
+
+              intersectionMap =
+                weightedSets
+                  .flatMap(Chunk.fromIterable)
+                  .groupBy(_._1)
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
+
+              result =
+                if (withScoresOption.isDefined)
+                  Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).flatMap { case (v, s) =>
+                    Chunk(bulkString(v), bulkString(s.toString))
+                  })
+                else
+                  Chunk.fromIterable(intersectionMap.toArray.sortBy(_._2).map(e => bulkString(e._1)))
+
+            } yield RespValue.Array(result)
+          )
+        )
+
+      case api.SortedSets.ZInterStore =>
+        val destination = input(0).asString
+        val numKeys     = input(1).asLong.toInt
+        val keys        = input.drop(2).take(numKeys).map(_.asString)
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx =>
+              input
+                .drop(idx + 1)
+                .takeWhile(v => Try(v.asString.stripSuffix(".0").toLong).isSuccess)
+                .map(_.asString.stripSuffix(".0").toLong)
+            )
+            .getOrElse(Chunk.empty)
+
+        orInvalidParameter(STM.succeed(!(weights.nonEmpty && weights.size != numKeys)))(
+          orWrongType(forAll(keys :+ destination)(isSortedSet))(
+            for {
+              sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+
+              intersectionKeys =
+                sourceSets.map(_.keySet).reduce(_.intersect(_))
+
+              weightedSets =
+                sourceSets
+                  .map(m => m.filter(m => intersectionKeys.contains(m._1)))
+                  .zipAll(weights, Map.empty, 1L)
+                  .map { case (scoreMap, weight) => scoreMap.map { case (member, score) => member -> score * weight } }
+
+              destinationResult =
+                weightedSets
+                  .flatMap(Chunk.fromIterable)
+                  .groupBy(_._1)
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
+
+              _ <- sortedSets.put(destination, destinationResult)
+            } yield RespValue.Integer(destinationResult.size.toLong)
+          )
+        )
+
+      case api.SortedSets.ZLexCount =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-"                    => LexMinimum.Unbounded
+          case s if s.startsWith("(") => LexMinimum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMinimum.Closed(s.drop(1))
+        }
+
+        val max = input(2).asString match {
+          case "+"                    => LexMaximum.Unbounded
+          case s if s.startsWith("(") => LexMaximum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMaximum.Closed(s.drop(1))
+        }
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            lexKeys   = scoreMap.keys.toArray.sorted
+
+            minPredicate = (s: String) =>
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s > key
+                               case LexMinimum.Closed(key) => s >= key
+                             }
+
+            maxPredicate = (s: String) =>
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s < key
+                               case LexMaximum.Closed(key) => s <= key
+                             }
+
+            filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
+
+            result = Chunk.fromIterable(filtered.map(bulkString))
+          } yield RespValue.Integer(result.size.toLong)
+        )
+
+      case api.SortedSets.ZRangeByLex =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-"                    => LexMinimum.Unbounded
+          case s if s.startsWith("(") => LexMinimum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMinimum.Closed(s.drop(1))
+        }
+
+        val max = input(2).asString match {
+          case "+"                    => LexMaximum.Unbounded
+          case s if s.startsWith("(") => LexMaximum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMaximum.Closed(s.drop(1))
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                            .map(_._1)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted)
+
+            minPredicate = (s: String) =>
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s > key
+                               case LexMinimum.Closed(key) => s >= key
+                             }
+
+            maxPredicate = (s: String) =>
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s < key
+                               case LexMaximum.Closed(key) => s <= key
+                             }
+
+            filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
+
+            bounds = (min, max) match {
+                       case (LexMinimum.Unbounded, LexMaximum.Unbounded) => filtered
+                       case (LexMinimum.Unbounded, _)                    => filtered.dropRight(1)
+                       case (_, LexMaximum.Unbounded)                    => filtered.drop(1)
+                       case (_, _)                                       => filtered.drop(1).dropRight(1)
+                     }
+
+            result = Chunk.fromIterable(bounds.map(bulkString))
+          } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZRevRangeByLex =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-"                    => LexMinimum.Unbounded
+          case s if s.startsWith("(") => LexMinimum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMinimum.Closed(s.drop(1))
+        }
+
+        val max = input(2).asString match {
+          case "+"                    => LexMaximum.Unbounded
+          case s if s.startsWith("(") => LexMaximum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMaximum.Closed(s.drop(1))
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._1)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                            .map(_._1)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted).reverse
+
+            minPredicate = (s: String) =>
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s < key
+                               case LexMinimum.Closed(key) => s <= key
+                             }
+
+            maxPredicate = (s: String) =>
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s > key
+                               case LexMaximum.Closed(key) => s >= key
+                             }
+
+            filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
+
+            result = Chunk.fromIterable(filtered.map(bulkString))
+          } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZRemRangeByLex =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-"                    => LexMinimum.Unbounded
+          case s if s.startsWith("(") => LexMinimum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMinimum.Closed(s.drop(1))
+        }
+
+        val max = input(2).asString match {
+          case "+"                    => LexMaximum.Unbounded
+          case s if s.startsWith("(") => LexMaximum.Open(s.drop(1))
+          case s if s.startsWith("[") => LexMaximum.Closed(s.drop(1))
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                            .map(_._1)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.keys.toArray.sorted)
+
+            minPredicate = (s: String) =>
+                             min match {
+                               case LexMinimum.Unbounded   => true
+                               case LexMinimum.Open(key)   => s > key
+                               case LexMinimum.Closed(key) => s >= key
+                             }
+
+            maxPredicate = (s: String) =>
+                             max match {
+                               case LexMaximum.Unbounded   => true
+                               case LexMaximum.Open(key)   => s < key
+                               case LexMaximum.Closed(key) => s <= key
+                             }
+
+            filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
+
+            _ <- sortedSets.put(key, scoreMap -- filtered)
+          } yield RespValue.Integer(filtered.length.toLong)
+        )
+
+      case api.SortedSets.ZRemRangeByRank =>
+        val key   = input(0).asString
+        val start = input(1).asLong.toInt
+        val stop  = input(2).asLong.toInt
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            rank      = scoreMap.toArray.sortBy(_._2)
+            result    = rank.slice(start, if (stop < 0) rank.length + stop else stop + 1)
+            _        <- sortedSets.put(key, scoreMap -- result.map(_._1))
+          } yield RespValue.Integer(result.length.toLong)
+        )
+
+      case api.SortedSets.ZRangeByScore =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-inf"                 => ScoreMinimum.Infinity
+          case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
+          case s                      => ScoreMinimum.Closed(s.toDouble)
+        }
+
+        val max = input(2).asString match {
+          case "+inf"                 => ScoreMaximum.Infinity
+          case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
+          case s                      => ScoreMaximum.Closed(s.toDouble)
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        val withScoresOption = input.map(_.asString).indexOf("WITHSCORES") match {
+          case -1 => false
+          case _  => true
+        }
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2))
+
+            minPredicate = (s: Double) =>
+                             min match {
+                               case _: ScoreMinimum.Infinity.type => true
+                               case ScoreMinimum.Open(key)        => s > key
+                               case ScoreMinimum.Closed(key)      => s >= key
+                             }
+
+            maxPredicate = (s: Double) =>
+                             max match {
+                               case _: ScoreMaximum.Infinity.type => true
+                               case ScoreMaximum.Open(key)        => s < key
+                               case ScoreMaximum.Closed(key)      => s <= key
+                             }
+
+            filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
+
+            result =
+              if (withScoresOption)
+                Chunk.fromIterable(filtered.flatMap { case (k, s) => bulkString(k) :: bulkString(s.toString) :: Nil })
+              else
+                Chunk.fromIterable(filtered.map { case (k, _) => bulkString(k) })
+
+          } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZRevRangeByScore =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-inf"                 => ScoreMinimum.Infinity
+          case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
+          case s                      => ScoreMinimum.Closed(s.toDouble)
+        }
+
+        val max = input(2).asString match {
+          case "+inf"                 => ScoreMaximum.Infinity
+          case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
+          case s                      => ScoreMaximum.Closed(s.toDouble)
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        val withScoresOption = input.map(_.asString).indexOf("WITHSCORES") match {
+          case -1 => false
+          case _  => true
+        }
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption.map(_ + 1)
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .reverse
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2).reverse)
+
+            minPredicate = (s: Double) =>
+                             min match {
+                               case _: ScoreMinimum.Infinity.type => true
+                               case ScoreMinimum.Open(key)        => s < key
+                               case ScoreMinimum.Closed(key)      => s <= key
+                             }
+
+            maxPredicate = (s: Double) =>
+                             max match {
+                               case _: ScoreMaximum.Infinity.type => true
+                               case ScoreMaximum.Open(key)        => s > key
+                               case ScoreMaximum.Closed(key)      => s >= key
+                             }
+
+            filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
+
+            result =
+              if (withScoresOption)
+                Chunk.fromIterable(filtered.flatMap { case (k, s) => bulkString(k) :: bulkString(s.toString) :: Nil })
+              else
+                Chunk.fromIterable(filtered.map { case (k, _) => bulkString(k) })
+
+          } yield RespValue.Array(result)
+        )
+
+      case api.SortedSets.ZRemRangeByScore =>
+        val key = input(0).asString
+
+        val min = input(1).asString match {
+          case "-inf"                 => ScoreMinimum.Infinity
+          case s if s.startsWith("(") => ScoreMinimum.Open(s.drop(1).toDouble)
+          case s if s.startsWith("[") => ScoreMinimum.Closed(s.drop(1).toDouble)
+        }
+
+        val max = input(2).asString match {
+          case "+inf"                 => ScoreMaximum.Infinity
+          case s if s.startsWith("(") => ScoreMaximum.Open(s.drop(1).toDouble)
+          case s if s.startsWith("[") => ScoreMaximum.Closed(s.drop(1).toDouble)
+        }
+
+        val limitOptionIdx = input.map(_.asString).indexOf("LIMIT") match {
+          case -1  => None
+          case idx => Some(idx)
+        }
+
+        val offsetOption = limitOptionIdx.map(idx => input(idx + 1).asLong)
+        val countOption  = limitOptionIdx.map(idx => input(idx + 2).asLong)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+
+            limitKeys = for {
+                          offset <- offsetOption
+                          count  <- countOption
+                        } yield {
+                          scoreMap.toArray
+                            .sortBy(_._2)
+                            .slice(offset.toInt, offset.toInt + count.toInt)
+                        }
+
+            lexKeys = limitKeys.getOrElse(scoreMap.toArray.sortBy(_._2))
+
+            minPredicate = (s: Double) =>
+                             min match {
+                               case _: ScoreMinimum.Infinity.type => true
+                               case ScoreMinimum.Open(key)        => s > key
+                               case ScoreMinimum.Closed(key)      => s >= key
+                             }
+
+            maxPredicate = (s: Double) =>
+                             max match {
+                               case _: ScoreMaximum.Infinity.type => true
+                               case ScoreMaximum.Open(key)        => s < key
+                               case ScoreMaximum.Closed(key)      => s <= key
+                             }
+
+            filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
+
+            _ <- sortedSets.put(key, scoreMap -- filtered.map(_._1))
+          } yield RespValue.Integer(filtered.length.toLong)
+        )
+
+      case api.SortedSets.ZPopMin =>
+        val key   = input(0).asString
+        val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            results   = scoreMap.toArray.sortBy { case (_, score) => score }.take(count)
+            _        <- sortedSets.put(key, scoreMap -- results.map(_._1))
+          } yield RespValue.Array(
+            Chunk
+              .fromIterable(results)
+              .flatMap(ms => Chunk(RespValue.bulkString(ms._1), RespValue.bulkString(ms._2.toString.stripSuffix(".0"))))
+          )
+        )
+
+      case api.SortedSets.ZPopMax =>
+        val key   = input(0).asString
+        val count = input.drop(1).headOption.map(_.asString.toInt).getOrElse(1)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            results   = scoreMap.toArray.sortBy { case (_, score) => score }.reverse.take(count)
+            _        <- sortedSets.put(key, scoreMap -- results.map(_._1))
+          } yield RespValue.Array(
+            Chunk
+              .fromIterable(results)
+              .flatMap(ms => Chunk(RespValue.bulkString(ms._1), RespValue.bulkString(ms._2.toString.stripSuffix(".0"))))
+          )
+        )
+
+      case api.SortedSets.ZRank =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            rank = scoreMap.toArray.sortBy(_._2).map(_._1).indexOf(member) match {
+                     case -1  => None
+                     case idx => Some(idx)
+                   }
+          } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
+        )
+
+      case api.SortedSets.ZRem =>
+        val key     = input(0).asString
+        val members = input.tail.map(_.asString)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            newSet    = scoreMap.filterNot { case (v, _) => members.contains(v) }
+            _        <- sortedSets.put(key, newSet)
+          } yield RespValue.Integer(scoreMap.size.toLong - newSet.size.toLong)
+        )
+
+      case api.SortedSets.ZRevRank =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            rank = scoreMap.toArray.sortBy(_._2).reverse.map(_._1).indexOf(member) match {
+                     case -1  => None
+                     case idx => Some(idx)
+                   }
+          } yield rank.fold[RespValue](RespValue.NullBulkString)(result => RespValue.Integer(result.toLong))
+        )
+
+      case api.SortedSets.ZScore =>
+        val key    = input(0).asString
+        val member = input(1).asString
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap  <- sortedSets.getOrElse(key, Map.empty)
+            maybeScore = scoreMap.get(member)
+          } yield maybeScore.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result.toString))
+        )
+
+      case api.SortedSets.Zmscore =>
+        val key     = input(0).asString
+        val members = input.tail.map(_.asString)
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap   <- sortedSets.getOrElse(key, Map.empty)
+            maybeScores = members.map(m => scoreMap.get(m))
+            result = maybeScores.map {
+                       case Some(v) => RespValue.bulkString(v.toString)
+                       case None    => RespValue.NullBulkString
+                     }
+          } yield RespValue.array(result: _*)
+        )
+
+      case api.SortedSets.ZRange =>
+        val key              = input.head.asString
+        val start            = input(1).asString.toInt
+        val end              = input(2).asString.toInt
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            slice =
+              if (end < 0)
+                scoreMap.toArray.sortBy(_._2).slice(start, scoreMap.size + 1 + end)
+              else
+                scoreMap.toArray.sortBy(_._2).slice(start, end + 1)
+
+            result = withScoresOption.fold(slice.map(_._1))(_ =>
+                       slice.flatMap { case (v, s) => Array(v, s.toString.stripSuffix(".0")) }
+                     )
+          } yield RespValue.Array(Chunk.fromIterable(result) map RespValue.bulkString)
+        )
+
+      case api.SortedSets.ZRevRange =>
+        val key              = input.head.asString
+        val start            = input(1).asString.toInt
+        val end              = input(2).asString.toInt
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            slice =
+              if (end < 0)
+                scoreMap.toArray.sortBy(_._2).reverse.slice(start, scoreMap.size + 1 + end)
+              else
+                scoreMap.toArray.sortBy(_._2).reverse.slice(start, end + 1)
+
+            result = withScoresOption.fold(slice.map(_._1))(_ =>
+                       slice.flatMap { case (v, s) => Array(v, s.toString.stripSuffix(".0")) }
+                     )
+          } yield RespValue.Array(Chunk.fromIterable(result) map RespValue.bulkString)
+        )
+
+      case api.SortedSets.ZScan =>
+        val key   = input.head.asString
+        val start = input(1).asString.toInt
+
+        val maybeRegex =
+          if (input.size > 2) input(2).asString match {
+            case "MATCH" => Some(input(3).asString.replace("*", ".*").r)
+            case _       => None
+          }
+          else None
+
+        def maybeGetCount(key: RespValue.BulkString, value: RespValue.BulkString): Option[Int] =
+          key.asString match {
+            case "COUNT" => Some(value.asString.toInt)
+            case _       => None
+          }
+
+        val maybeCount =
+          if (input.size > 4) maybeGetCount(input(4), input(5))
+          else if (input.size > 2) maybeGetCount(input(2), input(3))
+          else None
+
+        val end = start + maybeCount.getOrElse(10)
+
+        orWrongType(isSortedSet(key))(
+          {
+            for {
+              scoreMap <- sortedSets.getOrElse(key, Map.empty)
+              filtered =
+                maybeRegex.map(regex => scoreMap.filter(s => regex.pattern.matcher(s._1).matches)).getOrElse(scoreMap)
+              resultSet = filtered.toArray.sortBy(_._2).slice(start, end)
+              nextIndex = if (filtered.size <= end) 0 else end
+              expand    = resultSet.flatMap(v => Array(v._1, v._2.toString.stripSuffix(".0")))
+              results   = Replies.array(expand)
+            } yield RespValue.array(RespValue.bulkString(nextIndex.toString), results)
+          }
+        )
+
+      case api.SortedSets.ZUnionStore =>
+        val destination = input(0).asString
+        val numKeys     = input(1).asLong.toInt
+        val keys        = input.drop(2).take(numKeys).map(_.asString)
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx =>
+              input
+                .drop(idx + 1)
+                .takeWhile(v => Try(v.asString.stripSuffix(".0").toLong).isSuccess)
+                .map(_.asString.stripSuffix(".0").toLong)
+            )
+            .getOrElse(Chunk.empty)
+
+        orInvalidParameter(STM.succeed(!(weights.nonEmpty && weights.size != numKeys)))(
+          orWrongType(forAll(keys :+ destination)(isSortedSet))(
+            for {
+              sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+
+              unionKeys =
+                sourceSets.map(_.keySet).reduce(_.union(_))
+
+              weightedSets =
+                sourceSets
+                  .map(m => m.filter(m => unionKeys.contains(m._1)))
+                  .zipAll(weights, Map.empty, 1L)
+                  .map { case (scoreMap, weight) => scoreMap.map { case (member, score) => member -> score * weight } }
+
+              destinationResult =
+                weightedSets
+                  .flatMap(Chunk.fromIterable)
+                  .groupBy(_._1)
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
+
+              _ <- sortedSets.put(destination, destinationResult)
+            } yield RespValue.Integer(destinationResult.size.toLong)
+          )
+        )
+
+      case api.SortedSets.ZUnion =>
+        val numKeys          = input(0).asLong.toInt
+        val keys             = input.drop(1).take(numKeys).map(_.asString)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        val options = input.map(_.asString).zipWithIndex
+        val aggregate =
+          options
+            .find(_._1 == "AGGREGATE")
+            .map(_._2)
+            .map(idx => input(idx + 1).asString)
+            .map {
+              case "SUM" => (_: Double) + (_: Double)
+              case "MIN" => Math.min(_: Double, _: Double)
+              case "MAX" => Math.max(_: Double, _: Double)
+            }
+            .getOrElse((_: Double) + (_: Double))
+
+        val weights =
+          options
+            .find(_._1 == "WEIGHTS")
+            .map(_._2)
+            .map(idx =>
+              input
+                .drop(idx + 1)
+                .takeWhile(v => Try(v.asString.stripSuffix(".0").toLong).isSuccess)
+                .map(_.asString.stripSuffix(".0").toLong)
+            )
+            .getOrElse(Chunk.empty)
+
+        orInvalidParameter(STM.succeed(!(weights.nonEmpty && weights.size != numKeys)))(
+          orWrongType(forAll(keys)(isSortedSet))(
+            for {
+              sourceSets <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
+
+              unionKeys =
+                sourceSets.map(_.keySet).reduce(_.union(_))
+
+              weightedSets =
+                sourceSets
+                  .map(m => m.filter(m => unionKeys.contains(m._1)))
+                  .zipAll(weights, Map.empty, 1L)
+                  .map { case (scoreMap, weight) => scoreMap.map { case (member, score) => member -> score * weight } }
+
+              unionMap =
+                weightedSets
+                  .flatMap(Chunk.fromIterable)
+                  .groupBy(_._1)
+                  .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
+
+              result =
+                if (withScoresOption.isDefined)
+                  Chunk.fromIterable(unionMap.toArray.sortBy(_._2).flatMap { case (v, s) =>
+                    Chunk(bulkString(v), bulkString(s.toString))
+                  })
+                else
+                  Chunk.fromIterable(unionMap.toArray.sortBy(_._2).map(e => bulkString(e._1)))
+
+            } yield RespValue.Array(result)
+          )
+        )
+
+      case api.SortedSets.ZRandMember =>
+        val key              = input(0).asString
+        val maybeCount       = input.tail.headOption.map(b => b.asString.toLong)
+        val withScoresOption = input.map(_.asString).find(_ == "WITHSCORES")
+
+        orWrongType(isSortedSet(key))(
+          for {
+            scoreMap <- sortedSets.getOrElse(key, Map.empty)
+            asVector  = scoreMap.toVector
+            res <- maybeCount match {
+                     case None =>
+                       selectOne(asVector, randomPick).map {
+                         _.fold(RespValue.NullBulkString: RespValue)(s => RespValue.bulkString(s._1))
+                       }
+
+                     case Some(n) if n > 0 =>
+                       selectN(asVector, n, randomPick).map[RespValue] { values =>
+                         if (withScoresOption.isDefined) {
+                           val flatMemberScores = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                           if (flatMemberScores.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(flatMemberScores)
+                         } else {
+                           if (values.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(values.map(_._1))
+                         }
+                       }
+
+                     case Some(n) if n < 0 =>
+                       selectNWithReplacement(asVector, -n, randomPick).map[RespValue] { values =>
+                         if (withScoresOption.isDefined) {
+                           val flatMemeberScore = values.flatMap { case (m, s) => m :: s.toString :: Nil }
+                           if (flatMemeberScore.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(flatMemeberScore)
+                         } else {
+                           if (values.isEmpty)
+                             RespValue.NullArray
+                           else
+                             Replies.array(values.map(_._1))
+                         }
+                       }
+
+                     case Some(_) => STM.succeedNow(RespValue.NullBulkString)
+                   }
+          } yield res
+        )
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
@@ -1024,14 +2114,20 @@ private[redis] final class TestExecutor private (
   ): USTM[RespValue] =
     STM.ifM(predicate)(program, STM.succeedNow(Replies.WrongType))
 
+  private[this] def orInvalidParameter(predicate: USTM[Boolean])(
+    program: => USTM[RespValue]
+  ): USTM[RespValue] =
+    STM.ifM(predicate)(program, STM.succeedNow(Replies.Error))
+
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): STM[Nothing, Boolean] =
     for {
-      isString <- strings.contains(name)
-      isList   <- lists.contains(name)
-      isHyper  <- hyperLogLogs.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isList && !isHyper && !isHash
+      isString    <- strings.contains(name)
+      isList      <- lists.contains(name)
+      isHyper     <- hyperLogLogs.contains(name)
+      isHash      <- hashes.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isList && !isHyper && !isHash && !isSortedSet
 
   // check whether the key is a list or unused.
   private[this] def isList(name: String): STM[Nothing, Boolean] =
@@ -1045,20 +2141,32 @@ private[redis] final class TestExecutor private (
   //check whether the key is a hyperLogLog or unused.
   private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
-      isString <- strings.contains(name)
-      isSet    <- sets.contains(name)
-      isList   <- lists.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isSet && !isList && !isHash
+      isString    <- strings.contains(name)
+      isSet       <- sets.contains(name)
+      isList      <- lists.contains(name)
+      isHash      <- hashes.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isSet && !isList && !isHash && !isSortedSet
 
   //check whether the key is a hash or unused.
   private[this] def isHash(name: String): ZSTM[Any, Nothing, Boolean] =
+    for {
+      isString    <- strings.contains(name)
+      isSet       <- sets.contains(name)
+      isList      <- lists.contains(name)
+      isHyper     <- hyperLogLogs.contains(name)
+      isSortedSet <- sortedSets.contains(name)
+    } yield !isString && !isSet && !isList && !isHyper && !isSortedSet
+
+  //check whether the key is a hash or unused.
+  private[this] def isSortedSet(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
       isString <- strings.contains(name)
       isSet    <- sets.contains(name)
       isList   <- lists.contains(name)
       isHyper  <- hyperLogLogs.contains(name)
-    } yield !isString && !isSet && !isList && !isHyper
+      isHash   <- hashes.contains(name)
+    } yield !isString && !isSet && !isList && !isHyper && !isHash
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
@@ -1162,7 +2270,8 @@ private[redis] object TestExecutor {
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
       lists        <- TMap.empty[String, Chunk[String]].commit
       hashes       <- TMap.empty[String, Map[String, String]].commit
-    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes)
+      sortedSets   <- TMap.empty[String, Map[String, Double]].commit
+    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes, sortedSets)
 
     executor.toLayer
   }

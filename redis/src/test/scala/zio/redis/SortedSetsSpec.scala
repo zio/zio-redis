@@ -181,7 +181,7 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(card)(equalTo(2L))
         },
         testM("0 when key doesn't exist") {
-          assertM(zCard("unknown"))(equalTo(0L))
+          assertM(zCard("unknownSet"))(equalTo(0L))
         },
         testM("error when not set") {
           for {
@@ -862,7 +862,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
-                   MemberScore(1800d, "Micromax"),
+                   MemberScore(1801d, "Micromax"),
                    MemberScore(2200d, "Sunsui"),
                    MemberScore(1800d, "MicroSoft"),
                    MemberScore(2500d, "LG")
@@ -876,7 +876,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <- zAdd(key)(
                    MemberScore(1556d, "Samsung"),
                    MemberScore(2000d, "Nokia"),
-                   MemberScore(1800d, "Micromax"),
+                   MemberScore(1801d, "Micromax"),
                    MemberScore(2200d, "Sunsui"),
                    MemberScore(1800d, "MicroSoft"),
                    MemberScore(2500d, "LG")
@@ -898,7 +898,7 @@ trait SortedSetsSpec extends BaseSpec {
             key       <- uuid
             samsung    = MemberScore(1556d, "Samsung")
             nokia      = MemberScore(2000d, "Nokia")
-            micromax   = MemberScore(1800d, "Micromax")
+            micromax   = MemberScore(1801d, "Micromax")
             sunsui     = MemberScore(2200d, "Sunsui")
             microSoft  = MemberScore(1800d, "MicroSoft")
             lg         = MemberScore(2500d, "LG")
@@ -912,7 +912,7 @@ trait SortedSetsSpec extends BaseSpec {
             key       <- uuid
             samsung    = MemberScore(1556d, "Samsung")
             nokia      = MemberScore(2000d, "Nokia")
-            micromax   = MemberScore(1800d, "Micromax")
+            micromax   = MemberScore(1801d, "Micromax")
             sunsui     = MemberScore(2200d, "Sunsui")
             microSoft  = MemberScore(1800d, "MicroSoft")
             lg         = MemberScore(2500d, "LG")
