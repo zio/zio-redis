@@ -1320,7 +1320,7 @@ private[redis] final class TestExecutor private (
                   .groupBy(_._1)
                   .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
 
-              _ <- sortedSets.put(destination, Map.from(destinationResult))
+              _ <- sortedSets.put(destination, destinationResult)
             } yield RespValue.Integer(destinationResult.size.toLong)
           )
         )
@@ -1986,7 +1986,7 @@ private[redis] final class TestExecutor private (
                   .groupBy(_._1)
                   .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
 
-              _ <- sortedSets.put(destination, Map.from(destinationResult))
+              _ <- sortedSets.put(destination, destinationResult)
             } yield RespValue.Integer(destinationResult.size.toLong)
           )
         )
