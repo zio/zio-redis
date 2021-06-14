@@ -73,25 +73,25 @@ object BuildHelper {
           "-Xmax-classfile-name",
           "242"
         ) ++ std2xOptions ++ optimizerOptions(optimize)
-      case _             => Nil
+      case _ => Nil
     }
 
   private def optimizerOptions(optimize: Boolean): List[String] =
     if (optimize) List("-opt:l:inline", "-opt-inline-from:zio.internal.**") else Nil
 
   private val stdOptions = {
-    val fatalWarnings =if (sys.env.contains("CI")) List("-Xfatal-warnings") else Nil
+    val fatalWarnings = if (sys.env.contains("CI")) List("-Xfatal-warnings") else Nil
     List("-deprecation", "-encoding", "UTF-8", "-feature", "-unchecked") ++ fatalWarnings
   }
 
-  private val std2xOptions = 
-      List(
-    "-language:higherKinds",
-    "-language:existentials",
-    "-explaintypes",
-    "-Yrangepos",
-    "-Xlint:_,-missing-interpolator,-type-parameter-shadow",
-    "-Ywarn-numeric-widen",
-    "-Ywarn-value-discard"
-  )
+  private val std2xOptions =
+    List(
+      "-language:higherKinds",
+      "-language:existentials",
+      "-explaintypes",
+      "-Yrangepos",
+      "-Xlint:_,-missing-interpolator,-type-parameter-shadow",
+      "-Ywarn-numeric-widen",
+      "-Ywarn-value-discard"
+    )
 }
