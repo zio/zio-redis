@@ -18,7 +18,7 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   var count: Int = _
 
-  private var items: List[String]      = _
+  private var items: List[String] = _
 
   private val key            = "test-set1"
   private val destinationKey = "test-set2"

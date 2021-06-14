@@ -5,7 +5,7 @@ import io.circe.{ Decoder, Encoder }
 final case class Contributor(login: Login, contributions: Contributions)
 
 object Contributor {
-  implicit val decoder: Decoder[Contributor] = 
+  implicit val decoder: Decoder[Contributor] =
     Decoder.forProduct2("login", "contributions")(Contributor.apply)
 
   implicit val encoder: Encoder[Contributor] =
