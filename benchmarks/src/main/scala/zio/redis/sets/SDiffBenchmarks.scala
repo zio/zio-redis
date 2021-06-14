@@ -16,7 +16,7 @@ import zio.redis.{ BenchmarkRuntime, sAdd, sDiff }
 class SDiffBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
-  private var count: Int = _
+  var count: Int = _
 
   private var items: List[String]      = _
   private var otherItems: List[String] = _

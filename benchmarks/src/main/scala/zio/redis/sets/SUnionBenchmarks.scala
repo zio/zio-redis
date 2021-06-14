@@ -16,7 +16,7 @@ import zio.redis.{ BenchmarkRuntime, sAdd, sUnion }
 class SUnionBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
-  private var count: Int = _
+  var count: Int = _
 
   private var items: List[String]      = _
   private var otherItems: List[String] = _
@@ -30,7 +30,6 @@ class SUnionBenchmarks extends BenchmarkRuntime {
     otherItems = (0 to count).toList.map(_.toString)
     zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
     zioUnsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
-
   }
 
   @Benchmark

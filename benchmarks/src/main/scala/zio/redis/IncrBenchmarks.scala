@@ -15,7 +15,7 @@ import zio.ZIO
 class IncrBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
-  private var count: Int = _
+  var count: Int = _
 
   private var items: List[String] = _
 
