@@ -45,5 +45,5 @@ class GetBenchmarks extends BenchmarkRuntime {
     unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.get(i)))
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(get[String, String]))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(get(_).returning[String]))
 }
