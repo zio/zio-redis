@@ -328,13 +328,14 @@ trait Streams {
    * @param key ID of the stream
    * @param group ID of the consumer group
    * @param consumer ID of the consumer
+   * @return the number of created consumer groups.
    */
   final def xGroupCreateConsumer[SK: Schema, SG: Schema, SC: Schema](
     key: SK,
     group: SG,
     consumer: SC
-  ): ZIO[RedisExecutor, RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), UnitOutput)
+  ): ZIO[RedisExecutor, RedisError, Boolean] = {
+    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), BoolOutput)
     command.run(CreateConsumer(key, group, consumer))
   }
 
