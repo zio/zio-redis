@@ -13,8 +13,11 @@ object BuildHelper {
 
     val doc = new Load(LoadSettings.builder().build())
       .loadFromReader(scala.io.Source.fromFile(".github/workflows/ci.yml").bufferedReader())
+
     val yaml = doc.asInstanceOf[JMap[String, JMap[String, JMap[String, JMap[String, JMap[String, JList[String]]]]]]]
+
     val list = yaml.get("jobs").get("test").get("strategy").get("matrix").get("scala").asScala
+
     list.map(v => (v.split('.').take(2).mkString("."), v)).toMap
   }
 
@@ -23,17 +26,18 @@ object BuildHelper {
   val Zio: String      = "1.0.9"
 
   def buildInfoSettings(packageName: String) =
-    Seq(
-      buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
+    List(
+      buildInfoKeys := List[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
       buildInfoPackage := packageName,
       buildInfoObject := "BuildInfo"
     )
 
   def stdSettings(prjName: String) =
-    Seq(
+    List(
       name := s"$prjName",
-      crossScalaVersions := Seq(Scala212, Scala213),
+      crossScalaVersions := List(Scala212, Scala213),
       ThisBuild / scalaVersion := Scala213,
+      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
       ThisBuild / semanticdbEnabled := true,
       ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on",
       ThisBuild / semanticdbVersion := scalafixSemanticdb.revision,
@@ -46,4 +50,48 @@ object BuildHelper {
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true
     )
+
+  private def extraOptions(scalaVersion: String, optimize: Boolean) =
+    CrossVersion.partialVersion(scalaVersion) match {
+      case Some((2, 13)) =>
+        List("-Ywarn-unused:params,-implicits") ++ std2xOptions ++ optimizerOptions(optimize)
+      case Some((2, 12)) =>
+        List(
+          "-opt-warnings",
+          "-Ywarn-extra-implicit",
+          "-Ywarn-unused:_,imports",
+          "-Ywarn-unused:imports",
+          "-Ypartial-unification",
+          "-Yno-adapted-args",
+          "-Ywarn-inaccessible",
+          "-Ywarn-infer-any",
+          "-Ywarn-nullary-override",
+          "-Ywarn-nullary-unit",
+          "-Ywarn-unused:params,-implicits",
+          "-Xfuture",
+          "-Xsource:2.13",
+          "-Xmax-classfile-name",
+          "242"
+        ) ++ std2xOptions ++ optimizerOptions(optimize)
+      case _             => Nil
+    }
+
+  private def optimizerOptions(optimize: Boolean): List[String] =
+    if (optimize) List("-opt:l:inline", "-opt-inline-from:zio.internal.**") else Nil
+
+  private val stdOptions = {
+    val fatalWarnings =if (sys.env.contains("CI")) List("-Xfatal-warnings") else Nil
+    List("-deprecation", "-encoding", "UTF-8", "-feature", "-unchecked") ++ fatalWarnings
+  }
+
+  private val std2xOptions = 
+      List(
+    "-language:higherKinds",
+    "-language:existentials",
+    "-explaintypes",
+    "-Yrangepos",
+    "-Xlint:_,-missing-interpolator,-type-parameter-shadow",
+    "-Ywarn-numeric-widen",
+    "-Ywarn-value-discard"
+  )
 }
