@@ -15,7 +15,7 @@ import zio.redis.{ BenchmarkRuntime, hExists, hSet }
 @Fork(2)
 class HExistsBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
-  private var size: Int = _
+  var size: Int = _
 
   private var items: List[(String, String)] = _
 

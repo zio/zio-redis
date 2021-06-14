@@ -27,21 +27,21 @@ trait RedisClients {
   }
 
   implicit object LaserDiscClientRunner extends QueryUnsafeRunner[LaserDiscClient] {
-    override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
+    override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync()
   }
 
   implicit object RedicoulusClientRunner extends QueryUnsafeRunner[RediculousClient] {
-    override def unsafeRun(f: RediculousClient => CatsIO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync
+    override def unsafeRun(f: RediculousClient => CatsIO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync()
   }
 
   implicit object Redis4CatsClientRunnerString extends QueryUnsafeRunner[Redis4CatsClient[String]] {
     override def unsafeRun(f: Redis4CatsClient[String] => CatsIO[Unit]): Unit =
-      redis4CatsConnectionString.use(f).unsafeRunSync
+      redis4CatsConnectionString.use(f).unsafeRunSync()
   }
 
   implicit object Redis4CatsClientRunnerLong extends QueryUnsafeRunner[Redis4CatsClient[Long]] {
     override def unsafeRun(f: Redis4CatsClient[Long] => CatsIO[Unit]): Unit =
-      redis4CatsConnectionLong.use(f).unsafeRunSync
+      redis4CatsConnectionLong.use(f).unsafeRunSync()
   }
 
   private val redicoulusConnection: Resource[CatsIO, RediculousClient] =

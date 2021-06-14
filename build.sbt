@@ -46,6 +46,7 @@ lazy val redis =
 lazy val benchmarks =
   project
     .in(file("benchmarks"))
+    .settings(stdSettings("benchmarks"))
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
@@ -54,8 +55,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects" % "0.13.1",
         "io.chrisdavenport" %% "rediculous"         % "0.0.12",
         "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
-      ),
-      Compile / scalacOptions := Seq("-Xlint:unused")
+      )
     )
 
 lazy val example =
@@ -76,6 +76,5 @@ lazy val example =
         "io.circe"                     %% "circe-core"                    % "0.14.1",
         "io.circe"                     %% "circe-generic"                 % "0.14.1",
         "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0"
-      ),
-      Compile / scalacOptions := Seq("-Xlint:unused")
+      )
     )
