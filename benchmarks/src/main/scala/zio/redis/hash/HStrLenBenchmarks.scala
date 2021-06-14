@@ -15,7 +15,7 @@ import zio.redis.{ BenchmarkRuntime, hSet, hStrLen }
 @Fork(2)
 class HStrLenBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
-  private var size: Int = _
+  var size: Int = _
 
   private var items: List[(String, String)] = _
 

@@ -16,10 +16,9 @@ import zio.redis.{ BenchmarkRuntime, sAdd, sMove }
 class SMoveBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
-  private var count: Int = _
+  var count: Int = _
 
   private var items: List[String]      = _
-  private var otherItems: List[String] = _
 
   private val key            = "test-set1"
   private val destinationKey = "test-set2"
@@ -27,9 +26,7 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    otherItems = (0 to count).toList.map(_.toString)
     zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
-
   }
 
   @Benchmark

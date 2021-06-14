@@ -15,10 +15,10 @@ import zio.redis.{ BenchmarkRuntime, hIncrBy, hSet }
 @Fork(2)
 class HIncrbyBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
-  private var size: Int = _
+  var size: Int = _
 
   @Param(Array("1"))
-  private var increment: Long = _
+  var increment: Long = _
 
   private var items: List[(String, String)] = _
 

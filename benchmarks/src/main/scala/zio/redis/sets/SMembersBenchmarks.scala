@@ -15,7 +15,7 @@ import zio.redis.{ BenchmarkRuntime, sAdd, sMembers }
 @Fork(2)
 class SMembersBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
-  private var count: Int = _
+  var count: Int = _
 
   private var items: List[String] = _
 

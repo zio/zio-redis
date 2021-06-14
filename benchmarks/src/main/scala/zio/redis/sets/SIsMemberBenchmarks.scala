@@ -16,7 +16,7 @@ import zio.redis.{ BenchmarkRuntime, sAdd, sIsMember }
 class SIsMemberBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
-  private var count: Int = _
+  var count: Int = _
 
   private var items: List[String] = _
 
