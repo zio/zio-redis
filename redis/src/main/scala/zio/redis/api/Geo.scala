@@ -208,7 +208,7 @@ trait Geo {
     order: Option[Order] = None
   ): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(
-      GeoRadiusStore,
+      GeoRadius,
       Tuple11(
         ArbitraryInput[K](),
         LongLatInput,
@@ -327,7 +327,7 @@ trait Geo {
     order: Option[Order] = None
   ): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(
-      "GEORADIUSBYMEMBER",
+      GeoRadiusByMember,
       Tuple11(
         ArbitraryInput[K](),
         ArbitraryInput[M](),
@@ -355,7 +355,5 @@ private[redis] object Geo {
   final val GeoHash                = "GEOHASH"
   final val GeoPos                 = "GEOPOS"
   final val GeoRadius              = "GEORADIUS"
-  final val GeoRadiusStore         = "GEORADIUS"
   final val GeoRadiusByMember      = "GEORADIUSBYMEMBER"
-  final val GeoRadiusByMemberStore = "GEORADIUSBYMEMBER"
 }
