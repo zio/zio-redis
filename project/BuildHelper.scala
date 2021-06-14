@@ -79,10 +79,8 @@ object BuildHelper {
   private def optimizerOptions(optimize: Boolean): List[String] =
     if (optimize) List("-opt:l:inline", "-opt-inline-from:zio.internal.**") else Nil
 
-  private val stdOptions = {
-    val fatalWarnings = if (sys.env.contains("CI")) List("-Xfatal-warnings") else Nil
-    List("-deprecation", "-encoding", "UTF-8", "-feature", "-unchecked") ++ fatalWarnings
-  }
+  private val stdOptions =
+    List("-deprecation", "-encoding", "UTF-8", "-feature", "-unchecked", "-Xfatal-warnings")
 
   private val std2xOptions =
     List(
