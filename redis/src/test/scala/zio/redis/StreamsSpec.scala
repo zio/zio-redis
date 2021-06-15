@@ -720,7 +720,6 @@ trait StreamsSpec extends BaseSpec {
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
-      // TODO: unignore when docker image for redis 6.2 comes out
       suite("xGroupCreateConsumer")(
         testM("new consumer") {
           for {
@@ -748,7 +747,7 @@ trait StreamsSpec extends BaseSpec {
             result    <- xGroupCreateConsumer[String, String, String](nonStream, group, consumer).either
           } yield assert(result)(isLeft)
         }
-      ) @@ ignore,
+      ),
       suite("xGroupDelConsumer")(
         testM("non-existing consumer") {
           for {
@@ -869,29 +868,33 @@ trait StreamsSpec extends BaseSpec {
             equalTo(PendingInfo(2L, Some(firstMsg), Some(lastMsg), Map(first -> 1L, second -> 1L)))
           )
         },
-        // TODO: unignore when redis docker image version 6.2 comes out
         testM("with 0ms idle time") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
-            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
-            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-            result   <- xPending(stream, group, 0.millis)
-          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
-        } @@ ignore,
+            stream              <- uuid
+            group               <- uuid
+            consumer            <- uuid
+            _                   <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id                  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _                   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            cons: Option[String] = None
+            result              <- xPending(stream, group, "-", "+", 10L, cons, Some(0.millis))
+            msg                  = result.head
+          } yield assert(msg.id)(equalTo(id)) && assert(msg.owner)(equalTo(consumer)) && assert(msg.counter)(
+            equalTo(1L)
+          )
+        },
         testM("with 60s idle time") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
-            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
-            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-            result   <- xPending(stream, group, 1.minute)
-          } yield assert(result)(equalTo(PendingInfo(1L, None, None, Map.empty[String, Long])))
-        } @@ ignore,
+            stream              <- uuid
+            group               <- uuid
+            consumer            <- uuid
+            _                   <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _                   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _                   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            cons: Option[String] = None
+            result              <- xPending(stream, group, "-", "+", 10L, cons, Some(1.minute))
+          } yield assert(result)(isEmpty)
+        },
         testM("error when group doesn't exist") {
           for {
             stream <- uuid
