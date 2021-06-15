@@ -870,26 +870,31 @@ trait StreamsSpec extends BaseSpec {
         },
         testM("with 0ms idle time") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
-            id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
-            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-            result   <- xPending(stream, group, 0.millis)
-          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
+            stream              <- uuid
+            group               <- uuid
+            consumer            <- uuid
+            _                   <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            id                  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _                   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            cons: Option[String] = None
+            result              <- xPending(stream, group, "-", "+", 10L, cons, Some(0.millis))
+            msg                  = result.head
+          } yield assert(msg.id)(equalTo(id)) && assert(msg.owner)(equalTo(consumer)) && assert(msg.counter)(
+            equalTo(1L)
+          )
         },
         testM("with 60s idle time") {
           for {
-            stream   <- uuid
-            group    <- uuid
-            consumer <- uuid
-            _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
-            _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
-            _        <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-            result   <- xPending(stream, group, 1.minute)
-          } yield assert(result)(equalTo(PendingInfo(1L, None, None, Map.empty[String, Long])))
-        } @@ ignore,
+            stream              <- uuid
+            group               <- uuid
+            consumer            <- uuid
+            _                   <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
+            _                   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
+            _                   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
+            cons: Option[String] = None
+            result              <- xPending(stream, group, "-", "+", 10L, cons, Some(1.minute))
+          } yield assert(result)(isEmpty)
+        },
         testM("error when group doesn't exist") {
           for {
             stream <- uuid
