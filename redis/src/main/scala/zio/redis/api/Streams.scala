@@ -328,13 +328,14 @@ trait Streams {
    * @param key ID of the stream
    * @param group ID of the consumer group
    * @param consumer ID of the consumer
+   * @return the number of created consumer groups.
    */
   final def xGroupCreateConsumer[SK: Schema, SG: Schema, SC: Schema](
     key: SK,
     group: SG,
     consumer: SC
-  ): ZIO[RedisExecutor, RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), UnitOutput)
+  ): ZIO[RedisExecutor, RedisError, Boolean] = {
+    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), BoolOutput)
     command.run(CreateConsumer(key, group, consumer))
   }
 
@@ -387,27 +388,6 @@ trait Streams {
    *
    * @param key ID of the stream
    * @param group ID of the consumer group
-   * @param idle idle time of a pending message by which message are filtered
-   * @return summary about the pending messages in a given consumer group.
-   */
-  final def xPending[SK: Schema, SG: Schema](
-    key: SK,
-    group: SG,
-    idle: Duration
-  ): ZIO[RedisExecutor, RedisError, PendingInfo] = {
-    val command = RedisCommand(
-      XPending,
-      Tuple3(ArbitraryInput[SK](), ArbitraryInput[SG](), OptionalInput(IdleInput)),
-      XPendingOutput
-    )
-    command.run((key, group, Some(idle)))
-  }
-
-  /**
-   * Inspects the list of pending messages.
-   *
-   * @param key ID of the stream
-   * @param group ID of the consumer group
    * @param start start of the range of IDs
    * @param end end of the range of IDs
    * @param count maximum number of messages returned
@@ -429,15 +409,15 @@ trait Streams {
       Tuple7(
         ArbitraryInput[SK](),
         ArbitraryInput[SG](),
+        OptionalInput(IdleInput),
         ArbitraryInput[I](),
         ArbitraryInput[I](),
         LongInput,
-        OptionalInput(ArbitraryInput[SC]()),
-        OptionalInput(IdleInput)
+        OptionalInput(ArbitraryInput[SC]())
       ),
       PendingMessagesOutput
     )
-    command.run((key, group, start, end, count, consumer, idle))
+    command.run((key, group, idle, start, end, count, consumer))
   }
 
   /**
