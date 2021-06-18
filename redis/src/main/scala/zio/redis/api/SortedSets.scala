@@ -206,7 +206,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Subtract multiple sorted sets and return members and their associated score.
    *
@@ -219,24 +218,27 @@ trait SortedSets {
    * @return
    *   Chunk of differences and scores between the first and successive input sorted sets.
    */
-  final def zDiffWithScores[K: Schema, M: Schema](
+  final def zDiffWithScores[K: Schema](
     inputKeysNum: Long,
     key: K,
     keys: K*
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command =
-      RedisCommand(
-        ZDiff,
-        Tuple3(
-          LongInput,
-          NonEmptyList(ArbitraryInput[K]()),
-          ArbitraryInput[String]()
-        ),
-        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-          .map(_.map { case (m, s) => MemberScore(s, m) })
-      )
-    command.run((inputKeysNum, (key, keys.toList), WithScores.stringify))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command =
+          RedisCommand(
+            ZDiff,
+            Tuple3(
+              LongInput,
+              NonEmptyList(ArbitraryInput[K]()),
+              ArbitraryInput[String]()
+            ),
+            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+              .map(_.map { case (m, s) => MemberScore(s, m) })
+          )
+        command.run((inputKeysNum, (key, keys.toList), WithScores.stringify))
+      }
+    }
 
   /**
    * Subtract multiple sorted sets and store the resulting sorted set in a destination key.
@@ -330,7 +332,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Intersect multiple sorted sets and return members and their associated score.
    *
@@ -349,24 +350,27 @@ trait SortedSets {
    * @return
    *   Chunk containing the intersection of members with their score.
    */
-  final def zInterWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zInterWithScores[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZInter,
-      Tuple5(
-        LongInput,
-        NonEmptyList(ArbitraryInput[K]()),
-        OptionalInput(AggregateInput),
-        OptionalInput(WeightsInput),
-        ArbitraryInput[String]()
-      ),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZInter,
+          Tuple5(
+            LongInput,
+            NonEmptyList(ArbitraryInput[K]()),
+            OptionalInput(AggregateInput),
+            OptionalInput(WeightsInput),
+            ArbitraryInput[String]()
+          ),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
+      }
+    }
 
   /**
    * Intersect multiple sorted sets and store the resulting sorted set in a new key.
@@ -425,7 +429,6 @@ trait SortedSets {
     command.run((key, lexRange.min.stringify, lexRange.max.stringify))
   }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Remove and return members with the highest scores in a sorted set.
    *
@@ -438,20 +441,22 @@ trait SortedSets {
    * @return
    *   Chunk of popped elements and scores.
    */
-  final def zPopMax[K: Schema, M: Schema](
+  final def zPopMax[K: Schema](
     key: K,
     count: Option[Long] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZPopMax,
-      Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, count))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZPopMax,
+          Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((key, count))
+      }
+    }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Remove and return members with the lowest scores in a sorted set.
    *
@@ -464,18 +469,21 @@ trait SortedSets {
    * @return
    *   Chunk of popped elements and scores.
    */
-  final def zPopMin[K: Schema, M: Schema](
+  final def zPopMin[K: Schema](
     key: K,
     count: Option[Long] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZPopMin,
-      Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, count))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZPopMin,
+          Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((key, count))
+      }
+    }
 
   /**
    * Return a range of members in a sorted set, by index.
@@ -499,7 +507,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Return a range of members in a sorted set, by index.
    *
@@ -510,18 +517,21 @@ trait SortedSets {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRangeWithScores[K: Schema, M: Schema](
+  final def zRangeWithScores[K: Schema](
     key: K,
     range: Range
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZRange,
-      Tuple3(ArbitraryInput[K](), RangeInput, ArbitraryInput[String]()),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, range, WithScores.stringify))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZRange,
+          Tuple3(ArbitraryInput[K](), RangeInput, ArbitraryInput[String]()),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((key, range, WithScores.stringify))
+      }
+    }
 
   /**
    * Return a range of members in a sorted set, by lexicographical range.
@@ -577,7 +587,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Return a range of members in a sorted set, by score.
    *
@@ -591,25 +600,28 @@ trait SortedSets {
    * @return
    *   Chunk of elements with their scores in the specified score range.
    */
-  final def zRangeByScoreWithScores[K: Schema, M: Schema](
+  final def zRangeByScoreWithScores[K: Schema](
     key: K,
     scoreRange: ScoreRange,
     limit: Option[Limit] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZRangeByScore,
-      Tuple5(
-        ArbitraryInput[K](),
-        ArbitraryInput[String](),
-        ArbitraryInput[String](),
-        ArbitraryInput[String](),
-        OptionalInput(LimitInput)
-      ),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, scoreRange.min.stringify, scoreRange.max.stringify, WithScores.stringify, limit))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZRangeByScore,
+          Tuple5(
+            ArbitraryInput[K](),
+            ArbitraryInput[String](),
+            ArbitraryInput[String](),
+            ArbitraryInput[String](),
+            OptionalInput(LimitInput)
+          ),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((key, scoreRange.min.stringify, scoreRange.max.stringify, WithScores.stringify, limit))
+      }
+    }
 
   /**
    * Determine the index of a member in a sorted set.
@@ -722,7 +734,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Return a range of members in a sorted set, by index, with scores ordered from high to low.
    *
@@ -733,18 +744,21 @@ trait SortedSets {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRevRangeWithScores[K: Schema, M: Schema](
+  final def zRevRangeWithScores[K: Schema](
     key: K,
     range: Range
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZRevRange,
-      Tuple3(ArbitraryInput[K](), RangeInput, ArbitraryInput[String]()),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, range, WithScores.stringify))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZRevRange,
+          Tuple3(ArbitraryInput[K](), RangeInput, ArbitraryInput[String]()),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((key, range, WithScores.stringify))
+      }
+    }
 
   /**
    * Return a range of members in a sorted set, by lexicographical range, ordered from higher to lower strings.
@@ -805,7 +819,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Return a range of members in a sorted set, by score, with scores ordered from high to low.
    *
@@ -819,25 +832,28 @@ trait SortedSets {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRevRangeByScoreWithScores[K: Schema, M: Schema](
+  final def zRevRangeByScoreWithScores[K: Schema](
     key: K,
     scoreRange: ScoreRange,
     limit: Option[Limit] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZRevRangeByScore,
-      Tuple5(
-        ArbitraryInput[K](),
-        ArbitraryInput[String](),
-        ArbitraryInput[String](),
-        ArbitraryInput[String](),
-        OptionalInput(LimitInput)
-      ),
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, scoreRange.max.stringify, scoreRange.min.stringify, WithScores.stringify, limit))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZRevRangeByScore,
+          Tuple5(
+            ArbitraryInput[K](),
+            ArbitraryInput[String](),
+            ArbitraryInput[String](),
+            ArbitraryInput[String](),
+            OptionalInput(LimitInput)
+          ),
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+        command.run((key, scoreRange.max.stringify, scoreRange.min.stringify, WithScores.stringify, limit))
+      }
+    }
 
   /**
    * Determine the index of a member in a sorted set, with scores ordered from high to low.
@@ -854,7 +870,6 @@ trait SortedSets {
     command.run((key, member))
   }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Incrementally iterate sorted sets elements and associated scores.
    *
@@ -869,22 +884,25 @@ trait SortedSets {
    * @return
    *   Returns the items for this iteration or nothing when you reach the end.
    */
-  final def zScan[K: Schema, M: Schema](
+  final def zScan[K: Schema](
     key: K,
     cursor: Long,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[MemberScore[M]])] = {
-    val memberScoresOutput =
-      ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    val command = RedisCommand(
-      ZScan,
-      Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-      Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput)
-    )
-    command.run((key, cursor, pattern.map(Pattern), count))
-  }
+  ): ResultBuilder[({ type lambda[+x] = (Long, Chunk[MemberScore[x]]) })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = (Long, Chunk[MemberScore[x]]) })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[MemberScore[M]])] = {
+        val memberScoresOutput =
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        val command = RedisCommand(
+          ZScan,
+          Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
+          Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput)
+        )
+        command.run((key, cursor, pattern.map(Pattern), count))
+      }
+    }
 
   /**
    * Get the score associated with the given member in a sorted set.
@@ -940,7 +958,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Add multiple sorted sets and return each member and associated score.
    *
@@ -959,25 +976,28 @@ trait SortedSets {
    * @return
    *   Chunk of all members with their scores in each sorted set.
    */
-  final def zUnionWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zUnionWithScores[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command =
-      RedisCommand(
-        ZUnion,
-        Tuple5(
-          LongInput,
-          NonEmptyList(ArbitraryInput[K]()),
-          OptionalInput(WeightsInput),
-          OptionalInput(AggregateInput),
-          ArbitraryInput[String]()
-        ),
-        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-          .map(_.map { case (m, s) => MemberScore(s, m) })
-      )
-    command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.stringify))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command =
+          RedisCommand(
+            ZUnion,
+            Tuple5(
+              LongInput,
+              NonEmptyList(ArbitraryInput[K]()),
+              OptionalInput(WeightsInput),
+              OptionalInput(AggregateInput),
+              ArbitraryInput[String]()
+            ),
+            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+              .map(_.map { case (m, s) => MemberScore(s, m) })
+          )
+        command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.stringify))
+      }
+    }
 
   /**
    * Add multiple sorted sets and store the resulting sorted set in a new key.
@@ -1046,7 +1066,6 @@ trait SortedSets {
         RedisCommand(ZRandMember, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
     }
 
-  // TODO: how to handle F[G[_]]
   /**
    * Return random elements from the sorted set value stored at key.
    *
@@ -1058,16 +1077,21 @@ trait SortedSets {
    * @return
    *   Return an array of elements from the sorted set value stored at key.
    */
-  final def zRandMember[K: Schema, M: Schema](key: K, count: Long): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
-    val command = RedisCommand(
-      ZRandMember,
-      Tuple2(ArbitraryInput[K](), LongInput),
-      ZRandMemberOutput(ArbitraryOutput[M]())
-    )
-    command.run((key, count))
-  }
+  final def zRandMember[K: Schema](
+    key: K,
+    count: Long
+  ): ResultBuilder[({ type lambda[+x] = Chunk[x] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[x] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[M]] = {
+        val command = RedisCommand(
+          ZRandMember,
+          Tuple2(ArbitraryInput[K](), LongInput),
+          ZRandMemberOutput(ArbitraryOutput[M]()))
+        )
+        command.run((key, count))
+      }
+    }
 
-  // TODO: how to handle F[G[H[_]]]
   /**
    * Return random elements from the sorted set value stored at key.
    *
@@ -1081,18 +1105,22 @@ trait SortedSets {
    *   key does not exist. If the WITHSCORES modifier is used, the reply is a list elements and their scores from the
    *   sorted set.
    */
-  final def zRandMemberWithScores[K: Schema, M: Schema](
+  final def zRandMemberWithScores[K: Schema](
     key: K,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
-    val command = RedisCommand(
-      ZRandMember,
-      Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[String]()),
-      ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-        .map(_.map { case (m, s) => MemberScore(s, m) })
-    )
-    command.run((key, count, WithScores.stringify))
-  }
+  ): ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
+    new ResultBuilder[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+      def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZRandMember,
+          Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[String]()),
+          ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) })
+        )
+
+        command.run((key, count, WithScores.stringify))
+      }
+    }
 }
 
 private[redis] object SortedSets {
