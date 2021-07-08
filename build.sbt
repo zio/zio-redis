@@ -68,7 +68,7 @@ lazy val example =
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
         "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
-        "de.heikoseeberger"            %% "akka-http-circe"               % "1.36.0",
+        "de.heikoseeberger"            %% "akka-http-circe"               % "1.37.0",
         "dev.zio"                      %% "zio-streams"                   % Zio,
         "dev.zio"                      %% "zio-config-magnolia"           % "1.0.6",
         "dev.zio"                      %% "zio-config-typesafe"           % "1.0.6",
