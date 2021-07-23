@@ -1,29 +1,22 @@
 package example.api
 
-import akka.http.interop.ZIOSupport
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import example._
-
+import zhttp.http.HttpApp
 import zio._
+import zhttp.http._
+import zhttp.service.Server
+import zio.json._
 
 object Api {
-  trait Service {
-    def routes: Route
+
+  val app: HttpApp[ContributorsCache, Nothing] = HttpApp.collectM {
+    case Method.GET -> Root / "repositories" / owner / name / "contributors" =>
+      ZIO
+        .serviceWith[ContributorsCache.Service](_.fetchAll(Repository(Owner(owner), Name(name))))
+        .bimap(ApiError.errorResponse, r => Response.jsonString(r.toJson))
+        .merge
   }
 
-  lazy val live: ZLayer[ContributorsCache, Nothing, Api] =
-    ZLayer.fromService { contributorsCache =>
-      new Service with ZIOSupport {
-        val routes =
-          path("repositories" / Segment / Segment / "contributors") { (owner, name) =>
-            get {
-              complete {
-                contributorsCache.fetchAll(Repository(Owner(owner), Name(name)))
-              }
-            }
-          }
-      }
-    }
+  val server = Server.app(app)
+
 }

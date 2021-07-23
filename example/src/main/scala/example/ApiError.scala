@@ -1,21 +1,21 @@
 package example
 
-import scala.util.control.NoStackTrace
+import zhttp.http._
 
-import akka.http.interop.ErrorResponse
-import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
+import scala.util.control.NoStackTrace
 
 sealed trait ApiError extends NoStackTrace
 
 object ApiError {
-  case object CacheMiss         extends ApiError
-  case object CorruptedData     extends ApiError
-  case object GithubUnreachable extends ApiError
-  case object UnknownProject    extends ApiError
+  case class CacheMiss(key: String)       extends ApiError
+  case object CorruptedData               extends ApiError
+  case object GithubUnreachable           extends ApiError
+  case class UnknownProject(path: String) extends ApiError
 
-  implicit val errorResponse: ErrorResponse[ApiError] = {
-    case CorruptedData | GithubUnreachable => HttpResponse(StatusCodes.InternalServerError)
-    case CacheMiss | UnknownProject        => HttpResponse(StatusCodes.NotFound)
+  val errorResponse: ApiError => UResponse = {
+    case CorruptedData | GithubUnreachable => Response.fromHttpError(HttpError.InternalServerError())
+    case CacheMiss(key)                    => Response.fromHttpError(HttpError.NotFound(Path.empty / key))
+    case UnknownProject(path)              => Response.fromHttpError(HttpError.NotFound(Path(path)))
   }
 
 }
