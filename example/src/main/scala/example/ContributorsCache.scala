@@ -1,13 +1,14 @@
 package example
 
 import example.ApiError._
-import zio.json._
 import sttp.client3.asynchttpclient.zio.{ SttpClient, send }
 import sttp.client3.ziojson.asJson
 import sttp.client3.{ UriContext, basicRequest }
 import sttp.model.Uri
+
 import zio._
 import zio.duration._
+import zio.json._
 import zio.redis._
 
 object ContributorsCache {

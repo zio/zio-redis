@@ -1,3 +1,3 @@
 package example.config
 
-case class ServerConfig(port: Int)
+final case class ServerConfig(port: Int)

@@ -1,15 +1,15 @@
 package example.api
 
 import example._
-import zhttp.http.HttpApp
-import zio._
-import zhttp.http._
+import zhttp.http.{ HttpApp, _ }
 import zhttp.service.Server
+
+import zio._
 import zio.json._
 
 object Api {
 
-  val app: HttpApp[ContributorsCache, Nothing] = HttpApp.collectM {
+  private val app: HttpApp[ContributorsCache, Nothing] = HttpApp.collectM {
     case Method.GET -> Root / "repositories" / owner / name / "contributors" =>
       ZIO
         .serviceWith[ContributorsCache.Service](_.fetchAll(Repository(Owner(owner), Name(name))))
@@ -17,6 +17,6 @@ object Api {
         .merge
   }
 
-  val server = Server.app(app)
+  val routes: Server[ContributorsCache, Nothing] = Server.app(app)
 
 }
