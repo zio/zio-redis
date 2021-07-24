@@ -1,15 +1,14 @@
 package example
 
 import example.ApiError._
-import io.circe.parser.decode
-import io.circe.syntax._
-import sttp.client.asynchttpclient.zio.SttpClient
-import sttp.client.circe.asJson
-import sttp.client.{ UriContext, basicRequest }
+import sttp.client3.asynchttpclient.zio.{ SttpClient, send }
+import sttp.client3.ziojson.asJson
+import sttp.client3.{ UriContext, basicRequest }
 import sttp.model.Uri
 
 import zio._
 import zio.duration._
+import zio.json._
 import zio.redis._
 
 object ContributorsCache {
@@ -27,23 +26,23 @@ object ContributorsCache {
 
   private[this] def read(repository: Repository): ZIO[RedisExecutor, ApiError, Contributors] =
     get[String, String](repository.key)
-      .someOrFail(ApiError.CacheMiss)
-      .map(decode[Contributors])
+      .someOrFail(ApiError.CacheMiss(repository.key))
+      .map(_.fromJson[Contributors])
       .rightOrFail(ApiError.CorruptedData)
       .refineToOrDie[ApiError]
 
   private[this] def retrieve(repository: Repository): ZIO[RedisExecutor with SttpClient, ApiError, Contributors] =
     for {
       req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
-      res          <- SttpClient.send(req).orElseFail(GithubUnreachable)
-      contributors <- res.body.fold(_ => ZIO.fail(UnknownProject), ZIO.succeed(_))
+      res          <- send(req).orElseFail(GithubUnreachable)
+      contributors <- res.body.fold(_ => ZIO.fail(UnknownProject(urlOf(repository).toString)), ZIO.succeed(_))
       _            <- cache(repository, contributors)
     } yield Contributors(contributors)
 
   private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[RedisExecutor, Any] =
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
-      .map(Contributors(_).asJson.noSpaces)
+      .map(Contributors(_).toJson)
       .flatMap(data => set(repository.key, data, Some(1.minute)).orDie)
       .ignore
 
