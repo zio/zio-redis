@@ -2204,29 +2204,25 @@ private[redis] final class TestExecutor private (
   private[this] def sInter(mainKey: String, otherKeys: Chunk[String]): STM[Unit, Set[String]] = {
     sealed trait State
     object State {
-
       case object WrongType extends State
 
-      case object Empty extends State
-
       final case class Continue(values: Set[String]) extends State
-
     }
+
     def get(key: String): STM[Nothing, State] =
       STM.ifM(isSet(key))(
-        sets.get(key).map(_.fold[State](State.Empty)(State.Continue)),
+        sets.get(key).map(_.fold[State](State.Continue(Set.empty))(State.Continue)),
         STM.succeedNow(State.WrongType)
       )
 
     def step(state: State, next: String): STM[Nothing, State] =
       state match {
-        case State.Empty     => STM.succeedNow(State.Empty)
         case State.WrongType => STM.succeedNow(State.WrongType)
         case State.Continue(values) =>
           get(next).map {
             case State.Continue(otherValues) =>
               val intersection = values.intersect(otherValues)
-              if (intersection.isEmpty) State.Empty else State.Continue(intersection)
+              State.Continue(intersection)
             case s => s
           }
       }
@@ -2235,9 +2231,8 @@ private[redis] final class TestExecutor private (
       init  <- get(mainKey)
       state <- STM.foldLeft(otherKeys)(init)(step)
       result <- state match {
-                  case State.Continue(values) => STM.succeedNow(values)
-                  case State.Empty            => STM.succeedNow(Set.empty[String])
                   case State.WrongType        => STM.fail(())
+                  case State.Continue(values) => STM.succeedNow(values)
                 }
     } yield result
   }
