@@ -1748,7 +1748,7 @@ trait SortedSetsSpec extends BaseSpec {
             notExists <- uuid
             _         <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             ret       <- zRandMember[String, String](notExists, 1)
-          } yield assert(ret)(isNone)
+          } yield assert(ret)(isEmpty)
         },
         testM("get an element") {
           for {
@@ -1762,7 +1762,7 @@ trait SortedSetsSpec extends BaseSpec {
             first <- uuid
             _     <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             ret   <- zRandMember[String, String](first, 2)
-          } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
+          } yield assert(ret)(hasSize(equalTo(2)))
         }
       ),
       suite("zRandMemberWithScores")(
@@ -1772,14 +1772,14 @@ trait SortedSetsSpec extends BaseSpec {
             notExists <- uuid
             _         <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             ret       <- zRandMemberWithScores[String, String](notExists, 1)
-          } yield assert(ret)(isNone)
+          } yield assert(ret)(isEmpty)
         },
         testM("get elements with count") {
           for {
             first <- uuid
             _     <- zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             ret   <- zRandMemberWithScores[String, String](first, 2)
-          } yield assert(ret)(isSome) && assert(ret.get.size)(equalTo(2))
+          } yield assert(ret)(hasSize(equalTo(2)))
         }
       )
     )

@@ -874,11 +874,11 @@ trait SortedSets {
    *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
    * @return Return an array of elements from the sorted set value stored at key.
    */
-  final def zRandMember[K: Schema, M: Schema](key: K, count: Long): ZIO[RedisExecutor, RedisError, Option[Chunk[M]]] = {
+  final def zRandMember[K: Schema, M: Schema](key: K, count: Long): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
     val command = RedisCommand(
       ZRandMember,
       Tuple2(ArbitraryInput[K](), LongInput),
-      OptionalOutput(ChunkOutput(ArbitraryOutput[M]()))
+      ZRandMemberOutput(ArbitraryOutput[M]())
     )
     command.run((key, count))
   }
@@ -895,14 +895,12 @@ trait SortedSets {
   final def zRandMemberWithScores[K: Schema, M: Schema](
     key: K,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, Option[Chunk[MemberScore[M]]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
     val command = RedisCommand(
       ZRandMember,
       Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[String]()),
-      OptionalOutput(
-        ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-          .map(_.map { case (m, s) => MemberScore(s, m) })
-      )
+      ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+        .map(_.map { case (m, s) => MemberScore(s, m) })
     )
     command.run((key, count, WithScores.stringify))
   }
