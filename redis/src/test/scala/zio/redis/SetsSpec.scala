@@ -246,14 +246,14 @@ trait SetsSpec extends BaseSpec {
             inter  <- sInter[String, String](first, second).either
           } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
         },
-        testM("empty with empty first set and second parameter is not set") {
+        testM("error when empty first set and second parameter is not set") {
           for {
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- set(second, value)
-            inter  <- sInter[String, String](first, second)
-          } yield assert(inter)(isEmpty)
+            inter  <- sInter[String, String](first, second).either
+          } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error with non-empty first set and second parameter is not set") {
           for {
@@ -316,15 +316,15 @@ trait SetsSpec extends BaseSpec {
             card   <- sInterStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
-        testM("empty with empty first set and second parameter is not set") {
+        testM("error when empty first set and second parameter is not set") {
           for {
             dest   <- uuid
             first  <- uuid
             second <- uuid
             value  <- uuid
             _      <- set(second, value)
-            card   <- sInterStore(dest, first, second)
-          } yield assert(card)(equalTo(0L))
+            card   <- sInterStore(dest, first, second).either
+          } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         testM("error with non-empty first set and second parameter is not set") {
           for {
