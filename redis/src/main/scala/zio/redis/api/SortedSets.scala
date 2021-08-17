@@ -1086,7 +1086,7 @@ trait SortedSets {
         val command = RedisCommand(
           ZRandMember,
           Tuple2(ArbitraryInput[K](), LongInput),
-          ZRandMemberOutput(ArbitraryOutput[M]()))
+          ZRandMemberOutput(ArbitraryOutput[M]())
         )
         command.run((key, count))
       }
