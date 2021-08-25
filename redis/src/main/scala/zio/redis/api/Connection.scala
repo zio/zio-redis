@@ -54,7 +54,16 @@ trait Connection {
     command.run(())
   }
 
-  final def clientInfo = ???
+  /**
+   * Returns information and statistics about the current client connection
+   *
+   * @return information on the current client
+   */
+  final def clientInfo: ZIO[RedisExecutor, RedisError, ClientInfo] = {
+    val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput)
+
+    command.run(()).map(_.head)
+  }
 
   /**
    * Closes a given client connection with the specified address
@@ -204,7 +213,16 @@ trait Connection {
     command.run(None)
   }
 
-  final def clientTrackingInfo = ???
+  /**
+   * Returns information about the current client connection's use of the server assisted client side caching feature
+   *
+   * @return tracking information.
+   */
+  final def clientTrackingInfo: ZIO[RedisExecutor, RedisError, ClientTrackingInfo] = {
+    val command = RedisCommand(ClientTrackingInfo, NoInput, ClientTrackingInfoOutput)
+
+    command.run(())
+  }
 
   /**
    * Unblocks, from a different connection, a client blocked in a blocking operation

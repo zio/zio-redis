@@ -85,6 +85,20 @@ trait Connection {
     case object Write extends ClientPauseMode
   }
 
+  sealed case class ClientTrackingFlags(
+    clientSideCaching: Boolean,
+    trackingMode: Option[ClientTrackingMode],
+    noLoop: Boolean,
+    caching: Option[Boolean],
+    brokenRedirect: Boolean
+  )
+
+  sealed case class ClientTrackingInfo(
+    flags: ClientTrackingFlags,
+    redirect: Option[Long],
+    prefixes: Set[String]
+  )
+
   sealed trait ClientTrackingMode { self =>
     private[redis] final def stringify: String =
       self match {
