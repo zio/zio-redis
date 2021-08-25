@@ -109,11 +109,11 @@ trait Connection {
    * @return info on the selected clients.
    */
   final def clientList(
-    ids: Id*
+    ids: Long*
   )(clientType: Option[ClientType] = None): ZIO[RedisExecutor, RedisError, Chunk[ClientInfo]] = {
     val command = RedisCommand(ClientList, Tuple2(OptionalInput(ClientTypeInput), Varargs(IdInput)), ClientInfoOutput)
 
-    command.run(clientType, ids)
+    command.run((clientType, ids))
   }
 
   /**
@@ -168,7 +168,7 @@ trait Connection {
       UnitOutput
     )
 
-    command.run(timeout, mode)
+    command.run((timeout, mode))
   }
 
   /**
@@ -237,7 +237,7 @@ trait Connection {
   ): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(ClientUnblock, Tuple2(LongInput, OptionalInput(UnblockBehaviorInput)), BoolOutput)
 
-    command.run(clientId, error)
+    command.run((clientId, error))
   }
 
   /**

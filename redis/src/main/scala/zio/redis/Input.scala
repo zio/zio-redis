@@ -545,9 +545,9 @@ object Input {
       }
   }
 
-  case object IdInput extends Input[Id] {
-    def encode(data: Id)(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      Chunk(encodeString("ID"), encodeString(data.id.toString))
+  case object IdInput extends Input[Long] {
+    def encode(data: Long)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      Chunk(encodeString("ID"), encodeString(data.toString))
   }
 
   case object UnblockBehaviorInput extends Input[UnblockBehavior] {

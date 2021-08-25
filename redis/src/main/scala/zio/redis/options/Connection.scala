@@ -5,8 +5,8 @@ import java.net.InetAddress
 import zio.duration.Duration
 
 trait Connection {
-  sealed abstract class Address(ip: InetAddress, port: Int) {
-    private[redis] final def stringify: String = s"$ip:$port"
+  sealed case class Address(ip: InetAddress, port: Int) {
+    private[redis] final def stringify: String = s"${ip.getHostAddress}:$port"
   }
 
   sealed case class ClientEvents(readable: Boolean, writable: Boolean)
@@ -61,10 +61,10 @@ trait Connection {
 
   object ClientKillFilter {
     sealed case class Address(ip: InetAddress, port: Int) extends ClientKillFilter {
-      private[redis] final def stringify: String = s"$ip:$port"
+      private[redis] final def stringify: String = s"${ip.getHostAddress}:$port"
     }
     sealed case class LocalAddress(ip: InetAddress, port: Int) extends ClientKillFilter {
-      private[redis] final def stringify: String = s"$ip:$port"
+      private[redis] final def stringify: String = s"${ip.getHostAddress}:$port"
     }
     sealed case class Id(id: Long)                 extends ClientKillFilter
     sealed case class Type(clientType: ClientType) extends ClientKillFilter
@@ -126,21 +126,19 @@ trait Connection {
   sealed trait ClientType { self =>
     private[redis] final def stringify: String =
       self match {
-        case ClientType.Normal => "normal"
-        case ClientType.Master => "master"
-        case ClientType.Slave  => "slave"
-        case ClientType.PubSub => "pubsub"
+        case ClientType.Normal  => "normal"
+        case ClientType.Master  => "master"
+        case ClientType.Replica => "replica"
+        case ClientType.PubSub  => "pubsub"
       }
   }
 
   object ClientType {
-    case object Normal extends ClientType
-    case object Master extends ClientType
-    case object Slave  extends ClientType
-    case object PubSub extends ClientType
+    case object Normal  extends ClientType
+    case object Master  extends ClientType
+    case object Replica extends ClientType
+    case object PubSub  extends ClientType
   }
-
-  sealed case class Id(id: Long)
 
   sealed trait UnblockBehavior { self =>
     private[redis] final def stringify: String =
