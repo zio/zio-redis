@@ -765,7 +765,7 @@ object Output {
               client
                 .get("events")
                 .map(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
-                .getOrElse(ClientEvents(readable = false, writable = false))
+                .getOrElse(ClientEvents())
             ClientInfo(
               id = client.get("id").flatMap(parseLong).getOrElse(0L),
               name = client.get("name"),
@@ -804,8 +804,8 @@ object Output {
           val fields = values.toList
             .grouped(2)
             .map {
-              case RespValue.SimpleString(key) :: value :: Nil => (key, value)
-              case other                                       => throw ProtocolError(s"$other isn't a valid format")
+              case (bulk @ RespValue.BulkString(_)) :: value :: Nil => (bulk.asString, value)
+              case other                                            => throw ProtocolError(s"$other isn't a valid format")
             }
             .toMap
           ClientTrackingInfo(
@@ -814,7 +814,7 @@ object Output {
               .map {
                 case RespValue.Array(value) =>
                   val set = value.map {
-                    case RespValue.SimpleString(string) => string
+                    case bulk @ RespValue.BulkString(_) => bulk.asString
                     case other                          => throw ProtocolError(s"$other isn't a string")
                   }.toSet
                   ClientTrackingFlags(
@@ -835,9 +835,10 @@ object Output {
             fields
               .get("redirect")
               .map {
-                case RespValue.Integer(-1L) => None
-                case RespValue.Integer(v)   => Some(v)
-                case other                  => throw ProtocolError(s"$other isn't an integer")
+                case RespValue.Integer(-1L)         => None
+                case RespValue.Integer(v) if v > 0L => Some(v)
+                case RespValue.Integer(v)           => throw ProtocolError(s"$v isn't a valid integer")
+                case other                          => throw ProtocolError(s"$other isn't an integer")
               }
               .getOrElse(throw ProtocolError("Missing redirect field")),
             fields
@@ -846,7 +847,7 @@ object Output {
                 case RespValue.NullArray => Set.empty[String]
                 case RespValue.Array(value) =>
                   value.map {
-                    case RespValue.SimpleString(string) => string
+                    case bulk @ RespValue.BulkString(_) => bulk.asString
                     case other                          => throw ProtocolError(s"$other isn't a string")
                   }.toSet[String]
                 case other => throw ProtocolError(s"$other isn't an array")
