@@ -819,15 +819,19 @@ object Output {
                   }.toSet
                   ClientTrackingFlags(
                     set.contains("on"),
-                    if (set.contains("optin")) Some(ClientTrackingMode.OptIn)
-                    else if (set.contains("optout")) Some(ClientTrackingMode.OptOut)
-                    else if (set.contains("bcast")) Some(ClientTrackingMode.Broadcast)
-                    else None,
-                    if (set.contains("noloop")) true else false,
-                    if (set.contains("caching-yes")) Some(true)
-                    else if (set.contains("caching-no")) Some(false)
-                    else None,
-                    if (set.contains("broken_redirect")) true else false
+                    set match {
+                      case s if s.contains("optin")  => Some(ClientTrackingMode.OptIn)
+                      case s if s.contains("optout") => Some(ClientTrackingMode.OptOut)
+                      case s if s.contains("bcast")  => Some(ClientTrackingMode.Broadcast)
+                      case _                         => None
+                    },
+                    set.contains("noloop"),
+                    set match {
+                      case s if s.contains("caching-yes") => Some(true)
+                      case s if s.contains("caching-no")  => Some(false)
+                      case _                              => None
+                    },
+                    set.contains("broken_redirect")
                   )
                 case other => throw ProtocolError(s"$other isn't an array with elements")
               }
