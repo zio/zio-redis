@@ -52,6 +52,11 @@ private[redis] final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
+                  case "CLIENT" =>
+                    val command1 = command.tail
+                    val name1    = command1.head
+                    runCommand(name.asString + " " + name1.asString, command1.tail).commit
+
                   case _ => runCommand(name.asString, command.tail).commit
                 }
     } yield result
@@ -79,6 +84,37 @@ private[redis] final class TestExecutor private (
 
   private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): USTM[RespValue] = {
     name match {
+      case api.Connection.Auth =>
+        onConnection(name, input)(RespValue.bulkString("OK"))
+
+      case api.Connection.ClientCaching =>
+        STM.succeedNow {
+          RespValue.SimpleString("OK")
+        }
+
+      case api.Connection.ClientUnpause =>
+        STM.succeedNow {
+          RespValue.SimpleString("OK")
+        }
+
+      case api.Connection.ClientPause =>
+        STM.succeedNow {
+          RespValue.SimpleString("OK")
+        }
+
+      case api.Connection.ClientSetName =>
+        STM.succeedNow {
+          RespValue.SimpleString("OK")
+        }
+
+      case api.Connection.ClientTracking =>
+        STM.succeedNow {
+          RespValue.SimpleString("OK")
+        }
+
+      case api.Connection.Echo =>
+        onConnection(name, input)(input.head)
+
       case api.Connection.Ping =>
         STM.succeedNow {
           if (input.isEmpty)
@@ -87,11 +123,15 @@ private[redis] final class TestExecutor private (
             input.head
         }
 
-      case api.Connection.Auth =>
-        onConnection(name, input)(RespValue.bulkString("OK"))
+      case api.Connection.Quit =>
+        STM.succeedNow {
+          RespValue.SimpleString("OK")
+        }
 
-      case api.Connection.Echo =>
-        onConnection(name, input)(input.head)
+      case api.Connection.Reset =>
+        STM.succeedNow {
+          RespValue.SimpleString("RESET")
+        }
 
       case api.Connection.Select =>
         onConnection(name, input)(RespValue.bulkString("OK"))
