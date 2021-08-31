@@ -197,7 +197,7 @@ trait Connection {
     redirect: Option[Long] = None,
     trackingMode: Option[ClientTrackingMode] = None,
     noLoop: Boolean = false,
-    prefixes: Set[String]
+    prefixes: Set[String] = Set.empty
   ): ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput)
     command.run(Some((redirect, trackingMode, noLoop, Chunk.fromIterable(prefixes))))

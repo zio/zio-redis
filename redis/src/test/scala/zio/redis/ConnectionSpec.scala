@@ -11,7 +11,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientCaching")(
         testM("track keys") {
           for {
-            _    <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), prefixes = Set.empty)
+            _    <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
             unit <- clientCaching(true)
           } yield assert(unit)(isUnit)
         },
