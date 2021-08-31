@@ -11,6 +11,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientCaching")(
         testM("track keys") {
           for {
+            _    <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), prefixes = Set.empty)
             unit <- clientCaching(true)
           } yield assert(unit)(isUnit)
         },
@@ -23,7 +24,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("client pausing")(
         testM("pause client") {
           for {
-            unit <- clientPause(3.seconds, Some(ClientPauseMode.All))
+            unit <- clientPause(1.second, Some(ClientPauseMode.All))
           } yield assert(unit)(isUnit)
         },
         testM("unpause client") {
@@ -42,7 +43,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientTracking")(
         testM("enable tracking") {
           for {
-            unit <- clientTrackingOn(Some(3L), Some(ClientTrackingMode.OptIn), prefixes = Set("foo"))
+            unit <- clientTrackingOn(None, Some(ClientTrackingMode.OptIn), prefixes = Set("foo"))
           } yield assert(unit)(isUnit)
         },
         testM("disable tracking") {
@@ -59,17 +60,10 @@ trait ConnectionSpec extends BaseSpec {
           ping(Some("Hello")).map(assert(_)(equalTo("Hello")))
         }
       ),
-      suite("quit and reset")(
-        testM("quit") {
-          for {
-            unit <- quit
-          } yield assert(unit)(isUnit)
-        },
-        testM("reset") {
-          for {
-            unit <- reset
-          } yield assert(unit)(isUnit)
-        }
-      )
+      testM("reset") {
+        for {
+          unit <- reset
+        } yield assert(unit)(isUnit)
+      }
     )
 }
