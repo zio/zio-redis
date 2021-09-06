@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
 
-import zio.redis._
 import zio.ZIO
+import zio.redis._
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
