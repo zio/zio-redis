@@ -1,10 +1,14 @@
-package zio.redis
+package zio.redis.strings
 
 import java.util.concurrent.TimeUnit
 
+import cats.instances.list._
+import cats.syntax.foldable._
+import io.chrisdavenport.rediculous.{ RedisCommands, RedisIO }
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
+import zio.redis._
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -29,24 +33,16 @@ class GetBitBenchmarks extends BenchmarkRuntime {
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
     import _root_.laserdisc.{ all => cmd, _ }
-    import cats.instances.list._
-    import cats.syntax.foldable._
     unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
   }
 
   @Benchmark
-  def rediculous(): Unit = {
-    import cats.implicits._
-    import io.chrisdavenport.rediculous._
+  def rediculous(): Unit =
     unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.getbit[RedisIO](i, 0L).run(c)))
-  }
 
   @Benchmark
-  def redis4cats(): Unit = {
-    import cats.instances.list._
-    import cats.syntax.foldable._
+  def redis4cats(): Unit =
     unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.getBit(i, 0L)))
-  }
 
   @Benchmark
   def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => getBit(i, 0L)))
