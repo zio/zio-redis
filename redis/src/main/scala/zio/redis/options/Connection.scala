@@ -34,8 +34,8 @@ trait Connection {
   sealed case class ClientInfo(
     id: Long,
     name: Option[String] = None,
-    address: Option[InetAddress] = None,
-    localAddress: Option[InetAddress] = None,
+    address: Option[Address] = None,
+    localAddress: Option[Address] = None,
     fileDescriptor: Option[Long] = None,
     age: Option[Duration] = None,
     idle: Option[Duration] = None,

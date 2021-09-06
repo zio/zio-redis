@@ -769,8 +769,12 @@ object Output {
             ClientInfo(
               id = client.get("id").flatMap(parseLong).getOrElse(0L),
               name = client.get("name"),
-              address = client.get("addr").map(InetAddress.getByName),
-              localAddress = client.get("laddr").map(InetAddress.getByName),
+              address = client.get("addr").map { str =>
+                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
+              },
+              localAddress = client.get("laddr").map { str =>
+                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
+              },
               fileDescriptor = client.get("fd").flatMap(parseLong),
               age = client.get("age").flatMap(parseLong).map(_.seconds),
               idle = client.get("idle").flatMap(parseLong).map(_.seconds),
@@ -792,7 +796,8 @@ object Output {
               user = client.get("user")
             )
           }
-        case other => throw ProtocolError(s"$other isn't a bulk string")
+        case RespValue.NullBulkString => Chunk.empty
+        case other                    => throw ProtocolError(s"$other isn't a bulk string")
       }
   }
 

@@ -87,7 +87,7 @@ trait Connection {
    *  belong to the normal class
    *  - User(username). Closes all the connections that are authenticated with the specified ACL username, however it
    *  returns an error if the username does not map to an existing ACL user
-   *  - SkipMe(yesNo). By default this option is set to yes, that is, the client calling the command will not get
+   *  - SkipMe(skip). By default this option is set to yes, that is, the client calling the command will not get
    *  killed, however setting this option to no will have the effect of also killing the client calling the command
    * It is possible to provide multiple filters at the same time. The command will handle multiple filters via logical
    * AND
@@ -113,7 +113,7 @@ trait Connection {
   )(clientType: Option[ClientType] = None): ZIO[RedisExecutor, RedisError, Chunk[ClientInfo]] = {
     val command = RedisCommand(ClientList, Tuple2(OptionalInput(ClientTypeInput), Varargs(IdInput)), ClientInfoOutput)
 
-    command.run((clientType, ids))
+    command.run((clientType, ids.toList))
   }
 
   /**
