@@ -1,9 +1,10 @@
-package zio.redis
+package zio.redis.strings
 
 import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
 
+import zio.redis._
 import zio.ZIO
 
 @State(Scope.Thread)
