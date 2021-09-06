@@ -13,7 +13,7 @@ object Api {
     case Method.GET -> Root / "repositories" / owner / name / "contributors" =>
       ZIO
         .serviceWith[ContributorsCache.Service](_.fetchAll(Repository(Owner(owner), Name(name))))
-        .bimap(ApiError.errorResponse, r => Response.jsonString(r.toJson))
+        .mapBoth(ApiError.errorResponse, r => Response.jsonString(r.toJson))
         .merge
   }
 
