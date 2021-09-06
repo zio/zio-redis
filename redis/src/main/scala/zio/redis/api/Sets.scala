@@ -12,11 +12,15 @@ trait Sets {
   /**
    * Add one or more members to a set.
    *
-   * @param key Key of set to add to
-   * @param member first member to add
-   * @param members subsequent members to add
-   * @return Returns the number of elements that were added to the set, not including all the elements already present
-   *         into the set.
+   * @param key
+   *   Key of set to add to
+   * @param member
+   *   first member to add
+   * @param members
+   *   subsequent members to add
+   * @return
+   *   Returns the number of elements that were added to the set, not including all the elements already present into
+   *   the set.
    */
   final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(SAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)
@@ -26,8 +30,10 @@ trait Sets {
   /**
    * Get the number of members in a set.
    *
-   * @param key Key of set to get the number of members of
-   * @return Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
+   * @param key
+   *   Key of set to get the number of members of
+   * @return
+   *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
   final def sCard[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(SCard, ArbitraryInput[K](), LongOutput)
@@ -37,10 +43,12 @@ trait Sets {
   /**
    * Subtract multiple sets.
    *
-   * @param key Key of the set to subtract from
-   * @param keys Keys of the sets to subtract
-   * @return Returns the members of the set resulting from the difference between the first set and all the successive
-   *         sets.
+   * @param key
+   *   Key of the set to subtract from
+   * @param keys
+   *   Keys of the sets to subtract
+   * @return
+   *   Returns the members of the set resulting from the difference between the first set and all the successive sets.
    */
   final def sDiff[K: Schema, R: Schema](key: K, keys: K*): ZIO[RedisExecutor, RedisError, Chunk[R]] = {
     val command = RedisCommand(SDiff, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
@@ -50,10 +58,14 @@ trait Sets {
   /**
    * Subtract multiple sets and store the resulting set in a key.
    *
-   * @param destination Key of set to store the resulting set
-   * @param key Key of set to be subtracted from
-   * @param keys Keys of sets to subtract
-   * @return Returns the number of elements in the resulting set.
+   * @param destination
+   *   Key of set to store the resulting set
+   * @param key
+   *   Key of set to be subtracted from
+   * @param keys
+   *   Keys of sets to subtract
+   * @return
+   *   Returns the number of elements in the resulting set.
    */
   final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(SDiffStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
@@ -63,9 +75,12 @@ trait Sets {
   /**
    * Intersect multiple sets and store the resulting set in a key.
    *
-   * @param destination Key of set to store the resulting set
-   * @param keys Keys of the sets to intersect with each other
-   * @return Returns the members of the set resulting from the intersection of all the given sets.
+   * @param destination
+   *   Key of set to store the resulting set
+   * @param keys
+   *   Keys of the sets to intersect with each other
+   * @return
+   *   Returns the members of the set resulting from the intersection of all the given sets.
    */
   final def sInter[K: Schema, R: Schema](destination: K, keys: K*): ZIO[RedisExecutor, RedisError, Chunk[R]] = {
     val command = RedisCommand(SInter, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
@@ -75,10 +90,14 @@ trait Sets {
   /**
    * Intersect multiple sets and store the resulting set in a key.
    *
-   * @param destination Key of set to store the resulting set
-   * @param key Key of first set to intersect
-   * @param keys Keys of subsequent sets to intersect
-   * @return Returns the number of elements in the resulting set.
+   * @param destination
+   *   Key of set to store the resulting set
+   * @param key
+   *   Key of first set to intersect
+   * @param keys
+   *   Keys of subsequent sets to intersect
+   * @return
+   *   Returns the number of elements in the resulting set.
    */
   final def sInterStore[D: Schema, K: Schema](
     destination: D,
@@ -92,10 +111,13 @@ trait Sets {
   /**
    * Determine if a given value is a member of a set.
    *
-   * @param key of the set
-   * @param member value which should be searched in the set
-   * @return Returns 1 if the element is a member of the set. 0 if the element is not a member of the set, or if key
-   *         does not exist.
+   * @param key
+   *   of the set
+   * @param member
+   *   value which should be searched in the set
+   * @return
+   *   Returns 1 if the element is a member of the set. 0 if the element is not a member of the set, or if key does not
+   *   exist.
    */
   final def sIsMember[K: Schema, M: Schema](key: K, member: M): ZIO[RedisExecutor, RedisError, Boolean] = {
     val command = RedisCommand(SIsMember, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), BoolOutput)
@@ -105,8 +127,10 @@ trait Sets {
   /**
    * Get all the members in a set.
    *
-   * @param key Key of the set to get the members of
-   * @return Returns the members of the set.
+   * @param key
+   *   Key of the set to get the members of
+   * @return
+   *   Returns the members of the set.
    */
   final def sMembers[K: Schema, R: Schema](key: K): ZIO[RedisExecutor, RedisError, Chunk[R]] = {
     val command = RedisCommand(SMembers, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[R]()))
@@ -116,10 +140,14 @@ trait Sets {
   /**
    * Move a member from one set to another.
    *
-   * @param source Key of the set to move the member from
-   * @param destination Key of the set to move the member to
-   * @param member Element to move
-   * @return Returns 1 if the element was moved. 0 if it was not found.
+   * @param source
+   *   Key of the set to move the member from
+   * @param destination
+   *   Key of the set to move the member to
+   * @param member
+   *   Element to move
+   * @return
+   *   Returns 1 if the element was moved. 0 if it was not found.
    */
   final def sMove[S: Schema, D: Schema, M: Schema](
     source: S,
@@ -133,9 +161,12 @@ trait Sets {
   /**
    * Remove and return one or multiple random members from a set.
    *
-   * @param key Key of the set to remove items from
-   * @param count Number of elements to remove
-   * @return Returns the elements removed.
+   * @param key
+   *   Key of the set to remove items from
+   * @param count
+   *   Number of elements to remove
+   * @return
+   *   Returns the elements removed.
    */
   final def sPop[K: Schema, R: Schema](key: K, count: Option[Long] = None): ZIO[RedisExecutor, RedisError, Chunk[R]] = {
     val command = RedisCommand(
@@ -149,9 +180,12 @@ trait Sets {
   /**
    * Get one or multiple random members from a set.
    *
-   * @param key Key of the set to get members from
-   * @param count Number of elements to randomly get
-   * @return Returns the random members.
+   * @param key
+   *   Key of the set to get members from
+   * @param count
+   *   Number of elements to randomly get
+   * @return
+   *   Returns the random members.
    */
   final def sRandMember[K: Schema, R: Schema](
     key: K,
@@ -168,10 +202,14 @@ trait Sets {
   /**
    * Remove one of more members from a set.
    *
-   * @param key Key of the set to remove members from
-   * @param member Value of the first element to remove
-   * @param members Subsequent values of elements to remove
-   * @return Returns the number of members that were removed from the set, not including non existing members.
+   * @param key
+   *   Key of the set to remove members from
+   * @param member
+   *   Value of the first element to remove
+   * @param members
+   *   Subsequent values of elements to remove
+   * @return
+   *   Returns the number of members that were removed from the set, not including non existing members.
    */
   final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(SRem, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)
@@ -181,14 +219,19 @@ trait Sets {
   /**
    * Incrementally iterate Set elements.
    *
-   * This is a cursor based scan of an entire set. Call initially with cursor set to 0 and on subsequent
-   * calls pass the return value as the next cursor.
+   * This is a cursor based scan of an entire set. Call initially with cursor set to 0 and on subsequent calls pass the
+   * return value as the next cursor.
    *
-   * @param key Key of the set to scan
-   * @param cursor Cursor to use for this iteration of scan
-   * @param pattern Glob-style pattern that filters which elements are returned
-   * @param count Count of elements. Roughly this number will be returned by Redis if possible
-   * @return Returns the next cursor, and items for this iteration or nothing when you reach the end, as a tuple.
+   * @param key
+   *   Key of the set to scan
+   * @param cursor
+   *   Cursor to use for this iteration of scan
+   * @param pattern
+   *   Glob-style pattern that filters which elements are returned
+   * @param count
+   *   Count of elements. Roughly this number will be returned by Redis if possible
+   * @return
+   *   Returns the next cursor, and items for this iteration or nothing when you reach the end, as a tuple.
    */
   final def sScan[K: Schema, R: Schema](
     key: K,
@@ -207,9 +250,12 @@ trait Sets {
   /**
    * Add multiple sets.
    *
-   * @param key Key of the first set to add
-   * @param keys Keys of the subsequent sets to add
-   * @return Returns a list with members of the resulting set.
+   * @param key
+   *   Key of the first set to add
+   * @param keys
+   *   Keys of the subsequent sets to add
+   * @return
+   *   Returns a list with members of the resulting set.
    */
   final def sUnion[K: Schema, R: Schema](key: K, keys: K*): ZIO[RedisExecutor, RedisError, Chunk[R]] = {
     val command = RedisCommand(SUnion, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
@@ -219,10 +265,14 @@ trait Sets {
   /**
    * Add multiple sets and add the resulting set in a key.
    *
-   * @param destination Key of destination to store the result
-   * @param key Key of first set to add
-   * @param keys Subsequent keys of sets to add
-   * @return Returns the number of elements in the resulting set.
+   * @param destination
+   *   Key of destination to store the result
+   * @param key
+   *   Key of first set to add
+   * @param keys
+   *   Subsequent keys of sets to add
+   * @return
+   *   Returns the number of elements in the resulting set.
    */
   final def sUnionStore[D: Schema, K: Schema](
     destination: D,
