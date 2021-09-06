@@ -26,7 +26,7 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Lint code
-        run: sbt fmtCheck fixCheck
+        run: ./sbt fmtCheck fixCheck
 
   test:
     runs-on: ubuntu-20.04
@@ -50,7 +50,7 @@ jobs:
       - name: Run test containers
         run: docker-compose up -d
       - name: Run tests
-        run: sbt ++${{ matrix.scala }}! test
+        run: ./sbt ++${{ matrix.scala }}! test
 
   ci:
     runs-on: ubuntu-20.04
@@ -74,7 +74,7 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Release artifacts
-        run: sbt ci-release
+        run: ./sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
