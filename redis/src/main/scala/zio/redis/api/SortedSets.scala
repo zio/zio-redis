@@ -13,12 +13,16 @@ trait SortedSets {
   /**
    * Remove and return the member with the highest score from one or more sorted sets, or block until one is available.
    *
-   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
-   * @param key Key of the set
-   * @param keys Keys of the rest sets
-   * @return A three-element Chunk with the first element being the name of the key where a member was popped,
-   *         the second element is the popped member itself, and the third element is the score of the popped element.
-   *         An empty chunk is returned when no element could be popped and the timeout expired.
+   * @param timeout
+   *   Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
+   * @param key
+   *   Key of the set
+   * @param keys
+   *   Keys of the rest sets
+   * @return
+   *   A three-element Chunk with the first element being the name of the key where a member was popped, the second
+   *   element is the popped member itself, and the third element is the score of the popped element. An empty chunk is
+   *   returned when no element could be popped and the timeout expired.
    */
   final def bzPopMax[K: Schema, M: Schema](
     timeout: Duration,
@@ -40,12 +44,16 @@ trait SortedSets {
   /**
    * Remove and return the member with the lowest score from one or more sorted sets, or block until one is available.
    *
-   * @param timeout Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
-   * @param key Key of the set
-   * @param keys Keys of the rest sets
-   * @return A three-element Chunk with the first element being the name of the key where a member was popped,
-   *         the second element is the popped member itself, and the third element is the score of the popped element.
-   *         An empty chunk is returned when no element could be popped and the timeout expired.
+   * @param timeout
+   *   Maximum number of seconds to block. A timeout of zero can be used to block indefinitely
+   * @param key
+   *   Key of the set
+   * @param keys
+   *   Keys of the rest sets
+   * @return
+   *   A three-element Chunk with the first element being the name of the key where a member was popped, the second
+   *   element is the popped member itself, and the third element is the score of the popped element. An empty chunk is
+   *   returned when no element could be popped and the timeout expired.
    */
   final def bzPopMin[K: Schema, M: Schema](
     timeout: Duration,
@@ -67,13 +75,19 @@ trait SortedSets {
   /**
    * Add one or more members to a sorted set, or update its score if it already exists.
    *
-   * @param key Key of set to add to
-   * @param update Set existing and never add elements or always set new elements and don't update existing elements
-   * @param change Modify the return value from the number of new elements added, to the total number of elements change
-   * @param memberScore Score that should be added to specific element for a given sorted set key
-   * @param memberScores Rest scores that should be added to specific elements fr a given sorted set key
-   * @return The number of elements added to the sorted set, not including elements already existing for which the score
-   *         was updated.
+   * @param key
+   *   Key of set to add to
+   * @param update
+   *   Set existing and never add elements or always set new elements and don't update existing elements
+   * @param change
+   *   Modify the return value from the number of new elements added, to the total number of elements change
+   * @param memberScore
+   *   Score that should be added to specific element for a given sorted set key
+   * @param memberScores
+   *   Rest scores that should be added to specific elements fr a given sorted set key
+   * @return
+   *   The number of elements added to the sorted set, not including elements already existing for which the score was
+   *   updated.
    */
   final def zAdd[K: Schema, M: Schema](key: K, update: Option[Update] = None, change: Option[Changed] = None)(
     memberScore: MemberScore[M],
@@ -95,14 +109,21 @@ trait SortedSets {
   /**
    * Add one or more members to a sorted set, or update its score if it already exists.
    *
-   * @param key Key of set to add to.
-   * @param update Set existing and never add elements or always set new elements and don't update existing elements
-   * @param change Modify the return value from the number of new elements added, to the total number of elements change
-   * @param increment When this option is specified ZADD acts like ZINCRBY. Only one score-element pair can be specified in this mode
-   * @param memberScore Score that should be added to specific element for a given sorted set key
-   * @param memberScores Rest scores that should be added to specific elements fr a given sorted set key
-   * @return The new score of member (a double precision floating point number), or None if the operation was aborted
-   *         (when called with either the XX or the NX option).
+   * @param key
+   *   Key of set to add to.
+   * @param update
+   *   Set existing and never add elements or always set new elements and don't update existing elements
+   * @param change
+   *   Modify the return value from the number of new elements added, to the total number of elements change
+   * @param increment
+   *   When this option is specified ZADD acts like ZINCRBY. Only one score-element pair can be specified in this mode
+   * @param memberScore
+   *   Score that should be added to specific element for a given sorted set key
+   * @param memberScores
+   *   Rest scores that should be added to specific elements fr a given sorted set key
+   * @return
+   *   The new score of member (a double precision floating point number), or None if the operation was aborted (when
+   *   called with either the XX or the NX option).
    */
   final def zAddWithIncr[K: Schema, M: Schema](key: K, update: Option[Update] = None, change: Option[Changed] = None)(
     increment: Increment,
@@ -126,8 +147,10 @@ trait SortedSets {
   /**
    * Get the number of members in a sorted set.
    *
-   * @param key Key of a sorted set
-   * @return The cardinality (number of elements) of the sorted set, or 0 if key does not exist.
+   * @param key
+   *   Key of a sorted set
+   * @return
+   *   The cardinality (number of elements) of the sorted set, or 0 if key does not exist.
    */
   final def zCard[K: Schema](key: K): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(ZCard, ArbitraryInput[K](), LongOutput)
@@ -137,9 +160,12 @@ trait SortedSets {
   /**
    * Returns the number of elements in the sorted set at key with a score between min and max.
    *
-   * @param key Key of a sorted set
-   * @param range Min and max score (including elements with score equal to min or max)
-   * @return the number of elements in the specified score range.
+   * @param key
+   *   Key of a sorted set
+   * @param range
+   *   Min and max score (including elements with score equal to min or max)
+   * @return
+   *   the number of elements in the specified score range.
    */
   final def zCount[K: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(ZCount, Tuple2(ArbitraryInput[K](), RangeInput), LongOutput)
@@ -149,10 +175,14 @@ trait SortedSets {
   /**
    * Subtract multiple sorted sets and return members.
    *
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of other sorted sets
-   * @return Chunk of differences between the first and successive input sorted sets.
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of other sorted sets
+   * @return
+   *   Chunk of differences between the first and successive input sorted sets.
    */
   final def zDiff[K: Schema, M: Schema](
     inputKeysNum: Long,
@@ -174,10 +204,14 @@ trait SortedSets {
   /**
    * Subtract multiple sorted sets and return members and their associated score.
    *
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of other sorted sets
-   * @return Chunk of differences and scores between the first and successive input sorted sets.
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of other sorted sets
+   * @return
+   *   Chunk of differences and scores between the first and successive input sorted sets.
    */
   final def zDiffWithScores[K: Schema, M: Schema](
     inputKeysNum: Long,
@@ -201,11 +235,16 @@ trait SortedSets {
   /**
    * Subtract multiple sorted sets and store the resulting sorted set in a destination key.
    *
-   * @param destination Key of the output
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of other sorted sets
-   * @return Chunk of differences between the first and successive input sorted sets.
+   * @param destination
+   *   Key of the output
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of other sorted sets
+   * @return
+   *   Chunk of differences between the first and successive input sorted sets.
    */
   final def zDiffStore[DK: Schema, K: Schema](
     destination: DK,
@@ -229,10 +268,14 @@ trait SortedSets {
   /**
    * Increment the score of a member in a sorted set.
    *
-   * @param key Key of a sorted set
-   * @param increment Increment value
-   * @param member Member of sorted set
-   * @return The new score of member (a double precision floating point number).
+   * @param key
+   *   Key of a sorted set
+   * @param increment
+   *   Increment value
+   * @param member
+   *   Member of sorted set
+   * @return
+   *   The new score of member (a double precision floating point number).
    */
   final def zIncrBy[K: Schema, M: Schema](
     key: K,
@@ -246,15 +289,20 @@ trait SortedSets {
   /**
    * Intersect multiple sorted sets and return members.
    *
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of the rest sorted sets
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
-   *                set. This means that the score of every element in every input sorted set is multiplied by this
-   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
-   *                multiplication factors default to 1
-   * @return Chunk containing the intersection of members.
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of the rest sorted sets
+   * @param aggregate
+   *   With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights
+   *   Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set. This
+   *   means that the score of every element in every input sorted set is multiplied by this factor before being passed
+   *   to the aggregation function. When WEIGHTS is not given, the multiplication factors default to 1
+   * @return
+   *   Chunk containing the intersection of members.
    */
   final def zInter[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
@@ -276,15 +324,20 @@ trait SortedSets {
   /**
    * Intersect multiple sorted sets and return members and their associated score.
    *
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of the rest sorted sets
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
-   *                set. This means that the score of every element in every input sorted set is multiplied by this
-   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
-   *                multiplication factors default to 1
-   * @return Chunk containing the intersection of members with their score.
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of the rest sorted sets
+   * @param aggregate
+   *   With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights
+   *   Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set. This
+   *   means that the score of every element in every input sorted set is multiplied by this factor before being passed
+   *   to the aggregation function. When WEIGHTS is not given, the multiplication factors default to 1
+   * @return
+   *   Chunk containing the intersection of members with their score.
    */
   final def zInterWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
@@ -308,16 +361,22 @@ trait SortedSets {
   /**
    * Intersect multiple sorted sets and store the resulting sorted set in a new key.
    *
-   * @param destination Key of the output
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of the rest sorted sets
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
-   *                set. This means that the score of every element in every input sorted set is multiplied by this
-   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
-   *                multiplication factors default to 1
-   * @return The number of elements in the resulting sorted set at destination.
+   * @param destination
+   *   Key of the output
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of the rest sorted sets
+   * @param aggregate
+   *   With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @param weights
+   *   Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set. This
+   *   means that the score of every element in every input sorted set is multiplied by this factor before being passed
+   *   to the aggregation function. When WEIGHTS is not given, the multiplication factors default to 1
+   * @return
+   *   The number of elements in the resulting sorted set at destination.
    */
   final def zInterStore[DK: Schema, K: Schema](destination: DK, inputKeysNum: Long, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
@@ -340,9 +399,12 @@ trait SortedSets {
   /**
    * Count the number of members in a sorted set between a given lexicographical range.
    *
-   * @param key Key of a sorted set
-   * @param lexRange LexRange that must be satisfied
-   * @return The number of elements in the specified score range.
+   * @param key
+   *   Key of a sorted set
+   * @param lexRange
+   *   LexRange that must be satisfied
+   * @return
+   *   The number of elements in the specified score range.
    */
   final def zLexCount[K: Schema](key: K, lexRange: LexRange): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(
@@ -356,11 +418,14 @@ trait SortedSets {
   /**
    * Remove and return members with the highest scores in a sorted set.
    *
-   * @param key Key of a sorted set
-   * @param count When left unspecified, the default value for count is 1. Specifying a count value that is higher than
-   *              the sorted set's cardinality will not produce an error. When returning multiple elements, the one with
-   *              the highest score will be the first, followed by the elements with lower scores
-   * @return Chunk of popped elements and scores.
+   * @param key
+   *   Key of a sorted set
+   * @param count
+   *   When left unspecified, the default value for count is 1. Specifying a count value that is higher than the sorted
+   *   set's cardinality will not produce an error. When returning multiple elements, the one with the highest score
+   *   will be the first, followed by the elements with lower scores
+   * @return
+   *   Chunk of popped elements and scores.
    */
   final def zPopMax[K: Schema, M: Schema](
     key: K,
@@ -378,11 +443,14 @@ trait SortedSets {
   /**
    * Remove and return members with the lowest scores in a sorted set.
    *
-   * @param key Key of a sorted set
-   * @param count When left unspecified, the default value for count is 1. Specifying a count value that is higher than
-   *              the sorted set's cardinality will not produce an error. When returning multiple elements, the one with
-   *              the lowest score will be the first, followed by the elements with greater scores
-   * @return Chunk of popped elements and scores.
+   * @param key
+   *   Key of a sorted set
+   * @param count
+   *   When left unspecified, the default value for count is 1. Specifying a count value that is higher than the sorted
+   *   set's cardinality will not produce an error. When returning multiple elements, the one with the lowest score will
+   *   be the first, followed by the elements with greater scores
+   * @return
+   *   Chunk of popped elements and scores.
    */
   final def zPopMin[K: Schema, M: Schema](
     key: K,
@@ -400,9 +468,12 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by index.
    *
-   * @param key Key of a sorted set
-   * @param range Inclusive range
-   * @return Chunk of elements in the specified range.
+   * @param key
+   *   Key of a sorted set
+   * @param range
+   *   Inclusive range
+   * @return
+   *   Chunk of elements in the specified range.
    */
   final def zRange[K: Schema, M: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
     val command = RedisCommand(
@@ -416,9 +487,12 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by index.
    *
-   * @param key Key of a sorted set
-   * @param range Inclusive range
-   * @return Chunk of elements with their scores in the specified range.
+   * @param key
+   *   Key of a sorted set
+   * @param range
+   *   Inclusive range
+   * @return
+   *   Chunk of elements with their scores in the specified range.
    */
   final def zRangeWithScores[K: Schema, M: Schema](
     key: K,
@@ -436,11 +510,15 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by lexicographical range.
    *
-   * @param key Key of a sorted set
-   * @param lexRange LexRange that must be satisfied
-   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count
-   *              returns all elements from the offset
-   * @return Chunk of elements in the specified score range.
+   * @param key
+   *   Key of a sorted set
+   * @param lexRange
+   *   LexRange that must be satisfied
+   * @param limit
+   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
+   *   all elements from the offset
+   * @return
+   *   Chunk of elements in the specified score range.
    */
   final def zRangeByLex[K: Schema, M: Schema](
     key: K,
@@ -458,11 +536,15 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by score.
    *
-   * @param key Key of a sorted set
-   * @param scoreRange ScoreRange that must be satisfied
-   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count
-   *              returns all elements from the offset
-   * @return Chunk of elements in the specified score range.
+   * @param key
+   *   Key of a sorted set
+   * @param scoreRange
+   *   ScoreRange that must be satisfied
+   * @param limit
+   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
+   *   all elements from the offset
+   * @return
+   *   Chunk of elements in the specified score range.
    */
   final def zRangeByScore[K: Schema, M: Schema](
     key: K,
@@ -480,11 +562,15 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by score.
    *
-   * @param key Key of a sorted set
-   * @param scoreRange ScoreRange that must be satisfied
-   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count
-   *              returns all elements from the offset
-   * @return Chunk of elements with their scores in the specified score range.
+   * @param key
+   *   Key of a sorted set
+   * @param scoreRange
+   *   ScoreRange that must be satisfied
+   * @param limit
+   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
+   *   all elements from the offset
+   * @return
+   *   Chunk of elements with their scores in the specified score range.
    */
   final def zRangeByScoreWithScores[K: Schema, M: Schema](
     key: K,
@@ -509,9 +595,12 @@ trait SortedSets {
   /**
    * Determine the index of a member in a sorted set.
    *
-   * @param key Key of a sorted set
-   * @param member Member of sorted set
-   * @return The rank of member in the sorted set stored at key, with the scores ordered from low to high.
+   * @param key
+   *   Key of a sorted set
+   * @param member
+   *   Member of sorted set
+   * @return
+   *   The rank of member in the sorted set stored at key, with the scores ordered from low to high.
    */
   final def zRank[K: Schema, M: Schema](key: K, member: M): ZIO[RedisExecutor, RedisError, Option[Long]] = {
     val command = RedisCommand(ZRank, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), OptionalOutput(LongOutput))
@@ -521,10 +610,14 @@ trait SortedSets {
   /**
    * Remove one or more members from a sorted set.
    *
-   * @param key Key of a sorted set
-   * @param firstMember Member to be removed
-   * @param restMembers Rest members to be removed
-   * @return The number of members removed from the sorted set, not including non existing members.
+   * @param key
+   *   Key of a sorted set
+   * @param firstMember
+   *   Member to be removed
+   * @param restMembers
+   *   Rest members to be removed
+   * @return
+   *   The number of members removed from the sorted set, not including non existing members.
    */
   final def zRem[K: Schema, M: Schema](
     key: K,
@@ -538,9 +631,12 @@ trait SortedSets {
   /**
    * Remove all members in a sorted set between the given lexicographical range.
    *
-   * @param key Key of a sorted set
-   * @param lexRange LexRange that must be satisfied
-   * @return The number of elements removed.
+   * @param key
+   *   Key of a sorted set
+   * @param lexRange
+   *   LexRange that must be satisfied
+   * @return
+   *   The number of elements removed.
    */
   final def zRemRangeByLex[K: Schema](key: K, lexRange: LexRange): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(
@@ -554,9 +650,12 @@ trait SortedSets {
   /**
    * Remove all members in a sorted set within the given indexes.
    *
-   * @param key Key of a sorted set
-   * @param range Range that must be satisfied
-   * @return The number of elements removed.
+   * @param key
+   *   Key of a sorted set
+   * @param range
+   *   Range that must be satisfied
+   * @return
+   *   The number of elements removed.
    */
   final def zRemRangeByRank[K: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(ZRemRangeByRank, Tuple2(ArbitraryInput[K](), RangeInput), LongOutput)
@@ -566,9 +665,12 @@ trait SortedSets {
   /**
    * Remove all members in a sorted set within the given scores.
    *
-   * @param key Key of a sorted set
-   * @param scoreRange ScoreRange that must be satisfied
-   * @return The number of elements removed.
+   * @param key
+   *   Key of a sorted set
+   * @param scoreRange
+   *   ScoreRange that must be satisfied
+   * @return
+   *   The number of elements removed.
    */
   final def zRemRangeByScore[K: Schema](key: K, scoreRange: ScoreRange): ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(
@@ -582,9 +684,12 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by index, with scores ordered from high to low.
    *
-   * @param key Key of a sorted set
-   * @param range Range that must be satisfied
-   * @return Chunk of elements in the specified range.
+   * @param key
+   *   Key of a sorted set
+   * @param range
+   *   Range that must be satisfied
+   * @return
+   *   Chunk of elements in the specified range.
    */
   final def zRevRange[K: Schema, M: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
     val command = RedisCommand(
@@ -598,9 +703,12 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by index, with scores ordered from high to low.
    *
-   * @param key Key of a sorted set
-   * @param range Range that must be satisfied
-   * @return Chunk of elements with their scores in the specified range.
+   * @param key
+   *   Key of a sorted set
+   * @param range
+   *   Range that must be satisfied
+   * @return
+   *   Chunk of elements with their scores in the specified range.
    */
   final def zRevRangeWithScores[K: Schema, M: Schema](
     key: K,
@@ -618,11 +726,15 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by lexicographical range, ordered from higher to lower strings.
    *
-   * @param key Key of a sorted set
-   * @param lexRange LexRange that must be satisfied
-   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count
-   *              returns all elements from the offset
-   * @return Chunk of elements in the specified score range.
+   * @param key
+   *   Key of a sorted set
+   * @param lexRange
+   *   LexRange that must be satisfied
+   * @param limit
+   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
+   *   all elements from the offset
+   * @return
+   *   Chunk of elements in the specified score range.
    */
   final def zRevRangeByLex[K: Schema, M: Schema](
     key: K,
@@ -640,11 +752,15 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by score, with scores ordered from high to low.
    *
-   * @param key Key of a sorted set
-   * @param scoreRange ScoreRange that must be satisfied
-   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count
-   *              returns all elements from the offset
-   * @return Chunk of elements in the specified range.
+   * @param key
+   *   Key of a sorted set
+   * @param scoreRange
+   *   ScoreRange that must be satisfied
+   * @param limit
+   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
+   *   all elements from the offset
+   * @return
+   *   Chunk of elements in the specified range.
    */
   final def zRevRangeByScore[K: Schema, M: Schema](
     key: K,
@@ -667,11 +783,15 @@ trait SortedSets {
   /**
    * Return a range of members in a sorted set, by score, with scores ordered from high to low.
    *
-   * @param key Key of a sorted set
-   * @param scoreRange ScoreRange that must be satisfied
-   * @param limit The optional LIMIT argument can be used to only get a range of the matching elements. A negative count
-   *              returns all elements from the offset
-   * @return Chunk of elements with their scores in the specified range.
+   * @param key
+   *   Key of a sorted set
+   * @param scoreRange
+   *   ScoreRange that must be satisfied
+   * @param limit
+   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
+   *   all elements from the offset
+   * @return
+   *   Chunk of elements with their scores in the specified range.
    */
   final def zRevRangeByScoreWithScores[K: Schema, M: Schema](
     key: K,
@@ -696,9 +816,12 @@ trait SortedSets {
   /**
    * Determine the index of a member in a sorted set, with scores ordered from high to low.
    *
-   * @param key Key of a sorted set
-   * @param member Member of sorted set
-   * @return The rank of member.
+   * @param key
+   *   Key of a sorted set
+   * @param member
+   *   Member of sorted set
+   * @return
+   *   The rank of member.
    */
   final def zRevRank[K: Schema, M: Schema](key: K, member: M): ZIO[RedisExecutor, RedisError, Option[Long]] = {
     val command = RedisCommand(ZRevRank, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), OptionalOutput(LongOutput))
@@ -708,11 +831,16 @@ trait SortedSets {
   /**
    * Incrementally iterate sorted sets elements and associated scores.
    *
-   * @param key Key of the set to scan
-   * @param cursor Cursor to use for this iteration of scan
-   * @param pattern Glob-style pattern that filters which elements are returned
-   * @param count Count of elements. Roughly this number will be returned by Redis if possible
-   * @return Returns the items for this iteration or nothing when you reach the end.
+   * @param key
+   *   Key of the set to scan
+   * @param cursor
+   *   Cursor to use for this iteration of scan
+   * @param pattern
+   *   Glob-style pattern that filters which elements are returned
+   * @param count
+   *   Count of elements. Roughly this number will be returned by Redis if possible
+   * @return
+   *   Returns the items for this iteration or nothing when you reach the end.
    */
   final def zScan[K: Schema, M: Schema](
     key: K,
@@ -734,9 +862,12 @@ trait SortedSets {
   /**
    * Get the score associated with the given member in a sorted set.
    *
-   * @param key Key of a sorted set
-   * @param member Member of sorted set
-   * @return The score of member (a double precision floating point number.
+   * @param key
+   *   Key of a sorted set
+   * @param member
+   *   Member of sorted set
+   * @return
+   *   The score of member (a double precision floating point number.
    */
   final def zScore[K: Schema, M: Schema](key: K, member: M): ZIO[RedisExecutor, RedisError, Option[Double]] = {
     val command = RedisCommand(ZScore, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), OptionalOutput(DoubleOutput))
@@ -746,15 +877,20 @@ trait SortedSets {
   /**
    * Add multiple sorted sets and return each member.
    *
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of other sorted sets
-   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
-   *                set. This means that the score of every element in every input sorted set is multiplied by this
-   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
-   *                multiplication factors default to 1
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @return Chunk of all members in each sorted set.
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of other sorted sets
+   * @param weights
+   *   Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set. This
+   *   means that the score of every element in every input sorted set is multiplied by this factor before being passed
+   *   to the aggregation function. When WEIGHTS is not given, the multiplication factors default to 1
+   * @param aggregate
+   *   With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return
+   *   Chunk of all members in each sorted set.
    */
   final def zUnion[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
@@ -777,15 +913,20 @@ trait SortedSets {
   /**
    * Add multiple sorted sets and return each member and associated score.
    *
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of other sorted sets
-   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
-   *                set. This means that the score of every element in every input sorted set is multiplied by this
-   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
-   *                multiplication factors default to 1
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @return Chunk of all members with their scores in each sorted set.
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of other sorted sets
+   * @param weights
+   *   Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set. This
+   *   means that the score of every element in every input sorted set is multiplied by this factor before being passed
+   *   to the aggregation function. When WEIGHTS is not given, the multiplication factors default to 1
+   * @param aggregate
+   *   With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return
+   *   Chunk of all members with their scores in each sorted set.
    */
   final def zUnionWithScores[K: Schema, M: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
@@ -810,16 +951,22 @@ trait SortedSets {
   /**
    * Add multiple sorted sets and store the resulting sorted set in a new key.
    *
-   * @param destination Key of the output
-   * @param inputKeysNum Number of input keys
-   * @param key Key of a sorted set
-   * @param keys Keys of other sorted sets
-   * @param weights Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted
-   *                set. This means that the score of every element in every input sorted set is multiplied by this
-   *                factor before being passed to the aggregation function. When WEIGHTS is not given, the
-   *                multiplication factors default to 1
-   * @param aggregate With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
-   * @return The number of elements in the resulting sorted set at destination.
+   * @param destination
+   *   Key of the output
+   * @param inputKeysNum
+   *   Number of input keys
+   * @param key
+   *   Key of a sorted set
+   * @param keys
+   *   Keys of other sorted sets
+   * @param weights
+   *   Represents WEIGHTS option, it is possible to specify a multiplication factor for each input sorted set. This
+   *   means that the score of every element in every input sorted set is multiplied by this factor before being passed
+   *   to the aggregation function. When WEIGHTS is not given, the multiplication factors default to 1
+   * @param aggregate
+   *   With the AGGREGATE option, it is possible to specify how the results of the union are aggregated
+   * @return
+   *   The number of elements in the resulting sorted set at destination.
    */
   final def zUnionStore[DK: Schema, K: Schema](destination: DK, inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
@@ -842,10 +989,12 @@ trait SortedSets {
   /**
    * Returns the scores associated with the specified members in the sorted set stored at key.
    *
-   * @param key Key of the set
-   * @param keys Keys of the rest sets
-   * @return List of scores or None associated with the specified member values (a double precision floating point
-   *         number).
+   * @param key
+   *   Key of the set
+   * @param keys
+   *   Keys of the rest sets
+   * @return
+   *   List of scores or None associated with the specified member values (a double precision floating point number).
    */
   final def zMScore[K: Schema](
     key: K,
@@ -858,8 +1007,10 @@ trait SortedSets {
   /**
    * Return a random element from the sorted set value stored at key.
    *
-   * @param key Key of a sorted set
-   * @return Return a random element from the sorted set value stored at key.
+   * @param key
+   *   Key of a sorted set
+   * @return
+   *   Return a random element from the sorted set value stored at key.
    */
   final def zRandMember[K: Schema, M: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[M]] = {
     val command = RedisCommand(ZRandMember, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[M]()))
@@ -869,10 +1020,13 @@ trait SortedSets {
   /**
    * Return random elements from the sorted set value stored at key.
    *
-   * @param key Key of a sorted set
-   * @param count If the provided count argument is positive, return an array of distinct elements.
-   *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
-   * @return Return an array of elements from the sorted set value stored at key.
+   * @param key
+   *   Key of a sorted set
+   * @param count
+   *   If the provided count argument is positive, return an array of distinct elements. The array's length is either
+   *   count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return
+   *   Return an array of elements from the sorted set value stored at key.
    */
   final def zRandMember[K: Schema, M: Schema](key: K, count: Long): ZIO[RedisExecutor, RedisError, Chunk[M]] = {
     val command = RedisCommand(
@@ -886,11 +1040,15 @@ trait SortedSets {
   /**
    * Return random elements from the sorted set value stored at key.
    *
-   * @param key Key of a sorted set
-   * @param count If the provided count argument is positive, return an array of distinct elements.
-   *              The array's length is either count or the sorted set's cardinality (ZCARD), whichever is lower
-   * @return When the additional count argument is passed, the command returns an array of elements, or an empty array when key does not exist.
-   *         If the WITHSCORES modifier is used, the reply is a list elements and their scores from the sorted set.
+   * @param key
+   *   Key of a sorted set
+   * @param count
+   *   If the provided count argument is positive, return an array of distinct elements. The array's length is either
+   *   count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return
+   *   When the additional count argument is passed, the command returns an array of elements, or an empty array when
+   *   key does not exist. If the WITHSCORES modifier is used, the reply is a list elements and their scores from the
+   *   sorted set.
    */
   final def zRandMemberWithScores[K: Schema, M: Schema](
     key: K,

@@ -51,9 +51,8 @@ object RedisExecutor {
         .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
 
     /**
-     * Opens a connection to the server and launches send and receive operations.
-     * All failures are retried by opening a new connection.
-     * Only exits by interruption or defect.
+     * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a
+     * new connection. Only exits by interruption or defect.
      */
     val run: IO[RedisError, Unit] =
       (send.forever race receive)
