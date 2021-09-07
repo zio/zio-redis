@@ -550,6 +550,15 @@ object Input {
       Chunk(encodeString("ID"), encodeString(data.toString))
   }
 
+  case object IdsInput extends Input[Iterable[Long]] {
+    def encode(data: Iterable[Long])(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      if (data.nonEmpty)
+        Chunk.single(encodeString("ID")) ++ data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) =>
+          acc ++ Chunk.single(encodeString(a.toString))
+        )
+      else Chunk.empty
+  }
+
   case object UnblockBehaviorInput extends Input[UnblockBehavior] {
     def encode(data: UnblockBehavior)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeString(data.stringify))

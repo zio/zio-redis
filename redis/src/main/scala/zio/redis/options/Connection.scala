@@ -95,7 +95,7 @@ trait Connection {
 
   sealed case class ClientTrackingInfo(
     flags: ClientTrackingFlags,
-    redirect: Option[Long] = None,
+    redirect: ClientTrackingRedirect,
     prefixes: Set[String] = Set.empty
   )
 

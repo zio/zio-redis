@@ -1025,6 +1025,18 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("ID", "10")))
         }
       ),
+      suite("Ids")(
+        testM("empty list") {
+          for {
+            result <- Task(IdsInput.encode(List()))
+          } yield assert(result)(equalTo(respArgs()))
+        },
+        testM("non-empty list") {
+          for {
+            result <- Task(IdsInput.encode(List(10, 11, 12)))
+          } yield assert(result)(equalTo(respArgs("ID", "10", "11", "12")))
+        }
+      ),
       suite("UnblockBehavior")(
         testM("timeout") {
           for {

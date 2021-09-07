@@ -107,17 +107,12 @@ private[redis] final class TestExecutor private (
                   "ERR CLIENT CACHING can be called only when the client is in tracking mode with OPTIN or OPTOUT mode enabled"
                 )
               }
-          } else {
-            for {
-              trackingFlags <- clientTrackingInfo.get("flags")
-              newTrackingFlags =
-                trackingFlags.get - "optin" - "optout" - "bcast" - "caching-yes" - "caching-no" - "on" + "off"
-              _       <- clientTrackingInfo.put("flags", newTrackingFlags)
-              flags   <- clientInfo.get("flags")
-              newFlags = flags.get.replace("B", "")
-              _       <- clientInfo.put("flags", newFlags)
-            } yield RespValue.SimpleString("OK")
-          }
+          } else
+            STM.succeed {
+              RespValue.Error(
+                "ERR CLIENT CACHING can be called only when the client is in tracking mode with OPTIN or OPTOUT mode enabled"
+              )
+            }
         }
 
       case api.Connection.ClientId =>
@@ -173,21 +168,18 @@ private[redis] final class TestExecutor private (
         }
 
       case api.Connection.ClientList =>
-        val inputList = input.toList.map(_.asString).grouped(2)
-        val typeOption = inputList.filter {
-          case List("TYPE", _) => true
-          case _               => false
-        }.map(_(1)).toList.headOption
-        val inputIds = inputList.filter {
-          case List("ID", _) => true
-          case _             => false
-        }.map(_(1)).toList
+        val inputList  = input.toList.map(_.asString)
+        val typeOption = if (inputList.contains("TYPE")) Some(inputList(1)) else None
+        val inputIds   = if (inputList.contains("ID")) inputList.tail else List[String]()
+
         for {
           flags <- clientTrackingInfo.get("flags")
           id    <- clientInfo.get("id")
           info <-
-            if ((typeOption.isEmpty || flags.get.contains(typeOption.get.toLowerCase)) && inputIds.contains(id.get))
-              clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}").map(Some(_))
+            if (
+              (typeOption.isEmpty || flags.get.contains(typeOption.get.toLowerCase))
+              && (inputIds.isEmpty || inputIds.contains(id.get))
+            ) clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}").map(Some(_))
             else STM.succeed(None)
         } yield info.map(str => RespValue.bulkString(str.trim)).getOrElse(RespValue.NullBulkString)
 
@@ -197,17 +189,7 @@ private[redis] final class TestExecutor private (
         } yield name.map(RespValue.bulkString).getOrElse(RespValue.NullBulkString)
 
       case api.Connection.ClientGetRedir =>
-        for {
-          flags <- clientTrackingInfo.get("flags")
-          id    <- clientTrackingInfo.get("redirect")
-        } yield
-          if (flags.get.contains("on"))
-            id.get.head.toLong match {
-              case -1L              => RespValue.Integer(0L)
-              case redirectTo: Long => RespValue.Integer(redirectTo)
-            }
-          else
-            RespValue.Integer(-1L)
+        clientTrackingInfo.get("redirect").map(redir => RespValue.Integer(redir.get.head.toLong))
 
       case api.Connection.ClientUnpause =>
         STM.succeedNow {
@@ -226,10 +208,8 @@ private[redis] final class TestExecutor private (
         } yield RespValue.SimpleString("OK")
 
       case api.Connection.ClientTracking =>
-        STM.succeed {
-          RespValue.SimpleString("OK")
-        }
         val inputList = input.toList.map(_.asString)
+
         if (inputList.head == "ON") {
           val mode = inputList match {
             case list if list.contains("OPTIN")  => Some("optin")
@@ -241,87 +221,105 @@ private[redis] final class TestExecutor private (
           val filteredInput = inputList.tail
             .filter(input => input != "OPTIN" && input != "OPTOUT" && input != "BCAST" && input != "NOLOOP")
             .grouped(2)
-          val redirectId = filteredInput.filter(_.head == "REDIRECT").map(_(1)).toList.headOption
+            .toList
+          val redirectId = filteredInput.filter(_.head == "REDIRECT").map(_(1)).headOption
           val prefixes   = filteredInput.filter(_.head == "PREFIX").map(_(1)).toSet
 
-          val addTracking = for {
-            flags           <- clientInfo.get("flags")
-            newFlags         = if (!flags.get.contains('t')) flags.get + 't' else flags.get
-            _               <- clientInfo.put("flags", newFlags)
-            trackingFlags   <- clientTrackingInfo.get("flags")
-            newTrackingFlags = trackingFlags.get - "off" + "on"
-            _               <- clientTrackingInfo.put("flags", newTrackingFlags)
-          } yield RespValue.SimpleString("OK")
+          if (prefixes.isEmpty || mode.nonEmpty && mode.get == "bcast") {
+            val addTracking = for {
+              flags   <- clientInfo.get("flags")
+              newFlags = if (!flags.get.contains('t')) flags.get + 't' else flags.get
+              _       <- clientInfo.put("flags", newFlags)
+              _       <- clientTrackingInfo.put("flags", Set("on"))
+            } yield STM.succeed(())
 
-          val removeMode = clientTrackingInfo.get("flags").flatMap { trackingFlags =>
-            trackingFlags.get match {
-              case flags if flags.contains("optin")  => clientTrackingInfo.put("flags", flags - "optin")
-              case flags if flags.contains("optout") => clientTrackingInfo.put("flags", flags - "optout")
-              case flags if flags.contains("broadcast") =>
+            val removeMode = for {
+              clientFlags <- clientInfo.get("flags")
+              _           <- clientInfo.put("flags", clientFlags.get.replace("B", ""))
+            } yield STM.succeed(())
+
+            val addMode =
+              if (mode.nonEmpty)
                 for {
-                  _           <- clientTrackingInfo.put("flags", flags - "bcast")
-                  clientFlags <- clientInfo.get("flags")
-                  _           <- clientInfo.put("flags", clientFlags.get.replace("B", ""))
+                  trackingFlags   <- clientTrackingInfo.get("flags")
+                  newTrackingFlags = trackingFlags.get + mode.get
+                  _               <- clientTrackingInfo.put("flags", newTrackingFlags)
+                  flags           <- clientInfo.get("flags")
+                  newFlags         = if (mode.get == "bcast" && !flags.get.contains('B')) flags.get + 'B' else flags.get
+                  _               <- clientInfo.put("flags", newFlags)
                 } yield ()
+              else STM.succeed(())
 
-              case _ => STM.succeed(())
+            val addNoLoop =
+              if (noLoop)
+                for {
+                  trackingFlags   <- clientTrackingInfo.get("flags")
+                  newTrackingFlags = trackingFlags.get + "noloop"
+                  _               <- clientTrackingInfo.put("flags", newTrackingFlags)
+                } yield ()
+              else STM.succeed(())
+
+            val removeRedirectId = clientTrackingInfo.put("redirect", Set("0"))
+
+            val addRedirectId =
+              if (redirectId.nonEmpty)
+                for {
+                  _ <- clientInfo.put("redirect", redirectId.get)
+                  _ <- clientTrackingInfo.put("redirect", Set(redirectId.get))
+                } yield ()
+              else STM.succeed(())
+
+            val addPrefixes =
+              if (prefixes.nonEmpty)
+                for {
+                  trackingPrefixes   <- clientTrackingInfo.get("prefixes")
+                  newTrackingPrefixes = trackingPrefixes.get ++ prefixes
+                  _                  <- clientTrackingInfo.put("prefixes", newTrackingPrefixes)
+                } yield ()
+              else STM.succeed(())
+
+            clientTrackingInfo.get("flags").flatMap { flags =>
+              if (
+                flags.get.contains("bcast") && (mode.isEmpty || mode.get != "bcast")
+                || mode.nonEmpty && mode.get == "bcast" && (flags.get.contains("optin") || flags.get
+                  .contains("optout"))
+              )
+                STM.succeed {
+                  RespValue.Error(
+                    "You can't switch BCAST mode on/off before disabling tracking for this client, and then re-enabling it with a different mode"
+                  )
+                }
+              else if (
+                mode.nonEmpty && (mode.get == "optin" && flags.get.contains("optout")
+                  || mode.get == "optout" && flags.get.contains("optin"))
+              )
+                STM.succeed {
+                  RespValue.Error(
+                    "ERR You can't switch OPTIN/OPTOUT mode before disabling tracking for this client, and then re-enabling it with a different mode"
+                  )
+                }
+              else
+                for {
+                  _ <- addTracking
+                  _ <- removeMode
+                  _ <- addMode
+                  _ <- addNoLoop
+                  _ <- removeRedirectId
+                  _ <- addRedirectId
+                  _ <- addPrefixes
+                } yield RespValue.SimpleString("OK")
             }
-          }
-
-          val addMode =
-            if (mode.nonEmpty)
-              for {
-                trackingFlags   <- clientTrackingInfo.get("flags")
-                newTrackingFlags = trackingFlags.get + mode.get
-                _               <- clientTrackingInfo.put("flags", newTrackingFlags)
-                flags           <- clientInfo.get("flags")
-                newFlags         = if (mode.get == "bcast" && !flags.get.contains('B')) flags.get + 'B' else flags.get
-                _               <- clientInfo.put("flags", newFlags)
-              } yield ()
-            else STM.succeed(())
-
-          val addNoLoop =
-            if (noLoop)
-              for {
-                trackingFlags   <- clientTrackingInfo.get("flags")
-                newTrackingFlags = trackingFlags.get + "noloop"
-                _               <- clientTrackingInfo.put("flags", newTrackingFlags)
-              } yield ()
-            else STM.succeed(())
-
-          val addRedirectId =
-            if (redirectId.nonEmpty)
-              for {
-                _ <- clientInfo.put("redir", redirectId.get)
-                _ <- clientTrackingInfo.put("redir", Set(redirectId.get))
-              } yield ()
-            else STM.succeed(())
-
-          val addPrefixes =
-            if (prefixes.nonEmpty)
-              for {
-                trackingPrefixes   <- clientTrackingInfo.get("prefixes")
-                newTrackingPrefixes = trackingPrefixes.get ++ prefixes
-                _                  <- clientTrackingInfo.put("prefixes", newTrackingPrefixes)
-              } yield ()
-            else STM.succeed(())
-
-          for {
-            _    <- removeMode
-            _    <- addMode
-            _    <- addNoLoop
-            _    <- addRedirectId
-            _    <- addPrefixes
-            resp <- addTracking
-          } yield resp
+          } else
+            STM.succeed {
+              RespValue.Error("ERR PREFIX option requires BCAST mode to be enabled")
+            }
         } else {
           for {
-            flags           <- clientInfo.get("flags")
-            newFlags         = flags.get.replace("t", "")
-            _               <- clientInfo.put("flags", newFlags)
-            trackingFlags   <- clientTrackingInfo.get("flags")
-            newTrackingFlags = trackingFlags.get - "on" + "off"
-            _               <- clientTrackingInfo.put("flags", newTrackingFlags)
+            flags <- clientInfo.get("flags")
+            _     <- clientInfo.put("flags", flags.get.replace("t", ""))
+            _     <- clientTrackingInfo.put("flags", Set("off"))
+            _     <- clientTrackingInfo.put("redirect", Set("-1"))
+            _     <- clientTrackingInfo.put("prefixes", Set.empty)
           } yield RespValue.SimpleString("OK")
         }
 
@@ -342,7 +340,7 @@ private[redis] final class TestExecutor private (
 
       case api.Connection.ClientUnblock =>
         STM.succeedNow {
-          RespValue.bulkString("true")
+          RespValue.Integer(0)
         }
 
       case api.Connection.Echo =>

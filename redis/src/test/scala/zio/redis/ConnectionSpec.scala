@@ -5,6 +5,7 @@ import java.net.InetAddress
 import zio.Chunk
 import zio.duration._
 import zio.test.Assertion._
+import zio.test.TestAspect._
 import zio.test._
 
 trait ConnectionSpec extends BaseSpec {
@@ -14,14 +15,19 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientCaching")(
         testM("track keys") {
           for {
-            _    <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-            unit <- clientCaching(true)
-          } yield assert(unit)(isUnit)
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
+            _            <- clientCaching(true)
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
         },
         testM("don't track keys") {
           for {
-            unit <- clientCaching(false)
-          } yield assert(unit)(isUnit)
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+            _            <- clientCaching(false)
+            trackingInfo <- clientTrackingInfo
+          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
         }
       ),
       suite("clientId")(
@@ -125,7 +131,7 @@ trait ConnectionSpec extends BaseSpec {
           for {
             _            <- clientTrackingOn(None, Some(ClientTrackingMode.Broadcast), prefixes = Set("foo"))
             trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.redirect)(isNone) &&
+          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotRedirected)) &&
             assert(trackingInfo.flags)(
               equalTo(ClientTrackingFlags(clientSideCaching = true, trackingMode = Some(ClientTrackingMode.Broadcast)))
             ) &&
@@ -135,7 +141,7 @@ trait ConnectionSpec extends BaseSpec {
           for {
             _            <- clientTrackingOff
             trackingInfo <- clientTrackingInfo
-          } yield assert(trackingInfo.redirect)(isNone) &&
+          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotEnabled)) &&
             assert(trackingInfo.flags)(
               equalTo(ClientTrackingFlags(clientSideCaching = false))
             ) &&
@@ -148,12 +154,18 @@ trait ConnectionSpec extends BaseSpec {
             _            <- clientTrackingOff
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo)(
-            equalTo(ClientTrackingInfo(flags = ClientTrackingFlags(clientSideCaching = false)))
+            equalTo(
+              ClientTrackingInfo(
+                flags = ClientTrackingFlags(clientSideCaching = false),
+                redirect = ClientTrackingRedirect.NotEnabled
+              )
+            )
           )
         },
-        testM("get tracking info when tracking is enabled in optin mode with prefixes set and caching on") {
+        testM("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
           for {
-            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), prefixes = Set("foo", "bar"))
+            _            <- clientTrackingOff
+            _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
             _            <- clientCaching(true)
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo)(
@@ -162,12 +174,21 @@ trait ConnectionSpec extends BaseSpec {
                 flags = ClientTrackingFlags(
                   clientSideCaching = true,
                   trackingMode = Some(ClientTrackingMode.OptIn),
-                  caching = Some(true)
+                  caching = Some(true),
+                  noLoop = true
                 ),
-                prefixes = Set("foo", "bar")
+                redirect = ClientTrackingRedirect.NotRedirected
               )
             )
           )
+        }
+      ),
+      suite("clientUnblock")(
+        testM("unblock client that isn't blocked") {
+          for {
+            id   <- clientId
+            bool <- clientUnblock(id)
+          } yield assert(bool)(equalTo(false))
         }
       ),
       suite("ping")(
@@ -183,5 +204,5 @@ trait ConnectionSpec extends BaseSpec {
           unit <- reset
         } yield assert(unit)(isUnit)
       }
-    )
+    ) @@ sequential
 }

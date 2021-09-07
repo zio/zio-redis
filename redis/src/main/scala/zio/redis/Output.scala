@@ -844,10 +844,10 @@ object Output {
             fields
               .get("redirect")
               .map {
-                case RespValue.Integer(-1L)         => None
-                case RespValue.Integer(v) if v > 0L => Some(v)
-                case RespValue.Integer(v)           => throw ProtocolError(s"$v isn't a valid integer")
-                case other                          => throw ProtocolError(s"$other isn't an integer")
+                case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
+                case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
+                case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
+                case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
               }
               .getOrElse(throw ProtocolError("Missing redirect field")),
             fields
