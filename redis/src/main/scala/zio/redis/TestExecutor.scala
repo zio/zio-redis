@@ -179,9 +179,9 @@ private[redis] final class TestExecutor private (
             if (
               (typeOption.isEmpty || flags.get.contains(typeOption.get.toLowerCase))
               && (inputIds.isEmpty || inputIds.contains(id.get))
-            ) clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}").map(Some(_))
-            else STM.succeed(None)
-        } yield info.map(str => RespValue.bulkString(str.trim)).getOrElse(RespValue.NullBulkString)
+            ) clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}")
+            else STM.succeed("")
+        } yield RespValue.bulkString(info)
 
       case api.Connection.ClientGetName =>
         for {
@@ -2540,7 +2540,7 @@ private[redis] object TestExecutor {
       clientInfo <- TMap
                       .make(
                         "id"        -> "174716",
-                        "addr"      -> "127.0.0.1:8000",
+                        "addr"      -> "127.0.0.1:57646",
                         "laddr"     -> "127.0.0.1:6379",
                         "fd"        -> "8",
                         "age"       -> "655215",
