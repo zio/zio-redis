@@ -3,6 +3,7 @@ package zio.redis
 import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
+import zio.test.TestAspect._
 import zio.test._
 
 object ApiSpec
@@ -32,7 +33,8 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite
-      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live),
+      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
+        @@ sequential,
       suite("Test Executor")(
         connectionSuite,
         setsSuite,
