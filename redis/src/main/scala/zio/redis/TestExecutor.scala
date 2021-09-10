@@ -123,7 +123,7 @@ private[redis] final class TestExecutor private (
       case api.Connection.ClientInfo =>
         for {
           info <- clientInfo.fold("")((z, a) => s"$z ${a._1}=${a._2}")
-        } yield RespValue.bulkString(info.trim)
+        } yield RespValue.bulkString(info)
 
       case api.Connection.ClientKill =>
         if (input.length == 1) {
