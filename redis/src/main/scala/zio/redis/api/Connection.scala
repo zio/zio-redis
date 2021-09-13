@@ -71,7 +71,7 @@ trait Connection {
    * @param address the address of the client to kill
    * @return the Unit value.
    */
-  final def clientKill(address: Address): ZIO[RedisExecutor, RedisError, Unit] = {
+  final def  clientKill(address: Address): ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(ClientKill, AddressInput, UnitOutput)
 
     command.run(address)
