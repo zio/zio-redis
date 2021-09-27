@@ -718,13 +718,13 @@ object Output {
   }
 
   case object ClientInfoOutput extends Output[Chunk[ClientInfo]] {
-    private def parseLong(s: String): Option[Long] =
-      try Some(s.toLong)
-      catch { case _: NumberFormatException => None }
+    private def parseLong(s: String): Long =
+      try s.toLong
+      catch { case _: NumberFormatException => throw ProtocolError(s"$s isn't a long") }
 
-    private def parseInt(s: String): Option[Int] =
-      try Some(s.toInt)
-      catch { case _: NumberFormatException => None }
+    private def parseInt(s: String): Int =
+      try s.toInt
+      catch { case _: NumberFormatException => throw ProtocolError(s"$s isn't an integer") }
 
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
       respValue match {
@@ -745,34 +745,13 @@ object Output {
           Chunk.fromIterable(clients).map { client =>
             val flags: Set[ClientFlag] = client
               .get("flags")
-              .map { s =>
-                import ClientFlag._
-                s.collect {
-                  case 'A' => ToBeClosedAsap
-                  case 'b' => Blocked
-                  case 'c' => ToBeClosedAfterReply
-                  case 'd' => WatchedKeysModified
-                  case 'M' => IsMaster
-                  case 'O' => MonitorMode
-                  case 'P' => PubSub
-                  case 'r' => ReadOnlyMode
-                  case 'S' => Replica
-                  case 'u' => Unblocked
-                  case 'U' => UnixDomainSocket
-                  case 'x' => MultiExecContext
-                  case 't' => KeysTrackingEnabled
-                  case 'R' => TrackingTargetClientInvalid
-                  case 'B' => BroadcastTrackingMode
-                }.toSet[ClientFlag]
-              }
-              .getOrElse(Set.empty)
+              .fold(Set.empty[ClientFlag])(ClientFlag.toClientFlagSet)
             val events =
               client
                 .get("events")
-                .map(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
-                .getOrElse(ClientEvents())
+                .fold(ClientEvents())(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
             ClientInfo(
-              id = client.get("id").flatMap(parseLong).getOrElse(0L),
+              id = client.get("id").fold(throw ProtocolError("Missing id field"))(parseLong),
               name = client.get("name"),
               address = client.get("addr").map { str =>
                 Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
@@ -780,24 +759,24 @@ object Output {
               localAddress = client.get("laddr").map { str =>
                 Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
               },
-              fileDescriptor = client.get("fd").flatMap(parseLong),
-              age = client.get("age").flatMap(parseLong).map(_.seconds),
-              idle = client.get("idle").flatMap(parseLong).map(_.seconds),
+              fileDescriptor = client.get("fd").map(parseLong),
+              age = client.get("age").map(parseLong(_).seconds),
+              idle = client.get("idle").map(parseLong(_).seconds),
               flags = flags,
-              databaseId = client.get("db").flatMap(parseLong),
-              subscriptions = client.get("sub").flatMap(parseInt).getOrElse(0),
-              patternSubscriptions = client.get("psub").flatMap(parseInt).getOrElse(0),
-              multiCommands = client.get("multi").flatMap(parseInt).getOrElse(0),
-              queryBufferLength = client.get("qbuf").flatMap(parseInt),
-              queryBufferFree = client.get("qbuf-free").flatMap(parseInt),
-              outputBufferLength = client.get("obl").flatMap(parseInt),
-              outputListLength = client.get("oll").flatMap(parseInt),
-              outputBufferMem = client.get("omem").flatMap(parseLong),
+              databaseId = client.get("db").map(parseLong),
+              subscriptions = client.get("sub").fold(0)(parseInt),
+              patternSubscriptions = client.get("psub").fold(0)(parseInt),
+              multiCommands = client.get("multi").fold(0)(parseInt),
+              queryBufferLength = client.get("qbuf").map(parseInt),
+              queryBufferFree = client.get("qbuf-free").map(parseInt),
+              outputBufferLength = client.get("obl").map(parseInt),
+              outputListLength = client.get("oll").map(parseInt),
+              outputBufferMem = client.get("omem").map(parseLong),
               events = events,
               lastCommand = client.get("cmd"),
-              argvMemory = client.get("argv-mem").flatMap(parseLong),
-              totalMemory = client.get("tot-mem").flatMap(parseLong),
-              redirectionClientId = client.get("redir").flatMap(parseLong),
+              argvMemory = client.get("argv-mem").map(parseLong),
+              totalMemory = client.get("tot-mem").map(parseLong),
+              redirectionClientId = client.get("redir").map(parseLong),
               user = client.get("user")
             )
           }
@@ -820,7 +799,7 @@ object Output {
           ClientTrackingInfo(
             fields
               .get("flags")
-              .map {
+              .fold(throw ProtocolError("Missing flags field")) {
                 case RespValue.Array(value) =>
                   val set = value.map {
                     case bulk @ RespValue.BulkString(_) => bulk.asString
@@ -843,20 +822,18 @@ object Output {
                     set.contains("broken_redirect")
                   )
                 case other => throw ProtocolError(s"$other isn't an array with elements")
-              }
-              .getOrElse(throw ProtocolError("Missing flags field")),
+              },
             fields
               .get("redirect")
-              .map {
+              .fold(throw ProtocolError("Missing redirect field")) {
                 case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
                 case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
                 case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
                 case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
-              }
-              .getOrElse(throw ProtocolError("Missing redirect field")),
+              },
             fields
               .get("prefixes")
-              .map {
+              .fold(throw ProtocolError("Missing prefixes field")) {
                 case RespValue.NullArray => Set.empty[String]
                 case RespValue.Array(value) =>
                   value.map {
@@ -865,7 +842,6 @@ object Output {
                   }.toSet[String]
                 case other => throw ProtocolError(s"$other isn't an array")
               }
-              .getOrElse(throw ProtocolError("Missing prefixes field"))
           )
         case array @ RespValue.Array(_) => throw ProtocolError(s"$array doesn't have an even number of elements")
         case other                      => throw ProtocolError(s"$other isn't an array")

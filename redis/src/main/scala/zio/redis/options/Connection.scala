@@ -29,6 +29,24 @@ trait Connection {
     case object KeysTrackingEnabled         extends ClientFlag
     case object TrackingTargetClientInvalid extends ClientFlag
     case object BroadcastTrackingMode       extends ClientFlag
+
+    private[redis] final def toClientFlagSet(flags: String): Set[ClientFlag] = flags.collect {
+      case 'A' => ToBeClosedAsap
+      case 'b' => Blocked
+      case 'c' => ToBeClosedAfterReply
+      case 'd' => WatchedKeysModified
+      case 'M' => IsMaster
+      case 'O' => MonitorMode
+      case 'P' => PubSub
+      case 'r' => ReadOnlyMode
+      case 'S' => Replica
+      case 'u' => Unblocked
+      case 'U' => UnixDomainSocket
+      case 'x' => MultiExecContext
+      case 't' => KeysTrackingEnabled
+      case 'R' => TrackingTargetClientInvalid
+      case 'B' => BroadcastTrackingMode
+    }.toSet
   }
 
   sealed case class ClientInfo(

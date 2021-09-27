@@ -119,7 +119,7 @@ object Input {
 
   case object ClientTrackingInput
       extends Input[Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]] {
-    override private[redis] def encode(
+    def encode(
       data: Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]
     )(implicit codec: Codec): Chunk[RespValue.BulkString] =
       data match {
@@ -132,7 +132,7 @@ object Input {
           }
           val loopChunk = if (noLoop) Chunk(encodeString("NOLOOP")) else Chunk.empty
           Chunk(encodeString("ON")) ++
-            clientRedir.map(id => Chunk(encodeString("REDIRECT"), encodeString(id.toString))).getOrElse(Chunk.empty) ++
+            clientRedir.fold(Chunk.empty)(id => Chunk(encodeString("REDIRECT"), encodeString(id.toString))) ++
             prefixes.flatMap(prefix => Chunk(encodeString("PREFIX"), encodeString(prefix))) ++
             modeChunk ++
             loopChunk
