@@ -7,7 +7,7 @@ import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Task }
+import zio.{ Chunk, Task, UIO }
 
 object InputSpec extends BaseSpec {
   import StrAlgoLcsQueryType._
@@ -28,9 +28,9 @@ object InputSpec extends BaseSpec {
       ),
       suite("Address")(
         testM("valid value") {
-          val ip   = InetAddress.getByName("127.0.0.1")
-          val port = 42
           for {
+            ip     <- UIO(InetAddress.getByName("127.0.0.1"))
+            port   <- UIO(42)
             result <- Task(AddressInput.encode(Address(ip, port)))
           } yield assert(result)(equalTo(respArgs("127.0.0.1:42")))
         }
@@ -222,34 +222,34 @@ object InputSpec extends BaseSpec {
       ),
       suite("ClientKill")(
         testM("address") {
-          val address = InetAddress.getByName("127.0.0.1")
-          val port    = 42
           for {
-            result <- Task(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
+            address <- UIO(InetAddress.getByName("127.0.0.1"))
+            port    <- UIO(42)
+            result  <- Task(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
           } yield assert(result)(equalTo(respArgs("ADDR", "127.0.0.1:42")))
         },
         testM("local address") {
-          val address = InetAddress.getByName("127.0.0.1")
-          val port    = 42
           for {
-            result <- Task(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
+            address <- UIO(InetAddress.getByName("127.0.0.1"))
+            port    <- UIO(42)
+            result  <- Task(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
           } yield assert(result)(equalTo(respArgs("LADDR", s"127.0.0.1:42")))
         },
         testM("client id") {
-          val id = 42L
           for {
+            id     <- UIO(42L)
             result <- Task(ClientKillInput.encode(ClientKillFilter.Id(id)))
           } yield assert(result)(equalTo(respArgs("ID", "42")))
         },
         testM("type") {
-          val clientType = ClientType.PubSub
           for {
-            result <- Task(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
+            clientType <- UIO(ClientType.PubSub)
+            result     <- Task(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
           } yield assert(result)(equalTo(respArgs("TYPE", "pubsub")))
         },
         testM("user") {
-          val user = "Foo Bar"
           for {
+            user   <- UIO("Foo Bar")
             result <- Task(ClientKillInput.encode(ClientKillFilter.User(user)))
           } yield assert(result)(equalTo(respArgs("USER", "Foo Bar")))
         },
@@ -285,10 +285,10 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("OFF")))
         },
         testM("client redirect with noloop and prefixes") {
-          val clientId = 42L
-          val prefixes = Chunk("prefix1", "prefix2", "prefix3")
           for {
-            result <- Task(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
+            clientId <- UIO(42L)
+            prefixes <- UIO(Chunk("prefix1", "prefix2", "prefix3"))
+            result   <- Task(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
           } yield assert(result)(
             equalTo(
               respArgs("ON", "REDIRECT", clientId.toString) ++ prefixes
