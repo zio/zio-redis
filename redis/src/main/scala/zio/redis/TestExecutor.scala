@@ -98,8 +98,7 @@ private[redis] final class TestExecutor private (
 
       case api.Geo.GeoAdd =>
         val keyOption = input.headOption.map(_.asString)
-
-        val values =
+        val valuesOption = NonEmptyChunk.fromChunk(
           Chunk.fromIterator(
             input
               .drop(1)
@@ -107,63 +106,63 @@ private[redis] final class TestExecutor private (
               .grouped(3)
               .map(g => (LongLat(g(0).toDouble, g(1).toDouble), g(2)))
           )
-        orInvalidParameter(
-          STM.succeed(keyOption.nonEmpty && values.nonEmpty && values.map(_._1).forall(Hash.isValidLongLat))
-        ) {
-          val key = keyOption.get
-          orWrongType(isSortedSet(key)) {
-            val members = values.map { case (longLat, member) =>
-              MemberScore(Hash.encodeAsHash(longLat.longitude, longLat.latitude).toDouble, member)
-            }
+        )
 
-            for {
-              scoreMap    <- sortedSets.getOrElse(key, Map.empty)
-              membersAdded = members.count(ms => scoreMap.contains(ms.member))
-              newScoreMap  = scoreMap ++ members.map(ms => (ms.member, ms.score)).toMap
-              _           <- sortedSets.put(key, newScoreMap)
-            } yield RespValue.Integer(membersAdded.toLong)
-          }
+        orMissingParameter2(keyOption, valuesOption) { (key, values) =>
+          orWrongType(isSortedSet(key))(
+            orInvalidParameter(STM.succeed(values.map(_._1).forall(Hash.isValidLongLat))) {
+              val members = values.map { case (longLat, member) =>
+                MemberScore(Hash.encodeAsHash(longLat.longitude, longLat.latitude).toDouble, member)
+              }
+
+              for {
+                scoreMap    <- sortedSets.getOrElse(key, Map.empty)
+                membersAdded = members.count(ms => scoreMap.contains(ms.member))
+                newScoreMap  = scoreMap ++ members.map(ms => (ms.member, ms.score)).toMap
+                _           <- sortedSets.put(key, newScoreMap)
+              } yield RespValue.Integer(membersAdded.toLong)
+            }
+          )
         }
 
       case api.Geo.GeoDist =>
-        val keyOption = input.headOption.map(_.asString)
-        val unit = input.lastOption.flatMap(_.asString match {
+        val stringInput = input.map(_.asString)
+
+        val keyOption     = stringInput.headOption
+        val member1Option = stringInput.lift(1)
+        val member2Option = stringInput.lift(2)
+        val unit = stringInput.lift(3).flatMap {
           case "m"  => Some(RadiusUnit.Meters)
           case "km" => Some(RadiusUnit.Kilometers)
           case "ft" => Some(RadiusUnit.Feet)
           case "mi" => Some(RadiusUnit.Miles)
           case _    => None
-        })
-        val members = (if (unit.isEmpty) input else input.dropRight(1)).drop(1).map(_.asString)
+        }
 
-        orInvalidParameter(STM.succeed(keyOption.nonEmpty)) {
-          val key = keyOption.get
+        orMissingParameter3(keyOption, member1Option, member2Option) { (key, member1, member2) =>
           orWrongType(isSortedSet(key))(
-            orInvalidParameter(STM.succeed(members.nonEmpty))(
-              for {
-                scoreMap <- sortedSets.getOrElse(key, Map.empty)
-                hashes    = members.collect(scoreMap)
-              } yield
-                if (hashes.size == 2)
-                  RespValue.bulkString(
-                    Hash
-                      .distance(
-                        Hash.decodeHash(hashes(0).toLong),
-                        Hash.decodeHash(hashes(1).toLong),
-                        unit.getOrElse(RadiusUnit.Meters)
-                      )
-                      .toString
-                  )
-                else RespValue.NullBulkString
-            )
+            for {
+              scoreMap <- sortedSets.getOrElse(key, Map.empty)
+              hashes    = Chunk(member1, member2).collect(scoreMap)
+              distOption = if (hashes.size == 2)
+                             Some(
+                               Hash
+                                 .distance(
+                                   Hash.decodeHash(hashes(0).toLong),
+                                   Hash.decodeHash(hashes(1).toLong),
+                                   unit.getOrElse(RadiusUnit.Meters)
+                                 )
+                             )
+                           else None
+            } yield distOption.fold[RespValue](RespValue.NullBulkString)(dist => RespValue.bulkString(dist.toString))
           )
         }
 
       case api.Geo.GeoHash =>
-        val keyOption = input.headOption.map(_.asString)
-        val members   = input.drop(1).map(_.asString)
-        orInvalidParameter(STM.succeed(keyOption.nonEmpty && members.nonEmpty)) {
-          val key = keyOption.get
+        val keyOption     = input.headOption.map(_.asString)
+        val membersOption = NonEmptyChunk.fromChunk(input.drop(1).map(_.asString))
+
+        orMissingParameter2(keyOption, membersOption) { (key, members) =>
           orWrongType(isSortedSet(key))(
             for {
               scoreMap <- sortedSets.getOrElse(key, Map.empty)
@@ -176,11 +175,10 @@ private[redis] final class TestExecutor private (
         }
 
       case api.Geo.GeoPos =>
-        val keyOption = input.headOption.map(_.asString)
-        val members   = input.drop(1).map(_.asString)
+        val keyOption     = input.headOption.map(_.asString)
+        val membersOption = NonEmptyChunk.fromChunk(input.drop(1).map(_.asString))
 
-        orInvalidParameter(STM.succeed(keyOption.nonEmpty && members.nonEmpty)) {
-          val key = keyOption.get
+        orMissingParameter2(keyOption, membersOption) { (key, members) =>
           orWrongType(isSortedSet(key))(
             for {
               scoreMap <- sortedSets.getOrElse(key, Map.empty)
@@ -228,13 +226,7 @@ private[redis] final class TestExecutor private (
           key
         }
 
-        orInvalidParameter(
-          STM.succeed(keyOption.nonEmpty && centerOption.nonEmpty && radiusOption.nonEmpty && unitOption.nonEmpty)
-        ) {
-          val key    = keyOption.get
-          val center = centerOption.get
-          val radius = radiusOption.get
-          val unit   = unitOption.get
+        orMissingParameter4(keyOption, centerOption, radiusOption, unitOption) { (key, center, radius, unit) =>
           orWrongType(isSortedSet(key))(
             {
               for {
@@ -327,13 +319,7 @@ private[redis] final class TestExecutor private (
           key
         }
 
-        orInvalidParameter(
-          STM.succeed(keyOption.nonEmpty && memberOption.nonEmpty && radiusOption.nonEmpty && unitOption.nonEmpty)
-        ) {
-          val key    = keyOption.get
-          val member = memberOption.get
-          val radius = radiusOption.get
-          val unit   = unitOption.get
+        orMissingParameter4(keyOption, memberOption, radiusOption, unitOption) { (key, member, radius, unit) =>
           orWrongType(isSortedSet(key))(
             {
               sortedSets.getOrElse(key, Map.empty).flatMap { scoreMap =>
@@ -2422,6 +2408,32 @@ private[redis] final class TestExecutor private (
     program: => USTM[RespValue]
   ): USTM[RespValue] =
     STM.ifM(predicate)(program, STM.succeedNow(Replies.Error))
+
+  private[this] def apply[A, B](optionAB: Option[A => B])(optionA: Option[A]): Option[B] = for {
+    a  <- optionA
+    ab <- optionAB
+  } yield ab(a)
+
+  private[this] def orMissingParameter2[A, B](paramA: Option[A], paramB: Option[B])(
+    program: (A, B) => USTM[RespValue]
+  ): USTM[RespValue] =
+    apply(apply(Some(program.curried))(paramA))(paramB).getOrElse(STM.succeedNow(Replies.Error))
+
+  private[this] def orMissingParameter3[A, B, C](paramA: Option[A], paramB: Option[B], paramC: Option[C])(
+    program: (A, B, C) => USTM[RespValue]
+  ): USTM[RespValue] =
+    apply(apply(apply(Some(program.curried))(paramA))(paramB))(paramC).getOrElse(STM.succeedNow(Replies.Error))
+
+  private[this] def orMissingParameter4[A, B, C, D](
+    paramA: Option[A],
+    paramB: Option[B],
+    paramC: Option[C],
+    paramD: Option[D]
+  )(
+    program: (A, B, C, D) => USTM[RespValue]
+  ): USTM[RespValue] =
+    apply(apply(apply(apply(Some(program.curried))(paramA))(paramB))(paramC))(paramD)
+      .getOrElse(STM.succeedNow(Replies.Error))
 
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): STM[Nothing, Boolean] =
