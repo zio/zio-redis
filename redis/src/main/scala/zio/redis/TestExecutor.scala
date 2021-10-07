@@ -367,6 +367,296 @@ private[redis] final class TestExecutor private (
       case api.Connection.Select =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
+      case api.Geo.GeoAdd =>
+        val keyOption = input.headOption.map(_.asString)
+        val valuesOption = NonEmptyChunk.fromChunk(
+          Chunk.fromIterator(
+            input
+              .drop(1)
+              .map(_.asString)
+              .grouped(3)
+              .map(g => (LongLat(g(0).toDouble, g(1).toDouble), g(2)))
+          )
+        )
+
+        orMissingParameter2(keyOption, valuesOption) { (key, values) =>
+          orWrongType(isSortedSet(key))(
+            orInvalidParameter(STM.succeed(values.map(_._1).forall(Hash.isValidLongLat))) {
+              val members = values.map { case (longLat, member) =>
+                MemberScore(Hash.encodeAsHash(longLat.longitude, longLat.latitude).toDouble, member)
+              }
+
+              for {
+                scoreMap    <- sortedSets.getOrElse(key, Map.empty)
+                membersAdded = members.count(ms => scoreMap.contains(ms.member))
+                newScoreMap  = scoreMap ++ members.map(ms => (ms.member, ms.score)).toMap
+                _           <- sortedSets.put(key, newScoreMap)
+              } yield RespValue.Integer(membersAdded.toLong)
+            }
+          )
+        }
+
+      case api.Geo.GeoDist =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption     = stringInput.headOption
+        val member1Option = stringInput.lift(1)
+        val member2Option = stringInput.lift(2)
+        val unit = stringInput.lift(3).flatMap {
+          case "m"  => Some(RadiusUnit.Meters)
+          case "km" => Some(RadiusUnit.Kilometers)
+          case "ft" => Some(RadiusUnit.Feet)
+          case "mi" => Some(RadiusUnit.Miles)
+          case _    => None
+        }
+
+        orMissingParameter3(keyOption, member1Option, member2Option) { (key, member1, member2) =>
+          orWrongType(isSortedSet(key))(
+            for {
+              scoreMap <- sortedSets.getOrElse(key, Map.empty)
+              hashes    = Chunk(member1, member2).collect(scoreMap)
+              distOption = if (hashes.size == 2)
+                             Some(
+                               Hash
+                                 .distance(
+                                   Hash.decodeHash(hashes(0).toLong),
+                                   Hash.decodeHash(hashes(1).toLong),
+                                   unit.getOrElse(RadiusUnit.Meters)
+                                 )
+                             )
+                           else None
+            } yield distOption.fold[RespValue](RespValue.NullBulkString)(dist => RespValue.bulkString(dist.toString))
+          )
+        }
+
+      case api.Geo.GeoHash =>
+        val keyOption     = input.headOption.map(_.asString)
+        val membersOption = NonEmptyChunk.fromChunk(input.drop(1).map(_.asString))
+
+        orMissingParameter2(keyOption, membersOption) { (key, members) =>
+          orWrongType(isSortedSet(key))(
+            for {
+              scoreMap <- sortedSets.getOrElse(key, Map.empty)
+              respChunk = members.map(scoreMap.get(_).fold[RespValue](RespValue.NullBulkString) { hash =>
+                            val geoHash = Hash.asGeoHash(hash.toLong)
+                            RespValue.bulkString(geoHash)
+                          })
+            } yield RespValue.Array(respChunk)
+          )
+        }
+
+      case api.Geo.GeoPos =>
+        val keyOption     = input.headOption.map(_.asString)
+        val membersOption = NonEmptyChunk.fromChunk(input.drop(1).map(_.asString))
+
+        orMissingParameter2(keyOption, membersOption) { (key, members) =>
+          orWrongType(isSortedSet(key))(
+            for {
+              scoreMap <- sortedSets.getOrElse(key, Map.empty)
+              respChunk = members.map(scoreMap.get(_).fold[RespValue](RespValue.NullArray) { hash =>
+                            val longLat = Hash.decodeHash(hash.toLong)
+                            RespValue.array(
+                              RespValue.bulkString(longLat.longitude.toString),
+                              RespValue.bulkString(longLat.latitude.toString)
+                            )
+                          })
+            } yield RespValue.Array(respChunk)
+          )
+        }
+
+      case api.Geo.GeoRadius =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption = stringInput.headOption
+        val centerOption = for {
+          longitude <- stringInput.lift(1).map(_.toDouble)
+          latitude  <- stringInput.lift(2).map(_.toDouble)
+        } yield LongLat(longitude, latitude)
+        val radiusOption = stringInput.lift(3).map(_.toDouble)
+        val unitOption = stringInput.lift(4).flatMap {
+          case "m"  => Some(RadiusUnit.Meters)
+          case "km" => Some(RadiusUnit.Kilometers)
+          case "ft" => Some(RadiusUnit.Feet)
+          case "mi" => Some(RadiusUnit.Miles)
+          case _    => None
+        }
+        val withCoord = stringInput.find(_ == WithCoord.stringify)
+        val withDist  = stringInput.find(_ == WithDist.stringify)
+        val withHash  = stringInput.find(_ == WithHash.stringify)
+        val count = stringInput.toList.sliding(2).collectFirst { case "COUNT" :: count :: _ =>
+          count.toInt
+        }
+        val order = stringInput.collectFirst {
+          case "ASC"  => Order.Ascending
+          case "DESC" => Order.Descending
+        }
+        val store = stringInput.toList.sliding(2).collectFirst { case "STORE" :: key :: _ =>
+          key
+        }
+        val storeDist = stringInput.toList.sliding(2).collectFirst { case "STOREDIST" :: key :: _ =>
+          key
+        }
+
+        orMissingParameter4(keyOption, centerOption, radiusOption, unitOption) { (key, center, radius, unit) =>
+          orWrongType(isSortedSet(key))(
+            {
+              for {
+                scoreMap <- sortedSets.getOrElse(key, Map.empty)
+                list = scoreMap
+                         .map(x => x -> Hash.distance(center, Hash.decodeHash(x._2.toLong), unit))
+                         .filter(_._2 <= radius)
+                         .toList
+                orderedList = order.fold(list) {
+                                case Order.Ascending  => list.sortWith(_._2 < _._2)
+                                case Order.Descending => list.sortWith(_._2 > _._2)
+                              }
+                countedList = count.fold(orderedList)(orderedList.take)
+                _ <- store.fold(STM.unit)(key =>
+                       sortedSets.put(
+                         key,
+                         countedList.map { case ((name, score), _) =>
+                           (name, score)
+                         }.toMap
+                       )
+                     )
+                _ <- storeDist.fold(STM.unit)(key =>
+                       sortedSets.put(
+                         key,
+                         countedList.map { case ((name, _), distance) =>
+                           (name, distance)
+                         }.toMap
+                       )
+                     )
+                chunk =
+                  Chunk.fromIterable(
+                    countedList.map { case ((name, score), distance) =>
+                      val nameResp = RespValue.bulkString(name)
+                      val infoChunk =
+                        withCoord.fold[Chunk[RespValue]](Chunk.empty) { _ =>
+                          val longLat = Hash.decodeHash(score.toLong)
+
+                          Chunk.single(
+                            RespValue.array(
+                              RespValue.bulkString(longLat.longitude.toString),
+                              RespValue.bulkString(longLat.latitude.toString)
+                            )
+                          )
+                        } ++
+                          withDist
+                            .fold[Chunk[RespValue]](Chunk.empty)(_ =>
+                              Chunk.single(RespValue.bulkString(distance.toString))
+                            ) ++
+                          withHash
+                            .fold[Chunk[RespValue]](Chunk.empty)(_ => Chunk.single(RespValue.Integer(score.toLong)))
+
+                      if (infoChunk.isEmpty) nameResp else RespValue.Array(nameResp +: infoChunk)
+                    }
+                  )
+              } yield
+                if (store.nonEmpty || storeDist.nonEmpty) RespValue.Integer(countedList.size.toLong)
+                else if (chunk.nonEmpty) RespValue.Array(chunk)
+                else RespValue.NullArray
+            }
+          )
+        }
+
+      case api.Geo.GeoRadiusByMember =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption    = stringInput.headOption
+        val memberOption = stringInput.lift(1)
+        val radiusOption = stringInput.lift(2).map(_.toDouble)
+        val unitOption = stringInput.lift(3).flatMap {
+          case "m"  => Some(RadiusUnit.Meters)
+          case "km" => Some(RadiusUnit.Kilometers)
+          case "ft" => Some(RadiusUnit.Feet)
+          case "mi" => Some(RadiusUnit.Miles)
+          case _    => None
+        }
+        val withCoord = stringInput.find(_ == WithCoord.stringify)
+        val withDist  = stringInput.find(_ == WithDist.stringify)
+        val withHash  = stringInput.find(_ == WithHash.stringify)
+        val count = stringInput.toList.sliding(2).collectFirst { case "COUNT" :: count :: _ =>
+          count.toInt
+        }
+        val order = stringInput.collectFirst {
+          case "ASC"  => Order.Ascending
+          case "DESC" => Order.Descending
+        }
+        val store = stringInput.toList.sliding(2).collectFirst { case "STORE" :: key :: _ =>
+          key
+        }
+        val storeDist = stringInput.toList.sliding(2).collectFirst { case "STOREDIST" :: key :: _ =>
+          key
+        }
+
+        orMissingParameter4(keyOption, memberOption, radiusOption, unitOption) { (key, member, radius, unit) =>
+          orWrongType(isSortedSet(key))(
+            {
+              sortedSets.getOrElse(key, Map.empty).flatMap { scoreMap =>
+                if (scoreMap.contains(member)) {
+                  val center = scoreMap(member).toLong
+                  val list =
+                    scoreMap
+                      .map(x => x -> Hash.distance(Hash.decodeHash(center), Hash.decodeHash(x._2.toLong), unit))
+                      .filter(_._2 <= radius)
+                      .toList
+                  val orderedList = order.fold(list) {
+                    case Order.Ascending  => list.sortWith(_._2 < _._2)
+                    case Order.Descending => list.sortWith(_._2 > _._2)
+                  }
+                  val countedList = count.fold(orderedList)(orderedList.take)
+                  for {
+                    _ <- store.fold(STM.unit)(key =>
+                           sortedSets.put(
+                             key,
+                             countedList.map { case ((name, score), _) =>
+                               (name, score)
+                             }.toMap
+                           )
+                         )
+                    _ <- storeDist.fold(STM.unit)(key =>
+                           sortedSets.put(
+                             key,
+                             countedList.map { case ((name, _), distance) =>
+                               (name, distance)
+                             }.toMap
+                           )
+                         )
+                    chunk = Chunk.fromIterable(
+                              countedList.map { case ((name, score), distance) =>
+                                val nameResp = RespValue.bulkString(name)
+                                val infoChunk =
+                                  withCoord.fold[Chunk[RespValue]](Chunk.empty) { _ =>
+                                    val longLat = Hash.decodeHash(score.toLong)
+
+                                    Chunk.single(
+                                      RespValue.array(
+                                        RespValue.bulkString(longLat.longitude.toString),
+                                        RespValue.bulkString(longLat.latitude.toString)
+                                      )
+                                    )
+                                  } ++
+                                    withDist.fold[Chunk[RespValue]](Chunk.empty)(_ =>
+                                      Chunk.single(RespValue.bulkString(distance.toString))
+                                    ) ++
+                                    withHash.fold[Chunk[RespValue]](Chunk.empty)(_ =>
+                                      Chunk.single(RespValue.Integer(score.toLong))
+                                    )
+
+                                if (infoChunk.isEmpty) nameResp else RespValue.Array(nameResp +: infoChunk)
+                              }
+                            )
+                  } yield
+                    if (store.nonEmpty || storeDist.nonEmpty) RespValue.Integer(countedList.size.toLong)
+                    else if (chunk.nonEmpty) RespValue.Array(chunk)
+                    else RespValue.NullArray
+                } else STM.succeedNow(RespValue.Error("ERR could not decode requested zset member"))
+              }
+            }
+          )
+        }
+
       case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
@@ -2390,6 +2680,32 @@ private[redis] final class TestExecutor private (
   ): USTM[RespValue] =
     STM.ifM(predicate)(program, STM.succeedNow(Replies.Error))
 
+  private[this] def apply[A, B](optionAB: Option[A => B])(optionA: Option[A]): Option[B] = for {
+    a  <- optionA
+    ab <- optionAB
+  } yield ab(a)
+
+  private[this] def orMissingParameter2[A, B](paramA: Option[A], paramB: Option[B])(
+    program: (A, B) => USTM[RespValue]
+  ): USTM[RespValue] =
+    apply(apply(Some(program.curried))(paramA))(paramB).getOrElse(STM.succeedNow(Replies.Error))
+
+  private[this] def orMissingParameter3[A, B, C](paramA: Option[A], paramB: Option[B], paramC: Option[C])(
+    program: (A, B, C) => USTM[RespValue]
+  ): USTM[RespValue] =
+    apply(apply(apply(Some(program.curried))(paramA))(paramB))(paramC).getOrElse(STM.succeedNow(Replies.Error))
+
+  private[this] def orMissingParameter4[A, B, C, D](
+    paramA: Option[A],
+    paramB: Option[B],
+    paramC: Option[C],
+    paramD: Option[D]
+  )(
+    program: (A, B, C, D) => USTM[RespValue]
+  ): USTM[RespValue] =
+    apply(apply(apply(apply(Some(program.curried))(paramA))(paramB))(paramC))(paramD)
+      .getOrElse(STM.succeedNow(Replies.Error))
+
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): STM[Nothing, Boolean] =
     for {
@@ -2506,6 +2822,85 @@ private[redis] final class TestExecutor private (
                   case State.Continue(values) => STM.succeedNow(values)
                 }
     } yield result
+  }
+
+  private[this] object Hash {
+    val longRange: (Double, Double) = (-180.0, 180.0)
+    val latRange: (Double, Double)  = (-85.05112878, 85.05112878)
+
+    def isValidLongLat(longLat: LongLat): Boolean =
+      longLat.longitude >= longRange._1 && longLat.longitude <= longRange._2 && longLat.latitude >= latRange._1 && longLat.latitude <= latRange._2
+
+    def encodeAsHash(
+      longitude: Double,
+      latitude: Double,
+      longRange: (Double, Double) = longRange,
+      latRange: (Double, Double) = latRange
+    ): Long = {
+      val longOffset = ((longitude - longRange._1) / (longRange._2 - longRange._1) * (1L << 26)).toLong
+      val latOffset  = ((latitude - latRange._1) / (latRange._2 - latRange._1) * (1L << 26)).toLong
+
+      @annotation.tailrec
+      def findHash(
+        acc: Long,
+        bitPlace: Int
+      ): Long =
+        if (bitPlace < 0) acc
+        else if (bitPlace % 2 == 0) findHash(acc | (latOffset & 1L << bitPlace / 2) << bitPlace / 2, bitPlace - 1)
+        else findHash(acc | (longOffset & 1L << bitPlace / 2) << (bitPlace + 1) / 2, bitPlace - 1)
+
+      findHash(0, 51)
+    }
+
+    def asGeoHash(hash: Long): String = {
+      val base32       = "0123456789bcdefghjkmnpqrstuvwxyz"
+      val longLat      = decodeHash(hash)
+      val standardHash = encodeAsHash(longLat.longitude, longLat.latitude, latRange = (-90.0, 90.0))
+      standardHash.toBinaryString.grouped(5).map(x => base32(Integer.parseInt(x, 2))).mkString.updated(10, base32(0))
+    }
+
+    def decodeHash(hash: Long): LongLat = {
+
+      @annotation.tailrec
+      def findLongLat(longBits: Long, latBits: Long, bitPlace: Long): (Long, Long) =
+        if (bitPlace < 0) (longBits, latBits)
+        else if (bitPlace % 2 == 0)
+          findLongLat(longBits, latBits | (hash & 1L << bitPlace) >> (bitPlace / 2), bitPlace - 1)
+        else findLongLat(longBits | (hash & 1L << bitPlace) >> (bitPlace / 2 + 1), latBits, bitPlace - 1)
+
+      val (longBits, latBits) = findLongLat(0L, 0L, 51)
+
+      val longDiff = longRange._2 - longRange._1
+      val latDiff  = latRange._2 - latRange._1
+
+      val longLow  = longRange._1 + longBits * 1.0 / (1L << 26) * longDiff
+      val longHigh = longRange._1 + (longBits + 1.0) * 1.0 / (1L << 26) * longDiff
+      val latLow   = latRange._1 + latBits * 1.0 / (1L << 26) * latDiff
+      val latHigh  = latRange._1 + (latBits + 1.0) * 1.0 / (1L << 26) * latDiff
+      LongLat((longLow + longHigh) / 2.0, (latLow + latHigh) / 2.0)
+    }
+
+    def distance(longLat1: LongLat, longLat2: LongLat, unit: RadiusUnit = RadiusUnit.Meters): Double = {
+      import Math._
+
+      val latDiff  = (longLat2.latitude - longLat1.latitude).toRadians
+      val longDiff = (longLat2.longitude - longLat1.longitude).toRadians
+      val lat1     = longLat1.latitude.toRadians
+      val lat2     = longLat2.latitude.toRadians
+      val toMeters = unit match {
+        case RadiusUnit.Meters     => 1.0
+        case RadiusUnit.Kilometers => 1000.0
+        case RadiusUnit.Feet       => 0.3048
+        case RadiusUnit.Miles      => 1609.34
+      }
+
+      val u        = sin(latDiff / 2.0)
+      val v        = sin(longDiff / 2.0)
+      val radius   = 6372797.560856 / toMeters
+      val distance = 2.0 * radius * asin(sqrt(u * u + cos(lat1) * cos(lat2) * v * v))
+
+      round(distance * 10000.0) / 10000.0
+    }
   }
 
   private[this] def forAll[A](chunk: Chunk[A])(f: A => STM[Nothing, Boolean]) =

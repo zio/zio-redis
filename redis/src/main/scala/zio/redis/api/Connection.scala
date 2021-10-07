@@ -317,7 +317,7 @@ trait Connection {
    * reconnecting again
    *
    * @return
-   *   the Unit valule.
+   *   the Unit value.
    */
   final def reset: ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(Reset, NoInput, ResetOutput)

@@ -1,10 +1,12 @@
-package zio.redis
+package zio.redis.lists
 
 import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
+import zio.duration._
+import zio.redis.{ BenchmarkRuntime, blPop, rPush }
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -12,17 +14,18 @@ import zio.ZIO
 @Measurement(iterations = 15)
 @Warmup(iterations = 15)
 @Fork(2)
-class GetBenchmarks extends BenchmarkRuntime {
-
+class BlPopBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   var count: Int = _
 
   private var items: List[String] = _
 
-  @Setup(Level.Trial)
+  private val key = "test-list"
+
+  @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    zioUnsafeRun(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -31,23 +34,32 @@ class GetBenchmarks extends BenchmarkRuntime {
     import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.get[String](Key.unsafeFrom(i)))))
+
+    unsafeRun[LaserDiscClient](c =>
+      items.traverse_(_ => c.send(cmd.blocking.blpop[String](Key.unsafeFrom(key), PosInt.unsafeFrom(1))))
+    )
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.get[RedisIO](i).run(c)))
+
+    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.blpop[RedisIO](List(key), 1).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
+    import cats.data._
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.get(i)))
+    import scala.concurrent.duration._
+
+    unsafeRun[Redis4CatsClient[String]](c =>
+      items.traverse_(_ => c.blPop(Duration(1, TimeUnit.SECONDS), NonEmptyList.one(key)))
+    )
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(get[String, String]))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => blPop[String, String](key)(1.second)))
 }

@@ -23,24 +23,24 @@ object BuildHelper {
 
   val Scala212: String = versions("2.12")
   val Scala213: String = versions("2.13")
-  val Zio: String      = "1.0.9"
+  val Zio: String      = "1.0.12"
 
   def buildInfoSettings(packageName: String) =
     List(
-      buildInfoKeys := List[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
+      buildInfoKeys    := List[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),
       buildInfoPackage := packageName,
-      buildInfoObject := "BuildInfo"
+      buildInfoObject  := "BuildInfo"
     )
 
   def stdSettings(prjName: String) =
     List(
-      name := s"$prjName",
-      crossScalaVersions := List(Scala212, Scala213),
-      ThisBuild / scalaVersion := Scala213,
-      scalacOptions := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
+      name                          := s"$prjName",
+      crossScalaVersions            := List(Scala212, Scala213),
+      ThisBuild / scalaVersion      := Scala213,
+      scalacOptions                 := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
       ThisBuild / semanticdbEnabled := true,
       ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on",
-      ThisBuild / semanticdbVersion := scalafixSemanticdb.revision,
+      ThisBuild / semanticdbVersion          := scalafixSemanticdb.revision,
       ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
       ThisBuild / scalafixDependencies ++= List(
         "com.github.liancheng" %% "organize-imports" % "0.5.0",

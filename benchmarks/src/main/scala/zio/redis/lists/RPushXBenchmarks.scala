@@ -1,10 +1,11 @@
-package zio.redis
+package zio.redis.lists
 
 import java.util.concurrent.TimeUnit
 
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
+import zio.redis.{ BenchmarkRuntime, del, rPush, rPushX }
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -12,18 +13,23 @@ import zio.ZIO
 @Measurement(iterations = 15)
 @Warmup(iterations = 15)
 @Fork(2)
-class StrLenBenchmarks extends BenchmarkRuntime {
-
+class RPushXBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   var count: Int = _
 
   private var items: List[String] = _
 
-  @Setup(Level.Trial)
+  private val key = "test-list"
+
+  @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    zioUnsafeRun(rPush(key, items.head).unit)
   }
+
+  @TearDown(Level.Invocation)
+  def tearDown(): Unit =
+    zioUnsafeRun(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -31,23 +37,26 @@ class StrLenBenchmarks extends BenchmarkRuntime {
     import _root_.laserdisc.{ all => cmd, _ }
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.strlen(Key.unsafeFrom(i)))))
+
+    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.rpushx[String](Key.unsafeFrom(key), i))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.strlen[RedisIO](i).run(c)))
+
+    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.rpushx[RedisIO](key, i).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.strLen(i)))
+
+    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.rPushX(key, i)))
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(strLen[String]))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => rPushX[String, String](key, i)))
 }
