@@ -132,7 +132,9 @@ object Input {
           }
           val loopChunk = if (noLoop) Chunk(encodeString("NOLOOP")) else Chunk.empty
           Chunk(encodeString("ON")) ++
-            clientRedir.fold(Chunk.empty)(id => Chunk(encodeString("REDIRECT"), encodeString(id.toString))) ++
+            clientRedir.fold(Chunk.empty: Chunk[RespValue.BulkString])(id =>
+              Chunk(encodeString("REDIRECT"), encodeString(id.toString))
+            ) ++
             prefixes.flatMap(prefix => Chunk(encodeString("PREFIX"), encodeString(prefix))) ++
             modeChunk ++
             loopChunk

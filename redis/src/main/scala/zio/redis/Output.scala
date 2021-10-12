@@ -734,10 +734,10 @@ object Output {
             _.trim
               .split(' ')
               .toList
-              .map {
+              .collect {
                 _.split('=').toList match {
-                  case key :: value :: Nil => key -> value
-                  case other               => throw ProtocolError(s"Invalid text $other in client information")
+                  case key :: value :: Nil      => key -> value
+                  case other if other.size != 1 => throw ProtocolError(s"Invalid text $other in client information")
                 }
               }
               .toMap
@@ -751,7 +751,7 @@ object Output {
                 .get("events")
                 .fold(ClientEvents())(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
             ClientInfo(
-              id = client.get("id").fold(throw ProtocolError("Missing id field"))(parseLong),
+              id = client.get("id").fold(0L)(parseLong),
               name = client.get("name"),
               address = client.get("addr").map { str =>
                 Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
