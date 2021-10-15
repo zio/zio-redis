@@ -1,7 +1,5 @@
 package zio.redis
 
-import java.net.InetAddress
-
 import zio.Chunk
 import zio.duration._
 import zio.schema.Schema
@@ -715,73 +713,6 @@ object Output {
     catch {
       case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
     }
-  }
-
-  case object ClientInfoOutput extends Output[Chunk[ClientInfo]] {
-    private def parseLong(s: String): Long =
-      try s.toLong
-      catch { case _: NumberFormatException => throw ProtocolError(s"$s isn't a long") }
-
-    private def parseInt(s: String): Int =
-      try s.toInt
-      catch { case _: NumberFormatException => throw ProtocolError(s"$s isn't an integer") }
-
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
-      respValue match {
-        case bulk @ RespValue.BulkString(_) if bulk.asString == "" => Chunk.empty
-        case bulk @ RespValue.BulkString(_) =>
-          val clients: List[Map[String, String]] = bulk.asString.split('\n').toList.map {
-            _.trim
-              .split(' ')
-              .toList
-              .collect {
-                _.split('=').toList match {
-                  case key :: value :: Nil      => key -> value
-                  case other if other.size != 1 => throw ProtocolError(s"Invalid text $other in client information")
-                }
-              }
-              .toMap
-          }
-          Chunk.fromIterable(clients).map { client =>
-            val flags: Set[ClientFlag] = client
-              .get("flags")
-              .fold(Set.empty[ClientFlag])(ClientFlag.toClientFlagSet)
-            val events =
-              client
-                .get("events")
-                .fold(ClientEvents())(s => ClientEvents(readable = s.contains('r'), writable = s.contains('w')))
-            ClientInfo(
-              id = client.get("id").fold(0L)(parseLong),
-              name = client.get("name"),
-              address = client.get("addr").map { str =>
-                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
-              },
-              localAddress = client.get("laddr").map { str =>
-                Address(InetAddress.getByName(str.split(':')(0)), str.split(':')(1).toInt)
-              },
-              fileDescriptor = client.get("fd").map(parseLong),
-              age = client.get("age").map(parseLong(_).seconds),
-              idle = client.get("idle").map(parseLong(_).seconds),
-              flags = flags,
-              databaseId = client.get("db").map(parseLong),
-              subscriptions = client.get("sub").fold(0)(parseInt),
-              patternSubscriptions = client.get("psub").fold(0)(parseInt),
-              multiCommands = client.get("multi").fold(0)(parseInt),
-              queryBufferLength = client.get("qbuf").map(parseInt),
-              queryBufferFree = client.get("qbuf-free").map(parseInt),
-              outputBufferLength = client.get("obl").map(parseInt),
-              outputListLength = client.get("oll").map(parseInt),
-              outputBufferMem = client.get("omem").map(parseLong),
-              events = events,
-              lastCommand = client.get("cmd"),
-              argvMemory = client.get("argv-mem").map(parseLong),
-              totalMemory = client.get("tot-mem").map(parseLong),
-              redirectionClientId = client.get("redir").map(parseLong),
-              user = client.get("user")
-            )
-          }
-        case other => throw ProtocolError(s"$other isn't a bulk string")
-      }
   }
 
   case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {

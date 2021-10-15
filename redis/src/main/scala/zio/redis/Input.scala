@@ -143,11 +143,6 @@ object Input {
       }
   }
 
-  case object ClientTypeInput extends Input[ClientType] {
-    def encode(data: ClientType)(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      Chunk(encodeString("TYPE"), encodeString(data.stringify))
-  }
-
   case object CopyInput extends Input[Copy] {
     def encode(data: Copy)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeString(data.stringify))
@@ -550,15 +545,6 @@ object Input {
   case object IdInput extends Input[Long] {
     def encode(data: Long)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk(encodeString("ID"), encodeString(data.toString))
-  }
-
-  case object IdsInput extends Input[Iterable[Long]] {
-    def encode(data: Iterable[Long])(implicit codec: Codec): Chunk[RespValue.BulkString] =
-      if (data.nonEmpty)
-        Chunk.single(encodeString("ID")) ++ data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) =>
-          acc ++ Chunk.single(encodeString(a.toString))
-        )
-      else Chunk.empty
   }
 
   case object UnblockBehaviorInput extends Input[UnblockBehavior] {

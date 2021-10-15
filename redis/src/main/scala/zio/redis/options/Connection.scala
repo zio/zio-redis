@@ -43,42 +43,6 @@ trait Connection {
     case object TrackingTargetClientInvalid extends ClientFlag
 
     case object BroadcastTrackingMode extends ClientFlag
-
-    private[redis] final def toClientFlagSet(flags: String): Set[ClientFlag] = flags.collect {
-      case 'A' => ToBeClosedAsap
-      case 'b' => Blocked
-      case 'c' => ToBeClosedAfterReply
-      case 'd' => WatchedKeysModified
-      case 'M' => IsMaster
-      case 'O' => MonitorMode
-      case 'P' => PubSub
-      case 'r' => ReadOnlyMode
-      case 'S' => Replica
-      case 'u' => Unblocked
-      case 'U' => UnixDomainSocket
-      case 'x' => MultiExecContext
-      case 't' => KeysTrackingEnabled
-      case 'R' => TrackingTargetClientInvalid
-      case 'B' => BroadcastTrackingMode
-    }.toSet
-
-    private[redis] final def toString(flags: Set[ClientFlag]): String = flags.collect {
-      case ToBeClosedAsap              => 'A'
-      case Blocked                     => 'b'
-      case ToBeClosedAfterReply        => 'c'
-      case WatchedKeysModified         => 'd'
-      case IsMaster                    => 'M'
-      case MonitorMode                 => 'O'
-      case PubSub                      => 'P'
-      case ReadOnlyMode                => 'r'
-      case Replica                     => 'S'
-      case Unblocked                   => 'u'
-      case UnixDomainSocket            => 'U'
-      case MultiExecContext            => 'x'
-      case KeysTrackingEnabled         => 't'
-      case TrackingTargetClientInvalid => 'R'
-      case BroadcastTrackingMode       => 'B'
-    }.mkString
   }
 
   sealed case class ClientInfo(
@@ -105,34 +69,7 @@ trait Connection {
     totalMemory: Option[Long] = None,
     redirectionClientId: Option[Long] = None,
     user: Option[String] = None
-  ) {
-    private[redis] final def stringify: String =
-      s"""
-         |id=$id
-         | name=${name.getOrElse("")}
-         | ${address.fold("")(addr => s"${addr.stringify} ")}
-         |${localAddress.fold("")(laddr => s"laddr=${laddr.stringify} ")}
-         |${fileDescriptor.fold("")(fd => s"fd=$fd ")}
-         |${age.fold("")(age => s"age=${age.getSeconds} ")}
-         |${idle.fold("")(idle => s"idle=${idle.getSeconds} ")}
-         |flags=${Some(ClientFlag.toString(flags)).filter(_.nonEmpty).getOrElse('N')}
-         | ${databaseId.fold("")(db => s"db=$db ")}
-         |sub=$subscriptions
-         | psub=$patternSubscriptions
-         | multi=$multiCommands
-         | ${queryBufferLength.fold("")(qbuf => s"qbuf=$qbuf ")}
-         |${queryBufferFree.fold("")(qbufFree => s"qbuf-free=$qbufFree ")}
-         |${outputBufferLength.fold("")(obl => s"obl=$obl ")}
-         |${outputListLength.fold("")(oll => s"oll=$oll ")}
-         |${outputBufferMem.fold("")(omem => s"omem=$omem ")}
-         |events=${if (events.readable) 'r' else ""}${if (events.writable) 'w' else ""}
-         | ${lastCommand.fold("")(cmd => s"cmd=$cmd ")}
-         |${argvMemory.fold("")(argvMem => s"argv-mem=$argvMem ")}
-         |${totalMemory.fold("")(totMem => s"tot-mem=$totMem ")}
-         |${redirectionClientId.fold("")(redir => s"redir=$redir ")}
-         |${user.fold("")(user => s"user=$user")}
-         |""".stripMargin.replaceAll(System.lineSeparator(), "")
-  }
+  )
 
   sealed trait ClientKillFilter
 

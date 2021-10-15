@@ -2,7 +2,6 @@ package zio.redis
 
 import java.net.InetAddress
 
-import zio.Chunk
 import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
@@ -33,24 +32,10 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientId")(
         testM("get client id") {
           for {
-            id        <- clientId
-            info      <- clientInfo
-            expectedId = info.id
-          } yield assert(id)(equalTo(expectedId))
+            id <- clientId
+          } yield assert(id)(isGreaterThan(0L))
         }
-      ) @@ ignore,
-      suite("clientInfo")(
-        testM("get client info") {
-          for {
-            info         <- clientInfo
-            id            = info.id
-            name          = info.name.getOrElse("")
-            expectedId   <- clientId
-            expectedName <- clientGetName
-          } yield assert(id)(equalTo(expectedId)) &&
-            assert(name)(equalTo(expectedName.getOrElse("")))
-        }
-      ) @@ ignore,
+      ),
       suite("clientKill")(
         testM("error when a connection with the specifed address doesn't exist") {
           for {
@@ -67,20 +52,6 @@ trait ConnectionSpec extends BaseSpec {
             id            <- clientId
             clientsKilled <- clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
           } yield assert(clientsKilled)(equalTo(0L))
-        }
-      ),
-      suite("clientList")(
-        testM("get client info") {
-          for {
-            id           <- clientId
-            infoChunk    <- clientList(id)()
-            expectedInfo <- clientInfo
-          } yield assert(infoChunk.head)(equalTo(expectedInfo))
-        } @@ ignore,
-        testM("get empty chunk when no clients with specified ids exist") {
-          for {
-            emptyChunk <- clientList(76L, 77L, 78L)()
-          } yield assert(emptyChunk)(equalTo(Chunk.empty))
         }
       ),
       suite("clientGetRedir")(
@@ -109,21 +80,12 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(unit)(isUnit)
         }
       ),
-      suite("set and get name")(
-        testM("clientSetName") {
-          for {
-            _    <- clientSetName("foo")
-            info <- clientInfo
-            name  = info.name.getOrElse("")
-          } yield assert(name)(equalTo("foo"))
-        } @@ ignore,
-        testM("clientGetName") {
-          for {
-            _    <- clientSetName("bar")
-            name <- clientGetName
-          } yield assert(name.getOrElse(""))(equalTo("bar"))
-        }
-      ),
+      testM("set and get name") {
+        for {
+          _    <- clientSetName("foo")
+          name <- clientGetName
+        } yield assert(name.getOrElse(""))(equalTo("foo"))
+      },
       suite("clientTracking")(
         testM("enable tracking in broadcast mode and with prefixes") {
           for {

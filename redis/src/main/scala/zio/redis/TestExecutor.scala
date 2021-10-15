@@ -116,9 +116,6 @@ private[redis] final class TestExecutor private (
       case api.Connection.ClientId =>
         clientInfo.get.map(info => RespValue.Integer(info.id))
 
-      case api.Connection.ClientInfo =>
-        clientInfo.get.map(info => RespValue.bulkString(info.stringify))
-
       case api.Connection.ClientKill =>
         if (input.length == 1) {
           val addressOption = input.headOption.map(_.asString)
@@ -159,43 +156,6 @@ private[redis] final class TestExecutor private (
               .map(bool => RespValue.Integer(if (bool) 1 else 0))
           } else STM.succeedNow(RespValue.Integer(0))
         }
-
-      case api.Connection.ClientList =>
-        val inputList        = input.toList.map(_.asString)
-        val subCommandOption = inputList.headOption
-
-        subCommandOption.fold[USTM[RespValue]](clientInfo.get.map(info => RespValue.bulkString(info.stringify)))(
-          subCommand =>
-            if (subCommand == "TYPE") {
-              val clientTypeOption = inputList.lift(1)
-
-              orMissingParameter(clientTypeOption)(clientType =>
-                clientInfo.get.map { info =>
-                  val condition = clientType match {
-                    case string if string == ClientType.PubSub.stringify  => info.flags.contains(ClientFlag.PubSub)
-                    case string if string == ClientType.Master.stringify  => info.flags.contains(ClientFlag.IsMaster)
-                    case string if string == ClientType.Replica.stringify => info.flags.contains(ClientFlag.Replica)
-                    case string if string == ClientType.Normal.stringify =>
-                      !info.flags.contains(ClientFlag.PubSub) &&
-                        !info.flags.contains(ClientFlag.IsMaster) && !info.flags.contains(ClientFlag.Replica)
-                    case _ => false
-                  }
-
-                  RespValue.bulkString(if (condition) info.stringify else "")
-                }
-              )
-            } else if (subCommand == "ID") {
-              val idsOption = Some(inputList.drop(1)).filter(_.nonEmpty)
-
-              orMissingParameter(idsOption)(ids =>
-                clientInfo.get.map { info =>
-                  val condition = ids.contains(info.id.toString)
-
-                  RespValue.bulkString(if (condition) info.stringify else "")
-                }
-              )
-            } else STM.succeed(RespValue.Error("ERR"))
-        )
 
       case api.Connection.ClientGetName =>
         clientInfo.get.map(_.name.fold[RespValue](RespValue.NullBulkString)(name => RespValue.bulkString(name)))

@@ -1,7 +1,5 @@
 package zio.redis
 
-import java.net.InetAddress
-
 import zio.duration._
 import zio.redis.Output._
 import zio.redis.RedisError.{ ProtocolError, _ }
@@ -858,66 +856,6 @@ object OutputSpec extends BaseSpec {
             )
           }
         )
-      ),
-      suite("ClientInfo")(
-        testM("extract addresses") {
-          for {
-            id      <- UIO(42L)
-            address <- UIO(Address(InetAddress.getByName("127.0.0.1"), 800))
-            resp    <- UIO(RespValue.bulkString(s"addr=${address.stringify} id=$id laddr=${address.stringify}"))
-            res     <- Task(ClientInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(
-            equalTo(
-              Chunk.single(
-                ClientInfo(
-                  id = 42L,
-                  address = Some(address),
-                  localAddress = Some(address)
-                )
-              )
-            )
-          )
-        },
-        testM("extract flags") {
-          import ClientFlag._
-
-          for {
-            id   <- UIO(42L)
-            resp <- UIO(RespValue.bulkString(s"flags=bOPSRt id=$id"))
-            expectedFlags <- UIO(
-                               Set[ClientFlag](
-                                 Blocked,
-                                 MonitorMode,
-                                 PubSub,
-                                 Replica,
-                                 TrackingTargetClientInvalid,
-                                 KeysTrackingEnabled
-                               )
-                             )
-            res <- Task(ClientInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(Chunk.single(ClientInfo(id = 42L, flags = expectedFlags))))
-        },
-        testM("ignore unknown flags") {
-          for {
-            id   <- UIO(42L)
-            resp <- UIO(RespValue.bulkString(s"flags=XYZ id=$id"))
-            res  <- Task(ClientInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(Chunk.single(ClientInfo(id = id, flags = Set.empty))))
-        },
-        testM("extract multiple fields") {
-          for {
-            resp <- UIO(RespValue.bulkString("sub=4 id=42 idle=6 fd=9234\nid=99 events=r db=33\nid=1 cmd=foo"))
-            res  <- Task(ClientInfoOutput.unsafeDecode(resp))
-          } yield assert(res)(
-            equalTo(
-              Chunk(
-                ClientInfo(id = 42L, idle = Some(6.seconds), subscriptions = 4, fileDescriptor = Some(9234L)),
-                ClientInfo(id = 99L, events = ClientEvents(readable = true), databaseId = Some(33L)),
-                ClientInfo(id = 1L, lastCommand = Some("foo"))
-              )
-            )
-          )
-        }
       ),
       suite("ClientTrackingInfo")(
         testM("extract with tracking off") {
