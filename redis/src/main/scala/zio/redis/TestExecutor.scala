@@ -13,6 +13,8 @@ import zio.schema.codec.Codec
 import zio.stm.{ random => _, _ }
 
 private[redis] final class TestExecutor private (
+  clientInfo: TRef[ClientInfo],
+  clientTrackingInfo: TRef[ClientTrackingInfo],
   lists: TMap[String, Chunk[String]],
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
@@ -52,6 +54,11 @@ private[redis] final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
 
+                  case "CLIENT" =>
+                    val command1 = command.tail
+                    val name1    = command1.head
+                    runCommand(name.asString + " " + name1.asString, command1.tail).commit
+
                   case _ => runCommand(name.asString, command.tail).commit
                 }
     } yield result
@@ -79,7 +86,264 @@ private[redis] final class TestExecutor private (
 
   private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): USTM[RespValue] = {
     name match {
-      case api.Connection.Ping.name =>
+      case api.Connection.Auth =>
+        onConnection(name, input)(RespValue.bulkString("OK"))
+
+      case api.Connection.ClientCaching =>
+        val yesNoOption = input.headOption.map(_.asString)
+        orMissingParameter(yesNoOption) { yesNo =>
+          orInvalidParameter(STM.succeed(yesNo == "YES" || yesNo == "NO"))(
+            clientTrackingInfo.get.flatMap { trackingInfo =>
+              val flags = trackingInfo.flags
+              if (flags.clientSideCaching && yesNo == "YES" && flags.trackingMode.contains(ClientTrackingMode.OptIn))
+                clientTrackingInfo
+                  .set(trackingInfo.copy(flags = flags.copy(caching = Some(true))))
+                  .map(_ => RespValue.SimpleString("OK"))
+              else if (flags.clientSideCaching && flags.trackingMode.contains(ClientTrackingMode.OptOut))
+                clientTrackingInfo
+                  .set(trackingInfo.copy(flags = flags.copy(caching = Some(false))))
+                  .map(_ => RespValue.SimpleString("OK"))
+              else
+                STM.succeed(
+                  RespValue.Error(
+                    "ERR CLIENT CACHING can be called only when the client is in tracking mode with OPTIN or OPTOUT mode enabled"
+                  )
+                )
+            }
+          )
+        }
+
+      case api.Connection.ClientId =>
+        clientInfo.get.map(info => RespValue.Integer(info.id))
+
+      case api.Connection.ClientKill =>
+        if (input.length == 1) {
+          val addressOption = input.headOption.map(_.asString)
+
+          orMissingParameter(addressOption)(address =>
+            clientInfo.get.map(info =>
+              if (info.address.fold(false)(_.stringify == address)) RespValue.SimpleString("OK")
+              else RespValue.Error("ERR")
+            )
+          )
+        } else {
+          val inputList = input.toList.map(_.asString).grouped(2)
+          val notSkipMe = inputList.contains(List("SKIPME", "NO"))
+          if (notSkipMe) {
+            inputList.map {
+              case List("ADDR", addr) =>
+                clientInfo.get.map(_.address.fold(false)(_.stringify == addr))
+              case List("LADDR", laddr) =>
+                clientInfo.get.map(_.localAddress.fold(false)(_.stringify == laddr))
+              case List("ID", id) =>
+                clientInfo.get.map(_.id.toString == id)
+              case List("TYPE", clientType) =>
+                clientInfo.get.map(info =>
+                  clientType match {
+                    case string if string == ClientType.PubSub.stringify  => info.flags.contains(ClientFlag.PubSub)
+                    case string if string == ClientType.Master.stringify  => info.flags.contains(ClientFlag.IsMaster)
+                    case string if string == ClientType.Replica.stringify => info.flags.contains(ClientFlag.Replica)
+                    case string if string == ClientType.Normal.stringify =>
+                      !info.flags.contains(ClientFlag.PubSub) &&
+                        !info.flags.contains(ClientFlag.IsMaster) && !info.flags.contains(ClientFlag.Replica)
+                    case _ => false
+                  }
+                )
+              case List("USER", user) =>
+                clientInfo.get.map(_.user.fold(false)(_ == user))
+              case _ => STM.succeed(true)
+            }.fold(STM.succeed(true))((a, b) => a.flatMap(x => b.map(y => x && y)))
+              .map(bool => RespValue.Integer(if (bool) 1 else 0))
+          } else STM.succeedNow(RespValue.Integer(0))
+        }
+
+      case api.Connection.ClientGetName =>
+        clientInfo.get.map(_.name.fold[RespValue](RespValue.NullBulkString)(name => RespValue.bulkString(name)))
+
+      case api.Connection.ClientGetRedir =>
+        clientTrackingInfo.get.map { trackingInfo =>
+          val redirect = trackingInfo.redirect match {
+            case ClientTrackingRedirect.RedirectedTo(id) => id
+            case ClientTrackingRedirect.NotRedirected    => 0L
+            case ClientTrackingRedirect.NotEnabled       => -1L
+          }
+
+          RespValue.Integer(redirect)
+        }
+
+      case api.Connection.ClientUnpause =>
+        STM.succeedNow(RespValue.SimpleString("OK"))
+
+      case api.Connection.ClientPause =>
+        STM.succeedNow(RespValue.SimpleString("OK"))
+
+      case api.Connection.ClientSetName =>
+        val nameOption = input.headOption.map(_.asString)
+
+        orMissingParameter(nameOption)(name =>
+          clientInfo.getAndUpdate(_.copy(name = Some(name))).as(RespValue.SimpleString("OK"))
+        )
+
+      case api.Connection.ClientTracking =>
+        val inputList   = input.toList.map(_.asString)
+        val onOffOption = inputList.headOption
+
+        orMissingParameter(onOffOption)(onOff =>
+          orInvalidParameter(STM.succeed(onOff == "ON" || onOff == "OFF"))(
+            if (onOff == "ON") {
+              val mode = inputList match {
+                case list if list.contains(ClientTrackingMode.OptIn.stringify)     => Some(ClientTrackingMode.OptIn)
+                case list if list.contains(ClientTrackingMode.OptOut.stringify)    => Some(ClientTrackingMode.OptOut)
+                case list if list.contains(ClientTrackingMode.Broadcast.stringify) => Some(ClientTrackingMode.Broadcast)
+                case _                                                             => None
+              }
+              val noLoop = inputList.contains("NOLOOP")
+              val filteredInput = inputList
+                .drop(1)
+                .filterNot(
+                  Set(
+                    ClientTrackingMode.OptIn.stringify,
+                    ClientTrackingMode.OptOut.stringify,
+                    ClientTrackingMode.Broadcast.stringify,
+                    "NOLOOP"
+                  )
+                )
+                .grouped(2)
+                .toList
+              val redirectId = filteredInput.filter(_.head == "REDIRECT").map(_(1).toLong).headOption
+              val prefixes = Some(filteredInput.filter(_.head == "PREFIX").map(_(1)).toSet)
+                .map(set => if (set.isEmpty && mode.contains(ClientTrackingMode.Broadcast)) Set("") else set)
+                .filter(_.nonEmpty)
+
+              clientTrackingInfo.get.flatMap { trackingInfo =>
+                import ClientTrackingMode._
+
+                val trackingMode = trackingInfo.flags.trackingMode
+
+                if (prefixes.nonEmpty && !mode.contains(Broadcast))
+                  STM.succeed(
+                    RespValue.Error("ERR PREFIX option requires BCAST mode to be enabled")
+                  )
+                else if (
+                  trackingMode.contains(Broadcast) && !mode.contains(Broadcast) || mode.contains(Broadcast) &&
+                  trackingMode.fold(false)(_ != Broadcast)
+                )
+                  STM.succeed(
+                    RespValue.Error(
+                      "You can't switch BCAST mode on/off before disabling tracking for this client, and then re-enabling it with a different mode"
+                    )
+                  )
+                else if (
+                  mode.contains(OptIn) && trackingMode.contains(OptOut) || mode.contains(OptOut) && trackingMode
+                    .contains(OptIn)
+                )
+                  STM.succeed {
+                    RespValue.Error(
+                      "ERR You can't switch OPTIN/OPTOUT mode before disabling tracking for this client, and then re-enabling it with a different mode"
+                    )
+                  }
+                else {
+                  val addTracking = for {
+                    _ <- clientInfo.getAndUpdate(info => info.copy(flags = info.flags + ClientFlag.KeysTrackingEnabled))
+                    _ <- clientTrackingInfo.getAndUpdate(_.copy(flags = ClientTrackingFlags(clientSideCaching = true)))
+                  } yield ()
+
+                  val addMode = mode.fold(STM.unit)(mode =>
+                    for {
+                      _ <- clientTrackingInfo.getAndUpdate(trackingInfo =>
+                             trackingInfo.copy(flags = trackingInfo.flags.copy(trackingMode = Some(mode)))
+                           )
+                      _ <- STM.when(mode == ClientTrackingMode.Broadcast)(
+                             clientInfo.getAndUpdate(info =>
+                               info.copy(flags = info.flags + ClientFlag.BroadcastTrackingMode)
+                             )
+                           )
+                    } yield ()
+                  )
+
+                  val addNoLoop =
+                    clientTrackingInfo.getAndUpdate(trackingInfo =>
+                      trackingInfo.copy(flags = trackingInfo.flags.copy(noLoop = noLoop))
+                    )
+
+                  val addRedirectId = for {
+                    _ <- clientInfo.getAndUpdate(_.copy(redirectionClientId = redirectId))
+                    _ <- clientTrackingInfo.getAndUpdate(
+                           _.copy(redirect =
+                             redirectId.fold[ClientTrackingRedirect](ClientTrackingRedirect.NotRedirected)(id =>
+                               ClientTrackingRedirect.RedirectedTo(id)
+                             )
+                           )
+                         )
+                  } yield ()
+
+                  val addPrefixes = prefixes.fold(STM.unit)(prefixes =>
+                    clientTrackingInfo
+                      .getAndUpdate(trackingInfo => trackingInfo.copy(prefixes = trackingInfo.prefixes ++ prefixes))
+                      .as(())
+                  )
+
+                  addTracking *> addMode *> addNoLoop *> addRedirectId *> addPrefixes.as(RespValue.SimpleString("OK"))
+                }
+              }
+            } else
+              for {
+                _ <-
+                  clientInfo.getAndUpdate(info =>
+                    info.copy(flags =
+                      info.flags -- Set(ClientFlag.KeysTrackingEnabled, ClientFlag.BroadcastTrackingMode)
+                    )
+                  )
+                _ <- clientTrackingInfo.set(
+                       ClientTrackingInfo(
+                         ClientTrackingFlags(clientSideCaching = false),
+                         ClientTrackingRedirect.NotEnabled
+                       )
+                     )
+              } yield RespValue.SimpleString("OK")
+          )
+        )
+
+      case api.Connection.ClientTrackingInfo =>
+        clientTrackingInfo.get.map { trackingInfo =>
+          val flags = Chunk.single(if (trackingInfo.flags.clientSideCaching) "on" else "off") ++
+            trackingInfo.flags.trackingMode.fold[Chunk[String]](Chunk.empty)(mode =>
+              Chunk.single(mode.stringify.toLowerCase)
+            ) ++
+            (if (trackingInfo.flags.noLoop) Chunk.single("noloop") else Chunk.empty) ++
+            trackingInfo.flags.caching
+              .fold[Chunk[String]](Chunk.empty)(condition =>
+                Chunk.single(if (condition) "caching-yes" else "caching-no")
+              ) ++
+            (if (trackingInfo.flags.brokenRedirect) Chunk.single("broken_redirect") else Chunk.empty)
+          val redirect = trackingInfo.redirect match {
+            case ClientTrackingRedirect.RedirectedTo(id) => id
+            case ClientTrackingRedirect.NotRedirected    => 0L
+            case ClientTrackingRedirect.NotEnabled       => -1L
+          }
+          val respPrefixes =
+            if (trackingInfo.prefixes.isEmpty) RespValue.NullArray
+            else RespValue.array(trackingInfo.prefixes.toSeq.map(RespValue.bulkString): _*)
+
+          RespValue.array(
+            RespValue.bulkString("flags"),
+            RespValue.Array(flags.map(RespValue.bulkString)),
+            RespValue.bulkString("redirect"),
+            RespValue.Integer(redirect),
+            RespValue.bulkString("prefixes"),
+            respPrefixes
+          )
+        }
+
+      case api.Connection.ClientUnblock =>
+        STM.succeedNow(RespValue.Integer(0))
+
+      case api.Connection.Echo =>
+        val messageOption = input.headOption
+
+        orMissingParameter(messageOption)(message => onConnection(name, input)(message))
+
+      case api.Connection.Ping =>
         STM.succeedNow {
           if (input.isEmpty)
             RespValue.bulkString("PONG")
@@ -87,13 +351,13 @@ private[redis] final class TestExecutor private (
             input.head
         }
 
-      case api.Connection.Auth.name =>
-        onConnection(name, input)(RespValue.bulkString("OK"))
+      case api.Connection.Quit =>
+        STM.succeedNow(RespValue.SimpleString("OK"))
 
-      case api.Connection.Echo.name =>
-        onConnection(name, input)(input.head)
+      case api.Connection.Reset =>
+        STM.succeedNow(RespValue.SimpleString("RESET"))
 
-      case api.Connection.Select.name =>
+      case api.Connection.Select =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
       case api.Geo.GeoAdd =>
@@ -2414,6 +2678,9 @@ private[redis] final class TestExecutor private (
     ab <- optionAB
   } yield ab(a)
 
+  private[this] def orMissingParameter[A](paramA: Option[A])(program: A => USTM[RespValue]): USTM[RespValue] =
+    apply(Some(program))(paramA).getOrElse(STM.succeedNow(Replies.Error))
+
   private[this] def orMissingParameter2[A, B](paramA: Option[A], paramB: Option[B])(
     program: (A, B) => USTM[RespValue]
   ): USTM[RespValue] =
@@ -2661,7 +2928,26 @@ private[redis] object TestExecutor {
       lists        <- TMap.empty[String, Chunk[String]].commit
       hashes       <- TMap.empty[String, Map[String, String]].commit
       sortedSets   <- TMap.empty[String, Map[String, Double]].commit
-    } yield new TestExecutor(lists, sets, strings, randomPick, hyperLogLogs, hashes, sortedSets)
+      clientInfo   <- TRef.make(ClientInfo(id = 174716)).commit
+      clientTrackingInfo <- TRef
+                              .make(
+                                ClientTrackingInfo(
+                                  flags = ClientTrackingFlags(clientSideCaching = false),
+                                  redirect = ClientTrackingRedirect.NotEnabled
+                                )
+                              )
+                              .commit
+    } yield new TestExecutor(
+      clientInfo,
+      clientTrackingInfo,
+      lists,
+      sets,
+      strings,
+      randomPick,
+      hyperLogLogs,
+      hashes,
+      sortedSets
+    )
 
     executor.toLayer
   }
