@@ -5,7 +5,7 @@ import zio.redis.Output._
 import zio.redis.RedisError.{ ProtocolError, _ }
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Task }
+import zio.{ Chunk, Task, UIO }
 
 object OutputSpec extends BaseSpec {
 
@@ -175,6 +175,13 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(isUnit)
         }
       ),
+      suite("reset") {
+        testM("extract unit") {
+          for {
+            res <- Task(ResetOutput.unsafeDecode(RespValue.SimpleString("RESET")))
+          } yield assert(res)(isUnit)
+        }
+      },
       suite("keyElem")(
         testM("extract none") {
           for {
@@ -849,6 +856,156 @@ object OutputSpec extends BaseSpec {
             )
           }
         )
+      ),
+      suite("ClientTrackingInfo")(
+        testM("extract with tracking off") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(RespValue.bulkString("off")),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(-1L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(
+                                  clientSideCaching = false
+                                ),
+                                ClientTrackingRedirect.NotEnabled
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("extract with flags set") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(
+                            RespValue.bulkString("on"),
+                            RespValue.bulkString("optin"),
+                            RespValue.bulkString("caching-yes"),
+                            RespValue.bulkString("noloop")
+                          ),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(0L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(
+                                  clientSideCaching = true,
+                                  trackingMode = Some(ClientTrackingMode.OptIn),
+                                  noLoop = true,
+                                  caching = Some(true)
+                                ),
+                                ClientTrackingRedirect.NotRedirected
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("extract with redirect id and broken redirect flag") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("broken_redirect")),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(42L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(clientSideCaching = true, brokenRedirect = true),
+                                ClientTrackingRedirect.RedirectedTo(42L)
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("extract with specified prefixes") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("bcast")),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(0L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.array(
+                            RespValue.bulkString("prefix1"),
+                            RespValue.bulkString("prefix2"),
+                            RespValue.bulkString("prefix3")
+                          )
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(
+                                  clientSideCaching = true,
+                                  trackingMode = Some(ClientTrackingMode.Broadcast)
+                                ),
+                                ClientTrackingRedirect.NotRedirected,
+                                Set("prefix1", "prefix2", "prefix3")
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("error when fields are missing") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(42L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
+      suite("ClientTrackingRedirect")(
+        testM("extract not enabled") {
+          for {
+            resp <- UIO(RespValue.Integer(-1L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.NotEnabled))
+        },
+        testM("extract not redirected") {
+          for {
+            resp <- UIO(RespValue.Integer(0L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.NotRedirected))
+        },
+        testM("extract redirect id") {
+          for {
+            resp <- UIO(RespValue.Integer(42L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.RedirectedTo(resp.value)))
+        },
+        testM("error when redirect id is invalid") {
+          for {
+            resp <- UIO(RespValue.Integer(-42L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
       )
     )
 

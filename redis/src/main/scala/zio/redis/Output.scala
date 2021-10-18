@@ -241,6 +241,14 @@ object Output {
       }
   }
 
+  case object ResetOutput extends Output[Unit] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Unit =
+      respValue match {
+        case RespValue.SimpleString("RESET") => ()
+        case other                           => throw ProtocolError(s"$other isn't unit.")
+      }
+  }
+
   case object GeoOutput extends Output[Chunk[Option[LongLat]]] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[Option[LongLat]] =
       respValue match {
@@ -705,5 +713,79 @@ object Output {
     catch {
       case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
     }
+  }
+
+  case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): ClientTrackingInfo =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) if values.length % 2 == 0 =>
+          val fields = values.toList
+            .grouped(2)
+            .map {
+              case (bulk @ RespValue.BulkString(_)) :: value :: Nil => (bulk.asString, value)
+              case other                                            => throw ProtocolError(s"$other isn't a valid format")
+            }
+            .toMap
+          ClientTrackingInfo(
+            fields
+              .get("flags")
+              .fold(throw ProtocolError("Missing flags field")) {
+                case RespValue.Array(value) =>
+                  val set = value.map {
+                    case bulk @ RespValue.BulkString(_) => bulk.asString
+                    case other                          => throw ProtocolError(s"$other isn't a string")
+                  }.toSet
+                  ClientTrackingFlags(
+                    set.contains("on"),
+                    set match {
+                      case s if s.contains("optin")  => Some(ClientTrackingMode.OptIn)
+                      case s if s.contains("optout") => Some(ClientTrackingMode.OptOut)
+                      case s if s.contains("bcast")  => Some(ClientTrackingMode.Broadcast)
+                      case _                         => None
+                    },
+                    set.contains("noloop"),
+                    set match {
+                      case s if s.contains("caching-yes") => Some(true)
+                      case s if s.contains("caching-no")  => Some(false)
+                      case _                              => None
+                    },
+                    set.contains("broken_redirect")
+                  )
+                case other => throw ProtocolError(s"$other isn't an array with elements")
+              },
+            fields
+              .get("redirect")
+              .fold(throw ProtocolError("Missing redirect field")) {
+                case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
+                case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
+                case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
+                case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
+              },
+            fields
+              .get("prefixes")
+              .fold(throw ProtocolError("Missing prefixes field")) {
+                case RespValue.NullArray => Set.empty[String]
+                case RespValue.Array(value) =>
+                  value.map {
+                    case bulk @ RespValue.BulkString(_) => bulk.asString
+                    case other                          => throw ProtocolError(s"$other isn't a string")
+                  }.toSet[String]
+                case other => throw ProtocolError(s"$other isn't an array")
+              }
+          )
+        case array @ RespValue.Array(_) => throw ProtocolError(s"$array doesn't have an even number of elements")
+        case other                      => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object ClientTrackingRedirectOutput extends Output[ClientTrackingRedirect] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): ClientTrackingRedirect =
+      respValue match {
+        case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
+        case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
+        case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
+        case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
+      }
   }
 }
