@@ -2721,7 +2721,7 @@ private[redis] final class TestExecutor private (
       isHash   <- hashes.contains(name)
     } yield !isString && !isSet && !isHyper && !isHash
 
-  //check whether the key is a hyperLogLog or unused.
+  // check whether the key is a hyperLogLog or unused.
   private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
       isString    <- strings.contains(name)
@@ -2731,7 +2731,7 @@ private[redis] final class TestExecutor private (
       isSortedSet <- sortedSets.contains(name)
     } yield !isString && !isSet && !isList && !isHash && !isSortedSet
 
-  //check whether the key is a hash or unused.
+  // check whether the key is a hash or unused.
   private[this] def isHash(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
       isString    <- strings.contains(name)
@@ -2741,7 +2741,7 @@ private[redis] final class TestExecutor private (
       isSortedSet <- sortedSets.contains(name)
     } yield !isString && !isSet && !isList && !isHyper && !isSortedSet
 
-  //check whether the key is a hash or unused.
+  // check whether the key is a hash or unused.
   private[this] def isSortedSet(name: String): ZSTM[Any, Nothing, Boolean] =
     for {
       isString <- strings.contains(name)
