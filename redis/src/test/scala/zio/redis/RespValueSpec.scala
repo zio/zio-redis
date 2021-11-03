@@ -2,7 +2,7 @@ package zio.redis
 import java.nio.charset.StandardCharsets
 
 import zio.Chunk
-import zio.stream.Stream
+import zio.stream.{ Stream => ZStream }
 import zio.test.Assertion._
 import zio.test._
 
@@ -32,7 +32,7 @@ object RespValueSpec extends BaseSpec {
           RespValue.NullBulkString
         )
 
-        Stream
+        ZStream
           .fromChunk(values)
           .mapConcat(_.serialize)
           .transduce(RespValue.Decoder)
