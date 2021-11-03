@@ -2,7 +2,7 @@ package zio.redis.api
 
 import zio.duration._
 import zio.redis.Input._
-import zio.redis.Output.{ StreamGroupsInfoOutput, _ }
+import zio.redis.Output._
 import zio.redis._
 import zio.schema.Schema
 import zio.{ Chunk, ZIO }
@@ -236,7 +236,7 @@ trait Streams {
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
     force: Boolean = false
-  )(id: I, ids: I*): ZIO[RedisExecutor, RedisError, Map[I, Map[RK, RV]]] = {
+  )(id: I, ids: I*): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
     val command = RedisCommand(
       XClaim,
       Tuple9(
@@ -250,7 +250,7 @@ trait Streams {
         OptionalInput(RetryCountInput),
         OptionalInput(WithForceInput)
       ),
-      StreamOutput[I, RK, RV]()
+      StreamEntriesOutput[I, RK, RV]()
     )
     val forceOpt = if (force) Some(WithForce) else None
     command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt))
@@ -522,11 +522,11 @@ trait Streams {
     key: SK,
     start: I,
     end: I
-  ): ZIO[RedisExecutor, RedisError, Map[I, Map[RK, RV]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
     val command = RedisCommand(
       XRange,
       Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamOutput[I, RK, RV]()
+      StreamEntriesOutput[I, RK, RV]()
     )
     command.run((key, start, end, None))
   }
@@ -550,11 +550,11 @@ trait Streams {
     start: I,
     end: I,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, Map[I, Map[RK, RV]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
     val command = RedisCommand(
       XRange,
       Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamOutput[I, RK, RV]()
+      StreamEntriesOutput[I, RK, RV]()
     )
     command.run((key, start, end, Some(Count(count))))
   }
@@ -579,11 +579,11 @@ trait Streams {
   )(
     stream: (SK, I),
     streams: (SK, I)*
-  ): ZIO[RedisExecutor, RedisError, Map[SK, Map[I, Map[RK, RV]]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[Stream[SK, I, RK, RV]]] = {
     val command = RedisCommand(
       XRead,
       Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput[SK, I]()),
-      KeyValueTwoOutput(ArbitraryOutput[SK](), StreamOutput[I, RK, RV]())
+      ChunkOutput(StreamOutput[SK, I, RK, RV]())
     )
     command.run((count.map(Count), block, (stream, Chunk.fromIterable(streams))))
   }
@@ -617,7 +617,7 @@ trait Streams {
   )(
     stream: (SK, I),
     streams: (SK, I)*
-  ): ZIO[RedisExecutor, RedisError, Map[SK, Map[I, Map[RK, RV]]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[Stream[SK, I, RK, RV]]] = {
     val command = RedisCommand(
       XReadGroup,
       Tuple6(
@@ -628,7 +628,7 @@ trait Streams {
         OptionalInput(NoAckInput),
         StreamsInput[SK, I]()
       ),
-      KeyValueTwoOutput(ArbitraryOutput[SK](), StreamOutput[I, RK, RV]())
+      ChunkOutput(StreamOutput[SK, I, RK, RV]())
     )
     val noAckOpt = if (noAck) Some(NoAck) else None
     command.run((group, consumer, count.map(Count), block, noAckOpt, (stream, Chunk.fromIterable(streams))))
@@ -650,11 +650,11 @@ trait Streams {
     key: SK,
     end: I,
     start: I
-  ): ZIO[RedisExecutor, RedisError, Map[I, Map[RK, RV]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
     val command = RedisCommand(
       XRevRange,
       Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamOutput[I, RK, RV]()
+      StreamEntriesOutput[I, RK, RV]()
     )
     command.run((key, end, start, None))
   }
@@ -678,11 +678,11 @@ trait Streams {
     end: I,
     start: I,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, Map[I, Map[RK, RV]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
     val command = RedisCommand(
       XRevRange,
       Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamOutput[I, RK, RV]()
+      StreamEntriesOutput[I, RK, RV]()
     )
     command.run((key, end, start, Some(Count(count))))
   }

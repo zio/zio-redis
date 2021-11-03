@@ -163,7 +163,7 @@ trait StreamsSpec extends BaseSpec {
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
             result <- xClaim[String, String, String, String, String, String](stream, group, second, 0.millis)(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("multiple pending messages") {
           for {
@@ -176,7 +176,9 @@ trait StreamsSpec extends BaseSpec {
             id1    <- xAdd[String, String, String, String, String](stream, "*", "c" -> "d", "e" -> "f")
             _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
             result <- xClaim[String, String, String, String, String, String](stream, group, second, 0.millis)(id, id1)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"), id1 -> Map("c" -> "d", "e" -> "f"))))
+          } yield assert(result)(
+            equalTo(Chunk(StreamEntry(id, Map("a" -> "b")), StreamEntry(id1, Map("c" -> "d", "e" -> "f"))))
+          )
         },
         testM("non-existent message") {
           for {
@@ -229,7 +231,7 @@ trait StreamsSpec extends BaseSpec {
             _      <- xReadGroup[String, String, String, String, String, String](group, first)(stream -> ">")
             result <-
               xClaim[String, String, String, String, String, String](stream, group, second, (-360000).millis)(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with positive idle time") {
           for {
@@ -247,7 +249,7 @@ trait StreamsSpec extends BaseSpec {
                         0.millis,
                         Some(360000.millis)
                       )(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with negative idle time") {
           for {
@@ -265,7 +267,7 @@ trait StreamsSpec extends BaseSpec {
                         0.millis,
                         Some((-360000).millis)
                       )(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with positive time") {
           for {
@@ -283,7 +285,7 @@ trait StreamsSpec extends BaseSpec {
                         0.millis,
                         time = Some(360000.millis)
                       )(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with negative time") {
           for {
@@ -301,7 +303,7 @@ trait StreamsSpec extends BaseSpec {
                         0.millis,
                         time = Some((-360000).millis)
                       )(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with positive retry count") {
           for {
@@ -319,7 +321,7 @@ trait StreamsSpec extends BaseSpec {
                         0.millis,
                         retryCount = Some(3)
                       )(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with negative retry count") {
           for {
@@ -337,7 +339,7 @@ trait StreamsSpec extends BaseSpec {
                         0.millis,
                         retryCount = Some(-3)
                       )(id)
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with force when message is not in the pending state") {
           for {
@@ -350,7 +352,7 @@ trait StreamsSpec extends BaseSpec {
               xClaim[String, String, String, String, String, String](stream, group, consumer, 0.millis, force = true)(
                 id
               )
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("when not stream") {
           for {
@@ -983,7 +985,7 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRange[String, String, String, String](stream, "-", "+")
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with the positive count") {
           for {
@@ -991,7 +993,7 @@ trait StreamsSpec extends BaseSpec {
             first  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRange[String, String, String, String](stream, "-", "+", 1L)
-          } yield assert(result)(equalTo(Map(first -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(first, Map("a" -> "b")))))
         },
         testM("with the negative count") {
           for {
@@ -1041,7 +1043,7 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRead[String, String, String, String]()(stream -> "0-0")
-          } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
+          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
         testM("from the stream that doesn't exist") {
           for {
@@ -1057,7 +1059,12 @@ trait StreamsSpec extends BaseSpec {
             secondMsg <- xAdd[String, String, String, String, String](second, "*", "a" -> "b")
             result    <- xRead[String, String, String, String]()(first -> "0-0", second -> "0-0")
           } yield assert(result)(
-            equalTo(Map(first -> Map(firstMsg -> Map("a" -> "b")), second -> Map(secondMsg -> Map("a" -> "b"))))
+            equalTo(
+              Chunk(
+                Stream(first, Chunk(StreamEntry(firstMsg, Map("a" -> "b")))),
+                Stream(second, Chunk(StreamEntry(secondMsg, Map("a" -> "b"))))
+              )
+            )
           )
         },
         testM("with the positive count") {
@@ -1066,7 +1073,7 @@ trait StreamsSpec extends BaseSpec {
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRead[String, String, String, String](Some(1L))(stream -> "0-0")
-          } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
+          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
         testM("with the zero count") {
           for {
@@ -1074,7 +1081,13 @@ trait StreamsSpec extends BaseSpec {
             firstMsg  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             secondMsg <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result    <- xRead[String, String, String, String](Some(0L))(stream -> "0-0")
-          } yield assert(result)(equalTo(Map(stream -> Map(firstMsg -> Map("a" -> "b"), secondMsg -> Map("a" -> "b")))))
+          } yield assert(result)(
+            equalTo(
+              Chunk(
+                Stream(stream, Chunk(StreamEntry(firstMsg, Map("a" -> "b")), StreamEntry(secondMsg, Map("a" -> "b"))))
+              )
+            )
+          )
         },
         testM("with the negative count") {
           for {
@@ -1082,7 +1095,13 @@ trait StreamsSpec extends BaseSpec {
             firstMsg  <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             secondMsg <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result    <- xRead[String, String, String, String](Some(-1L))(stream -> "0-0")
-          } yield assert(result)(equalTo(Map(stream -> Map(firstMsg -> Map("a" -> "b"), secondMsg -> Map("a" -> "b")))))
+          } yield assert(result)(
+            equalTo(
+              Chunk(
+                Stream(stream, Chunk(StreamEntry(firstMsg, Map("a" -> "b")), StreamEntry(secondMsg, Map("a" -> "b"))))
+              )
+            )
+          )
         },
         // TODO: can be unignored when connection pool is introduced
         testM("with the 1 second block") {
@@ -1130,7 +1149,7 @@ trait StreamsSpec extends BaseSpec {
             _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-          } yield assert(result)(equalTo(Map(stream -> Map(id -> Map("a" -> "b")))))
+          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
         testM("when stream has multiple messages") {
           for {
@@ -1141,7 +1160,11 @@ trait StreamsSpec extends BaseSpec {
             first    <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
+          } yield assert(result)(
+            equalTo(
+              Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b")))))
+            )
+          )
         },
         testM("when empty stream") {
           for {
@@ -1165,7 +1188,12 @@ trait StreamsSpec extends BaseSpec {
             result <-
               xReadGroup[String, String, String, String, String, String](group, consumer)(first -> ">", second -> ">")
           } yield assert(result)(
-            equalTo(Map(first -> Map(firstMsg -> Map("a" -> "b")), second -> Map(secondMsg -> Map("a" -> "b"))))
+            equalTo(
+              Chunk(
+                Stream(first, Chunk(StreamEntry(firstMsg, Map("a" -> "b")))),
+                Stream(second, Chunk(StreamEntry(secondMsg, Map("a" -> "b"))))
+              )
+            )
           )
         },
         testM("with positive count") {
@@ -1178,7 +1206,7 @@ trait StreamsSpec extends BaseSpec {
             _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <-
               xReadGroup[String, String, String, String, String, String](group, consumer, Some(1L))(stream -> ">")
-          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b")))))
+          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")))))))
         },
         testM("with zero count") {
           for {
@@ -1190,7 +1218,11 @@ trait StreamsSpec extends BaseSpec {
             second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <-
               xReadGroup[String, String, String, String, String, String](group, consumer, Some(0L))(stream -> ">")
-          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
+          } yield assert(result)(
+            equalTo(
+              Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b")))))
+            )
+          )
         },
         testM("with negative count") {
           for {
@@ -1202,7 +1234,11 @@ trait StreamsSpec extends BaseSpec {
             second   <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <-
               xReadGroup[String, String, String, String, String, String](group, consumer, Some(-1L))(stream -> ">")
-          } yield assert(result)(equalTo(Map(stream -> Map(first -> Map("a" -> "b"), second -> Map("a" -> "b")))))
+          } yield assert(result)(
+            equalTo(
+              Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b")))))
+            )
+          )
         },
         testM("with NOACK flag") {
           for {
@@ -1249,7 +1285,7 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRevRange[String, String, String, String](stream, "+", "-")
-          } yield assert(result)(equalTo(Map(id -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
         testM("with the positive count") {
           for {
@@ -1257,7 +1293,7 @@ trait StreamsSpec extends BaseSpec {
             _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             second <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRevRange[String, String, String, String](stream, "+", "-", 1L)
-          } yield assert(result)(equalTo(Map(second -> Map("a" -> "b"))))
+          } yield assert(result)(equalTo(Chunk(StreamEntry(second, Map("a" -> "b")))))
         },
         testM("with the negative count") {
           for {

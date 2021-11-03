@@ -284,11 +284,11 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput[String, String, String]().unsafeDecode(input))
-            .map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input))
+            .map(assert(_)(equalTo(Chunk(StreamEntry("id", Map("field" -> "value"))))))
         },
         testM("extract empty map") {
-          Task(StreamOutput[String, String, String]().unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
         },
         testM("error when array of field-value pairs has odd length") {
           val input = RespValue.array(
@@ -299,7 +299,7 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput[String, String, String]().unsafeDecode(input)).either
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input)).either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message has more then two elements") {
@@ -310,7 +310,7 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput[String, String, String]().unsafeDecode(input)).either
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input)).either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
@@ -478,13 +478,13 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(
-            KeyValueTwoOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+            ChunkOutput(StreamOutput[String, String, String, String]()).unsafeDecode(input)
           ).map(
             assert(_)(
               equalTo(
-                Map(
-                  "str1" -> Map("id1" -> Map("a" -> "b")),
-                  "str2" -> Map("id2" -> Map("c" -> "d"), "id3" -> Map("e" -> "f"))
+                Chunk(
+                  Stream("str1", Chunk(StreamEntry("id1", Map("a" -> "b")))),
+                  Stream("str2", Chunk(StreamEntry("id2", Map("c" -> "d")), StreamEntry("id3", Map("e" -> "f"))))
                 )
               )
             )
@@ -505,7 +505,7 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(
-            KeyValueOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
           ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message doesn't have an ID") {
@@ -523,7 +523,7 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(
-            KeyValueOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
           ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when stream doesn't have an ID") {
@@ -541,7 +541,7 @@ object OutputSpec extends BaseSpec {
             )
           )
           Task(
-            KeyValueOutput(ArbitraryOutput[String](), StreamOutput[String, String, String]()).unsafeDecode(input)
+            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
           ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         suite("xInfoStream")(
