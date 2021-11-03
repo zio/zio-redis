@@ -348,10 +348,10 @@ object Output {
     idSchema: Schema[I],
     keySchema: Schema[K],
     valueSchema: Schema[V]
-  ) extends Output[Stream[N, I, K, V]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Stream[N, I, K, V] = {
+  ) extends Output[StreamChunk[N, I, K, V]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamChunk[N, I, K, V] = {
       val (name, entries) = Tuple2Output(ArbitraryOutput[N](), StreamEntriesOutput[I, K, V]()).unsafeDecode(respValue)
-      Stream(name, entries)
+      StreamChunk(name, entries)
     }
   }
 

@@ -483,8 +483,8 @@ object OutputSpec extends BaseSpec {
             assert(_)(
               equalTo(
                 Chunk(
-                  Stream("str1", Chunk(StreamEntry("id1", Map("a" -> "b")))),
-                  Stream("str2", Chunk(StreamEntry("id2", Map("c" -> "d")), StreamEntry("id3", Map("e" -> "f"))))
+                  StreamChunk("str1", Chunk(StreamEntry("id1", Map("a" -> "b")))),
+                  StreamChunk("str2", Chunk(StreamEntry("id2", Map("c" -> "d")), StreamEntry("id3", Map("e" -> "f"))))
                 )
               )
             )

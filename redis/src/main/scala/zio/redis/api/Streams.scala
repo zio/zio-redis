@@ -579,7 +579,7 @@ trait Streams {
   )(
     stream: (SK, I),
     streams: (SK, I)*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Stream[SK, I, RK, RV]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamChunk[SK, I, RK, RV]]] = {
     val command = RedisCommand(
       XRead,
       Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput[SK, I]()),
@@ -617,7 +617,7 @@ trait Streams {
   )(
     stream: (SK, I),
     streams: (SK, I)*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Stream[SK, I, RK, RV]]] = {
+  ): ZIO[RedisExecutor, RedisError, Chunk[StreamChunk[SK, I, RK, RV]]] = {
     val command = RedisCommand(
       XReadGroup,
       Tuple6(

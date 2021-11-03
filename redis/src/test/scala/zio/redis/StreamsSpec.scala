@@ -1043,7 +1043,7 @@ trait StreamsSpec extends BaseSpec {
             stream <- uuid
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRead[String, String, String, String]()(stream -> "0-0")
-          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
+          } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
         testM("from the stream that doesn't exist") {
           for {
@@ -1061,8 +1061,8 @@ trait StreamsSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               Chunk(
-                Stream(first, Chunk(StreamEntry(firstMsg, Map("a" -> "b")))),
-                Stream(second, Chunk(StreamEntry(secondMsg, Map("a" -> "b"))))
+                StreamChunk(first, Chunk(StreamEntry(firstMsg, Map("a" -> "b")))),
+                StreamChunk(second, Chunk(StreamEntry(secondMsg, Map("a" -> "b"))))
               )
             )
           )
@@ -1073,7 +1073,7 @@ trait StreamsSpec extends BaseSpec {
             id     <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             _      <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <- xRead[String, String, String, String](Some(1L))(stream -> "0-0")
-          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
+          } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
         testM("with the zero count") {
           for {
@@ -1084,7 +1084,10 @@ trait StreamsSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               Chunk(
-                Stream(stream, Chunk(StreamEntry(firstMsg, Map("a" -> "b")), StreamEntry(secondMsg, Map("a" -> "b"))))
+                StreamChunk(
+                  stream,
+                  Chunk(StreamEntry(firstMsg, Map("a" -> "b")), StreamEntry(secondMsg, Map("a" -> "b")))
+                )
               )
             )
           )
@@ -1098,7 +1101,10 @@ trait StreamsSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               Chunk(
-                Stream(stream, Chunk(StreamEntry(firstMsg, Map("a" -> "b")), StreamEntry(secondMsg, Map("a" -> "b"))))
+                StreamChunk(
+                  stream,
+                  Chunk(StreamEntry(firstMsg, Map("a" -> "b")), StreamEntry(secondMsg, Map("a" -> "b")))
+                )
               )
             )
           )
@@ -1149,7 +1155,7 @@ trait StreamsSpec extends BaseSpec {
             _        <- xGroupCreate[String, String, String](stream, group, "$", mkStream = true)
             id       <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
-          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
+          } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
         testM("when stream has multiple messages") {
           for {
@@ -1162,7 +1168,9 @@ trait StreamsSpec extends BaseSpec {
             result   <- xReadGroup[String, String, String, String, String, String](group, consumer)(stream -> ">")
           } yield assert(result)(
             equalTo(
-              Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b")))))
+              Chunk(
+                StreamChunk(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b"))))
+              )
             )
           )
         },
@@ -1190,8 +1198,8 @@ trait StreamsSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               Chunk(
-                Stream(first, Chunk(StreamEntry(firstMsg, Map("a" -> "b")))),
-                Stream(second, Chunk(StreamEntry(secondMsg, Map("a" -> "b"))))
+                StreamChunk(first, Chunk(StreamEntry(firstMsg, Map("a" -> "b")))),
+                StreamChunk(second, Chunk(StreamEntry(secondMsg, Map("a" -> "b"))))
               )
             )
           )
@@ -1206,7 +1214,7 @@ trait StreamsSpec extends BaseSpec {
             _        <- xAdd[String, String, String, String, String](stream, "*", "a" -> "b")
             result <-
               xReadGroup[String, String, String, String, String, String](group, consumer, Some(1L))(stream -> ">")
-          } yield assert(result)(equalTo(Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")))))))
+          } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(first, Map("a" -> "b")))))))
         },
         testM("with zero count") {
           for {
@@ -1220,7 +1228,9 @@ trait StreamsSpec extends BaseSpec {
               xReadGroup[String, String, String, String, String, String](group, consumer, Some(0L))(stream -> ">")
           } yield assert(result)(
             equalTo(
-              Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b")))))
+              Chunk(
+                StreamChunk(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b"))))
+              )
             )
           )
         },
@@ -1236,7 +1246,9 @@ trait StreamsSpec extends BaseSpec {
               xReadGroup[String, String, String, String, String, String](group, consumer, Some(-1L))(stream -> ">")
           } yield assert(result)(
             equalTo(
-              Chunk(Stream(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b")))))
+              Chunk(
+                StreamChunk(stream, Chunk(StreamEntry(first, Map("a" -> "b")), StreamEntry(second, Map("a" -> "b"))))
+              )
             )
           )
         },

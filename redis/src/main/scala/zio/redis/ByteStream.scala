@@ -7,11 +7,11 @@ import java.nio.channels.{ AsynchronousSocketChannel, Channel, CompletionHandler
 
 import zio._
 import zio.logging._
-import zio.stream.{ Stream => ZStream }
+import zio.stream.Stream
 
 private[redis] object ByteStream {
   trait Service {
-    def read: ZStream[IOException, Byte]
+    def read: Stream[IOException, Byte]
     def write(chunk: Chunk[Byte]): IO[IOException, Unit]
   }
 
@@ -72,8 +72,8 @@ private[redis] object ByteStream {
     channel: AsynchronousSocketChannel
   ) extends Service {
 
-    val read: ZStream[IOException, Byte] =
-      ZStream.repeatEffectChunkOption {
+    val read: Stream[IOException, Byte] =
+      Stream.repeatEffectChunkOption {
         val receive =
           for {
             _ <- IO.effectTotal(readBuffer.clear())
