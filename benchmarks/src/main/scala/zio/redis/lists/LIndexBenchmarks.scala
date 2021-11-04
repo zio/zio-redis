@@ -60,5 +60,5 @@ class LIndexBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lIndex[String, String](key, i.toLong)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lIndex(key, i.toLong).returning[String]))
 }
