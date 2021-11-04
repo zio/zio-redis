@@ -2,10 +2,10 @@ package zio.redis
 
 import zio.duration._
 import zio.redis.Output._
-import zio.redis.RedisError.{ ProtocolError, _ }
+import zio.redis.RedisError.{ProtocolError, _}
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Task, UIO }
+import zio.{Chunk, Task, UIO}
 
 object OutputSpec extends BaseSpec {
 

@@ -4,10 +4,10 @@ import java.nio.charset.StandardCharsets
 
 import zio.redis.RedisError.CodecError
 import zio.schema.Schema
-import zio.schema.StandardType.{ DoubleType, IntType, LongType }
+import zio.schema.StandardType.{DoubleType, IntType, LongType}
 import zio.schema.codec.Codec
 import zio.stream.ZTransducer
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, ZIO}
 
 object StringUtf8Codec extends Codec {
   override def encoder[A](schema: Schema[A]): ZTransducer[Any, Nothing, A, Byte] =

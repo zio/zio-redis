@@ -2,12 +2,12 @@ package zio.redis
 
 import java.util.concurrent.TimeUnit
 
-import zio.clock.{ Clock, currentTime }
+import zio.clock.{Clock, currentTime}
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Has }
+import zio.{Chunk, Has}
 
 trait ListSpec extends BaseSpec {
   val listSuite

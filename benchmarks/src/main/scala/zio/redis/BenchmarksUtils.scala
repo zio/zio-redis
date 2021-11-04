@@ -1,11 +1,11 @@
 package zio.redis
 
-import cats.effect.{ IO => CatsIO }
+import cats.effect.{IO => CatsIO}
 
 import zio.logging.Logging
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.{ BootstrapRuntime, ZIO, ZLayer }
+import zio.{BootstrapRuntime, ZIO, ZLayer}
 
 trait BenchmarksUtils {
   self: RedisClients with BootstrapRuntime =>

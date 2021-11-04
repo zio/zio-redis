@@ -7,7 +7,7 @@ import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Task, UIO }
+import zio.{Chunk, Task, UIO}
 
 object InputSpec extends BaseSpec {
   import StrAlgoLcsQueryType._
