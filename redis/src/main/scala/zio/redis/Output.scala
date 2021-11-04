@@ -326,9 +326,9 @@ object Output {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamEntry[I, K, V] =
       respValue match {
         case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-          val eId   = ArbitraryOutput[I]().unsafeDecode(id)
-          val entry = KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()).unsafeDecode(value)
-          StreamEntry(id = eId, entry)
+          val entryId = ArbitraryOutput[I]().unsafeDecode(id)
+          val entry   = KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()).unsafeDecode(value)
+          StreamEntry(entryId, entry)
         case other =>
           throw ProtocolError(s"$other isn't a valid array")
       }
