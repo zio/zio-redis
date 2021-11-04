@@ -2,7 +2,6 @@ import sbt._
 import Keys._
 import sbtbuildinfo._
 import BuildInfoKeys._
-import scalafix.sbt.ScalafixPlugin.autoImport._
 
 object BuildHelper {
   private val versions: Map[String, String] = {
