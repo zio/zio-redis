@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{ BenchmarkRuntime, lPop, rPush }
+import zio.redis.{BenchmarkRuntime, lPop, rPush}
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -30,7 +30,7 @@ class LPopBenchmarks extends BenchmarkRuntime {
   @Benchmark
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
-    import _root_.laserdisc.{ all => cmd, _ }
+    import _root_.laserdisc.{all => cmd, _}
     import cats.instances.list._
     import cats.syntax.foldable._
 

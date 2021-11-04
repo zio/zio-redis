@@ -4,7 +4,7 @@ import zio.redis.RedisError.WrongType
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, NonEmptyChunk, ZIO }
+import zio.{Chunk, NonEmptyChunk, ZIO}
 
 trait SetsSpec extends BaseSpec {
   val setsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =

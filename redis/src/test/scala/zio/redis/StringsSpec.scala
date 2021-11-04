@@ -4,12 +4,12 @@ import java.time.Instant
 
 import zio.clock.Clock
 import zio.duration._
-import zio.redis.RedisError.{ ProtocolError, WrongType }
+import zio.redis.RedisError.{ProtocolError, WrongType}
 import zio.test.Assertion._
-import zio.test.TestAspect.{ eventually, ignore }
+import zio.test.TestAspect.{eventually, ignore}
 import zio.test._
-import zio.test.environment.{ TestClock, TestConsole, TestRandom, TestSystem }
-import zio.{ Chunk, Has, ZIO }
+import zio.test.environment.{TestClock, TestConsole, TestRandom, TestSystem}
+import zio.{Chunk, Has, ZIO}
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite: Spec[Has[Clock.Service] with Has[RedisExecutor.Service] with Has[TestClock.Service] with Has[

@@ -1,9 +1,9 @@
 package example
 
 import example.ApiError._
-import sttp.client3.asynchttpclient.zio.{ SttpClient, send }
+import sttp.client3.asynchttpclient.zio.{SttpClient, send}
 import sttp.client3.ziojson.asJson
-import sttp.client3.{ UriContext, basicRequest }
+import sttp.client3.{UriContext, basicRequest}
 import sttp.model.Uri
 
 import zio._

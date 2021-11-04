@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{ BenchmarkRuntime, hIncrBy, hSet }
+import zio.redis.{BenchmarkRuntime, hIncrBy, hSet}
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -34,7 +34,7 @@ class HIncrbyBenchmarks extends BenchmarkRuntime {
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
     import cats.implicits.toFoldableOps
-    import _root_.laserdisc.{ all => cmd, _ }
+    import _root_.laserdisc.{all => cmd, _}
     import cats.instances.list._
     unsafeRun[LaserDiscClient](c =>
       items.traverse_(it =>

@@ -7,10 +7,10 @@ import scala.util.Try
 import zio._
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.{ BulkString, bulkString }
+import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.stm.{ random => _, _ }
+import zio.stm.{random => _, _}
 
 private[redis] final class TestExecutor private (
   clientInfo: TRef[ClientInfo],

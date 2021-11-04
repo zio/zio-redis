@@ -4,13 +4,13 @@ import java.time.Instant
 
 import zio.duration._
 import zio.redis.Input._
-import zio.redis.Output.{ Tuple2Output, _ }
+import zio.redis.Output.{Tuple2Output, _}
 import zio.redis._
 import zio.schema.Schema
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, ZIO}
 
 trait Keys {
-  import Keys.{ Keys => _, _ }
+  import Keys.{Keys => _, _}
 
   /**
    * Removes the specified keys. A key is ignored if it does not exist.

@@ -7,7 +7,7 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
 import zio.schema.Schema
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, ZIO}
 
 trait Strings {
   import Strings._

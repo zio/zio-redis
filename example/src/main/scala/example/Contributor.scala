@@ -1,6 +1,6 @@
 package example
 
-import zio.json.{ DeriveJsonCodec, JsonCodec }
+import zio.json.{DeriveJsonCodec, JsonCodec}
 
 final case class Contributor(login: Login, contributions: Contributions)
 
