@@ -33,6 +33,6 @@ class LMoveBenchmarks extends BenchmarkRuntime {
 
   @Benchmark
   def zio(): Unit = zioUnsafeRun(
-    ZIO.foreach_(items)(_ => lMove[String, String, String](key, key, Side.Left, Side.Right))
+    ZIO.foreach_(items)(_ => lMove(key, key, Side.Left, Side.Right).returning[String])
   )
 }
