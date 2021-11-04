@@ -60,5 +60,5 @@ class LRangeBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lRange[String, String](key, 0 to i)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lRange(key, 0 to i).returning[String]))
 }
