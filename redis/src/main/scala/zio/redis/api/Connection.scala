@@ -4,7 +4,7 @@ import zio.duration.Duration
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, ZIO}
 
 trait Connection {
   import Connection._

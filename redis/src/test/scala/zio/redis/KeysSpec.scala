@@ -10,7 +10,7 @@ import zio.schema.codec.Codec
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ Chunk, ZIO, ZLayer }
+import zio.{Chunk, ZIO, ZLayer}
 
 trait KeysSpec extends BaseSpec {
 

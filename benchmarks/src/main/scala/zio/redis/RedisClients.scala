@@ -1,7 +1,7 @@
 package zio.redis
 
 import cats.effect.unsafe.implicits.global
-import cats.effect.{ IO => CatsIO, _ }
+import cats.effect.{IO => CatsIO, _}
 import com.comcast.ip4s._
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.data.RedisCodec

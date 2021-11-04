@@ -1,11 +1,11 @@
 package zio.redis
 
 import zio.duration.Duration
-import zio.redis.RedisError.{ ProtocolError, WrongType }
+import zio.redis.RedisError.{ProtocolError, WrongType}
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, ZIO }
+import zio.{Chunk, ZIO}
 
 trait SortedSetsSpec extends BaseSpec {
   val sortedSetsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =

@@ -1,9 +1,9 @@
 package zio.redis
 
-import java.io.{ EOFException, IOException }
-import java.net.{ InetSocketAddress, SocketAddress, StandardSocketOptions }
+import java.io.{EOFException, IOException}
+import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
-import java.nio.channels.{ AsynchronousSocketChannel, Channel, CompletionHandler }
+import java.nio.channels.{AsynchronousSocketChannel, Channel, CompletionHandler}
 
 import zio._
 import zio.logging._
