@@ -33,10 +33,10 @@ object BuildHelper {
 
   def stdSettings(prjName: String) =
     List(
-      name                          := s"$prjName",
-      crossScalaVersions            := List(Scala212, Scala213),
-      ThisBuild / scalaVersion      := Scala213,
-      scalacOptions                 := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
+      name                     := s"$prjName",
+      crossScalaVersions       := List(Scala212, Scala213),
+      ThisBuild / scalaVersion := Scala213,
+      scalacOptions            := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
       Test / parallelExecution := true,
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true
