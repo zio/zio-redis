@@ -318,29 +318,41 @@ object Output {
       }
   }
 
-  final case class KeyValueTwoOutput[K, V](outK: Output[K], outV: Output[V]) extends Output[Map[K, V]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[K, V] =
-      respValue match {
-        case RespValue.NullArray => Map.empty[K, V]
-        case RespValue.Array(entities) =>
-          entities.map {
-            case RespValue.Array(Seq(key @ RespValue.BulkString(_), value)) =>
-              outK.unsafeDecode(key) -> outV.unsafeDecode(value)
-            case other =>
-              throw ProtocolError(s"$other isn't a valid array")
-          }.toMap
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  final case class StreamOutput[I, K, V]()(implicit
+  final case class StreamEntryOutput[I, K, V]()(implicit
     idSchema: Schema[I],
     keySchema: Schema[K],
     valueSchema: Schema[V]
-  ) extends Output[Map[I, Map[K, V]]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Map[I, Map[K, V]] =
-      KeyValueTwoOutput(ArbitraryOutput[I](), KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()))
-        .unsafeDecode(respValue)
+  ) extends Output[StreamEntry[I, K, V]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamEntry[I, K, V] =
+      respValue match {
+        case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
+          val entryId = ArbitraryOutput[I]().unsafeDecode(id)
+          val entry   = KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()).unsafeDecode(value)
+          StreamEntry(entryId, entry)
+        case other =>
+          throw ProtocolError(s"$other isn't a valid array")
+      }
+  }
+
+  final case class StreamEntriesOutput[I, K, V]()(implicit
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[Chunk[StreamEntry[I, K, V]]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[StreamEntry[I, K, V]] =
+      ChunkOutput(StreamEntryOutput[I, K, V]()).unsafeDecode(respValue)
+  }
+
+  final case class StreamOutput[N, I, K, V]()(implicit
+    nameSchema: Schema[N],
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[StreamChunk[N, I, K, V]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): StreamChunk[N, I, K, V] = {
+      val (name, entries) = Tuple2Output(ArbitraryOutput[N](), StreamEntriesOutput[I, K, V]()).unsafeDecode(respValue)
+      StreamChunk(name, entries)
+    }
   }
 
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
@@ -442,9 +454,8 @@ object Output {
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                   if key.asString == XInfoFields.LastGeneratedId =>
                 streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
-              case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Entries =>
-                val streamEntryList = values.map(extractStreamEntry[I, K, V])
-                streamInfoFull = streamInfoFull.copy(entries = streamEntryList)
+              case (key @ RespValue.BulkString(_), value) if key.asString == XInfoFields.Entries =>
+                streamInfoFull = streamInfoFull.copy(entries = StreamEntriesOutput[I, K, V]().unsafeDecode(value))
               case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Groups =>
                 // Get the group list of the stream.
                 streamInfoFull = streamInfoFull.copy(groups = values.map(extractXInfoFullGroup))
@@ -583,9 +594,9 @@ object Output {
                 streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
               case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) =>
                 if (key.asString == XInfoFields.FirstEntry)
-                  streamInfo = streamInfo.copy(firstEntry = Some(extractStreamEntry(value)))
+                  streamInfo = streamInfo.copy(firstEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
                 else if (key.asString == XInfoFields.LastEntry)
-                  streamInfo = streamInfo.copy(lastEntry = Some(extractStreamEntry(value)))
+                  streamInfo = streamInfo.copy(lastEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
               case _ =>
             }
             pos += 2
@@ -599,18 +610,6 @@ object Output {
       }
     }
   }
-
-  private def extractStreamEntry[I: Schema, K: Schema, V: Schema](
-    es: RespValue
-  )(implicit codec: Codec): StreamEntry[I, K, V] =
-    es match {
-      case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
-        val eId   = ArbitraryOutput[I]().unsafeDecode(id)
-        val entry = KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()).unsafeDecode(value)
-        StreamEntry(id = eId, entry)
-      case other =>
-        throw ProtocolError(s"$other isn't a valid array")
-    }
 
   case object XPendingOutput extends Output[PendingInfo] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): PendingInfo =
