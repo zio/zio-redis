@@ -2,7 +2,6 @@ import sbt._
 import Keys._
 import sbtbuildinfo._
 import BuildInfoKeys._
-import scalafix.sbt.ScalafixPlugin.autoImport._
 
 object BuildHelper {
   private val versions: Map[String, String] = {
@@ -34,18 +33,10 @@ object BuildHelper {
 
   def stdSettings(prjName: String) =
     List(
-      name                          := s"$prjName",
-      crossScalaVersions            := List(Scala212, Scala213),
-      ThisBuild / scalaVersion      := Scala213,
-      scalacOptions                 := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
-      ThisBuild / semanticdbEnabled := true,
-      ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on",
-      ThisBuild / semanticdbVersion          := scalafixSemanticdb.revision,
-      ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
-      ThisBuild / scalafixDependencies ++= List(
-        "com.github.liancheng" %% "organize-imports" % "0.5.0",
-        "com.github.vovapolu"  %% "scaluzzi"         % "0.1.20"
-      ),
+      name                     := s"$prjName",
+      crossScalaVersions       := List(Scala212, Scala213),
+      ThisBuild / scalaVersion := Scala213,
+      scalacOptions            := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
       Test / parallelExecution := true,
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true

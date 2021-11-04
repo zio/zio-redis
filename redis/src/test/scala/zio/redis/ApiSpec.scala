@@ -18,9 +18,7 @@ object ApiSpec
     with HashSpec
     with StreamsSpec {
 
-  // scalafix:off
   def spec =
-    // scalafix:on
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite,

@@ -25,8 +25,8 @@ jobs:
         uses: olafurpg/setup-scala@v13
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
-      - name: Lint code
-        run: ./sbt fmtCheck fixCheck
+      - name: Check code formatting
+        run: ./sbt fmtCheck
 
   test:
     runs-on: ubuntu-20.04
