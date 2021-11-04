@@ -59,6 +59,8 @@ trait Streams {
 
   sealed case class StreamEntry[I, K, V](id: I, fields: Map[K, V])
 
+  sealed case class StreamChunk[N, I, K, V](name: N, entries: Chunk[StreamEntry[I, K, V]])
+
   sealed case class StreamInfo[I, K, V](
     length: Long,
     radixTreeKeys: Long,
