@@ -1,6 +1,6 @@
 package zio.redis
 
-import java.nio.file.{FileSystems, Path}
+import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
 
 import zio._
@@ -676,7 +676,7 @@ private[redis] final class TestExecutor private (
         val pattern = input.head.asString
         val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
         keys.keys
-          .map(keys => keys.filter(k => matcher.matches(Path.of(k))))
+          .map(keys => keys.filter(k => matcher.matches(Paths.get(k))))
           .map(Replies.array)
 
       case api.Keys.Scan =>
@@ -702,7 +702,7 @@ private[redis] final class TestExecutor private (
                      }.getOrElse(sliced)
           matched = pattern.map { p =>
                       val matcher = FileSystems.getDefault.getPathMatcher("glob:" + p)
-                      filtered.filter { case (k, _) => matcher.matches(Path.of(k)) }
+                      filtered.filter { case (k, _) => matcher.matches(Paths.get(k)) }
                     }.getOrElse(filtered)
           result    = matched.map(_._1)
           nextIndex = if (filtered.size <= end) 0 else end
