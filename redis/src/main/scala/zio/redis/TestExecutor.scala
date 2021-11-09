@@ -1,27 +1,34 @@
 package zio.redis
 
+import java.nio.file.{FileSystems, Path}
+import java.time.Instant
+
+import zio._
+import zio.clock.Clock
+import zio.duration._
+import zio.redis.RedisError.ProtocolError
+import zio.redis.RespValue.{bulkString, BulkString}
+import zio.redis.codec.StringUtf8Codec
+import zio.redis.TestExecutor.{KeyInfo, KeyType}
+import zio.schema.codec.Codec
+import zio.stm.{random => _, _}
+
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
 
-import zio._
-import zio.duration._
-import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.{BulkString, bulkString}
-import zio.redis.codec.StringUtf8Codec
-import zio.schema.codec.Codec
-import zio.stm.{random => _, _}
-
 private[redis] final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
   clientTrackingInfo: TRef[ClientTrackingInfo],
+  keys: TMap[String, KeyInfo],
   lists: TMap[String, Chunk[String]],
   sets: TMap[String, Set[String]],
   strings: TMap[String, String],
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
-  sortedSets: TMap[String, Map[String, Double]]
+  sortedSets: TMap[String, Map[String, Double]],
+  clock: Clock
 ) extends RedisExecutor.Service {
 
   override val codec: Codec = StringUtf8Codec
@@ -29,37 +36,39 @@ private[redis] final class TestExecutor private (
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
+      now  <- clock.get.instant
+      _    <- clearExpired(now).commit
       result <- name.asString match {
                   case api.Lists.BlPop =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray, now)
 
                   case api.Lists.BrPop =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullArray, now)
 
                   case api.Lists.BrPopLPush =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
                   case api.Lists.BlMove =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
                   case api.SortedSets.BzPopMax =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
                   case api.SortedSets.BzPopMin =>
                     val timeout = command.tail.last.asString.toInt
-                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString)
+                    runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
                   case "CLIENT" =>
                     val command1 = command.tail
                     val name1    = command1.head
-                    runCommand(name.asString + " " + name1.asString, command1.tail).commit
+                    runCommand(name.asString + " " + name1.asString, command1.tail, now).commit
 
-                  case _ => runCommand(name.asString, command.tail).commit
+                  case _ => runCommand(name.asString, command.tail, now).commit
                 }
     } yield result
 
@@ -67,15 +76,16 @@ private[redis] final class TestExecutor private (
     name: String,
     input: Chunk[RespValue.BulkString],
     timeout: Int,
-    respValue: RespValue
+    respValue: RespValue,
+    now: Instant
   ): UIO[RespValue] =
-    if (timeout > 0)
-      runCommand(name, input).commit
+    if (timeout > 0) {
+      runCommand(name, input, now).commit
         .timeout(timeout.seconds)
         .map(_.getOrElse(respValue))
-        .provideLayer(zio.clock.Clock.live)
-    else
-      runCommand(name, input).commit
+        .provideLayer(Clock.live)
+    } else
+      runCommand(name, input, now).commit
 
   private def errResponse(cmd: String): RespValue.BulkString =
     RespValue.bulkString(s"(error) ERR wrong number of arguments for '$cmd' command")
@@ -84,7 +94,7 @@ private[redis] final class TestExecutor private (
     res: => RespValue.BulkString
   ): USTM[BulkString] = STM.succeedNow(if (input.isEmpty) errResponse(command) else res)
 
-  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString]): USTM[RespValue] = {
+  private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString], now: Instant): USTM[RespValue] = {
     name match {
       case api.Connection.Auth =>
         onConnection(name, input)(RespValue.bulkString("OK"))
@@ -383,7 +393,7 @@ private[redis] final class TestExecutor private (
                 scoreMap    <- sortedSets.getOrElse(key, Map.empty)
                 membersAdded = members.count(ms => scoreMap.contains(ms.member))
                 newScoreMap  = scoreMap ++ members.map(ms => (ms.member, ms.score)).toMap
-                _           <- sortedSets.put(key, newScoreMap)
+                _           <- putSortedSet(key, newScoreMap)
               } yield RespValue.Integer(membersAdded.toLong)
             }
           )
@@ -505,7 +515,7 @@ private[redis] final class TestExecutor private (
                               }
                 countedList = count.fold(orderedList)(orderedList.take)
                 _ <- store.fold(STM.unit)(key =>
-                       sortedSets.put(
+                       putSortedSet(
                          key,
                          countedList.map { case ((name, score), _) =>
                            (name, score)
@@ -513,7 +523,7 @@ private[redis] final class TestExecutor private (
                        )
                      )
                 _ <- storeDist.fold(STM.unit)(key =>
-                       sortedSets.put(
+                       putSortedSet(
                          key,
                          countedList.map { case ((name, _), distance) =>
                            (name, distance)
@@ -601,7 +611,7 @@ private[redis] final class TestExecutor private (
                   val countedList = count.fold(orderedList)(orderedList.take)
                   for {
                     _ <- store.fold(STM.unit)(key =>
-                           sortedSets.put(
+                           putSortedSet(
                              key,
                              countedList.map { case ((name, score), _) =>
                                (name, score)
@@ -609,7 +619,7 @@ private[redis] final class TestExecutor private (
                            )
                          )
                     _ <- storeDist.fold(STM.unit)(key =>
-                           sortedSets.put(
+                           putSortedSet(
                              key,
                              countedList.map { case ((name, _), distance) =>
                                (name, distance)
@@ -650,6 +660,193 @@ private[redis] final class TestExecutor private (
           )
         }
 
+      case api.Keys.Exists | api.Keys.Touch =>
+        val allkeys = input.map(_.asString)
+        STM
+          .foldLeft(allkeys)(0L) { case (acc, key) =>
+            STM.ifM(keys.contains(key))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
+          }
+          .map(RespValue.Integer)
+
+      case api.Keys.Del | api.Keys.Unlink =>
+        val allkeys = input.map(_.asString)
+        STM
+          .foldLeft(allkeys)(0L) { case (acc, key) => delete(key).map(acc + _) }
+          .map(RespValue.Integer)
+
+      case api.Keys.Keys =>
+        val pattern = input.head.asString
+        val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
+        keys.keys
+          .map(keys => keys.filter(k => matcher.matches(Path.of(k))))
+          .map(Replies.array)
+
+      case api.Keys.Scan =>
+        val start   = input.head.asString.toInt
+        val options = input.drop(1).map(_.asString)
+
+        val countIndex = options.indexOf("COUNT")
+        val count      = Option.when(countIndex >= 0)(options(countIndex + 1).toInt)
+
+        val patternIndex = options.indexOf("MATCH")
+        val pattern      = Option.when(patternIndex >= 0)(options(patternIndex + 1))
+
+        val redisTypeIndex = options.indexOf("TYPE")
+        val redisType      = Option.when(redisTypeIndex >= 0)(options(redisTypeIndex + 1))
+
+        val end = start + count.getOrElse(10)
+
+        for {
+          keys  <- keys.toList
+          sliced = keys.slice(start, end)
+          filtered = redisType.map { rt =>
+                       sliced.filter { case (_, info) => info.redisType.stringify == rt }
+                     }.getOrElse(sliced)
+          matched = pattern.map { p =>
+                      val matcher = FileSystems.getDefault.getPathMatcher("glob:" + p)
+                      filtered.filter { case (k, _) => matcher.matches(Path.of(k)) }
+                    }.getOrElse(filtered)
+          result    = matched.map(_._1)
+          nextIndex = if (filtered.size <= end) 0 else end
+        } yield RespValue.array(RespValue.bulkString(nextIndex.toString), Replies.array(result))
+
+      case api.Keys.TypeOf =>
+        val key = input.head.asString
+        keys.get(key).map(info => info.map(_.redisType).fold("none")(_.stringify)).map(RespValue.SimpleString)
+
+      case api.Keys.RandomKey =>
+        for {
+          ks   <- keys.keys
+          pick <- selectOne(ks.toVector, randomPick)
+        } yield pick.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString)
+
+      case api.Keys.Rename =>
+        val key    = input(0).asString
+        val newkey = input(1).asString
+        rename(key, newkey).as(Replies.Ok).catchAll(error => STM.succeedNow(error))
+
+      case api.Keys.RenameNx =>
+        val key    = input(0).asString
+        val newkey = input(1).asString
+        STM
+          .ifM(keys.contains(newkey))(STM.succeedNow(0L), rename(key, newkey).as(1L))
+          .map(RespValue.Integer)
+          .catchAll(error => STM.succeedNow(error))
+
+      case api.Keys.Sort =>
+        val key     = input.head.asString
+        val options = input.drop(1).map(_.asString)
+
+        implicit val ordering: Ordering[String] =
+          if (options.contains("DESC")) Ordering.String.reverse else Ordering.String
+        val byIndex     = options.indexOf("BY")
+        val by          = Option.when(byIndex >= 0)(options(byIndex + 1))
+        val limitIndex  = options.indexOf("LIMIT")
+        val limit       = Option.when(limitIndex >= 0)((options(limitIndex + 1).toInt, options(limitIndex + 2).toInt))
+        val getIndexes  = options.zipWithIndex.withFilter(_._1 == "GET").map(_._2)
+        val getPatterns = if (getIndexes.nonEmpty) getIndexes.map(i => options(i + 1)) else Chunk("#")
+        val storeIndex  = options.indexOf("STORE")
+        val storeKey    = Option.when(storeIndex >= 0)(options(storeIndex + 1))
+
+        def sort(list: Chunk[String]) =
+          by.fold(STM.succeedNow(list.sorted)) { by =>
+            val pairs = list.foldLeft(STM.succeedNow(Chunk[(String, String)]())) { case (aggr, next) =>
+              val key   = by.replace("*", next)
+              val value = strings.get(key)
+              aggr.flatMap(c => value.map(n => n.fold(c)(c :+ (next, _))))
+            }
+            pairs.map(_.sortBy(_._2).map(_._1))
+          }
+
+        def get(list: Chunk[String]) =
+          list.foldLeft(STM.succeedNow(Chunk[String]())) { case (aggr, next) =>
+            val keys = getPatterns.map(p => p.replace("*", next))
+            val values = keys.foldLeft(STM.succeedNow(Chunk[String]())) { case (all, k) =>
+              if (k == "#") all.map(a => a :+ next)
+              else all.flatMap(a => strings.get(k).map(v => v.fold(a)(a :+ _)))
+            }
+            aggr.flatMap(c => values.map(vs => c ++ vs))
+          }
+
+        def handle(listOpt: Option[Chunk[String]]) =
+          for {
+            list   <- listOpt.fold[STM[RespValue.Error, Chunk[String]]](STM.fail(Replies.Error))(STM.succeedNow)
+            sorted <- sort(list)
+            sliced  = limit.fold(sorted) { case (offset, count) => sorted.drop(offset).take(count) }
+            result <- get(sliced)
+          } yield result
+
+        val zstm = for {
+          keyInfoOpt <- keys.get(key)
+          keyInfo    <- keyInfoOpt.fold[STM[RespValue.Error, KeyInfo]](STM.fail(Replies.Error))(STM.succeedNow)
+          result <- keyInfo.`type` match {
+                      case KeyType.Lists => lists.get(key).flatMap(handle)
+                      case KeyType.Sets  => sets.get(key).flatMap(s => handle(s.map(Chunk.fromIterable)))
+                      case KeyType.SortedSets =>
+                        sortedSets.get(key).flatMap(s => handle(s.map(ks => Chunk.fromIterable(ks.keys))))
+                      case _ => STM.fail(Replies.Error)
+                    }
+          _ <- storeKey.fold(ZSTM.unit)(sk => putList(sk, result))
+        } yield if (storeKey.isEmpty) Replies.array(result) else RespValue.Integer(result.size.toLong)
+        zstm.catchAll(error => STM.succeedNow(error))
+
+      case api.Keys.Ttl =>
+        val key = input.head.asString
+        STM
+          .ifM(keys.contains(key))(
+            ttlOf(key, now).map(_.fold(-1L)(_.toSeconds)),
+            STM.succeedNow(-2L)
+          )
+          .map(RespValue.Integer)
+
+      case api.Keys.PTtl =>
+        val key = input.head.asString
+        STM
+          .ifM(keys.contains(key))(
+            ttlOf(key, now).map(_.fold(-1L)(_.toMillis)),
+            STM.succeedNow(-2L)
+          )
+          .map(RespValue.Integer)
+
+      case api.Keys.Persist =>
+        val key = input.head.asString
+        keys
+          .get(key)
+          .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = None)).as(1L)))
+          .map(RespValue.Integer)
+
+      case api.Keys.Expire =>
+        val key      = input(0).asString
+        val unixtime = now.plusSeconds(input(1).asLong)
+        keys
+          .get(key)
+          .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
+          .map(RespValue.Integer)
+
+      case api.Keys.ExpireAt =>
+        val key      = input(0).asString
+        val unixtime = Instant.ofEpochSecond(input(1).asLong)
+        keys
+          .get(key)
+          .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
+          .map(RespValue.Integer)
+
+      case api.Keys.PExpire =>
+        val key      = input(0).asString
+        val unixtime = now.plusMillis(input(1).asLong)
+        keys
+          .get(key)
+          .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
+          .map(RespValue.Integer)
+
+      case api.Keys.PExpireAt =>
+        val key      = input(0).asString
+        val unixtime = Instant.ofEpochMilli(input(1).asLong)
+        keys
+          .get(key)
+          .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
+          .map(RespValue.Integer)
+
       case api.Sets.SAdd =>
         val key = input.head.asString
         orWrongType(isSet(key))(
@@ -659,7 +856,7 @@ private[redis] final class TestExecutor private (
               oldSet <- sets.getOrElse(key, Set.empty)
               newSet  = oldSet ++ values
               added   = newSet.size - oldSet.size
-              _      <- sets.put(key, newSet)
+              _      <- putSet(key, newSet)
             } yield RespValue.Integer(added.toLong)
           }
         )
@@ -693,7 +890,7 @@ private[redis] final class TestExecutor private (
           for {
             main   <- sets.getOrElse(mainKey, Set.empty)
             result <- STM.foldLeft(others)(main) { case (acc, k) => sets.get(k).map(_.fold(acc)(acc -- _)) }
-            _      <- sets.put(distkey, result)
+            _      <- putSet(distkey, result)
           } yield RespValue.Integer(result.size.toLong)
         )
 
@@ -713,7 +910,7 @@ private[redis] final class TestExecutor private (
           _ => STM.succeedNow(Replies.WrongType),
           s =>
             for {
-              _ <- sets.put(destination, s)
+              _ <- putSet(destination, s)
             } yield RespValue.Integer(s.size.toLong)
         )
 
@@ -739,8 +936,8 @@ private[redis] final class TestExecutor private (
               STM.ifM(isSet(destinationKey))(
                 for {
                   dest <- sets.getOrElse(destinationKey, Set.empty)
-                  _    <- sets.put(sourceKey, source - member)
-                  _    <- sets.put(destinationKey, dest + member)
+                  _    <- putSet(sourceKey, source - member)
+                  _    <- putSet(destinationKey, dest + member)
                 } yield RespValue.Integer(1),
                 STM.succeedNow(Replies.WrongType)
               )
@@ -756,7 +953,7 @@ private[redis] final class TestExecutor private (
           for {
             set   <- sets.getOrElse(key, Set.empty)
             result = set.take(count)
-            _     <- sets.put(key, set -- result)
+            _     <- putSet(key, set -- result)
           } yield Replies.array(result)
         )
 
@@ -799,7 +996,7 @@ private[redis] final class TestExecutor private (
               oldSet <- sets.getOrElse(key, Set.empty)
               newSet  = oldSet -- values
               removed = oldSet.size - newSet.size
-              _      <- sets.put(key, newSet)
+              _      <- putSet(key, newSet)
             } yield RespValue.Integer(removed.toLong)
           }
         )
@@ -829,7 +1026,7 @@ private[redis] final class TestExecutor private (
                            unionSoFar ++ currentSet
                          }
                        }
-            _ <- sets.put(destination, union)
+            _ <- putSet(destination, union)
           } yield RespValue.Integer(union.size.toLong)
         )
 
@@ -869,11 +1066,27 @@ private[redis] final class TestExecutor private (
           }
         )
 
+      case api.Strings.Get =>
+        val key = input.head.asString
+        orWrongType(isString(key))(
+          strings.get(key).map(_.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString))
+        )
+
       case api.Strings.Set =>
         // not a full implementation. Just enough to make set tests work
-        val key   = input.head.asString
+        val key   = input(0).asString
         val value = input(1).asString
-        strings.put(key, value).as(Replies.Ok)
+        orWrongType(isString(key))(
+          putString(key, value).as(Replies.Ok)
+        )
+
+      case api.Strings.PSetEx =>
+        val key      = input(0).asString
+        val unixtime = Instant.ofEpochMilli(input(1).asLong)
+        val value    = input(2).asString
+        orWrongType(isString(key))(
+          putString(key, value, Some(unixtime)).as(Replies.Ok)
+        )
 
       case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
@@ -883,7 +1096,7 @@ private[redis] final class TestExecutor private (
           for {
             oldValues <- hyperLogLogs.getOrElse(key, Set.empty)
             ret        = if (oldValues == values) 0L else 1L
-            _         <- hyperLogLogs.put(key, values)
+            _         <- putHyperLogLog(key, values)
           } yield RespValue.Integer(ret)
         )
 
@@ -964,7 +1177,7 @@ private[redis] final class TestExecutor private (
                         respValue => STM.succeedNow(respValue),
                         maybeList =>
                           maybeList.fold(STM.succeedNow(RespValue.Integer(-1L)))(insert =>
-                            lists.put(key, insert) *> STM.succeedNow(RespValue.Integer(insert.size.toLong))
+                            putList(key, insert) *> STM.succeedNow(RespValue.Integer(insert.size.toLong))
                           )
                       )
           } yield result
@@ -987,7 +1200,7 @@ private[redis] final class TestExecutor private (
           for {
             oldValues <- lists.getOrElse(key, Chunk.empty)
             newValues  = values.reverse ++ oldValues
-            _         <- lists.put(key, newValues)
+            _         <- putList(key, newValues)
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
@@ -999,7 +1212,7 @@ private[redis] final class TestExecutor private (
           (for {
             list    <- lists.get(key)
             newList <- STM.fromOption(list.map(oldValues => values.reverse ++ oldValues))
-            _       <- lists.put(key, newList)
+            _       <- putList(key, newList)
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
@@ -1028,7 +1241,7 @@ private[redis] final class TestExecutor private (
                        case n if n > 0 => dropWhileLimit(list)(_ == element, n)
                        case n if n < 0 => dropWhileLimit(list.reverse)(_ == element, n * (-1)).reverse
                      }
-            _ <- lists.put(key, result)
+            _ <- putList(key, result)
           } yield RespValue.Integer((list.size - result.size).toLong)
         )
 
@@ -1046,7 +1259,7 @@ private[redis] final class TestExecutor private (
                            else list.updated(index, element)
                          }.toOption
                        }
-            _ <- lists.put(key, newList)
+            _ <- putList(key, newList)
           } yield ()).fold(_ => RespValue.Error("ERR index out of range"), _ => RespValue.SimpleString("OK"))
         )
 
@@ -1065,7 +1278,7 @@ private[redis] final class TestExecutor private (
                        case (l, r) if l < 0 && r < 0   => list.slice(list.size + l, list.size + r + 1)
                        case (_, _)                     => list
                      }
-            _ <- lists.put(key, result)
+            _ <- putList(key, result)
           } yield RespValue.SimpleString("OK")
         )
 
@@ -1077,7 +1290,7 @@ private[redis] final class TestExecutor private (
           for {
             list  <- lists.getOrElse(key, Chunk.empty)
             result = list.takeRight(count).reverse
-            _     <- lists.put(key, list.dropRight(count))
+            _     <- putList(key, list.dropRight(count))
           } yield result.size match {
             case 0 => RespValue.NullBulkString
             case 1 => RespValue.bulkString(result.head)
@@ -1096,8 +1309,8 @@ private[redis] final class TestExecutor private (
             value             = sourceList.lastOption
             sourceResult      = sourceList.dropRight(1)
             destinationResult = value.map(_ +: destinationList).getOrElse(destinationList)
-            _                <- lists.put(source, sourceResult)
-            _                <- lists.put(destination, destinationResult)
+            _                <- putList(source, sourceResult)
+            _                <- putList(destination, destinationResult)
           } yield value.fold[RespValue](RespValue.NullBulkString)(result => RespValue.bulkString(result))
         )
 
@@ -1109,7 +1322,7 @@ private[redis] final class TestExecutor private (
           for {
             oldValues <- lists.getOrElse(key, Chunk.empty)
             newValues  = values ++ oldValues
-            _         <- lists.put(key, newValues)
+            _         <- putList(key, newValues)
           } yield RespValue.Integer(newValues.size.toLong)
         )
 
@@ -1121,7 +1334,7 @@ private[redis] final class TestExecutor private (
           for {
             list  <- lists.getOrElse(key, Chunk.empty)
             result = list.take(count)
-            _     <- lists.put(key, list.drop(count))
+            _     <- putList(key, list.drop(count))
           } yield result.size match {
             case 0 => RespValue.NullBulkString
             case 1 => RespValue.bulkString(result.head)
@@ -1137,7 +1350,7 @@ private[redis] final class TestExecutor private (
           (for {
             list    <- lists.get(key)
             newList <- STM.fromOption(list.map(oldValues => oldValues ++ values.toVector))
-            _       <- lists.put(key, newList)
+            _       <- putList(key, newList)
           } yield newList).fold(_ => RespValue.Integer(0L), result => RespValue.Integer(result.size.toLong))
         )
 
@@ -1150,7 +1363,7 @@ private[redis] final class TestExecutor private (
               STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Chunk.empty)))(identity)
             nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
-            _             <- lists.put(sk, sl.tail)
+            _             <- putList(sk, sl.tail)
           } yield Replies.array(Chunk(sk, sl.head))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1163,7 +1376,7 @@ private[redis] final class TestExecutor private (
               STM.foreach(keys.map(key => STM.succeedNow(key) &&& lists.getOrElse(key, Chunk.empty)))(identity)
             nonEmptyLists <- STM.succeed(allLists.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)      <- STM.fromOption(nonEmptyLists.headOption)
-            _             <- lists.put(sk, sl.dropRight(1))
+            _             <- putList(sk, sl.dropRight(1))
           } yield Replies.array(Chunk(sk, sl.last))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1179,8 +1392,8 @@ private[redis] final class TestExecutor private (
             value            <- STM.fromOption(sourceList.lastOption)
             sourceResult      = sourceList.dropRight(1)
             destinationResult = value +: destinationList
-            _                <- lists.put(source, sourceResult)
-            _                <- lists.put(destination, destinationResult)
+            _                <- putList(source, sourceResult)
+            _                <- putList(destination, destinationResult)
           } yield RespValue.bulkString(value)).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1220,9 +1433,9 @@ private[redis] final class TestExecutor private (
                   case Side.Right => newSourceList :+ element
                 }
             _ <- if (source != destination)
-                   lists.put(source, newSourceList) *> lists.put(destination, newDestinationList)
+                   putList(source, newSourceList) *> putList(destination, newDestinationList)
                  else
-                   lists.put(source, newDestinationList)
+                   putList(source, newDestinationList)
           } yield element).fold(_ => RespValue.NullBulkString, result => RespValue.bulkString(result))
         )
 
@@ -1262,9 +1475,9 @@ private[redis] final class TestExecutor private (
                   case Side.Right => newSourceList :+ element
                 }
             _ <- if (source != destination)
-                   lists.put(source, newSourceList) *> lists.put(destination, newDestinationList)
+                   putList(source, newSourceList) *> putList(destination, newDestinationList)
                  else
-                   lists.put(source, newDestinationList)
+                   putList(source, newDestinationList)
           } yield element).foldM(_ => STM.retry, result => STM.succeed(RespValue.bulkString(result)))
         )
 
@@ -1351,7 +1564,8 @@ private[redis] final class TestExecutor private (
             hash       <- hashes.getOrElse(key, Map.empty)
             countExists = hash.keys count values.contains
             newHash     = hash -- values
-            _          <- if (newHash.isEmpty) hashes.delete(key) else hashes.put(key, newHash)
+            _ <- if (newHash.isEmpty) delete(key)
+                 else putHash(key, newHash)
           } yield RespValue.Integer(countExists.toLong)
         )
 
@@ -1397,7 +1611,7 @@ private[redis] final class TestExecutor private (
             hash     <- hashes.getOrElse(key, Map.empty)
             newValue <- STM.fromTry(Try(hash.getOrElse(field, "0").toLong + incr))
             newMap    = hash + (field -> newValue.toString)
-            _        <- hashes.put(key, newMap)
+            _        <- putHash(key, newMap)
           } yield newValue).fold(_ => Replies.Error, result => RespValue.Integer(result))
         )
 
@@ -1411,7 +1625,7 @@ private[redis] final class TestExecutor private (
             hash     <- hashes.getOrElse(key, Map.empty)
             newValue <- STM.fromTry(Try(hash.getOrElse(field, "0").toDouble + incr))
             newHash   = hash + (field -> newValue.toString)
-            _        <- hashes.put(key, newHash)
+            _        <- putHash(key, newHash)
           } yield newValue).fold(_ => Replies.Error, result => RespValue.bulkString(result.toString))
         )
 
@@ -1455,7 +1669,7 @@ private[redis] final class TestExecutor private (
           for {
             hash  <- hashes.getOrElse(key, Map.empty)
             newMap = hash ++ values.grouped(2).map(g => (g(0), g(1)))
-            _     <- hashes.put(key, newMap)
+            _     <- putHash(key, newMap)
           } yield Replies.Ok
         )
 
@@ -1503,7 +1717,7 @@ private[redis] final class TestExecutor private (
           for {
             hash   <- hashes.getOrElse(key, Map.empty)
             newHash = hash ++ values.grouped(2).map(g => (g(0), g(1)))
-            _      <- hashes.put(key, newHash)
+            _      <- putHash(key, newHash)
           } yield RespValue.Integer(newHash.size.toLong - hash.size.toLong)
         )
 
@@ -1517,7 +1731,7 @@ private[redis] final class TestExecutor private (
             hash    <- hashes.getOrElse(key, Map.empty)
             contains = hash.contains(field)
             newHash  = hash ++ (if (contains) Map.empty else Map(field -> value))
-            _       <- hashes.put(key, newHash)
+            _       <- putHash(key, newHash)
           } yield RespValue.Integer(if (contains) 0L else 1L)
         )
 
@@ -1595,7 +1809,7 @@ private[redis] final class TestExecutor private (
             nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
             (maxM, maxV) = sl.toList.maxBy(_._2)
-            _           <- sortedSets.put(sk, sl - maxM)
+            _           <- putSortedSet(sk, sl - maxM)
           } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1609,7 +1823,7 @@ private[redis] final class TestExecutor private (
             nonEmpty    <- STM.succeed(allSets.collect { case (key, v) if v.nonEmpty => key -> v })
             (sk, sl)    <- STM.fromOption(nonEmpty.headOption)
             (maxM, maxV) = sl.toList.minBy(_._2)
-            _           <- sortedSets.put(sk, sl - maxM)
+            _           <- putSortedSet(sk, sl - maxM)
           } yield Replies.array(Chunk(sk, maxM, maxV.toString))).foldM(_ => STM.retry, result => STM.succeed(result))
         )
 
@@ -1685,7 +1899,7 @@ private[redis] final class TestExecutor private (
                         }
 
             valuesChanged = changedOption.map(_ => valuesToAdd.size).getOrElse(newScoreMap.size - scoreMap.size)
-            _            <- sortedSets.put(key, newScoreMap)
+            _            <- putSortedSet(key, newScoreMap)
           } yield incrScore.fold[RespValue](RespValue.Integer(valuesChanged.toLong))(result =>
             RespValue.bulkString(result.toString)
           )
@@ -1740,7 +1954,7 @@ private[redis] final class TestExecutor private (
           for {
             sourceMaps <- STM.foreach(keys)(key => sortedSets.getOrElse(key, Map.empty))
             diffMap     = sourceMaps.reduce[Map[String, Double]] { case (a, b) => (a -- b.keySet) ++ (b -- a.keySet) }
-            _          <- sortedSets.put(destination, diffMap)
+            _          <- putSortedSet(destination, diffMap)
           } yield RespValue.Integer(diffMap.size.toLong)
         )
 
@@ -1758,7 +1972,7 @@ private[redis] final class TestExecutor private (
                             .getOrElse(increment.toDouble)
 
             resultSet = scoreMap + (member -> resultScore)
-            _        <- sortedSets.put(key, resultSet)
+            _        <- putSortedSet(key, resultSet)
           } yield RespValue.bulkString(resultScore.toString)
         )
 
@@ -1874,7 +2088,7 @@ private[redis] final class TestExecutor private (
                   .groupBy(_._1)
                   .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
 
-              _ <- sortedSets.put(destination, destinationResult)
+              _ <- putSortedSet(destination, destinationResult)
             } yield RespValue.Integer(destinationResult.size.toLong)
           )
         )
@@ -2099,7 +2313,7 @@ private[redis] final class TestExecutor private (
 
             filtered = lexKeys.filter(s => minPredicate(s) && maxPredicate(s))
 
-            _ <- sortedSets.put(key, scoreMap -- filtered)
+            _ <- putSortedSet(key, scoreMap -- filtered)
           } yield RespValue.Integer(filtered.length.toLong)
         )
 
@@ -2113,7 +2327,7 @@ private[redis] final class TestExecutor private (
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
             rank      = scoreMap.toArray.sortBy(_._2)
             result    = rank.slice(start, if (stop < 0) rank.length + stop else stop + 1)
-            _        <- sortedSets.put(key, scoreMap -- result.map(_._1))
+            _        <- putSortedSet(key, scoreMap -- result.map(_._1))
           } yield RespValue.Integer(result.length.toLong)
         )
 
@@ -2308,7 +2522,7 @@ private[redis] final class TestExecutor private (
 
             filtered = lexKeys.filter { case (_, s) => minPredicate(s) && maxPredicate(s) }
 
-            _ <- sortedSets.put(key, scoreMap -- filtered.map(_._1))
+            _ <- putSortedSet(key, scoreMap -- filtered.map(_._1))
           } yield RespValue.Integer(filtered.length.toLong)
         )
 
@@ -2320,7 +2534,7 @@ private[redis] final class TestExecutor private (
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
             results   = scoreMap.toArray.sortBy { case (_, score) => score }.take(count)
-            _        <- sortedSets.put(key, scoreMap -- results.map(_._1))
+            _        <- putSortedSet(key, scoreMap -- results.map(_._1))
           } yield RespValue.Array(
             Chunk
               .fromIterable(results)
@@ -2336,7 +2550,7 @@ private[redis] final class TestExecutor private (
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
             results   = scoreMap.toArray.sortBy { case (_, score) => score }.reverse.take(count)
-            _        <- sortedSets.put(key, scoreMap -- results.map(_._1))
+            _        <- putSortedSet(key, scoreMap -- results.map(_._1))
           } yield RespValue.Array(
             Chunk
               .fromIterable(results)
@@ -2366,7 +2580,7 @@ private[redis] final class TestExecutor private (
           for {
             scoreMap <- sortedSets.getOrElse(key, Map.empty)
             newSet    = scoreMap.filterNot { case (v, _) => members.contains(v) }
-            _        <- sortedSets.put(key, newSet)
+            _        <- putSortedSet(key, newSet)
           } yield RespValue.Integer(scoreMap.size.toLong - newSet.size.toLong)
         )
 
@@ -2540,7 +2754,7 @@ private[redis] final class TestExecutor private (
                   .groupBy(_._1)
                   .map { case (member, scores) => member -> scores.map(_._2).reduce(aggregate) }
 
-              _ <- sortedSets.put(destination, destinationResult)
+              _ <- putSortedSet(destination, destinationResult)
             } yield RespValue.Integer(destinationResult.size.toLong)
           )
         )
@@ -2703,53 +2917,103 @@ private[redis] final class TestExecutor private (
       .getOrElse(STM.succeedNow(Replies.Error))
 
   // check whether the key is a set or unused.
-  private[this] def isSet(name: String): STM[Nothing, Boolean] =
-    for {
-      isString    <- strings.contains(name)
-      isList      <- lists.contains(name)
-      isHyper     <- hyperLogLogs.contains(name)
-      isHash      <- hashes.contains(name)
-      isSortedSet <- sortedSets.contains(name)
-    } yield !isString && !isList && !isHyper && !isHash && !isSortedSet
+  private[this] def isSet(name: String): USTM[Boolean] =
+    keys.get(name).map(infoOpt => infoOpt.forall(i => i.`type` == KeyType.Sets))
+
+  // Check whether the key is a string or unused.
+  private[this] def isString(name: String): USTM[Boolean] =
+    keys.get(name).map(infoOpt => infoOpt.forall(i => i.`type` == KeyType.Strings))
 
   // check whether the key is a list or unused.
-  private[this] def isList(name: String): STM[Nothing, Boolean] =
-    for {
-      isString <- strings.contains(name)
-      isSet    <- sets.contains(name)
-      isHyper  <- hyperLogLogs.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isSet && !isHyper && !isHash
+  private[this] def isList(name: String): USTM[Boolean] =
+    keys.get(name).map(infoOpt => infoOpt.forall(i => i.`type` == KeyType.Lists))
 
   // check whether the key is a hyperLogLog or unused.
-  private[this] def isHyperLogLog(name: String): ZSTM[Any, Nothing, Boolean] =
-    for {
-      isString    <- strings.contains(name)
-      isSet       <- sets.contains(name)
-      isList      <- lists.contains(name)
-      isHash      <- hashes.contains(name)
-      isSortedSet <- sortedSets.contains(name)
-    } yield !isString && !isSet && !isList && !isHash && !isSortedSet
+  private[this] def isHyperLogLog(name: String): USTM[Boolean] =
+    keys.get(name).map(infoOpt => infoOpt.forall(i => i.`type` == KeyType.HyperLogs))
 
   // check whether the key is a hash or unused.
-  private[this] def isHash(name: String): ZSTM[Any, Nothing, Boolean] =
-    for {
-      isString    <- strings.contains(name)
-      isSet       <- sets.contains(name)
-      isList      <- lists.contains(name)
-      isHyper     <- hyperLogLogs.contains(name)
-      isSortedSet <- sortedSets.contains(name)
-    } yield !isString && !isSet && !isList && !isHyper && !isSortedSet
+  private[this] def isHash(name: String): USTM[Boolean] =
+    keys.get(name).map(infoOpt => infoOpt.forall(i => i.`type` == KeyType.Hashes))
 
   // check whether the key is a hash or unused.
-  private[this] def isSortedSet(name: String): ZSTM[Any, Nothing, Boolean] =
+  private[this] def isSortedSet(name: String): USTM[Boolean] =
+    keys.get(name).map(infoOpt => infoOpt.forall(i => i.`type` == KeyType.SortedSets))
+
+  // Puts element into list and removes its expiration, if any.
+  private[this] def putList(key: String, value: Chunk[String]): USTM[Unit] =
+    lists.put(key, value) <* keys.put(key, KeyInfo(KeyType.Lists, None))
+
+  // Puts element into set and removes its expiration, if any.
+  private[this] def putSet(key: String, value: Set[String]): USTM[Unit] =
+    sets.put(key, value) <* keys.put(key, KeyInfo(KeyType.Sets, None))
+
+  // Saves string and removes its expiration, if any.
+  private[this] def putString(key: String, value: String, expireAt: Option[Instant] = None): USTM[Unit] =
+    strings.put(key, value) <* keys.put(key, KeyInfo(KeyType.Strings, expireAt))
+
+  // Puts element into hyperLogLog and removes its expiration, if any.
+  private[this] def putHyperLogLog(key: String, value: Set[String]): USTM[Unit] =
+    hyperLogLogs.put(key, value) <* keys.put(key, KeyInfo(KeyType.HyperLogs, None))
+
+  // Puts element into hash and removes its expiration, if any.
+  private[this] def putHash(key: String, value: Map[String, String]): USTM[Unit] =
+    hashes.put(key, value) <* keys.put(key, KeyInfo(KeyType.Hashes, None))
+
+  // Puts element into set and removes its expiration, if any.
+  private[this] def putSortedSet(key: String, value: Map[String, Double]): USTM[Unit] =
+    sortedSets.put(key, value) <* keys.put(key, KeyInfo(KeyType.SortedSets, None))
+
+  /**
+   * Rename key by altering underlying data and metadata structures. Note: RENAME retains the data's expiration
+   */
+  def rename(key: String, newkey: String): STM[RespValue.Error, Unit] =
     for {
-      isString <- strings.contains(name)
-      isSet    <- sets.contains(name)
-      isList   <- lists.contains(name)
-      isHyper  <- hyperLogLogs.contains(name)
-      isHash   <- hashes.contains(name)
-    } yield !isString && !isSet && !isList && !isHyper && !isHash
+      keyInfoOpt <- keys.get(key)
+      keyInfo    <- keyInfoOpt.fold[STM[RespValue.Error, KeyInfo]](STM.fail(Replies.Error))(STM.succeedNow)
+      _          <- keys.delete(key)
+      _          <- keys.put(newkey, keyInfo)
+      _          <- STM.whenCaseM(lists.get(key)) { case Some(v) => lists.delete(key) *> lists.put(newkey, v) }
+      _          <- STM.whenCaseM(sets.get(key)) { case Some(v) => sets.delete(key) *> sets.put(newkey, v) }
+      _          <- STM.whenCaseM(strings.get(key)) { case Some(v) => strings.delete(key) *> strings.put(newkey, v) }
+      _ <- STM.whenCaseM(hyperLogLogs.get(key)) { case Some(v) =>
+             hyperLogLogs.delete(key) *> hyperLogLogs.put(newkey, v)
+           }
+      _ <- STM.whenCaseM(hashes.get(key)) { case Some(v) => hashes.delete(key) *> hashes.put(newkey, v) }
+    } yield ()
+
+  /** Deletes key from underlying data and metadata structures. */
+  private[this] def delete(key: String): USTM[Int] =
+    STM.ifM(keys.contains(key))(
+      for {
+        _ <- STM.whenM(isList(key))(lists.delete(key))
+        _ <- STM.whenM(isSet(key))(sets.delete(key))
+        _ <- STM.whenM(isString(key))(strings.delete(key))
+        _ <- STM.whenM(isHyperLogLog(key))(hyperLogLogs.delete(key))
+        _ <- STM.whenM(isHash(key))(hashes.delete(key))
+        _ <- keys.delete(key)
+      } yield 1,
+      STM.succeedNow(0)
+    )
+
+  /** Deletes all expired keys */
+  private def clearExpired(now: Instant): USTM[Unit] =
+    keys.foreach { (key, info) =>
+      val ttl = info.expireAt.map(e => Duration.fromInterval(now, e).toMillis).getOrElse(1L)
+      if (ttl <= 0) delete(key).unit
+      else STM.unit
+    }
+
+  /**
+   * Returns the time-to-live of a key, if any.
+   * @return
+   *   `Duration` between the key's expiration and the current time.
+   */
+  private[this] def ttlOf(key: String, now: Instant): USTM[Option[Duration]] =
+    keys.get(key).flatMap {
+      case Some(KeyInfo(_, Some(expireAt))) => STM.some(Duration.fromInterval(now, expireAt))
+      case _                                => STM.none
+    }
 
   @tailrec
   private[this] def dropWhileLimit[A](xs: Chunk[A])(p: A => Boolean, k: Int): Chunk[A] =
@@ -2916,12 +3180,41 @@ private[redis] final class TestExecutor private (
 }
 
 private[redis] object TestExecutor {
-  lazy val live: URLayer[zio.random.Random, RedisExecutor] = {
+
+  sealed trait KeyType extends Product with Serializable
+
+  object KeyType {
+    case object Strings    extends KeyType
+    case object HyperLogs  extends KeyType
+    case object Sets       extends KeyType
+    case object Lists      extends KeyType
+    case object Hashes     extends KeyType
+    case object SortedSets extends KeyType
+    case object Stream     extends KeyType
+
+    def toRedisType(keyType: KeyType): RedisType = keyType match {
+      case Strings    => RedisType.String
+      case HyperLogs  => RedisType.String
+      case Sets       => RedisType.Set
+      case Lists      => RedisType.List
+      case Hashes     => RedisType.Hash
+      case SortedSets => RedisType.SortedSet
+      case Stream     => RedisType.Stream
+    }
+  }
+
+  case class KeyInfo(`type`: KeyType, expireAt: Option[Instant]) {
+    lazy val redisType: RedisType = KeyType.toRedisType(`type`)
+  }
+
+  lazy val live: URLayer[zio.random.Random with Clock, RedisExecutor] = {
     val executor = for {
       seed         <- random.nextInt
+      clock        <- ZIO.identity[Clock]
       sRandom       = new scala.util.Random(seed)
       ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
       randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
+      keys         <- TMap.empty[String, KeyInfo].commit
       sets         <- TMap.empty[String, Set[String]].commit
       strings      <- TMap.empty[String, String].commit
       hyperLogLogs <- TMap.empty[String, Set[String]].commit
@@ -2929,24 +3222,21 @@ private[redis] object TestExecutor {
       hashes       <- TMap.empty[String, Map[String, String]].commit
       sortedSets   <- TMap.empty[String, Map[String, Double]].commit
       clientInfo   <- TRef.make(ClientInfo(id = 174716)).commit
-      clientTrackingInfo <- TRef
-                              .make(
-                                ClientTrackingInfo(
-                                  flags = ClientTrackingFlags(clientSideCaching = false),
-                                  redirect = ClientTrackingRedirect.NotEnabled
-                                )
-                              )
-                              .commit
+      clientTInfo =
+        ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
+      clientTrackingInfo <- TRef.make(clientTInfo).commit
     } yield new TestExecutor(
       clientInfo,
       clientTrackingInfo,
+      keys,
       lists,
       sets,
       strings,
       randomPick,
       hyperLogLogs,
       hashes,
-      sortedSets
+      sortedSets,
+      clock
     )
 
     executor.toLayer
