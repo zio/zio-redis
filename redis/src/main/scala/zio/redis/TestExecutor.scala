@@ -792,7 +792,7 @@ private[redis] final class TestExecutor private (
         val key = input.head.asString
         STM
           .ifM(keys.contains(key))(
-            ttlOf(key, now).map(_.fold(-1L)(_.toSeconds)),
+            ttlOf(key, now).map(_.fold(-1L)(_.getSeconds)),
             STM.succeedNow(-2L)
           )
           .map(RespValue.Integer)
