@@ -661,17 +661,15 @@ private[redis] final class TestExecutor private (
         }
 
       case api.Keys.Exists | api.Keys.Touch =>
-        val allkeys = input.map(_.asString)
         STM
-          .foldLeft(allkeys)(0L) { case (acc, key) =>
-            STM.ifM(keys.contains(key))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
+          .foldLeft(input)(0L) { case (acc, key) =>
+            STM.ifM(keys.contains(key.asString))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
           }
           .map(RespValue.Integer)
 
       case api.Keys.Del | api.Keys.Unlink =>
-        val allkeys = input.map(_.asString)
         STM
-          .foldLeft(allkeys)(0L) { case (acc, key) => delete(key).map(acc + _) }
+          .foldLeft(input)(0L) { case (acc, key) => delete(key.asString).map(acc + _) }
           .map(RespValue.Integer)
 
       case api.Keys.Keys =>
@@ -686,13 +684,13 @@ private[redis] final class TestExecutor private (
         val options = input.drop(1).map(_.asString)
 
         val countIndex = options.indexOf("COUNT")
-        val count      = Option.when(countIndex >= 0)(options(countIndex + 1).toInt)
+        val count      = if (countIndex >= 0) Some(options(countIndex + 1).toInt) else None
 
         val patternIndex = options.indexOf("MATCH")
-        val pattern      = Option.when(patternIndex >= 0)(options(patternIndex + 1))
+        val pattern      = if (patternIndex >= 0) Some(options(patternIndex + 1)) else None
 
         val redisTypeIndex = options.indexOf("TYPE")
-        val redisType      = Option.when(redisTypeIndex >= 0)(options(redisTypeIndex + 1))
+        val redisType      = if (redisTypeIndex >= 0) Some(options(redisTypeIndex + 1)) else None
 
         val end = start + count.getOrElse(10)
 
@@ -740,20 +738,20 @@ private[redis] final class TestExecutor private (
         implicit val ordering: Ordering[String] =
           if (options.contains("DESC")) Ordering.String.reverse else Ordering.String
         val byIndex     = options.indexOf("BY")
-        val by          = Option.when(byIndex >= 0)(options(byIndex + 1))
+        val by          = if (byIndex >= 0) Some(options(byIndex + 1)) else None
         val limitIndex  = options.indexOf("LIMIT")
-        val limit       = Option.when(limitIndex >= 0)((options(limitIndex + 1).toInt, options(limitIndex + 2).toInt))
+        val limit       = if (limitIndex >= 0) Some((options(limitIndex + 1).toInt, options(limitIndex + 2).toInt)) else None
         val getIndexes  = options.zipWithIndex.withFilter(_._1 == "GET").map(_._2)
         val getPatterns = if (getIndexes.nonEmpty) getIndexes.map(i => options(i + 1)) else Chunk("#")
         val storeIndex  = options.indexOf("STORE")
-        val storeKey    = Option.when(storeIndex >= 0)(options(storeIndex + 1))
+        val storeKey    = if (storeIndex >= 0) Some(options(storeIndex + 1)) else None
 
         def sort(list: Chunk[String]) =
           by.fold(STM.succeedNow(list.sorted)) { by =>
             val pairs = list.foldLeft(STM.succeedNow(Chunk[(String, String)]())) { case (aggr, next) =>
               val key   = by.replace("*", next)
               val value = strings.get(key)
-              aggr.flatMap(c => value.map(n => n.fold(c)(c :+ (next, _))))
+              aggr.flatMap(c => value.map(vo => vo.fold(c)(vo => c :+ (next -> vo))))
             }
             pairs.map(_.sortBy(_._2).map(_._1))
           }
@@ -1564,8 +1562,7 @@ private[redis] final class TestExecutor private (
             hash       <- hashes.getOrElse(key, Map.empty)
             countExists = hash.keys count values.contains
             newHash     = hash -- values
-            _ <- if (newHash.isEmpty) delete(key)
-                 else putHash(key, newHash)
+            _          <- ZSTM.ifM(ZSTM.succeedNow(newHash.isEmpty))(delete(key), putHash(key, newHash))
           } yield RespValue.Integer(countExists.toLong)
         )
 
@@ -3203,7 +3200,7 @@ private[redis] object TestExecutor {
     }
   }
 
-  case class KeyInfo(`type`: KeyType, expireAt: Option[Instant]) {
+  final case class KeyInfo(`type`: KeyType, expireAt: Option[Instant]) {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
