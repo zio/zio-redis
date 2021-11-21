@@ -32,8 +32,8 @@ lazy val redis =
     .settings(
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
-        "dev.zio" %% "zio-logging"  % "0.5.13",
-        "dev.zio" %% "zio-schema"   % "0.1.2",
+        "dev.zio" %% "zio-logging"  % "0.5.14",
+        "dev.zio" %% "zio-schema"   % "0.1.1",
         "dev.zio" %% "zio-test"     % Zio % Test,
         "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
@@ -71,6 +71,6 @@ lazy val example =
         "dev.zio"                       %% "zio-prelude"                   % "1.0.0-RC7",
         "dev.zio"                       %% "zio-json"                      % "0.1.5",
         "io.d11"                        %% "zhttp"                         % "1.0.0.0-RC17",
-        "io.github.kitlangton"          %% "zio-magic"                     % "0.3.9"
+        "io.github.kitlangton"          %% "zio-magic"                     % "0.3.10"
       )
     )

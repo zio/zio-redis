@@ -1,5 +1,6 @@
 package zio.redis
 
+import zio.{clock, Chunk, ZIO, ZLayer}
 import zio.clock.Clock
 import zio.duration._
 import zio.logging.Logging
@@ -7,10 +8,10 @@ import zio.random.Random
 import zio.redis.RedisError.ProtocolError
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
+import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
-import zio.test._
-import zio.{Chunk, ZIO, ZLayer}
+import zio.test.environment.TestClock
 
 trait KeysSpec extends BaseSpec {
 
@@ -170,7 +171,7 @@ trait KeysSpec extends BaseSpec {
               migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
-      ),
+      ) @@ testExecutorUnsupported,
       suite("ttl")(
         testM("check ttl for existing key") {
           for {
@@ -209,22 +210,24 @@ trait KeysSpec extends BaseSpec {
             _         <- set(key, value)
             exp       <- pExpire(key, 2000.millis)
             response1 <- exists(key)
-            _         <- ZIO.sleep(2050.millis)
+            fiber     <- ZIO.sleep(2050.millis).fork <* TestClock.adjust(2050.millis)
+            _         <- fiber.join
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
-        } @@ eventually,
+        },
         testM("set key expiration with pExpireAt command") {
           for {
             key       <- uuid
             value     <- uuid
-            expiresAt <- instantOf(2000)
+            expiresAt <- clock.instant.map(_.plusMillis(2000.millis.toMillis))
             _         <- set(key, value)
             exp       <- pExpireAt(key, expiresAt)
             response1 <- exists(key)
-            _         <- ZIO.sleep(2050.millis)
+            fiber     <- ZIO.sleep(2050.millis).fork <* TestClock.adjust(2050.millis)
+            _         <- fiber.join
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
-        } @@ eventually,
+        },
         testM("expire followed by persist") {
           for {
             key       <- uuid
@@ -238,14 +241,15 @@ trait KeysSpec extends BaseSpec {
           for {
             key       <- uuid
             value     <- uuid
-            expiresAt <- instantOf(2000)
+            expiresAt <- clock.instant.map(_.plusMillis(2000.millis.toMillis))
             _         <- set(key, value)
             exp       <- expireAt(key, expiresAt)
             response1 <- exists(key)
-            _         <- ZIO.sleep(2050.millis)
+            fiber     <- ZIO.sleep(2050.millis).fork <* TestClock.adjust(2050.millis)
+            _         <- fiber.join
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
-        } @@ eventually
+        }
       ),
       suite("renaming")(
         testM("rename existing key") {
@@ -333,7 +337,7 @@ trait KeysSpec extends BaseSpec {
             _      <- xAdd[String, String, String, String, String](key, "*", (field, value))
             stream <- typeOf(key)
           } yield assert(stream)(equalTo(RedisType.Stream))
-        }
+        } @@ testExecutorUnsupported
       ),
       suite("sort")(
         testM("list of numbers") {
@@ -389,15 +393,18 @@ trait KeysSpec extends BaseSpec {
         testM("getting multiple value referenced by a key-value pair") {
           for {
             key     <- uuid
-            value   <- uuid
-            _       <- lPush(key, value)
+            value1   = 1
+            value2   = 2
+            _       <- lPush(key, value1, value2)
             prefix  <- uuid
-            _       <- set(s"${prefix}_$value", "A")
+            _       <- set(s"${prefix}_$value1", "A1")
+            _       <- set(s"${prefix}_$value2", "A2")
             prefix2 <- uuid
-            _       <- set(s"${prefix2}_$value", "0")
+            _       <- set(s"${prefix2}_$value1", "01")
+            _       <- set(s"${prefix2}_$value2", "02")
             sorted <-
               sort[String, String](key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
-          } yield assert(sorted)(equalTo(Chunk("A", "0")))
+          } yield assert(sorted)(equalTo(Chunk("A1", "01", "A2", "02")))
         },
         testM("sort and store result") {
           for {
