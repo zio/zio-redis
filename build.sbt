@@ -71,6 +71,6 @@ lazy val example =
         "dev.zio"                       %% "zio-prelude"                   % "1.0.0-RC7",
         "dev.zio"                       %% "zio-json"                      % "0.1.5",
         "io.d11"                        %% "zhttp"                         % "1.0.0.0-RC17",
-        "io.github.kitlangton"          %% "zio-magic"                     % "0.3.10"
+        "io.github.kitlangton"          %% "zio-magic"                     % "0.3.11"
       )
     )
