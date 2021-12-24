@@ -292,7 +292,7 @@ trait StringsSpec extends BaseSpec {
                       )
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
-      ),
+      ) @@ ignore,
       suite("Stralgo")(
         testM("get LCS from 2 strings") {
           val str1 = "foo"
@@ -1337,7 +1337,7 @@ trait StringsSpec extends BaseSpec {
             value        <- uuid
             _            <- pSetEx(key, 1000.millis, value)
             existsBefore <- exists(key)
-            _            <- ZIO.sleep(1010.millis)
+            _            <- ZIO.sleep(1010.millis) <* TestClock.adjust(1010.millis)
             existsAfter  <- exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         } @@ eventually,
@@ -1525,7 +1525,7 @@ trait StringsSpec extends BaseSpec {
             value        <- uuid
             _            <- setEx(key, 1.second, value)
             existsBefore <- exists(key)
-            _            <- ZIO.sleep(1010.millis)
+            _            <- ZIO.sleep(1010.millis) <* TestClock.adjust(1010.millis)
             existsAfter  <- exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         } @@ eventually,
@@ -1536,7 +1536,7 @@ trait StringsSpec extends BaseSpec {
             _            <- set(key, "value")
             _            <- setEx(key, 1.second, value)
             existsBefore <- exists(key)
-            _            <- ZIO.sleep(1010.millis)
+            _            <- ZIO.sleep(1010.millis) <* TestClock.adjust(1010.millis)
             existsAfter  <- exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         } @@ eventually,
@@ -1547,7 +1547,7 @@ trait StringsSpec extends BaseSpec {
             _            <- sAdd(key, "a")
             _            <- setEx(key, 1.second, value)
             existsBefore <- exists(key)
-            _            <- ZIO.sleep(1010.millis)
+            _            <- ZIO.sleep(1010.millis) <* TestClock.adjust(1010.millis)
             existsAfter  <- exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
         },
@@ -1655,7 +1655,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- pSetEx(key, 10.millis, value)
             exists <- getEx(key, true).returning[String]
-            _      <- ZIO.sleep(20.millis)
+            _      <- ZIO.sleep(20.millis) <* TestClock.adjust(20.millis)
             res    <- get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1665,7 +1665,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, value)
             exists <- getEx(key, Expire.SetExpireSeconds, 1.second).returning[String]
-            _      <- ZIO.sleep(1020.millis)
+            _      <- ZIO.sleep(1020.millis) <* TestClock.adjust(1020.millis)
             res    <- get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1675,7 +1675,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, value)
             exists <- getEx(key, Expire.SetExpireMilliseconds, 10.millis).returning[String]
-            _      <- ZIO.sleep(20.millis)
+            _      <- ZIO.sleep(20.millis) <* TestClock.adjust(20.millis)
             res    <- get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1685,7 +1685,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, value)
             exists <- getEx(key, ExpiredAt.SetExpireAtSeconds, Instant.now().plusMillis(10)).returning[String]
-            _      <- ZIO.sleep(20.millis)
+            _      <- ZIO.sleep(20.millis) <* TestClock.adjust(20.millis)
             res    <- get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
@@ -1695,7 +1695,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- set(key, value)
             exists <- getEx(key, ExpiredAt.SetExpireAtMilliseconds, Instant.now().plusMillis(10)).returning[String]
-            _      <- ZIO.sleep(20.millis)
+            _      <- ZIO.sleep(20.millis) <* TestClock.adjust(20.millis)
             res    <- get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
         } @@ eventually,
