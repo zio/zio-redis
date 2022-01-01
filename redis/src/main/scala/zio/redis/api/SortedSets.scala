@@ -10,7 +10,6 @@ import zio.{Chunk, ZIO}
 trait SortedSets {
   import SortedSets._
 
-  // TODO: king-projector???
   /**
    * Remove and return the member with the highest score from one or more sorted sets, or block until one is available.
    *
@@ -29,8 +28,8 @@ trait SortedSets {
     timeout: Duration,
     key: K,
     keys: K*
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, MemberScore[x])] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, MemberScore[x])] })#lambda] {
+  ): ResultSchemaBuilder1[Lambda[x => Option[(K, MemberScore[x])]]] =
+    new ResultSchemaBuilder1[Lambda[x => Option[(K, MemberScore[x])]]] {
       override def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Option[(K, MemberScore[M])]] = {
         val memberScoreOutput =
           Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
@@ -45,7 +44,6 @@ trait SortedSets {
       }
     }
 
-  // TODO: kind-projector??
   /**
    * Remove and return the member with the lowest score from one or more sorted sets, or block until one is available.
    *
@@ -64,8 +62,8 @@ trait SortedSets {
     timeout: Duration,
     key: K,
     keys: K*
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, MemberScore[x])] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, MemberScore[x])] })#lambda] {
+  ): ResultSchemaBuilder1[Lambda[x => Option[(K, MemberScore[x])]]] =
+    new ResultSchemaBuilder1[Lambda[x => Option[(K, MemberScore[x])]]] {
       override def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Option[(K, MemberScore[M])]] = {
         val memberScoreOutput =
           Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
@@ -228,8 +226,8 @@ trait SortedSets {
     inputKeysNum: Long,
     key: K,
     keys: K*
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command =
           RedisCommand(
@@ -359,8 +357,8 @@ trait SortedSets {
   final def zInterWithScores[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZInter,
@@ -450,8 +448,8 @@ trait SortedSets {
   final def zPopMax[K: Schema](
     key: K,
     count: Option[Long] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZPopMax,
@@ -478,8 +476,8 @@ trait SortedSets {
   final def zPopMin[K: Schema](
     key: K,
     count: Option[Long] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZPopMin,
@@ -526,8 +524,8 @@ trait SortedSets {
   final def zRangeWithScores[K: Schema](
     key: K,
     range: Range
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRange,
@@ -614,8 +612,8 @@ trait SortedSets {
     key: K,
     scoreRange: ScoreRange,
     limit: Option[Limit] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRangeByScore,
@@ -757,8 +755,8 @@ trait SortedSets {
   final def zRevRangeWithScores[K: Schema](
     key: K,
     range: Range
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRevRange,
@@ -850,8 +848,8 @@ trait SortedSets {
     key: K,
     scoreRange: ScoreRange,
     limit: Option[Limit] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRevRangeByScore,
@@ -903,8 +901,8 @@ trait SortedSets {
     cursor: Long,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = (Long, Chunk[MemberScore[x]]) })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = (Long, Chunk[MemberScore[x]]) })#lambda] {
+  ): ResultSchemaBuilder1[Lambda[x => (Long, Chunk[MemberScore[x]])]] =
+    new ResultSchemaBuilder1[Lambda[x => (Long, Chunk[MemberScore[x]])]] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[MemberScore[M]])] = {
         val memberScoresOutput =
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput).map(_.map { case (m, s) => MemberScore(s, m) })
@@ -992,8 +990,8 @@ trait SortedSets {
   final def zUnionWithScores[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command =
           RedisCommand(
@@ -1093,8 +1091,8 @@ trait SortedSets {
   final def zRandMember[K: Schema](
     key: K,
     count: Long
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[x] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[x] })#lambda] {
+  ): ResultSchemaBuilder1[Chunk] =
+    new ResultSchemaBuilder1[Chunk] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[M]] = {
         val command = RedisCommand(
           ZRandMember,
@@ -1121,8 +1119,8 @@ trait SortedSets {
   final def zRandMemberWithScores[K: Schema](
     key: K,
     count: Long
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[MemberScore[x]] })#lambda] {
+  ): ResultSchemaBuilder1[MemberScores] =
+    new ResultSchemaBuilder1[MemberScores] {
       def returning[M: Schema]: ZIO[RedisExecutor, RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRandMember,

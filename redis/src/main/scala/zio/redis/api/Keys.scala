@@ -351,8 +351,8 @@ trait Keys {
     pattern: Option[String] = None,
     count: Option[Count] = None,
     `type`: Option[RedisType] = None
-  ): ResultSchemaBuilder1[({ type lambda[+x] = (Long, Chunk[x]) })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = (Long, Chunk[x]) })#lambda] {
+  ): ResultSchemaBuilder1[Lambda[x => (Long, Chunk[x])]] =
+    new ResultSchemaBuilder1[Lambda[x => (Long, Chunk[x])]] {
       def returning[K: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[K])] = {
         val command = RedisCommand(
           Scan,

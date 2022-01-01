@@ -30,6 +30,7 @@ lazy val redis =
     .settings(stdSettings("zio-redis"))
     .settings(buildInfoSettings("zio.redis"))
     .settings(
+      addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
         "dev.zio" %% "zio-logging"  % "0.5.14",

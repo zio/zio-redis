@@ -158,8 +158,8 @@ trait Hashes {
     key: K,
     field: F,
     fields: F*
-  ): ResultSchemaBuilder1[({ type lambda[+x] = Chunk[Option[x]] })#lambda] =
-    new ResultSchemaBuilder1[({ type lambda[+x] = Chunk[Option[x]] })#lambda] {
+  ): ResultSchemaBuilder1[Lambda[x => Chunk[Option[x]]]] =
+    new ResultSchemaBuilder1[Lambda[x => Chunk[Option[x]]]] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[Option[V]]] = {
         val command = RedisCommand(
           HmGet,
@@ -196,8 +196,6 @@ trait Hashes {
     command.run((key, (pair, pairs.toList)))
   }
 
-  type Scan2[F, V] = (Long, Chunk[(F, V)])
-  // TODO kind-projector
   /**
    * Iterates `fields` of Hash types and their associated values using a cursor-based iterator
    *
@@ -217,16 +215,17 @@ trait Hashes {
     cursor: Long,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ResultSchemaBuilder2[Scan2] = new ResultSchemaBuilder2[Scan2] {
-    override def returning[F: Schema, V: Schema]: ZIO[RedisExecutor, RedisError, Scan2[F, V]] = {
-      val command = RedisCommand(
-        HScan,
-        Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-        Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
-      )
-      command.run((key, cursor, pattern.map(Pattern), count))
+  ): ResultSchemaBuilder2[Lambda[(x, y) => (Long, Chunk[(x, y)])]] =
+    new ResultSchemaBuilder2[Lambda[(x, y) => (Long, Chunk[(x, y)])]] {
+      override def returning[F: Schema, V: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[(F, V)])] = {
+        val command = RedisCommand(
+          HScan,
+          Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
+          Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
+        )
+        command.run((key, cursor, pattern.map(Pattern), count))
+      }
     }
-  }
 
   /**
    * Sets `field -> value` pairs in the hash stored at `key`
