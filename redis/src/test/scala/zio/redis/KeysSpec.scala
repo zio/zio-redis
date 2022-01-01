@@ -166,7 +166,7 @@ trait KeysSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            _ <- set(key, value).provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
+            _     <- set(key, value).provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
             response <-
               migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
