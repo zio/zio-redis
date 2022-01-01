@@ -61,5 +61,5 @@ class BlPopBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => blPop[String, String](key)(1.second)))
+  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => blPop(key)(1.second).returning[String]))
 }
