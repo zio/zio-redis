@@ -190,13 +190,15 @@ trait ListSpec extends BaseSpec {
         },
         testM("brPopLPush block for 1 second when source does not exist") {
           for {
-            key     <- uuid
-            dest    <- uuid
-            _       <- rPush(dest, "four")
-            st      <- currentTime(TimeUnit.SECONDS)
-            s       <- brPopLPush(key, dest, 1.seconds).returning[String]
-            endTime <- currentTime(TimeUnit.SECONDS)
-          } yield assert(s)(isNone) && assert(endTime - st)(isGreaterThanEqualTo(1L))
+            key       <- uuid
+            dest      <- uuid
+            _         <- rPush(dest, "four")
+            startTime <- currentTime(TimeUnit.SECONDS)
+            f         <- brPopLPush(key, dest, 1.seconds).returning[String].fork
+            _         <- TestClock.adjust(1.second)
+            s         <- f.join
+            endTime   <- currentTime(TimeUnit.SECONDS)
+          } yield assert(s)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
         },
         testM("brPopLPush error when not list") {
           for {
@@ -750,7 +752,9 @@ trait ListSpec extends BaseSpec {
             destination <- uuid
             _           <- rPush(destination, "d")
             startTime   <- currentTime(TimeUnit.SECONDS)
-            moved       <- blMove(source, destination, Side.Left, Side.Right, 1.second).returning[String]
+            f           <- blMove(source, destination, Side.Left, Side.Right, 1.second).returning[String].fork
+            _           <- TestClock.adjust(1.second)
+            moved       <- f.join
             endTime     <- currentTime(TimeUnit.SECONDS)
           } yield assert(moved)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
         }

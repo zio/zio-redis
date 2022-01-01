@@ -404,7 +404,7 @@ trait KeysSpec extends BaseSpec {
             _       <- set(s"${prefix2}_$value2", "02")
             sorted <- sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
                         .returning[String]
-          } yield assert(sorted)(equalTo(Chunk("A", "0")))
+          } yield assert(sorted)(equalTo(Chunk("A1", "01", "A2", "02")))
         },
         testM("sort and store result") {
           for {
