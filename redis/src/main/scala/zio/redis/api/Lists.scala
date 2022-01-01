@@ -24,8 +24,12 @@ trait Lists {
    *   the element being popped from source and pushed to destination. If timeout is reached, an empty reply is
    *   returned.
    */
-  final def brPopLPush[S: Schema, D: Schema](source: S, destination: D, timeout: Duration): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def brPopLPush[S: Schema, D: Schema](
+    source: S,
+    destination: D,
+    timeout: Duration
+  ): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] = {
         val command = RedisCommand(
           BrPopLPush,
@@ -48,8 +52,8 @@ trait Lists {
    * @return
    *   the requested element, or empty if the index is out of range.
    */
-  final def lIndex[K: Schema](key: K, index: Long): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def lIndex[K: Schema](key: K, index: Long): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
         RedisCommand(LIndex, Tuple2(ArbitraryInput[K](), LongInput), OptionalOutput(ArbitraryOutput[V]()))
           .run((key, index))
@@ -76,8 +80,8 @@ trait Lists {
    * @return
    *   the value of the first element, or empty when key does not exist.
    */
-  final def lPop[K: Schema](key: K): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def lPop[K: Schema](key: K): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
         RedisCommand(LPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
@@ -129,8 +133,8 @@ trait Lists {
    * @return
    *   a chunk of elements in the specified range.
    */
-  final def lRange[K: Schema](key: K, range: Range): ResultBuilder[Chunk] =
-    new ResultBuilder[Chunk] {
+  final def lRange[K: Schema](key: K, range: Range): ResultSchemaBuilder1[Chunk] =
+    new ResultSchemaBuilder1[Chunk] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] =
         RedisCommand(LRange, Tuple2(ArbitraryInput[K](), RangeInput), ChunkOutput(ArbitraryOutput[V]()))
           .run((key, range))
@@ -199,8 +203,8 @@ trait Lists {
    * @return
    *   the value of the last element, or empty when key does not exist.
    */
-  final def rPop[K: Schema](key: K): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def rPop[K: Schema](key: K): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
         RedisCommand(RPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
@@ -217,8 +221,8 @@ trait Lists {
    * @return
    *   the element being popped and pushed. If source does not exist, empty is returned and no operation is performed.
    */
-  final def rPopLPush[S: Schema, D: Schema](source: S, destination: D): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def rPopLPush[S: Schema, D: Schema](source: S, destination: D): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
         RedisCommand(RPopLPush, Tuple2(ArbitraryInput[S](), ArbitraryInput[D]()), OptionalOutput(ArbitraryOutput[V]()))
           .run((source, destination))
@@ -260,7 +264,7 @@ trait Lists {
     command.run((key, (element, elements.toList)))
   }
 
-  // TODO: how to handle F[(A, B)]
+  // TODO kind-projector??
   /**
    * Removes and gets the first element in a list, or blocks until one is available. An element is popped from the head
    * of the first list that is non-empty, with the given keys being checked in the order that they are given.
@@ -276,18 +280,21 @@ trait Lists {
    *   the value of the popped element. An empty value is returned when no element could be popped and the timeout
    *   expired.
    */
-  final def blPop[K: Schema, V: Schema](key: K, keys: K*)(
+  final def blPop[K: Schema](key: K, keys: K*)(
     timeout: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[(K, V)]] = {
-    val command = RedisCommand(
-      BlPop,
-      Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
-      OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
-    )
-    command.run(((key, keys.toList), timeout))
-  }
+  ): ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, x)] })#lambda] =
+    new ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, x)] })#lambda] {
+      override def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[(K, V)]] = {
+        val command = RedisCommand(
+          BlPop,
+          Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
+          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
+        )
+        command.run(((key, keys.toList), timeout))
+      }
+    }
 
-  // TODO: how to handle F[(A, B)]
+  // TODO kind-projector??
   /**
    * Removes and gets the last element in a list, or block until one is available. An element is popped from the tail of
    * the first list that is non-empty, with the given keys being checked in the order that they are given.
@@ -303,16 +310,19 @@ trait Lists {
    *   the value of the popped element. An empty value is returned when no element could be popped and the timeout
    *   expired.
    */
-  final def brPop[K: Schema, V: Schema](key: K, keys: K*)(
+  final def brPop[K: Schema](key: K, keys: K*)(
     timeout: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[(K, V)]] = {
-    val command = RedisCommand(
-      BrPop,
-      Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
-      OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
-    )
-    command.run(((key, keys.toList), timeout))
-  }
+  ): ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, x)] })#lambda] =
+    new ResultSchemaBuilder1[({ type lambda[+x] = Option[(K, x)] })#lambda] {
+      override def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[(K, V)]] = {
+        val command = RedisCommand(
+          BrPop,
+          Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
+          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
+        )
+        command.run(((key, keys.toList), timeout))
+      }
+    }
 
   /**
    * Inserts element in the list stored at key either before or after the reference value pivot.
@@ -363,8 +373,8 @@ trait Lists {
     destination: D,
     sourceSide: Side,
     destinationSide: Side
-  ): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  ): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] = {
         val command = RedisCommand(
           LMove,
@@ -400,8 +410,8 @@ trait Lists {
     sourceSide: Side,
     destinationSide: Side,
     timeout: Duration
-  ): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  ): ResultSchemaBuilder1[Option] =
+    new ResultSchemaBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] = {
         val command = RedisCommand(
           BlMove,

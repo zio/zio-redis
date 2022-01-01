@@ -55,6 +55,10 @@ trait Streams {
 
   type NoAck = NoAck.type
 
+  type StreamEntries[I, K, V] = Chunk[StreamEntry[I, K, V]]
+
+  type StreamChunks[N, I, K, V] = Chunk[StreamChunk[N, I, K, V]]
+
   sealed case class StreamMaxLen(approximate: Boolean, count: Long)
 
   sealed case class StreamEntry[I, K, V](id: I, fields: Map[K, V])

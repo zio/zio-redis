@@ -3,17 +3,24 @@ package zio.redis
 import zio.ZIO
 import zio.schema.Schema
 
-trait ResultBuilder[+F[+_]] {
-  import ResultBuilder.NeedsReturnType
+sealed trait ResultBuilder
 
-  def returning[R: Schema]: ZIO[RedisExecutor, RedisError, F[R]]
-
-  final def map(f: Nothing => Any)(implicit nrt: NeedsReturnType): ZIO[Any, Nothing, Nothing] = ???
-
-  final def flatMap(f: Nothing => Any)(implicit nrt: NeedsReturnType): ZIO[Any, Nothing, Nothing] = ???
+trait ResultSchemaBuilder extends ResultBuilder {
+  def returning[R: Schema]: ZIO[RedisExecutor, RedisError, R]
 }
 
-object ResultBuilder {
-  @annotation.implicitNotFound("Use `returning[A]` to specify method's return type")
-  final abstract class NeedsReturnType
+trait ResultSchemaBuilder1[F[_]] extends ResultBuilder {
+  def returning[R: Schema]: ZIO[RedisExecutor, RedisError, F[R]]
+}
+
+trait ResultSchemaBuilder2[F[_, _]] extends ResultBuilder {
+  def returning[R1: Schema, R2: Schema]: ZIO[RedisExecutor, RedisError, F[R1, R2]]
+}
+
+trait ResultSchemaBuilder3[F[_, _, _]] extends ResultBuilder {
+  def returning[R1: Schema, R2: Schema, R3: Schema]: ZIO[RedisExecutor, RedisError, F[R1, R2, R3]]
+}
+
+trait ResultOutputBuilder extends ResultBuilder {
+  def returning[R: Output]: ZIO[RedisExecutor, RedisError, R]
 }

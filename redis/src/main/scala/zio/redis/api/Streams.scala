@@ -10,6 +10,7 @@ import zio.{Chunk, ZIO}
 trait Streams {
   import Streams._
   import XGroupCommand._
+  import StreamInfoWithFull._
 
   /**
    * Removes one or multiple messages from the pending entries list (PEL) of a stream consumer group.
@@ -58,8 +59,8 @@ trait Streams {
     id: I,
     pair: (K, V),
     pairs: (K, V)*
-  ): ResultBuilder[Id] =
-    new ResultBuilder[Id] {
+  ): ResultSchemaBuilder1[Id] =
+    new ResultSchemaBuilder1[Id] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Id[R]] = {
         val command = RedisCommand(
           XAdd,
@@ -75,7 +76,6 @@ trait Streams {
       }
     }
 
-  // TODO: how to handle F[_, _, _]
   /**
    * An introspection command used in order to retrieve different information about the stream.
    *
@@ -84,14 +84,15 @@ trait Streams {
    * @return
    *   General information about the stream stored at the specified key.
    */
-  final def xInfoStream[SK: Schema, RI: Schema, RK: Schema, RV: Schema](
+  final def xInfoStream[SK: Schema](
     key: SK
-  ): ZIO[RedisExecutor, RedisError, StreamInfo[RI, RK, RV]] = {
-    val command = RedisCommand(XInfoStream, ArbitraryInput[SK](), StreamInfoOutput[RI, RK, RV]())
-    command.run(key)
+  ): ResultSchemaBuilder3[StreamInfo] = new ResultSchemaBuilder3[StreamInfo] {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(XInfoStream, ArbitraryInput[SK](), StreamInfoOutput[RI, RK, RV]())
+      command.run(key)
+    }
   }
 
-  // TODO: how to handle F[_, _, _]
   /**
    * Returns the entire state of the stream, including entries, groups, consumers and PELs.
    *
@@ -100,18 +101,19 @@ trait Streams {
    * @return
    *   General information about the stream stored at the specified key.
    */
-  final def xInfoStreamFull[SK: Schema, RI: Schema, RK: Schema, RV: Schema](
+  final def xInfoStreamFull[SK: Schema](
     key: SK
-  ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo[RI, RK, RV]] = {
-    val command = RedisCommand(
-      XInfoStream,
-      Tuple2(ArbitraryInput[SK](), ArbitraryInput[String]()),
-      StreamInfoFullOutput[RI, RK, RV]()
-    )
-    command.run((key, "FULL"))
+  ): ResultSchemaBuilder3[FullStreamInfo] = new ResultSchemaBuilder3[FullStreamInfo] {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, FullStreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(
+        XInfoStream,
+        Tuple2(ArbitraryInput[SK](), ArbitraryInput[String]()),
+        StreamInfoFullOutput[RI, RK, RV]()
+      )
+      command.run((key, "FULL"))
+    }
   }
 
-  // TODO: how to handle F[_, _, _]
   /**
    * Returns the entire state of the stream, including entries, groups, consumers and PELs.
    *
@@ -122,16 +124,18 @@ trait Streams {
    * @return
    *   General information about the stream stored at the specified key.
    */
-  final def xInfoStreamFull[SK: Schema, RI: Schema, RK: Schema, RV: Schema](
+  final def xInfoStreamFull[SK: Schema](
     key: SK,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, StreamInfoWithFull.FullStreamInfo[RI, RK, RV]] = {
-    val command = RedisCommand(
-      XInfoStream,
-      Tuple3(ArbitraryInput[SK](), ArbitraryInput[String](), CountInput),
-      StreamInfoFullOutput[RI, RK, RV]()
-    )
-    command.run((key, "FULL", Count(count)))
+  ): ResultSchemaBuilder3[FullStreamInfo] = new ResultSchemaBuilder3[FullStreamInfo] {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, FullStreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(
+        XInfoStream,
+        Tuple3(ArbitraryInput[SK](), ArbitraryInput[String](), CountInput),
+        StreamInfoFullOutput[RI, RK, RV]()
+      )
+      command.run((key, "FULL", Count(count)))
+    }
   }
 
   /**
@@ -192,8 +196,8 @@ trait Streams {
   )(
     pair: (K, V),
     pairs: (K, V)*
-  ): ResultBuilder[Id] =
-    new ResultBuilder[Id] {
+  ): ResultSchemaBuilder1[Id] =
+    new ResultSchemaBuilder1[Id] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Id[R]] = {
         val command = RedisCommand(
           XAdd,
@@ -209,7 +213,7 @@ trait Streams {
       }
     }
 
-  // TODO: how to handle this output
+  // TODO: king-projector???
   /**
    * Changes the ownership of a pending message.
    *
@@ -237,7 +241,7 @@ trait Streams {
    * @return
    *   messages successfully claimed.
    */
-  final def xClaim[SK: Schema, SG: Schema, SC: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xClaim[SK: Schema, SG: Schema, SC: Schema, I: Schema](
     key: SK,
     group: SG,
     consumer: SC,
@@ -246,25 +250,28 @@ trait Streams {
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
     force: Boolean = false
-  )(id: I, ids: I*): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
-    val command = RedisCommand(
-      XClaim,
-      Tuple9(
-        ArbitraryInput[SK](),
-        ArbitraryInput[SG](),
-        ArbitraryInput[SC](),
-        DurationMillisecondsInput,
-        NonEmptyList(ArbitraryInput[I]()),
-        OptionalInput(IdleInput),
-        OptionalInput(TimeInput),
-        OptionalInput(RetryCountInput),
-        OptionalInput(WithForceInput)
-      ),
-      StreamEntriesOutput[I, RK, RV]()
-    )
-    val forceOpt = if (force) Some(WithForce) else None
-    command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt))
-  }
+  )(id: I, ids: I*): ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamEntries[I, RK, RV]] = {
+        val command = RedisCommand(
+          XClaim,
+          Tuple9(
+            ArbitraryInput[SK](),
+            ArbitraryInput[SG](),
+            ArbitraryInput[SC](),
+            DurationMillisecondsInput,
+            NonEmptyList(ArbitraryInput[I]()),
+            OptionalInput(IdleInput),
+            OptionalInput(TimeInput),
+            OptionalInput(RetryCountInput),
+            OptionalInput(WithForceInput)
+          ),
+          StreamEntriesOutput[I, RK, RV]()
+        )
+        val forceOpt = if (force) Some(WithForce) else None
+        command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt))
+      }
+    }
 
   /**
    * Changes the ownership of a pending message.
@@ -302,8 +309,8 @@ trait Streams {
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
     force: Boolean = false
-  )(id: I, ids: I*): ResultBuilder[Chunk] =
-    new ResultBuilder[Chunk] {
+  )(id: I, ids: I*): ResultSchemaBuilder1[Chunk] =
+    new ResultSchemaBuilder1[Chunk] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Chunk[R]] = {
         val command = RedisCommand(
           XClaim,
@@ -516,7 +523,7 @@ trait Streams {
     command.run((key, group, idle, start, end, count, consumer))
   }
 
-  // TODO: how to handle this output
+  // TODO: kind-projector???
   /**
    * Fetches the stream entries matching a given range of IDs.
    *
@@ -529,20 +536,23 @@ trait Streams {
    * @return
    *   the complete entries with IDs matching the specified range.
    */
-  final def xRange[SK: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xRange[SK: Schema, I: Schema](
     key: SK,
     start: I,
     end: I
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
-    val command = RedisCommand(
-      XRange,
-      Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamEntriesOutput[I, RK, RV]()
-    )
-    command.run((key, start, end, None))
-  }
+  ): ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamEntries[I, RK, RV]] = {
+        val command = RedisCommand(
+          XRange,
+          Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
+          StreamEntriesOutput[I, RK, RV]()
+        )
+        command.run((key, start, end, None))
+      }
+    }
 
-  // TODO: how to handle this output
+  // TODO: kind-projector?
   /**
    * Fetches the stream entries matching a given range of IDs.
    *
@@ -557,21 +567,24 @@ trait Streams {
    * @return
    *   the complete entries with IDs matching the specified range.
    */
-  final def xRange[SK: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xRange[SK: Schema, I: Schema](
     key: SK,
     start: I,
     end: I,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
-    val command = RedisCommand(
-      XRange,
-      Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamEntriesOutput[I, RK, RV]()
-    )
-    command.run((key, start, end, Some(Count(count))))
-  }
+  ): ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamEntries[I, RK, RV]] = {
+        val command = RedisCommand(
+          XRange,
+          Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
+          StreamEntriesOutput[I, RK, RV]()
+        )
+        command.run((key, start, end, Some(Count(count))))
+      }
+    }
 
-  // TODO: how to handle this output
+  // TODO: kind-projector?
   /**
    * Read data from one or multiple streams.
    *
@@ -586,20 +599,23 @@ trait Streams {
    * @return
    *   complete entries with an ID greater than the last received ID per stream.
    */
-  final def xRead[SK: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xRead[SK: Schema, I: Schema](
     count: Option[Long] = None,
     block: Option[Duration] = None
   )(
     stream: (SK, I),
     streams: (SK, I)*
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamChunk[SK, I, RK, RV]]] = {
-    val command = RedisCommand(
-      XRead,
-      Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput[SK, I]()),
-      ChunkOutput(StreamOutput[SK, I, RK, RV]())
-    )
-    command.run((count.map(Count), block, (stream, Chunk.fromIterable(streams))))
-  }
+  ): ResultSchemaBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamChunks[SK, I, RK, RV]] = {
+        val command = RedisCommand(
+          XRead,
+          Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput[SK, I]()),
+          ChunkOutput(StreamOutput[SK, I, RK, RV]())
+        )
+        command.run((count.map(Count), block, (stream, Chunk.fromIterable(streams))))
+      }
+    }
 
   // TODO: how to handle this output
   /**
@@ -622,7 +638,7 @@ trait Streams {
    * @return
    *   complete entries with an ID greater than the last received ID per stream.
    */
-  final def xReadGroup[SG: Schema, SC: Schema, SK: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xReadGroup[SG: Schema, SC: Schema, SK: Schema, I: Schema](
     group: SG,
     consumer: SC,
     count: Option[Long] = None,
@@ -631,24 +647,27 @@ trait Streams {
   )(
     stream: (SK, I),
     streams: (SK, I)*
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamChunk[SK, I, RK, RV]]] = {
-    val command = RedisCommand(
-      XReadGroup,
-      Tuple6(
-        ArbitraryInput[SG](),
-        ArbitraryInput[SC](),
-        OptionalInput(CountInput),
-        OptionalInput(BlockInput),
-        OptionalInput(NoAckInput),
-        StreamsInput[SK, I]()
-      ),
-      ChunkOutput(StreamOutput[SK, I, RK, RV]())
-    )
-    val noAckOpt = if (noAck) Some(NoAck) else None
-    command.run((group, consumer, count.map(Count), block, noAckOpt, (stream, Chunk.fromIterable(streams))))
-  }
+  ): ResultSchemaBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamChunks[SK, I, RK, RV]] = {
+        val command = RedisCommand(
+          XReadGroup,
+          Tuple6(
+            ArbitraryInput[SG](),
+            ArbitraryInput[SC](),
+            OptionalInput(CountInput),
+            OptionalInput(BlockInput),
+            OptionalInput(NoAckInput),
+            StreamsInput[SK, I]()
+          ),
+          ChunkOutput(StreamOutput[SK, I, RK, RV]())
+        )
+        val noAckOpt = if (noAck) Some(NoAck) else None
+        command.run((group, consumer, count.map(Count), block, noAckOpt, (stream, Chunk.fromIterable(streams))))
+      }
+    }
 
-  // TODO: how to handle this output
+  // TODO: king-projector??
   /**
    * Fetches the stream entries matching a given range of IDs in the reverse order.
    *
@@ -661,20 +680,23 @@ trait Streams {
    * @return
    *   the complete entries with IDs matching the specified range in the reverse order.
    */
-  final def xRevRange[SK: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xRevRange[SK: Schema, I: Schema](
     key: SK,
     end: I,
     start: I
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
-    val command = RedisCommand(
-      XRevRange,
-      Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamEntriesOutput[I, RK, RV]()
-    )
-    command.run((key, end, start, None))
-  }
+  ): ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamEntries[I, RK, RV]] = {
+        val command = RedisCommand(
+          XRevRange,
+          Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
+          StreamEntriesOutput[I, RK, RV]()
+        )
+        command.run((key, end, start, None))
+      }
+    }
 
-  // TODO: how to handle this output
+  // TODO: kind-projector??
   /**
    * Fetches the stream entries matching a given range of IDs in the reverse order.
    *
@@ -689,19 +711,22 @@ trait Streams {
    * @return
    *   the complete entries with IDs matching the specified range in the reverse order.
    */
-  final def xRevRange[SK: Schema, I: Schema, RK: Schema, RV: Schema](
+  final def xRevRange[SK: Schema, I: Schema](
     key: SK,
     end: I,
     start: I,
     count: Long
-  ): ZIO[RedisExecutor, RedisError, Chunk[StreamEntry[I, RK, RV]]] = {
-    val command = RedisCommand(
-      XRevRange,
-      Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
-      StreamEntriesOutput[I, RK, RV]()
-    )
-    command.run((key, end, start, Some(Count(count))))
-  }
+  ): ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
+    new ResultSchemaBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
+      override def returning[RK: Schema, RV: Schema]: ZIO[RedisExecutor, RedisError, StreamEntries[I, RK, RV]] = {
+        val command = RedisCommand(
+          XRevRange,
+          Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
+          StreamEntriesOutput[I, RK, RV]()
+        )
+        command.run((key, end, start, Some(Count(count))))
+      }
+    }
 
   /**
    * Trims the stream to a given number of items, evicting older items (items with lower IDs) if needed.

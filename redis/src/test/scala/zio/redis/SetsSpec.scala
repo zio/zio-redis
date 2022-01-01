@@ -747,7 +747,7 @@ trait SetsSpec extends BaseSpec {
         testM("empty set") {
           for {
             key              <- uuid
-            scan             <- sScan[String, String](key, 0L)
+            scan             <- sScan(key, 0L).returning[String]
             (cursor, members) = scan
           } yield assert(cursor)(isZero) &&
             assert(members)(isEmpty)
@@ -773,7 +773,7 @@ trait SetsSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- set(key, value)
-            scan  <- sScan[String, String](key, 0L).either
+            scan  <- sScan(key, 0L).returning[String].either
           } yield assert(scan)(isLeft(isSubtype[WrongType](anything)))
         }
       )
@@ -786,7 +786,7 @@ trait SetsSpec extends BaseSpec {
   ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
-        sScan[String, String](key, cursor, pattern, count).map {
+        sScan(key, cursor, pattern, count).returning[String].map {
           case (nc, nm) if nc == 0 => (nm, None)
           case (nc, nm)            => (nm, Some(nc))
         }

@@ -183,11 +183,11 @@ trait ListSpec extends BaseSpec {
             dest  <- uuid
             _     <- rPush(key, "one", "two", "three")
             _     <- rPush(dest, "four")
-            fiber <- brPopLPush[String, String, String](key, dest, 1.seconds).fork
+            fiber <- brPopLPush(key, dest, 1.seconds).returning[String].fork
             _     <- TestClock.adjust(1.second)
             _     <- fiber.join
-            r     <- lRange[String, String](key, 0 to -1)
-            l     <- lRange[String, String](dest, 0 to -1)
+            r     <- lRange(key, 0 to -1).returning[String]
+            l     <- lRange(dest, 0 to -1).returning[String]
           } yield assert(r)(equalTo(Chunk("one", "two"))) && assert(l)(equalTo(Chunk("three", "four")))
         },
         testM("brPopLPush block for 1 second when source does not exist") {
@@ -196,7 +196,7 @@ trait ListSpec extends BaseSpec {
             dest    <- uuid
             _       <- rPush(dest, "four")
             st      <- currentTime(TimeUnit.SECONDS)
-            fiber   <- brPopLPush[String, String, String](key, dest, 1.seconds).fork
+            fiber   <- brPopLPush(key, dest, 1.seconds).returning[String].fork
             _       <- TestClock.adjust(1.second)
             s       <- fiber.join
             endTime <- currentTime(TimeUnit.SECONDS)
@@ -405,7 +405,7 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            fiber      <- blPop[String, String](key)(1.second).fork
+            fiber      <- blPop(key)(1.second).returning[String].fork
             _          <- TestClock.adjust(1.second)
             popped     <- fiber.join.some
             (src, elem) = popped
@@ -416,7 +416,7 @@ trait ListSpec extends BaseSpec {
             empty      <- uuid
             nonEmpty   <- uuid
             _          <- lPush(nonEmpty, "a", "b", "c")
-            fiber      <- blPop[String, String](empty, nonEmpty)(1.second).fork
+            fiber      <- blPop(empty, nonEmpty)(1.second).returning[String].fork
             _          <- TestClock.adjust(1.second)
             popped     <- fiber.join.some
             (src, elem) = popped
@@ -425,7 +425,7 @@ trait ListSpec extends BaseSpec {
         testM("from one empty list") {
           for {
             key    <- uuid
-            fiber  <- blPop[String, String](key)(1.second).fork
+            fiber  <- blPop(key)(1.second).returning[String].fork
             _      <- TestClock.adjust(1.second)
             popped <- fiber.join
           } yield assert(popped)(isNone)
@@ -434,7 +434,7 @@ trait ListSpec extends BaseSpec {
           for {
             first  <- uuid
             second <- uuid
-            fiber  <- blPop[String, String](first, second)(1.second).fork
+            fiber  <- blPop(first, second)(1.second).returning[String].fork
             _      <- TestClock.adjust(1.second)
             popped <- fiber.join
           } yield assert(popped)(isNone)
@@ -443,7 +443,7 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- blPop[String, String](key)(0.seconds).some
+            popped     <- blPop(key)(0.seconds).returning[String].some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) && assert(elem)(equalTo("c"))
         },
@@ -452,7 +452,7 @@ trait ListSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            popped <- blPop[String, String](key)(1.second).either
+            popped <- blPop(key)(1.second).returning[String].either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -461,7 +461,7 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            fiber      <- brPop[String, String](key)(1.second).fork
+            fiber      <- brPop(key)(1.second).returning[String].fork
             _          <- TestClock.adjust(1.second)
             popped     <- fiber.join.some
             (src, elem) = popped
@@ -472,14 +472,14 @@ trait ListSpec extends BaseSpec {
             empty      <- uuid
             nonEmpty   <- uuid
             _          <- lPush(nonEmpty, "a", "b", "c")
-            popped     <- brPop[String, String](empty, nonEmpty)(1.second).some
+            popped     <- brPop(empty, nonEmpty)(1.second).returning[String].some
             (src, elem) = popped
           } yield assert(src)(equalTo(nonEmpty)) && assert(elem)(equalTo("a"))
         },
         testM("from one empty list") {
           for {
             key    <- uuid
-            fiber  <- brPop[String, String](key)(1.second).fork
+            fiber  <- brPop(key)(1.second).returning[String].fork
             _      <- TestClock.adjust(1.second)
             popped <- fiber.join
           } yield assert(popped)(isNone)
@@ -488,7 +488,7 @@ trait ListSpec extends BaseSpec {
           for {
             first  <- uuid
             second <- uuid
-            fiber  <- brPop[String, String](first, second)(1.second).fork
+            fiber  <- brPop(first, second)(1.second).returning[String].fork
             _      <- TestClock.adjust(1.second)
             popped <- fiber.join
           } yield assert(popped)(isNone)
@@ -497,7 +497,7 @@ trait ListSpec extends BaseSpec {
           for {
             key        <- uuid
             _          <- lPush(key, "a", "b", "c")
-            popped     <- brPop[String, String](key)(0.seconds).some
+            popped     <- brPop(key)(0.seconds).returning[String].some
             (src, elem) = popped
           } yield assert(src)(equalTo(key)) && assert(elem)(equalTo("a"))
         },
@@ -506,7 +506,7 @@ trait ListSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- set(key, value)
-            popped <- brPop[String, String](key)(1.second).either
+            popped <- brPop(key)(1.second).returning[String].either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -754,7 +754,7 @@ trait ListSpec extends BaseSpec {
             destination <- uuid
             _           <- rPush(destination, "d")
             startTime   <- currentTime(TimeUnit.SECONDS)
-            fiber       <- blMove[String, String, String](source, destination, Side.Left, Side.Right, 1.second).fork
+            fiber       <- blMove(source, destination, Side.Left, Side.Right, 1.second).returning[String].fork
             _           <- TestClock.adjust(1.second)
             moved       <- fiber.join
             endTime     <- currentTime(TimeUnit.SECONDS)
