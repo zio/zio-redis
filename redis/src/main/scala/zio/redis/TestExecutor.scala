@@ -155,7 +155,7 @@ private[redis] final class TestExecutor private (
                     case string if string == ClientType.Replica.stringify => info.flags.contains(ClientFlag.Replica)
                     case string if string == ClientType.Normal.stringify =>
                       !info.flags.contains(ClientFlag.PubSub) &&
-                        !info.flags.contains(ClientFlag.IsMaster) && !info.flags.contains(ClientFlag.Replica)
+                      !info.flags.contains(ClientFlag.IsMaster) && !info.flags.contains(ClientFlag.Replica)
                     case _ => false
                   }
                 )
