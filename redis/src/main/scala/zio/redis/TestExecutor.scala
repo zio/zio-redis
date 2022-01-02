@@ -1082,6 +1082,7 @@ private[redis] final class TestExecutor private (
 
       case api.Strings.Get =>
         val key = input.head.asString
+
         orWrongType(isString(key))(
           strings.get(key).map(_.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString))
         )
@@ -1089,12 +1090,12 @@ private[redis] final class TestExecutor private (
       case api.Strings.SetEx =>
         val stringInput = input.map(_.asString)
 
-        val keyOption = stringInput.headOption
+        val keyOption     = stringInput.headOption
         val secondsOption = stringInput.lift(1)
-        val valueOption = stringInput.lift(2)
+        val valueOption   = stringInput.lift(2)
 
         orMissingParameter3(keyOption, secondsOption, valueOption) { (key, seconds, value) =>
-          seconds.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
+          Try(seconds.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
             if (longSeconds > 0) {
               val unixtime = now.plusSeconds(longSeconds)
 
@@ -1106,12 +1107,12 @@ private[redis] final class TestExecutor private (
       case api.Strings.PSetEx =>
         val stringInput = input.map(_.asString)
 
-        val keyOption = stringInput.headOption
+        val keyOption    = stringInput.headOption
         val millisOption = stringInput.lift(1)
-        val valueOption = stringInput.lift(2)
+        val valueOption  = stringInput.lift(2)
 
         orMissingParameter3(keyOption, millisOption, valueOption) { (key, millis, value) =>
-          millis.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
+          Try(millis.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
             if (longMillis > 0) {
               val unixtime = now.plusMillis(longMillis)
 
@@ -2922,15 +2923,18 @@ private[redis] final class TestExecutor private (
         val stringInput = input.map(_.asString)
 
         val keyOption = stringInput.headOption
-        val startEnd  = stringInput.lift(1).zip(stringInput.lift(2))
+        val startEnd = for {
+          start <- stringInput.lift(1)
+          end   <- stringInput.lift(2)
+        } yield (start, end)
 
         orMissingParameter(keyOption) { key =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "").map { string =>
               val startEndString = startEnd.getOrElse(("0", (string.length - 1).toString))
 
-              startEndString._1.toIntOption.fold[RespValue](Replies.Error) { start =>
-                startEndString._2.toIntOption.fold[RespValue](Replies.Error) { end =>
+              Try(startEndString._1.toInt).toOption.fold[RespValue](Replies.Error) { start =>
+                Try(startEndString._2.toInt).toOption.fold[RespValue](Replies.Error) { end =>
                   val newStart = if (start < 0) string.length + start else start
                   val newEnd   = if (end < 0) string.length + end else end
 
@@ -2993,8 +2997,8 @@ private[redis] final class TestExecutor private (
           orWrongType(isString(key))(
             strings.getOrElse(key, "").map { string =>
               Some(bit).filter(bit => bit == "0" || bit == "1").fold[RespValue](Replies.Error) { bit =>
-                start.getOrElse("0").toIntOption.fold[RespValue](Replies.Error) { start =>
-                  end.getOrElse(string.length.toString).toIntOption.fold[RespValue](Replies.Error) { end =>
+                Try(start.getOrElse("0").toInt).toOption.fold[RespValue](Replies.Error) { start =>
+                  Try(end.getOrElse(string.length.toString).toInt).toOption.fold[RespValue](Replies.Error) { end =>
                     val newStart = if (start < 0) string.length + start else start
                     val newEnd   = (if (end < 0) string.length + end else end) + 1
 
@@ -3023,7 +3027,7 @@ private[redis] final class TestExecutor private (
         orMissingParameter(keyOption) { key =>
           orWrongType(isString(key))(
             strings.get(key).flatMap { stringOption =>
-              stringOption.getOrElse("0").toLongOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
+              Try(stringOption.getOrElse("0").toLong).toOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
                 if (num > Long.MinValue) {
                   val result = num - 1
 
@@ -3041,7 +3045,7 @@ private[redis] final class TestExecutor private (
         orMissingParameter2(keyOption, decrOption) { (key, decr) =>
           orWrongType(isString(key))(
             strings.get(key).flatMap { stringOption =>
-              stringOption.getOrElse("0").toLongOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
+              Try(stringOption.getOrElse("0").toLong).toOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
                 if (decr >= 0 && num >= Long.MinValue + decr || decr < 0 && num <= Long.MaxValue + decr) {
                   val result = num - decr
 
@@ -3059,7 +3063,7 @@ private[redis] final class TestExecutor private (
         orMissingParameter2(keyOption, offsetOption) { (key, offset) =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "").map { string =>
-              offset.toIntOption.filter(_ >= 0).fold[RespValue](Replies.Error) { offset =>
+              Try(offset.toInt).toOption.filter(_ >= 0).fold[RespValue](Replies.Error) { offset =>
                 RespValue
                   .Integer(string.getBytes.lift(offset / 8).fold(0L)(byte => (byte >> (7 - offset % 8) & 1).toLong))
               }
@@ -3075,12 +3079,14 @@ private[redis] final class TestExecutor private (
         orMissingParameter3(keyOption, startOption, endOption) { (key, start, end) =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "").map { string =>
-              start.toIntOption.zip(end.toIntOption).fold[RespValue](Replies.Error) { range =>
-                val newStart = if (range._1 < 0) string.length + range._1 else range._1
-                val newEnd   = (if (range._2 < 0) string.length + range._2 else range._2) + 1
+              Try(start.toInt).toOption
+                .flatMap(a => Try(end.toInt).toOption.map(b => (a, b)))
+                .fold[RespValue](Replies.Error) { range =>
+                  val newStart = if (range._1 < 0) string.length + range._1 else range._1
+                  val newEnd   = (if (range._2 < 0) string.length + range._2 else range._2) + 1
 
-                RespValue.bulkString(string.slice(newStart, newEnd))
-              }
+                  RespValue.bulkString(string.slice(newStart, newEnd))
+                }
             }
           )
         }
@@ -3104,7 +3110,7 @@ private[redis] final class TestExecutor private (
         orMissingParameter(keyOption) { key =>
           orWrongType(isString(key))(
             strings.get(key).flatMap { stringOption =>
-              stringOption.getOrElse("0").toLongOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
+              Try(stringOption.getOrElse("0").toLong).toOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
                 if (num < Long.MaxValue) {
                   val result = num + 1
 
@@ -3122,8 +3128,8 @@ private[redis] final class TestExecutor private (
         orMissingParameter2(keyOption, incrOption) { (key, incr) =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "0").flatMap { string =>
-              string.toLongOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
-                incr.toLongOption.fold(STM.succeed(Replies.Error: RespValue)) { incr =>
+              Try(string.toLong).toOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
+                Try(incr.toLong).toOption.fold(STM.succeed(Replies.Error: RespValue)) { incr =>
                   if (incr >= 0 && num <= Long.MaxValue - incr || incr < 0 && num >= Long.MinValue - incr) {
                     val result = num + incr
 
@@ -3142,8 +3148,8 @@ private[redis] final class TestExecutor private (
         orMissingParameter2(keyOption, incrOption) { (key, incr) =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "0").flatMap { string =>
-              string.toDoubleOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
-                incr.toDoubleOption.fold(STM.succeed(Replies.Error: RespValue)) { incr =>
+              Try(string.toDouble).toOption.fold(STM.succeed(Replies.Error: RespValue)) { num =>
+                Try(incr.toDouble).toOption.fold(STM.succeed(Replies.Error: RespValue)) { incr =>
                   if (incr >= 0 && num <= Double.MaxValue - incr || incr < 0 && num >= Double.MinValue - incr) {
                     val result = (num + incr).toString
 
@@ -3221,7 +3227,7 @@ private[redis] final class TestExecutor private (
                 val secondsOption = stringInput.lift(stringInput.indexOf("EX") + 1)
 
                 orMissingParameter(secondsOption) { seconds =>
-                  seconds.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
+                  Try(seconds.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
                     if (longSeconds > 0) {
                       val unixtime = now.plusSeconds(longSeconds)
 
@@ -3238,7 +3244,7 @@ private[redis] final class TestExecutor private (
                 val millisOption = stringInput.lift(stringInput.indexOf("PX") + 1)
 
                 orMissingParameter(millisOption) { millis =>
-                  millis.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
+                  Try(millis.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
                     if (longMillis > 0) {
                       val unixtime = now.plusMillis(longMillis)
 
@@ -3255,8 +3261,8 @@ private[redis] final class TestExecutor private (
                 val timestampOption = stringInput.lift(stringInput.indexOf("EXAT") + 1)
 
                 orMissingParameter(timestampOption) { timestamp =>
-                  timestamp.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longTimestamp =>
-                    if (longTimestamp > 0) {
+                  Try(timestamp.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longTimestamp =>
+                    if (longTimestamp >= 0) {
                       val unixtime = Instant.ofEpochSecond(longTimestamp)
 
                       if (get)
@@ -3272,17 +3278,18 @@ private[redis] final class TestExecutor private (
                 val milliTimestampOption = stringInput.lift(stringInput.indexOf("PXAT") + 1)
 
                 orMissingParameter(milliTimestampOption) { milliTimestamp =>
-                  milliTimestamp.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longMilliTimestamp =>
-                    if (longMilliTimestamp > 0) {
-                      val unixtime = Instant.ofEpochMilli(longMilliTimestamp)
+                  Try(milliTimestamp.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) {
+                    longMilliTimestamp =>
+                      if (longMilliTimestamp >= 0) {
+                        val unixtime = Instant.ofEpochMilli(longMilliTimestamp)
 
-                      if (get)
-                        orWrongType(isString(key))(
-                          strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
-                            <* putString(key, value, Some(unixtime))
-                        )
-                      else STM.succeed(Replies.Ok) <* putString(key, value, Some(unixtime))
-                    } else STM.succeed(Replies.Error)
+                        if (get)
+                          orWrongType(isString(key))(
+                            strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                              <* putString(key, value, Some(unixtime))
+                          )
+                        else STM.succeed(Replies.Ok) <* putString(key, value, Some(unixtime))
+                      } else STM.succeed(Replies.Error)
                   }
                 }
               case Some("KEEPTTL") =>
@@ -3306,9 +3313,8 @@ private[redis] final class TestExecutor private (
               case _ =>
                 STM.succeed(Replies.Error)
             },
-            STM.succeed(Replies.Error)
+            STM.succeed(RespValue.NullBulkString)
           )
-          putString(key, value).as(Replies.Ok)
         }
 
       case api.Strings.SetBit =>
@@ -3319,8 +3325,8 @@ private[redis] final class TestExecutor private (
         orMissingParameter3(keyOption, offsetOption, valueOption) { (key, offset, value) =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "").flatMap { string =>
-              offset.toIntOption.filter(_ >= 0).fold[USTM[RespValue]](STM.succeed(Replies.Error)) { offset =>
-                value.toIntOption
+              Try(offset.toInt).toOption.filter(_ >= 0).fold[USTM[RespValue]](STM.succeed(Replies.Error)) { offset =>
+                Try(value.toInt).toOption
                   .filter(num => num == 0 || num == 1)
                   .fold[USTM[RespValue]](STM.succeed(Replies.Error)) { value =>
                     val newString = string + "\u0000" * (offset / 8 + 1 - string.length)
@@ -3356,7 +3362,7 @@ private[redis] final class TestExecutor private (
         orMissingParameter3(keyOption, offsetOption, valueOption) { (key, stringOffset, value) =>
           orWrongType(isString(key))(
             strings.getOrElse(key, "").flatMap { string =>
-              stringOffset.toIntOption.filter(_ >= 0).fold(STM.succeed(Replies.Error: RespValue)) { offset =>
+              Try(stringOffset.toInt).toOption.filter(_ >= 0).fold(STM.succeed(Replies.Error: RespValue)) { offset =>
                 val result = (if (offset > string.length) string + "\u0000" * (offset - string.length)
                               else string.substring(0, offset)) + value
 
@@ -3382,8 +3388,9 @@ private[redis] final class TestExecutor private (
         val bOption           = stringInput.lift(2)
         val len               = stringInput.contains("LEN")
         val idx               = stringInput.contains("IDX")
-        val minMatchLen       = stringInput.lift(stringInput.indexOf("MINMATCHLEN") + 1).flatMap(_.toLongOption)
-        val withMatchLen      = stringInput.contains("WITHMATCHLEN")
+        val minMatchLen =
+          stringInput.lift(stringInput.indexOf("MINMATCHLEN") + 1).flatMap(string => Try(string.toLong).toOption)
+        val withMatchLen = stringInput.contains("WITHMATCHLEN")
 
         type Match = (((Long, Long), (Long, Long)), Long)
 
@@ -3495,7 +3502,7 @@ private[redis] final class TestExecutor private (
 
             orMissingParameter2(keyOption, secondsOption) { (key, seconds) =>
               orWrongType(isString(key))(
-                seconds.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
+                Try(seconds.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
                   if (longSeconds > 0) {
                     val unixtime = now.plusSeconds(longSeconds)
 
@@ -3514,7 +3521,7 @@ private[redis] final class TestExecutor private (
 
             orMissingParameter2(keyOption, millisOption) { (key, millis) =>
               orWrongType(isString(key))(
-                millis.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
+                Try(millis.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
                   if (longMillis > 0) {
                     val unixtime = now.plusMillis(longMillis)
 
@@ -3533,8 +3540,8 @@ private[redis] final class TestExecutor private (
 
             orMissingParameter2(keyOption, timestampOption) { (key, timestamp) =>
               orWrongType(isString(key))(
-                timestamp.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longTimestamp =>
-                  if (longTimestamp > 0) {
+                Try(timestamp.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longTimestamp =>
+                  if (longTimestamp >= 0) {
                     val unixtime = Instant.ofEpochSecond(longTimestamp)
 
                     keys
@@ -3543,7 +3550,7 @@ private[redis] final class TestExecutor private (
                       strings
                         .get(key)
                         .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
-                  } else STM.succeed(Replies.Error)
+                  } else STM.succeed(RespValue.Error("Error:" + longTimestamp))
                 }
               )
             }
@@ -3552,8 +3559,8 @@ private[redis] final class TestExecutor private (
 
             orMissingParameter2(keyOption, milliTimestampOption) { (key, milliTimestamp) =>
               orWrongType(isString(key))(
-                milliTimestamp.toLongOption.fold(STM.succeed[RespValue](Replies.Error)) { longMilliTimestamp =>
-                  if (longMilliTimestamp > 0) {
+                Try(milliTimestamp.toLong).toOption.fold(STM.succeed[RespValue](Replies.Error)) { longMilliTimestamp =>
+                  if (longMilliTimestamp >= 0) {
                     val unixtime = Instant.ofEpochMilli(longMilliTimestamp)
 
                     keys
