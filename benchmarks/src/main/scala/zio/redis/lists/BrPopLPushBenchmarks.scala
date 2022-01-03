@@ -69,6 +69,6 @@ class BrPopLPushBenchmarks extends BenchmarkRuntime {
 
   @Benchmark
   def zio(): Unit = zioUnsafeRun(
-    ZIO.foreach_(items)(_ => brPopLPush[String, String, String](key, key, 1.second))
+    ZIO.foreach_(items)(_ => brPopLPush(key, key, 1.second).returning[String])
   )
 }
