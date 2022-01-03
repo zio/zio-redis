@@ -15,7 +15,7 @@ sealed trait Input[-A] {
   private[redis] def encode(data: A)(implicit codec: Codec): Chunk[RespValue.BulkString]
 
   final def contramap[B](f: B => A): Input[B] = new Input[B] {
-    def encode(data: B): Chunk[BulkString] = self.encode(f(data))
+    def encode(data: B)(implicit codec: Codec): Chunk[BulkString] = self.encode(f(data))
   }
 }
 
@@ -72,7 +72,9 @@ object Input {
   }
 
   case object BitFieldCommandInput extends Input[BitFieldCommand] {
-    def encode(data: BitFieldCommand)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+    def encode(data: BitFieldCommand)(implicit codec: Codec): Chunk[RespValue.BulkString] = {
+      import BitFieldCommand._
+
       data match {
         case BitFieldGet(t, o) => Chunk(encodeString("GET"), encodeString(t.stringify), encodeString(o.toString))
         case BitFieldSet(t, o, v) =>
@@ -81,6 +83,7 @@ object Input {
           Chunk(encodeString("INCRBY"), encodeString(t.stringify), encodeString(o.toString), encodeString(i.toString))
         case bfo: BitFieldOverflow => Chunk(encodeString("OVERFLOW"), encodeString(bfo.stringify))
       }
+    }
   }
 
   case object BitOperationInput extends Input[BitOperation] {
@@ -562,7 +565,7 @@ object Input {
   }
 
   final case class EvalInput[-K, -V](inputK: Input[K], inputV: Input[V]) extends Input[(String, Chunk[K], Chunk[V])] {
-    def encode(data: (String, Chunk[K], Chunk[V])): Chunk[RespValue.BulkString] = {
+    def encode(data: (String, Chunk[K], Chunk[V]))(implicit codec: Codec): Chunk[RespValue.BulkString] = {
       val (lua, keys, args) = data
       val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
       val encodedKeys       = keys.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputK.encode(next))
@@ -572,7 +575,7 @@ object Input {
   }
 
   case object ScriptDebugInput extends Input[DebugMode] {
-    def encode(data: DebugMode): Chunk[RespValue.BulkString] =
+    def encode(data: DebugMode)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeString(data.stringify))
   }
 

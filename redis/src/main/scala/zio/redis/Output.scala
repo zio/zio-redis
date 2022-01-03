@@ -34,6 +34,7 @@ sealed trait Output[+A] {
     new Output[B] {
       protected def tryDecode(respValue: RespValue)(implicit codec: Codec): B = f(self.tryDecode(respValue))
     }
+
 }
 
 object Output {
@@ -41,7 +42,7 @@ object Output {
   import RedisError._
 
   case object RespValueOutput extends Output[RespValue] {
-    protected def tryDecode(respValue: RespValue): RespValue = respValue
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): RespValue = respValue
   }
 
   case object BoolOutput extends Output[Boolean] {

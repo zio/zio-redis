@@ -1,15 +1,15 @@
 package zio.redis
 
-import scala.util.Random
-
 import zio._
+import zio.redis.Input.{LongInput, StringInput}
 import zio.redis.Input.Implicits._
-import zio.redis.Input.{ LongInput, StringInput }
-import zio.redis.Output.{ KeyValueOutput, MultiStringOutput, RespValueOutput }
+import zio.redis.Output._
 import zio.redis.RedisError._
 import zio.redis.ScriptingSpec.CustomInputValue
-import zio.test.Assertion._
 import zio.test._
+import zio.test.Assertion._
+
+import scala.util.Random
 
 trait ScriptingSpec extends BaseSpec {
   val scriptingSpec: Spec[Annotations with RedisExecutor, TestFailure[Any], TestSuccess] =
@@ -25,7 +25,7 @@ trait ScriptingSpec extends BaseSpec {
                 |redis.call('set',KEYS[1],ARGV[1])
                 |return redis.call('exists',KEYS[1])
               """.stripMargin
-            res <- eval(lua, Chunk(key), Chunk(arg))
+            res <- eval(lua, Chunk(key), Chunk(arg)).returning[Boolean]
           } yield assert(res)(equalTo(true))
         },
         testM("take strings return strings") {
@@ -36,7 +36,7 @@ trait ScriptingSpec extends BaseSpec {
             arg1 <- uuid
             arg2 <- uuid
             lua   = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
-            res  <- eval(lua, Chunk(key1, key2), Chunk(arg1, arg2))
+            res  <- eval(lua, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
           } yield assert(res)(equalTo(Chunk(key1, key2, arg1, arg2)))
         },
         testM("put custom input value return custom input value") {
@@ -48,15 +48,16 @@ trait ScriptingSpec extends BaseSpec {
             arg2 <- ZIO.succeedNow(Random.nextLong())
             arg   = CustomInputValue(arg1, arg2)
             lua   = """return {ARGV[1],ARGV[2]}"""
-            res  <- eval[String, CustomInputValue, Map[String, String]](lua, Chunk(key1, key2), Chunk(arg))
+            res  <- eval(lua, Chunk(key1, key2), Chunk(arg)).returning[Map[String, String]]
           } yield assert(res)(equalTo(Map(arg1 -> arg2.toString)))
         },
         testM("return custom data type") {
           import ScriptingSpec.CustomData
-          val lua      = """return {1,2,{3,'Hello World!'}}"""
-          val expected = CustomData(1, 2, (3, "Hello World!"))
+          val lua                     = """return {1,2,{3,'Hello World!'}}"""
+          val expected                = CustomData(1, 2, (3, "Hello World!"))
+          val emptyInput: Chunk[Long] = Chunk.empty
           for {
-            res <- eval[Long, Long, CustomData](lua, Chunk.empty, Chunk.empty)
+            res <- eval(lua, emptyInput, emptyInput).returning[CustomData]
           } yield assert(res)(equalTo(expected))
         },
         testM("throw an error when incorrect script's sent") {
@@ -66,7 +67,7 @@ trait ScriptingSpec extends BaseSpec {
             arg  <- uuid
             lua   = ";"
             error = "Error compiling script (new function): user_script:1: unexpected symbol near ';'"
-            res  <- eval(lua, Chunk(key), Chunk(arg)).either
+            res  <- eval(lua, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         },
         testM("throw an error if couldn't decode resp value") {
@@ -77,7 +78,7 @@ trait ScriptingSpec extends BaseSpec {
             key <- uuid
             arg <- uuid
             lua  = ""
-            res <- eval(lua, Chunk(key), Chunk(arg)).either
+            res <- eval(lua, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         testM("throw custom error from script") {
@@ -87,7 +88,7 @@ trait ScriptingSpec extends BaseSpec {
             arg    <- uuid
             myError = "My Error"
             lua     = s"""return redis.error_reply("${myError}")"""
-            res    <- eval(lua, Chunk(key), Chunk(arg)).either
+            res    <- eval(lua, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(myError)))))
         }
       ),
@@ -103,7 +104,7 @@ trait ScriptingSpec extends BaseSpec {
                 |return redis.call('exists',KEYS[1])
               """.stripMargin
             sha <- scriptLoad(lua)
-            res <- evalSha(sha, Chunk(key), Chunk(arg))
+            res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[Boolean]
           } yield assert(res)(equalTo(true))
         },
         testM("take strings return strings") {
@@ -115,15 +116,16 @@ trait ScriptingSpec extends BaseSpec {
             arg2 <- uuid
             lua   = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
             sha  <- scriptLoad(lua)
-            res  <- evalSha(sha, Chunk(key1, key2), Chunk(arg1, arg2))
+            res  <- evalSha(sha, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
           } yield assert(res)(equalTo(Chunk(key1, key2, arg1, arg2)))
         },
         testM("return custom data type") {
           import ScriptingSpec.CustomData
-          val lua      = """return {1,2,{3,'Hello World!'}}"""
-          val expected = CustomData(1, 2, (3, "Hello World!"))
+          val lua                       = """return {1,2,{3,'Hello World!'}}"""
+          val expected                  = CustomData(1, 2, (3, "Hello World!"))
+          val emptyInput: Chunk[String] = Chunk.empty
           for {
-            res <- eval[Long, Long, CustomData](lua, Chunk.empty, Chunk.empty)
+            res <- eval(lua, emptyInput, emptyInput).returning[CustomData]
           } yield assert(res)(equalTo(expected))
         },
         testM("throw an error if couldn't decode resp value") {
@@ -135,7 +137,7 @@ trait ScriptingSpec extends BaseSpec {
             arg <- uuid
             lua  = ""
             sha <- scriptLoad(lua)
-            res <- evalSha(sha, Chunk(key), Chunk(arg)).either
+            res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         testM("throw custom error from script") {
@@ -146,15 +148,16 @@ trait ScriptingSpec extends BaseSpec {
             myError = "My Error"
             lua     = s"""return redis.error_reply("${myError}")"""
             sha    <- scriptLoad(lua)
-            res    <- evalSha(sha, Chunk(key), Chunk(arg)).either
+            res    <- evalSha(sha, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(myError)))))
         },
         testM("throw NoScript error if script isn't found in cache") {
           import ScriptingSpec.simpleStringOutput
-          val lua   = """return "1""""
-          val error = "No matching script. Please use EVAL."
+          val lua                       = """return "1""""
+          val error                     = "No matching script. Please use EVAL."
+          val emptyInput: Chunk[String] = Chunk.empty
           for {
-            res <- evalSha[String, String, String](lua, Chunk.empty, Chunk.empty).either
+            res <- evalSha(lua, emptyInput, emptyInput).returning[String].either
           } yield assert(res)(isLeft(isSubtype[NoScript](hasField("message", _.message, equalTo(error)))))
         }
       ),
@@ -213,7 +216,7 @@ object ScriptingSpec {
     }
     private val tryDecodeString: RespValue => String = {
       case s @ RespValue.BulkString(_) => s.asString
-      case other                       => throw ProtocolError(s"$other isn't a integer type")
+      case other                       => throw ProtocolError(s"$other isn't a string type")
     }
 
     implicit val decoder: Output[CustomData] = RespValueOutput.map {
