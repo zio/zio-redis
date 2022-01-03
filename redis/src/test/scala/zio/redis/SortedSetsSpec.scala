@@ -25,14 +25,14 @@ trait SortedSetsSpec extends BaseSpec {
             _       <- zAdd(key1)(delhi, tokyo)
             _       <- zAdd(key2)(mumbai, paris)
             _       <- zAdd(key3)(london)
-            result  <- bzPopMax[String, String](duration, key1, key2, key3)
+            result  <- bzPopMax(duration, key1, key2, key3).returning[String]
           } yield assert(result)(isSome(equalTo((key1, tokyo))))
         ),
         testM("empty set")(
           for {
             key     <- uuid
             duration = Duration.fromMillis(1000)
-            result  <- bzPopMax[String, String](duration, key)
+            result  <- bzPopMax(duration, key).returning[String]
           } yield assert(result)(isNone)
         )
       ),
@@ -48,14 +48,14 @@ trait SortedSetsSpec extends BaseSpec {
             paris    = MemberScore(4d, "Paris")
             _       <- zAdd(key2)(delhi, paris)
             _       <- zAdd(key3)(london)
-            result  <- bzPopMin[String, String](duration, key1, key2, key3)
+            result  <- bzPopMin(duration, key1, key2, key3).returning[String]
           } yield assert(result)(isSome(equalTo((key2, delhi))))
         ),
         testM("empty set")(
           for {
             key     <- uuid
             duration = Duration.fromMillis(1000)
-            result  <- bzPopMin[String, String](duration, key)
+            result  <- bzPopMin(duration, key).returning[String]
           } yield assert(result)(isNone)
         )
       ),

@@ -35,7 +35,7 @@ trait HashSpec extends BaseSpec {
             field2 <- uuid
             value  <- uuid
             _      <- hSet(hash, field1 -> value, field2 -> value)
-            result <- hGetAll[String, String, String](hash)
+            result <- hGetAll(hash).returning[String, String]
           } yield assert(Chunk.fromIterable(result.values))(hasSameElements(Chunk(value, value)))
         },
         testM("delete field for hash") {
@@ -267,7 +267,7 @@ trait HashSpec extends BaseSpec {
               field           <- uuid
               value           <- uuid
               _               <- hSet(hash, field -> value)
-              scan            <- hScan[String, String, String](hash, 0L, pattern, count)
+              scan            <- hScan(hash, 0L, pattern, count).returning[String, String]
               (next, elements) = scan
             } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         })

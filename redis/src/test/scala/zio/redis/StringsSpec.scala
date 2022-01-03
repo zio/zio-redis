@@ -15,15 +15,11 @@ trait StringsSpec extends BaseSpec {
   val stringsSuite: Spec[Has[Clock.Service]
     with Has[RedisExecutor.Service]
     with Has[TestClock.Service]
-    with Has[
-      TestConsole.Service
-    ]
+    with Has[TestConsole.Service]
     with Has[TestRandom.Service]
     with Has[TestSystem.Service]
     with Has[RedisExecutor.Service]
-    with Has[
-      Annotations.Service
-    ], TestFailure[RedisError], TestSuccess] =
+    with Has[Annotations.Service], TestFailure[RedisError], TestSuccess] =
     suite("strings")(
       suite("append")(
         testM("to the end of non-empty string") {

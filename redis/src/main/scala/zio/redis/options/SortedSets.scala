@@ -1,5 +1,7 @@
 package zio.redis.options
 
+import zio.Chunk
+
 trait SortedSets {
   sealed trait Aggregate extends Product { self =>
     private[redis] final def stringify: String =
@@ -61,6 +63,8 @@ trait SortedSets {
   sealed case class LexRange(min: LexMinimum, max: LexMaximum)
 
   sealed case class MemberScore[+M](score: Double, member: M)
+
+  type MemberScores[+M] = Chunk[MemberScore[M]]
 
   sealed trait ScoreMaximum { self =>
     private[redis] final def stringify: String =

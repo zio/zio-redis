@@ -2,12 +2,13 @@ package zio.redis.api
 
 import java.time.Instant
 
+import zio.{Chunk, ZIO}
 import zio.duration._
+import zio.redis._
 import zio.redis.Input._
 import zio.redis.Output._
-import zio.redis._
+import zio.redis.ResultBuilder._
 import zio.schema.Schema
-import zio.{Chunk, ZIO}
 
 trait Strings {
   import Strings._
@@ -150,8 +151,8 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it does not exist.
    */
-  final def get[K: Schema](key: K): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def get[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(Get, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
     }
@@ -181,8 +182,8 @@ trait Strings {
    * @return
    *   Returns the substring.
    */
-  final def getRange[K: Schema](key: K, range: Range): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(GetRange, Tuple2(ArbitraryInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]()))
           .run((key, range))
@@ -198,8 +199,8 @@ trait Strings {
    * @return
    *   Returns the previous value of the string or None if it did not previously have a value.
    */
-  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(GetSet, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), OptionalOutput(ArbitraryOutput[R]()))
           .run((key, value))
@@ -213,8 +214,8 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getDel[K: Schema](key: K): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def getDel[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(GetDel, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
     }
@@ -232,8 +233,8 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getEx[K: Schema](key: K, expire: Expire, expireTime: Duration): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def getEx[K: Schema](key: K, expire: Expire, expireTime: Duration): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expire, expireTime))
     }
@@ -251,8 +252,8 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getEx[K: Schema](key: K, expiredAt: ExpiredAt, timestamp: Instant): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def getEx[K: Schema](key: K, expiredAt: ExpiredAt, timestamp: Instant): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expiredAt, timestamp))
     }
@@ -267,8 +268,8 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getEx[K: Schema](key: K, persist: Boolean): ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def getEx[K: Schema](key: K, persist: Boolean): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
         RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, persist))
     }

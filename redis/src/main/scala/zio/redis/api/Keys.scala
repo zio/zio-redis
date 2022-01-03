@@ -2,12 +2,13 @@ package zio.redis.api
 
 import java.time.Instant
 
-import zio.duration._
-import zio.redis.Input._
-import zio.redis.Output.{Tuple2Output, _}
-import zio.redis._
-import zio.schema.Schema
 import zio.{Chunk, ZIO}
+import zio.duration._
+import zio.redis._
+import zio.redis.Input._
+import zio.redis.Output._
+import zio.redis.ResultBuilder._
+import zio.schema.Schema
 
 trait Keys {
   import Keys.{Keys => _, _}
@@ -103,8 +104,8 @@ trait Keys {
    * @return
    *   keys matching pattern.
    */
-  final def keys(pattern: String): ResultBuilder[Chunk] =
-    new ResultBuilder[Chunk] {
+  final def keys(pattern: String): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] =
         RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]())).run(pattern)
     }
@@ -247,8 +248,8 @@ trait Keys {
    * @return
    *   key or None when the database is empty.
    */
-  final def randomKey: ResultBuilder[Option] =
-    new ResultBuilder[Option] {
+  final def randomKey: ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
         RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]())).run(())
     }
@@ -351,8 +352,8 @@ trait Keys {
     pattern: Option[String] = None,
     count: Option[Count] = None,
     `type`: Option[RedisType] = None
-  ): ResultBuilder[({ type lambda[+x] = (Long, Chunk[x]) })#lambda] =
-    new ResultBuilder[({ type lambda[+x] = (Long, Chunk[x]) })#lambda] {
+  ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
       def returning[K: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[K])] = {
         val command = RedisCommand(
           Scan,
@@ -388,8 +389,8 @@ trait Keys {
     order: Order = Order.Ascending,
     get: Option[(String, List[String])] = None,
     alpha: Option[Alpha] = None
-  ): ResultBuilder[Chunk] =
-    new ResultBuilder[Chunk] {
+  ): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
       def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] = {
         val command = RedisCommand(
           Sort,
