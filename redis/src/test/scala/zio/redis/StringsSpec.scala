@@ -1058,7 +1058,7 @@ trait StringsSpec extends BaseSpec {
           } yield assert(substr)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
-      suite("getSet[String, String, String]")(
+      suite("getSet")(
         testM("non-empty value to the existing string") {
           for {
             key    <- uuid
@@ -1158,50 +1158,50 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
-      suite("incrByFloat[String, String]")(
+      suite("incrByFloat")(
         testM("3.4 when non-empty float") {
           for {
             key    <- uuid
             _      <- set(key, "5.1")
-            result <- incrByFloat[String, String](key, 3.4d)
-          } yield assert(result)(equalTo("8.5"))
+            result <- incrByFloat(key, 3.4d)
+          } yield assert(result)(equalTo(8.5))
         },
         testM("3.4 when empty float") {
           for {
             key    <- uuid
-            result <- incrByFloat[String, String](key, 3.4d)
-          } yield assert(result)(equalTo("3.4"))
+            result <- incrByFloat(key, 3.4d)
+          } yield assert(result)(equalTo(3.4))
         },
         testM("-3.4 when non-empty float") {
           for {
             key    <- uuid
             _      <- set(key, "5")
-            result <- incrByFloat[String, String](key, -3.4d)
-          } yield assert(result)(equalTo("1.6"))
+            result <- incrByFloat(key, -3.4d)
+          } yield assert(result)(equalTo(1.6))
         },
         testM("error when out of range value") {
           for {
             key    <- uuid
             _      <- set(key, s"${Double.MaxValue.toString}1234")
-            result <- incrByFloat[String, String](key, 3d).either
+            result <- incrByFloat(key, 3d).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not integer") {
           for {
             key    <- uuid
             _      <- set(key, "not-integer")
-            result <- incrByFloat[String, String](key, 3).either
+            result <- incrByFloat(key, 3).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
-      suite("mGet[String, String]")(
+      suite("mGet")(
         testM("from multiple non-empty strings") {
           for {
             first  <- uuid
             second <- uuid
             _      <- set(first, "1")
             _      <- set(second, "2")
-            result <- mGet[String, String](first, second)
+            result <- mGet(first, second).returning[String]
           } yield assert(result)(equalTo(Chunk(Some("1"), Some("2"))))
         },
         testM("from one non-empty and one empty string") {
@@ -1209,14 +1209,14 @@ trait StringsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- set(nonEmpty, "value")
-            result   <- mGet[String, String](nonEmpty, empty)
+            result   <- mGet(nonEmpty, empty).returning[String]
           } yield assert(result)(equalTo(Chunk(Some("value"), None)))
         },
         testM("from two empty strings") {
           for {
             first  <- uuid
             second <- uuid
-            result <- mGet[String, String](first, second)
+            result <- mGet(first, second).returning[String]
           } yield assert(result)(equalTo(Chunk(None, None)))
         },
         testM("from one string and one not string") {
@@ -1225,14 +1225,14 @@ trait StringsSpec extends BaseSpec {
             notStr <- uuid
             _      <- set(str, "value")
             _      <- sAdd(notStr, "a")
-            result <- mGet[String, String](str, notStr)
+            result <- mGet(str, notStr).returning[String]
           } yield assert(result)(equalTo(Chunk(Some("value"), None)))
         },
         testM("from one not string") {
           for {
             key    <- uuid
             _      <- sAdd(key, "a")
-            result <- mGet[String, String](key)
+            result <- mGet(key).returning[String]
           } yield assert(result)(equalTo(Chunk(None)))
         }
       ),
@@ -1252,7 +1252,7 @@ trait StringsSpec extends BaseSpec {
             firstVal  <- uuid
             secondVal <- uuid
             _         <- mSet((first, firstVal), (second, secondVal))
-            result    <- mGet[String, String](first, second)
+            result    <- mGet(first, second).returning[String]
           } yield assert(result)(equalTo(Chunk(Some(firstVal), Some(secondVal))))
         },
         testM("replace existing values") {
@@ -1264,7 +1264,7 @@ trait StringsSpec extends BaseSpec {
             replacement <- uuid
             _           <- mSet((first, firstVal), (second, secondVal))
             _           <- mSet((first, replacement), (second, replacement))
-            result      <- mGet[String, String](first, second)
+            result      <- mGet(first, second).returning[String]
           } yield assert(result)(equalTo(Chunk(Some(replacement), Some(replacement))))
         },
         testM("one value multiple times at once") {

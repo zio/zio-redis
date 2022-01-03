@@ -638,7 +638,7 @@ trait StreamsSpec extends BaseSpec {
             group    <- uuid
             consumer <- uuid
             _        <- xGroupCreate(stream, group, "$", mkStream = true)
-            result   <- xGroupCreateConsumer[String, String, String](stream, group, consumer).either
+            result   <- xGroupCreateConsumer(stream, group, consumer).either
           } yield assert(result)(isRight)
         },
         testM("error when group doesn't exist") {
@@ -646,7 +646,7 @@ trait StreamsSpec extends BaseSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            result   <- xGroupCreateConsumer[String, String, String](stream, group, consumer).either
+            result   <- xGroupCreateConsumer(stream, group, consumer).either
           } yield assert(result)(isLeft)
         },
         testM("error when not stream") {
@@ -655,7 +655,7 @@ trait StreamsSpec extends BaseSpec {
             group     <- uuid
             consumer  <- uuid
             _         <- set(nonStream, "value")
-            result    <- xGroupCreateConsumer[String, String, String](nonStream, group, consumer).either
+            result    <- xGroupCreateConsumer(nonStream, group, consumer).either
           } yield assert(result)(isLeft)
         }
       ),
@@ -1351,14 +1351,14 @@ trait StreamsSpec extends BaseSpec {
             _        <- xGroupCreate(stream, group, "$", mkStream = true)
             _        <- xAdd(stream, "*", "a" -> "b").returning[String]
             _        <- xReadGroup(group, consumer)(stream -> ">").returning[String, String]
-            result   <- xInfoConsumers[String, String](stream, group)
+            result   <- xInfoConsumers(stream, group)
           } yield assert(result.toList.head.name)(equalTo(consumer))
         },
         testM("error when no such key") {
           for {
             stream <- uuid
             group  <- uuid
-            result <- xInfoConsumers[String, String](stream, group).either
+            result <- xInfoConsumers(stream, group).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         testM("error when not a stream") {
@@ -1366,7 +1366,7 @@ trait StreamsSpec extends BaseSpec {
             nonStream <- uuid
             group     <- uuid
             _         <- set(nonStream, "helloworld")
-            result    <- xInfoConsumers[String, String](nonStream, group).either
+            result    <- xInfoConsumers(nonStream, group).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
