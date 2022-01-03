@@ -313,8 +313,8 @@ trait Strings {
    * @return
    *   Returns the value of key after the increment.
    */
-  final def incrByFloat[K: Schema, R: Schema](key: K, increment: Double): ZIO[RedisExecutor, RedisError, R] = {
-    val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryInput[K](), DoubleInput), ArbitraryOutput[R]())
+  final def incrByFloat[K: Schema](key: K, increment: Double): ZIO[RedisExecutor, RedisError, Double] = {
+    val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryInput[K](), DoubleInput), DoubleOutput)
     command.run((key, increment))
   }
 
@@ -328,11 +328,17 @@ trait Strings {
    * @return
    *   Returns the values of the given keys.
    */
-  final def mGet[K: Schema, R: Schema](key: K, keys: K*): ZIO[RedisExecutor, RedisError, Chunk[Option[R]]] = {
-    val command =
-      RedisCommand(MGet, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(ArbitraryOutput[R]())))
-    command.run((key, keys.toList))
-  }
+  final def mGet[K: Schema](
+    key: K,
+    keys: K*
+  ): ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[Option[V]]] = {
+        val command =
+          RedisCommand(MGet, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(ArbitraryOutput[V]())))
+        command.run((key, keys.toList))
+      }
+    }
 
   /**
    * Set multiple keys to multiple values.
