@@ -7,7 +7,7 @@ import zio.stream._
 
 sealed trait RespValue extends Product with Serializable { self =>
   import RespValue._
-  import RespValue.internal.{ Headers, NullStrEncoded, NullArrEncoded, CrLf }
+  import RespValue.internal.{Headers, NullStrEncoded, NullArrEncoded, CrLf}
 
   final def serialize: Chunk[Byte] =
     self match {
@@ -119,6 +119,8 @@ object RespValue {
                   CollectingArray(size, ChunkBuilder.make(size), Start.feed)
                 else
                   Done(Array(Chunk.empty))
+
+              case _ => Failed
             }
 
           case CollectingArray(rem, vals, next) =>

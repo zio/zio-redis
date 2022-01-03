@@ -5,28 +5,22 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 inThisBuild(
   List(
     organization := "dev.zio",
-    homepage := Some(url("https://github.com/zio/zio-redis/")),
-    licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    homepage     := Some(url("https://github.com/zio/zio-redis/")),
+    licenses     := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
-    ),
-    pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray),
-    pgpPublicRing := file("/tmp/public.asc"),
-    pgpSecretRing := file("/tmp/secret.asc")
+    )
   )
 )
 
-addCommandAlias("prepare", "fix; fmt")
 addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheckAll")
-addCommandAlias("fix", "scalafixAll")
-addCommandAlias("fixCheck", "scalafixAll --check")
 
 lazy val root =
   project
     .in(file("."))
-    .settings(skip in publish := true)
+    .settings(publish / skip := true)
     .aggregate(redis, benchmarks, example)
 
 lazy val redis =
@@ -38,7 +32,8 @@ lazy val redis =
     .settings(
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
-        "dev.zio" %% "zio-logging"  % "0.5.4",
+        "dev.zio" %% "zio-logging"  % "0.5.14",
+        "dev.zio" %% "zio-schema"   % "0.1.1",
         "dev.zio" %% "zio-test"     % Zio % Test,
         "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
@@ -48,16 +43,16 @@ lazy val redis =
 lazy val benchmarks =
   project
     .in(file("benchmarks"))
+    .settings(stdSettings("benchmarks"))
     .dependsOn(redis)
     .enablePlugins(JmhPlugin)
     .settings(
-      skip in publish := true,
+      publish / skip := true,
       libraryDependencies ++= Seq(
-        "dev.profunktor"    %% "redis4cats-effects" % "0.11.1",
-        "io.chrisdavenport" %% "rediculous"         % "0.0.8",
-        "io.laserdisc"      %% "laserdisc-fs2"      % "0.4.1"
-      ),
-      scalacOptions in Compile := Seq("-Xlint:unused")
+        "dev.profunktor"    %% "redis4cats-effects" % "1.0.0",
+        "io.chrisdavenport" %% "rediculous"         % "0.1.1",
+        "io.laserdisc"      %% "laserdisc-fs2"      % "0.5.0"
+      )
     )
 
 lazy val example =
@@ -66,18 +61,16 @@ lazy val example =
     .settings(stdSettings("example"))
     .dependsOn(redis)
     .settings(
-      skip in publish := true,
+      publish / skip := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.2.9",
-        "com.softwaremill.sttp.client" %% "circe"                         % "2.2.9",
-        "de.heikoseeberger"            %% "akka-http-circe"               % "1.35.2",
-        "dev.zio"                      %% "zio-streams"                   % Zio,
-        "dev.zio"                      %% "zio-config-magnolia"           % "1.0.0-RC31-1",
-        "dev.zio"                      %% "zio-config-typesafe"           % "1.0.0-RC31-1",
-        "dev.zio"                      %% "zio-prelude"                   % "1.0.0-RC1",
-        "io.circe"                     %% "circe-core"                    % "0.13.0",
-        "io.circe"                     %% "circe-generic"                 % "0.13.0",
-        "io.scalac"                    %% "zio-akka-http-interop"         % "0.4.0"
-      ),
-      scalacOptions in Compile := Seq("-Xlint:unused")
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.3.18",
+        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.3.18",
+        "dev.zio"                       %% "zio-streams"                   % Zio,
+        "dev.zio"                       %% "zio-config-magnolia"           % "1.0.10",
+        "dev.zio"                       %% "zio-config-typesafe"           % "1.0.10",
+        "dev.zio"                       %% "zio-prelude"                   % "1.0.0-RC7",
+        "dev.zio"                       %% "zio-json"                      % "0.1.5",
+        "io.d11"                        %% "zhttp"                         % "1.0.0.0-RC17",
+        "io.github.kitlangton"          %% "zio-magic"                     % "0.3.11"
+      )
     )

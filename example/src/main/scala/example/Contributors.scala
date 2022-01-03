@@ -1,12 +1,12 @@
 package example
 
-import io.circe.Codec
-import io.circe.generic.semiauto._
-
 import zio.Chunk
+import zio.json.JsonCodec
 
 final case class Contributors(contributors: Chunk[Contributor]) extends AnyVal
 
 object Contributors {
-  implicit val codec: Codec[Contributors] = deriveCodec[Contributors]
+  implicit val codec: JsonCodec[Contributors] =
+    JsonCodec.chunk[Contributor].xmap(Contributors(_), _.contributors)
+
 }

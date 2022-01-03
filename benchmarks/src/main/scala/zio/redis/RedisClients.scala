@@ -1,22 +1,17 @@
 package zio.redis
 
-import scala.concurrent.ExecutionContext
-
-import cats.effect.{ Blocker, ContextShift, IO => CatsIO, Resource, Timer }
+import cats.effect.unsafe.implicits.global
+import cats.effect.{IO => CatsIO, _}
+import com.comcast.ip4s._
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.data.RedisCodec
-import fs2.io.tcp.SocketGroup
-import io.chrisdavenport.rediculous.{ Redis, RedisConnection }
+import fs2.io.net.Network
+import io.chrisdavenport.rediculous.RedisConnection
 import io.lettuce.core.ClientOptions
 import laserdisc.fs2.RedisClient
 
 trait RedisClients {
   import RedisClients._
-
-  implicit val cs: ContextShift[CatsIO] = CatsIO.contextShift(ExecutionContext.global)
-  implicit val timer: Timer[CatsIO]     = CatsIO.timer(ExecutionContext.global)
-
-  type RedisIO[A] = Redis[CatsIO, A]
 
   type Redis4CatsClient[V] = RedisCommands[CatsIO, String, V]
   type LaserDiscClient     = RedisClient[CatsIO]
@@ -27,32 +22,28 @@ trait RedisClients {
   }
 
   implicit object LaserDiscClientRunner extends QueryUnsafeRunner[LaserDiscClient] {
-    override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync
+    override def unsafeRun(f: LaserDiscClient => CatsIO[Unit]): Unit = laserDiskConnection.use(f).unsafeRunSync()
   }
 
   implicit object RedicoulusClientRunner extends QueryUnsafeRunner[RediculousClient] {
-    override def unsafeRun(f: RediculousClient => CatsIO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync
+    override def unsafeRun(f: RediculousClient => CatsIO[Unit]): Unit = redicoulusConnection.use(f).unsafeRunSync()
   }
 
   implicit object Redis4CatsClientRunnerString extends QueryUnsafeRunner[Redis4CatsClient[String]] {
     override def unsafeRun(f: Redis4CatsClient[String] => CatsIO[Unit]): Unit =
-      redis4CatsConnectionString.use(f).unsafeRunSync
+      redis4CatsConnectionString.use(f).unsafeRunSync()
   }
 
   implicit object Redis4CatsClientRunnerLong extends QueryUnsafeRunner[Redis4CatsClient[Long]] {
     override def unsafeRun(f: Redis4CatsClient[Long] => CatsIO[Unit]): Unit =
-      redis4CatsConnectionLong.use(f).unsafeRunSync
+      redis4CatsConnectionLong.use(f).unsafeRunSync()
   }
 
   private val redicoulusConnection: Resource[CatsIO, RediculousClient] =
-    for {
-      blocker <- Blocker[CatsIO]
-      sg      <- SocketGroup[CatsIO](blocker)
-      c       <- RedisConnection.queued[CatsIO](sg, RedisHost, RedisPort, maxQueued = 10000, workers = 2)
-    } yield c
+    RedisConnection.queued[CatsIO](Network[CatsIO], host"127.0.0.1", port"6379", maxQueued = 10000, workers = 2)
 
   import _root_.laserdisc.auto.autoRefine
-  private val laserDiskConnection: Resource[CatsIO, LaserDiscClient] = RedisClient.to(RedisHost, RedisPort)
+  private val laserDiskConnection: Resource[CatsIO, LaserDiscClient] = RedisClient[CatsIO].to(RedisHost, RedisPort)
 
   import dev.profunktor.redis4cats.Redis
   import dev.profunktor.redis4cats.effect.Log.NoOp.instance

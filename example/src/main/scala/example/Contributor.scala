@@ -1,10 +1,11 @@
 package example
 
-import io.circe.Codec
-import io.circe.generic.semiauto._
+import zio.json.{DeriveJsonCodec, JsonCodec}
 
 final case class Contributor(login: Login, contributions: Contributions)
 
 object Contributor {
-  implicit val codec: Codec[Contributor] = deriveCodec[Contributor]
+  implicit val codec: JsonCodec[Contributor] =
+    DeriveJsonCodec.gen[Contributor]
+
 }

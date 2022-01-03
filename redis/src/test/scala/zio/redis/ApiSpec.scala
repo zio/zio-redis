@@ -1,8 +1,11 @@
 package zio.redis
 
+import zio.ZLayer
 import zio.clock.Clock
 import zio.logging.Logging
+import zio.test.TestAspect._
 import zio.test._
+import zio.test.environment._
 
 object ApiSpec
     extends ConnectionSpec
@@ -17,9 +20,7 @@ object ApiSpec
     with StreamsSpec
     with ScriptingSpec {
 
-  // scalafix:off
-  def spec =
-    // scalafix:on
+  def spec: ZSpec[TestEnvironment, Failure] =
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite,
@@ -33,12 +34,19 @@ object ApiSpec
         hashSuite,
         streamsSuite,
         scriptingSpec
-      ).provideCustomLayerShared((Logging.ignore >>> RedisExecutor.local.orDie) ++ Clock.live),
+      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
+        @@ sequential,
       suite("Test Executor")(
         connectionSuite,
-        setsSuite
+        keysSuite,
+        setsSuite,
+        hyperLogLogSuite,
+        listSuite,
+        hashSuite,
+        sortedSetsSuite,
+        geoSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
-        .provideCustomLayerShared(RedisExecutor.test)
+        .provideSomeLayer[TestEnvironment](RedisExecutor.test)
     )
 }

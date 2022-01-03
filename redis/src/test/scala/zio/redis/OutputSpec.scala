@@ -2,10 +2,10 @@ package zio.redis
 
 import zio.duration._
 import zio.redis.Output._
-import zio.redis.RedisError._
+import zio.redis.RedisError.{ ProtocolError, _ }
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Task }
+import zio.{ Chunk, Task, UIO }
 
 object OutputSpec extends BaseSpec {
 
@@ -44,7 +44,12 @@ object OutputSpec extends BaseSpec {
         testM("extract non-empty arrays") {
           val respValue = RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           for {
-            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(respValue))
+            res <-
+              Task(
+                ChunkOutput(MultiStringOutput).unsafeDecode(
+                  RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
+                )
+              )
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),
@@ -114,6 +119,26 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(equalTo(num))
         }
       ),
+      suite("chunkLong")(
+        testM("extract empty array") {
+          for {
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(RespValue.NullArray))
+          } yield assert(res)(equalTo(Chunk.empty))
+        },
+        testM("extract array of long values") {
+          val respArray = RespValue.array(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L))
+          for {
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray))
+          } yield assert(res)(equalTo(Chunk(1L, 2L, 3L)))
+        },
+        testM("fail when one value is not a long") {
+          val respArray =
+            RespValue.array(RespValue.Integer(1L), RespValue.bulkString("not a long"), RespValue.Integer(3L))
+          for {
+            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray)).run
+          } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
+        }
+      ),
       suite("optional")(
         testM("extract None") {
           for {
@@ -133,7 +158,7 @@ object OutputSpec extends BaseSpec {
             RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           )
           for {
-            res <- Task(ScanOutput.unsafeDecode(input))
+            res <- Task(ScanOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(equalTo(5L -> Chunk("foo", "bar")))
         }
       ),
@@ -151,6 +176,13 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(isUnit)
         }
       ),
+      suite("reset") {
+        testM("extract unit") {
+          for {
+            res <- Task(ResetOutput.unsafeDecode(RespValue.SimpleString("RESET")))
+          } yield assert(res)(isUnit)
+        }
+      },
       suite("keyElem")(
         testM("extract none") {
           for {
@@ -173,49 +205,52 @@ object OutputSpec extends BaseSpec {
       suite("multiStringChunk")(
         testM("extract one empty value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.NullBulkString))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.NullBulkString))
           } yield assert(res)(isEmpty)
         },
         testM("extract one multi-string value") {
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(RespValue.bulkString("ab")))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.bulkString("ab")))
           } yield assert(res)(hasSameElements(Chunk("ab")))
         },
         testM("extract one array value") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(MultiStringChunkOutput.unsafeDecode(input))
+            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
         }
       ),
       suite("chunkOptionalMultiString")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.NullArray))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with one non-empty element") {
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(RespValue.array(RespValue.bulkString("ab"))))
+            res <-
+              Task(
+                ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.array(RespValue.bulkString("ab")))
+              )
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
         testM("extract array with multiple non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
         testM("extract array with empty and non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.NullBulkString, RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOptionalMultiStringOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
         }
       ),
       suite("chunkOptionalLong")(
         testM("extract one empty value") {
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
         testM("extract array with empty and non-empty elements") {
@@ -226,7 +261,7 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
         },
         testM("extract array with non-empty elements") {
@@ -237,7 +272,7 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOptionalLongOutput.unsafeDecode(input))
+            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
         }
       ),
@@ -250,10 +285,11 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput.unsafeDecode(input)).map(assert(_)(equalTo(Map("id" -> Map("field" -> "value")))))
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input))
+            .map(assert(_)(equalTo(Chunk(StreamEntry("id", Map("field" -> "value"))))))
         },
         testM("extract empty map") {
-          Task(StreamOutput.unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
         },
         testM("error when array of field-value pairs has odd length") {
           val input = RespValue.array(
@@ -264,7 +300,8 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message has more then two elements") {
           val input = RespValue.array(
@@ -274,7 +311,8 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input)).either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
       suite("xPending")(
@@ -440,12 +478,14 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).map(
+          Task(
+            ChunkOutput(StreamOutput[String, String, String, String]()).unsafeDecode(input)
+          ).map(
             assert(_)(
               equalTo(
-                Map(
-                  "str1" -> Map("id1" -> Map("a" -> "b")),
-                  "str2" -> Map("id2" -> Map("c" -> "d"), "id3" -> Map("e" -> "f"))
+                Chunk(
+                  StreamChunk("str1", Chunk(StreamEntry("id1", Map("a" -> "b")))),
+                  StreamChunk("str2", Chunk(StreamEntry("id2", Map("c" -> "d")), StreamEntry("id3", Map("e" -> "f"))))
                 )
               )
             )
@@ -465,7 +505,9 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(
+            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
+          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when message doesn't have an ID") {
           val input = RespValue.array(
@@ -481,7 +523,9 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(
+            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
+          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         testM("error when stream doesn't have an ID") {
           val input = RespValue.array(
@@ -497,7 +541,471 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(XReadOutput.unsafeDecode(input)).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          Task(
+            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
+          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+        },
+        suite("xInfoStream")(
+          testM("extract valid value with first and last entry") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("groups"),
+              RespValue.Integer(2),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("2-0"),
+              RespValue.bulkString("first-entry"),
+              RespValue.array(
+                RespValue.bulkString("1-0"),
+                RespValue.array(
+                  RespValue.bulkString("key1"),
+                  RespValue.bulkString("value1")
+                )
+              ),
+              RespValue.bulkString("last-entry"),
+              RespValue.array(
+                RespValue.bulkString("2-0"),
+                RespValue.array(
+                  RespValue.bulkString("key2"),
+                  RespValue.bulkString("value2")
+                )
+              )
+            )
+
+            assertM(Task(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
+              equalTo(
+                StreamInfo(
+                  1,
+                  2,
+                  3,
+                  2,
+                  "2-0",
+                  Some(StreamEntry("1-0", Map("key1" -> "value1"))),
+                  Some(StreamEntry("2-0", Map("key2" -> "value2")))
+                )
+              )
+            )
+          },
+          testM("extract valid value without first and last entry") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("groups"),
+              RespValue.Integer(1),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0")
+            )
+
+            assertM(Task(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
+              equalTo(StreamInfo[String, String, String](1, 2, 3, 1, "0-0", None, None))
+            )
+          }
+        ),
+        suite("xInfoGroups")(
+          testM("extract a valid value") {
+            val resp = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("group1"),
+                RespValue.bulkString("consumers"),
+                RespValue.Integer(1),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(1),
+                RespValue.bulkString("last-delivered-id"),
+                RespValue.bulkString("1-0")
+              ),
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("group2"),
+                RespValue.bulkString("consumers"),
+                RespValue.Integer(2),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(2),
+                RespValue.bulkString("last-delivered-id"),
+                RespValue.bulkString("2-0")
+              )
+            )
+
+            assertM(Task(StreamGroupsInfoOutput.unsafeDecode(resp)))(
+              equalTo(
+                Chunk(
+                  StreamGroupsInfo("group1", 1, 1, "1-0"),
+                  StreamGroupsInfo("group2", 2, 2, "2-0")
+                )
+              )
+            )
+          },
+          testM("extract an empty array") {
+            val resp = RespValue.array()
+
+            assertM(Task(StreamGroupsInfoOutput.unsafeDecode(resp)))(isEmpty)
+          }
+        ),
+        suite("xInfoConsumers")(
+          testM("extract a valid value") {
+            val resp = RespValue.array(
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("consumer1"),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(1),
+                RespValue.bulkString("idle"),
+                RespValue.Integer(100)
+              ),
+              RespValue.array(
+                RespValue.bulkString("name"),
+                RespValue.bulkString("consumer2"),
+                RespValue.bulkString("pending"),
+                RespValue.Integer(2),
+                RespValue.bulkString("idle"),
+                RespValue.Integer(200)
+              )
+            )
+
+            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(
+              equalTo(
+                Chunk(
+                  StreamConsumersInfo("consumer1", 1, 100.millis),
+                  StreamConsumersInfo("consumer2", 2, 200.millis)
+                )
+              )
+            )
+          },
+          testM("extract an empty array") {
+            val resp = RespValue.array()
+
+            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
+          }
+        ),
+        suite("xInfoStreamFull")(
+          testM("extract a valid value without groups") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0"),
+              RespValue.bulkString("entries"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("3-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                ),
+                RespValue.array(
+                  RespValue.bulkString("4-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                )
+              )
+            )
+
+            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
+              equalTo(
+                StreamInfoWithFull.FullStreamInfo(
+                  1,
+                  2,
+                  3,
+                  "0-0",
+                  Chunk(StreamEntry("3-0", Map("key1" -> "value1")), StreamEntry("4-0", Map("key1" -> "value1"))),
+                  Chunk.empty
+                )
+              )
+            )
+          },
+          testM("extract a valid value without groups and entries") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0")
+            )
+            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
+              equalTo(
+                StreamInfoWithFull.FullStreamInfo[String, String, String](1, 2, 3, "0-0", Chunk.empty, Chunk.empty)
+              )
+            )
+          },
+          testM("extract an empty array") {
+            val resp = RespValue.array()
+            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
+          },
+          testM("extract a valid value with groups") {
+            val resp = RespValue.array(
+              RespValue.bulkString("length"),
+              RespValue.Integer(1),
+              RespValue.bulkString("radix-tree-keys"),
+              RespValue.Integer(2),
+              RespValue.bulkString("radix-tree-nodes"),
+              RespValue.Integer(3),
+              RespValue.bulkString("last-generated-id"),
+              RespValue.bulkString("0-0"),
+              RespValue.bulkString("entries"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("3-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                ),
+                RespValue.array(
+                  RespValue.bulkString("4-0"),
+                  RespValue.array(
+                    RespValue.bulkString("key1"),
+                    RespValue.bulkString("value1")
+                  )
+                )
+              ),
+              RespValue.bulkString("groups"),
+              RespValue.array(
+                RespValue.array(
+                  RespValue.bulkString("name"),
+                  RespValue.bulkString("name1"),
+                  RespValue.bulkString("last-delivered-id"),
+                  RespValue.bulkString("lastDeliveredId"),
+                  RespValue.bulkString("pel-count"),
+                  RespValue.Integer(1),
+                  RespValue.bulkString("pending"),
+                  RespValue.array(
+                    RespValue.array(
+                      RespValue.bulkString("entryId1"),
+                      RespValue.bulkString("consumerName1"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.Integer(1)
+                    ),
+                    RespValue.array(
+                      RespValue.bulkString("entryId2"),
+                      RespValue.bulkString("consumerName2"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.Integer(1)
+                    )
+                  ),
+                  RespValue.bulkString("consumers"),
+                  RespValue.array(
+                    RespValue.array(
+                      RespValue.bulkString("name"),
+                      RespValue.bulkString("Alice"),
+                      RespValue.bulkString("seen-time"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.bulkString("pel-count"),
+                      RespValue.Integer(1),
+                      RespValue.bulkString("pending"),
+                      RespValue.array(
+                        RespValue.array(
+                          RespValue.bulkString("entryId3"),
+                          RespValue.Integer(1588152520299L),
+                          RespValue.Integer(1)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+
+            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
+              equalTo(
+                StreamInfoWithFull.FullStreamInfo(
+                  1,
+                  2,
+                  3,
+                  "0-0",
+                  Chunk(StreamEntry("3-0", Map("key1" -> "value1")), StreamEntry("4-0", Map("key1" -> "value1"))),
+                  Chunk(
+                    StreamInfoWithFull.ConsumerGroups(
+                      "name1",
+                      "lastDeliveredId",
+                      1,
+                      Chunk(
+                        StreamInfoWithFull.GroupPel("entryId1", "consumerName1", 1588152520299L.millis, 1L),
+                        StreamInfoWithFull.GroupPel("entryId2", "consumerName2", 1588152520299L.millis, 1L)
+                      ),
+                      Chunk(
+                        StreamInfoWithFull.Consumers(
+                          "Alice",
+                          1588152520299L.millis,
+                          1,
+                          Chunk(
+                            StreamInfoWithFull.ConsumerPel("entryId3", 1588152520299L.millis, 1)
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          }
+        )
+      ),
+      suite("ClientTrackingInfo")(
+        testM("extract with tracking off") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(RespValue.bulkString("off")),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(-1L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(
+                                  clientSideCaching = false
+                                ),
+                                ClientTrackingRedirect.NotEnabled
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("extract with flags set") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(
+                            RespValue.bulkString("on"),
+                            RespValue.bulkString("optin"),
+                            RespValue.bulkString("caching-yes"),
+                            RespValue.bulkString("noloop")
+                          ),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(0L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(
+                                  clientSideCaching = true,
+                                  trackingMode = Some(ClientTrackingMode.OptIn),
+                                  noLoop = true,
+                                  caching = Some(true)
+                                ),
+                                ClientTrackingRedirect.NotRedirected
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("extract with redirect id and broken redirect flag") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("broken_redirect")),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(42L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(clientSideCaching = true, brokenRedirect = true),
+                                ClientTrackingRedirect.RedirectedTo(42L)
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("extract with specified prefixes") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(RespValue.bulkString("on"), RespValue.bulkString("bcast")),
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(0L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.array(
+                            RespValue.bulkString("prefix1"),
+                            RespValue.bulkString("prefix2"),
+                            RespValue.bulkString("prefix3")
+                          )
+                        )
+                    )
+            expectedInfo <- UIO(
+                              ClientTrackingInfo(
+                                ClientTrackingFlags(
+                                  clientSideCaching = true,
+                                  trackingMode = Some(ClientTrackingMode.Broadcast)
+                                ),
+                                ClientTrackingRedirect.NotRedirected,
+                                Set("prefix1", "prefix2", "prefix3")
+                              )
+                            )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(expectedInfo))
+        },
+        testM("error when fields are missing") {
+          for {
+            resp <- UIO(
+                      RespValue
+                        .array(
+                          RespValue.bulkString("redirect"),
+                          RespValue.Integer(42L),
+                          RespValue.bulkString("prefixes"),
+                          RespValue.NullArray
+                        )
+                    )
+            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
+        }
+      ),
+      suite("ClientTrackingRedirect")(
+        testM("extract not enabled") {
+          for {
+            resp <- UIO(RespValue.Integer(-1L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.NotEnabled))
+        },
+        testM("extract not redirected") {
+          for {
+            resp <- UIO(RespValue.Integer(0L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.NotRedirected))
+        },
+        testM("extract redirect id") {
+          for {
+            resp <- UIO(RespValue.Integer(42L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+          } yield assert(res)(equalTo(ClientTrackingRedirect.RedirectedTo(resp.value)))
+        },
+        testM("error when redirect id is invalid") {
+          for {
+            resp <- UIO(RespValue.Integer(-42L))
+            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )
     )

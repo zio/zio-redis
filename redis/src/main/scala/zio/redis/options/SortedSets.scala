@@ -1,7 +1,7 @@
 package zio.redis.options
 
 trait SortedSets {
-  sealed trait Aggregate { self =>
+  sealed trait Aggregate extends Product { self =>
     private[redis] final def stringify: String =
       self match {
         case Aggregate.Max => "MAX"
@@ -60,9 +60,7 @@ trait SortedSets {
 
   sealed case class LexRange(min: LexMinimum, max: LexMaximum)
 
-  sealed case class Limit(offset: Long, count: Long)
-
-  sealed case class MemberScore(score: Double, member: String)
+  sealed case class MemberScore[M](score: Double, member: M)
 
   sealed trait ScoreMaximum { self =>
     private[redis] final def stringify: String =

@@ -1,14 +1,16 @@
 package zio.redis
 
+import java.net.InetAddress
 import java.time.Instant
 
 import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
 import zio.test._
-import zio.{ Chunk, Task }
+import zio.{Chunk, Task, UIO}
 
 object InputSpec extends BaseSpec {
+  import StrAlgoLcsQueryType._
   import BitFieldCommand._
   import BitFieldType._
   import BitOperation._
@@ -22,6 +24,15 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(AbsTtlInput.encode(AbsTtl))
           } yield assert(result)(equalTo(respArgs("ABSTTL")))
+        }
+      ),
+      suite("Address")(
+        testM("valid value") {
+          for {
+            ip     <- UIO(InetAddress.getByName("127.0.0.1"))
+            port   <- UIO(42)
+            result <- Task(AddressInput.encode(Address(ip, port)))
+          } yield assert(result)(equalTo(respArgs("127.0.0.1:42")))
         }
       ),
       suite("Aggregate")(
@@ -39,6 +50,13 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(AggregateInput.encode(Aggregate.Sum))
           } yield assert(result)(equalTo(respArgs("AGGREGATE", "SUM")))
+        }
+      ),
+      suite("Alpha")(
+        testM("alpha") {
+          for {
+            result <- Task(AlphaInput.encode(Alpha))
+          } yield assert(result)(equalTo(respArgs("ALPHA")))
         }
       ),
       suite("Auth")(
@@ -63,6 +81,33 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(BoolInput.encode(false))
           } yield assert(result)(equalTo(respArgs("0")))
+        }
+      ),
+      suite("Stralgocommand")(
+        test("length option") {
+          assert(StralgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
+            equalTo(respArgs("LEN"))
+          )
+        },
+        test("idx option default") {
+          assert(StralgoLcsQueryTypeInput.encode(Idx()))(
+            equalTo(respArgs("IDX"))
+          )
+        },
+        test("idx option with minmatchlength") {
+          assert(StralgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
+            equalTo(respArgs("IDX", "MINMATCHLEN", "2"))
+          )
+        },
+        test("idx option with withmatchlength") {
+          assert(StralgoLcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
+            equalTo(respArgs("IDX", "WITHMATCHLEN"))
+          )
+        },
+        test("idx option with minmatchlength and withmatchlength") {
+          assert(StralgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
+            equalTo(respArgs("IDX", "MINMATCHLEN", "2", "WITHMATCHLEN"))
+          )
         }
       ),
       suite("BitFieldCommand")(
@@ -161,11 +206,94 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("0", "1000")))
         }
       ),
+      suite("By")(
+        testM("with a pattern") {
+          for {
+            result <- Task(ByInput.encode("mykey_*"))
+          } yield assert(result)(equalTo(respArgs("BY", "mykey_*")))
+        }
+      ),
       suite("Changed")(
         testM("valid value") {
           for {
             result <- Task(ChangedInput.encode(Changed))
           } yield assert(result)(equalTo(respArgs("CH")))
+        }
+      ),
+      suite("ClientKill")(
+        testM("address") {
+          for {
+            address <- UIO(InetAddress.getByName("127.0.0.1"))
+            port    <- UIO(42)
+            result  <- Task(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
+          } yield assert(result)(equalTo(respArgs("ADDR", "127.0.0.1:42")))
+        },
+        testM("local address") {
+          for {
+            address <- UIO(InetAddress.getByName("127.0.0.1"))
+            port    <- UIO(42)
+            result  <- Task(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
+          } yield assert(result)(equalTo(respArgs("LADDR", s"127.0.0.1:42")))
+        },
+        testM("client id") {
+          for {
+            id     <- UIO(42L)
+            result <- Task(ClientKillInput.encode(ClientKillFilter.Id(id)))
+          } yield assert(result)(equalTo(respArgs("ID", "42")))
+        },
+        testM("type") {
+          for {
+            clientType <- UIO(ClientType.PubSub)
+            result     <- Task(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
+          } yield assert(result)(equalTo(respArgs("TYPE", "pubsub")))
+        },
+        testM("user") {
+          for {
+            user   <- UIO("Foo Bar")
+            result <- Task(ClientKillInput.encode(ClientKillFilter.User(user)))
+          } yield assert(result)(equalTo(respArgs("USER", "Foo Bar")))
+        },
+        testM("skip me") {
+          for {
+            result <- Task(ClientKillInput.encode(ClientKillFilter.SkipMe(true)))
+          } yield assert(result)(equalTo(respArgs("SKIPME", "YES")))
+        }
+      ),
+      suite("ClientPauseMode")(
+        testM("all") {
+          for {
+            result <- Task(ClientPauseModeInput.encode(ClientPauseMode.All))
+          } yield assert(result)(equalTo(respArgs("ALL")))
+        },
+        testM("write") {
+          for {
+            result <- Task(ClientPauseModeInput.encode(ClientPauseMode.Write))
+          } yield assert(result)(equalTo(respArgs("WRITE")))
+        }
+      ),
+      suite("ClientTracking")(
+        testM("off") {
+          for {
+            result <- Task(ClientTrackingInput.encode(None))
+          } yield assert(result)(equalTo(respArgs("OFF")))
+        },
+        testM("client redirect with noloop and prefixes") {
+          for {
+            clientId <- UIO(42L)
+            prefixes <- UIO(Chunk("prefix1", "prefix2", "prefix3"))
+            result   <- Task(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
+          } yield assert(result)(
+            equalTo(
+              respArgs("ON", "REDIRECT", clientId.toString) ++ prefixes
+                .flatMap(respArgs("PREFIX", _)) ++ respArgs("NOLOOP")
+            )
+          )
+        },
+        testM("broadcast mode") {
+          for {
+            result <-
+              Task(ClientTrackingInput.encode(Some((None, Some(ClientTrackingMode.Broadcast), false, Chunk.empty))))
+          } yield assert(result)(equalTo(respArgs("ON", "BCAST")))
         }
       ),
       suite("Copy")(
@@ -202,6 +330,38 @@ object InputSpec extends BaseSpec {
           for {
             result <- Task(PositionInput.encode(Position.After))
           } yield assert(result)(equalTo(respArgs("AFTER")))
+        }
+      ),
+      suite("RedisType")(
+        testM("string type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.String))
+          } yield assert(result)(equalTo(respArgs("TYPE", "string")))
+        },
+        testM("list type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.List))
+          } yield assert(result)(equalTo(respArgs("TYPE", "list")))
+        },
+        testM("set type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.Set))
+          } yield assert(result)(equalTo(respArgs("TYPE", "set")))
+        },
+        testM("sorted set type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.SortedSet))
+          } yield assert(result)(equalTo(respArgs("TYPE", "zset")))
+        },
+        testM("hash type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.Hash))
+          } yield assert(result)(equalTo(respArgs("TYPE", "hash")))
+        },
+        testM("stream type") {
+          for {
+            result <- Task(RedisTypeInput.encode(RedisType.Stream))
+          } yield assert(result)(equalTo(respArgs("TYPE", "stream")))
         }
       ),
       suite("Double")(
@@ -274,6 +434,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("FREQ", "frequency")))
         }
       ),
+      suite("Get")(
+        testM("with a pattern") {
+          for {
+            result <- Task(GetInput.encode("mypattern_*"))
+          } yield assert(result)(equalTo(respArgs("GET", "mypattern_*")))
+        }
+      ),
       suite("IdleTime")(
         testM("0 seconds") {
           for {
@@ -303,47 +470,74 @@ object InputSpec extends BaseSpec {
       suite("LexRange")(
         testM("with unbound min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "+")))
         },
         testM("with open min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "+")))
         },
         testM("with closed min and unbound max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Unbounded)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Unbounded.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "+")))
         },
         testM("with unbound min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "(z")))
         },
         testM("with open min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "(z")))
         },
         testM("with closed min and open max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Open("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Open("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "(z")))
         },
         testM("with unbound min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Unbounded, LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Unbounded.stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-", "[z")))
         },
         testM("with open min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Open("a"), LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Open("a").stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(a", "[z")))
         },
         testM("with closed min and closed max") {
           for {
-            result <- Task(LexRangeInput.encode(LexRange(LexMinimum.Closed("a"), LexMaximum.Closed("z"))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((LexMinimum.Closed("a").stringify, LexMaximum.Closed("z").stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("[a", "[z")))
         }
       ),
@@ -401,32 +595,32 @@ object InputSpec extends BaseSpec {
       suite("MemberScore")(
         testM("with positive score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
           } yield assert(result)(equalTo(respArgs("4.2", "")))
         },
         testM("with negative score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
           } yield assert(result)(equalTo(respArgs("-4.2", "")))
         },
         testM("with zero score and empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(0d, "")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "")))
           } yield assert(result)(equalTo(respArgs("0.0", "")))
         },
         testM("with positive score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(4.2d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("4.2", "member")))
         },
         testM("with negative score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(-4.2d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("-4.2", "member")))
         },
         testM("with zero score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput.encode(MemberScore(0d, "member")))
+            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
           } yield assert(result)(equalTo(respArgs("0.0", "member")))
         }
       ),
@@ -505,15 +699,15 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("-1", "-5")))
         }
       ),
-      suite("Regex")(
+      suite("Pattern")(
         testM("with valid pattern") {
           for {
-            result <- Task(RegexInput.encode("\\d{3}".r))
-          } yield assert(result)(equalTo(respArgs("MATCH", "\\d{3}")))
+            result <- Task(PatternInput.encode(Pattern("*[ab]-*")))
+          } yield assert(result)(equalTo(respArgs("MATCH", "*[ab]-*")))
         },
         testM("with empty pattern") {
           for {
-            result <- Task(RegexInput.encode("".r))
+            result <- Task(PatternInput.encode(Pattern("")))
           } yield assert(result)(equalTo(respArgs("MATCH", "")))
         }
       ),
@@ -551,47 +745,74 @@ object InputSpec extends BaseSpec {
       suite("ScoreRange")(
         testM("with infinite min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "+inf")))
         },
         testM("with open min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "+inf")))
         },
         testM("with closed min and infinite max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Infinity)))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Infinity.stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "+inf")))
         },
         testM("with infinite min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "(5.2")))
         },
         testM("with open min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "(5.2")))
         },
         testM("with closed min and open max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Open(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "(5.2")))
         },
         testM("with infinite min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Infinity, ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("-inf", "5.2")))
         },
         testM("with open min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Open(4.2d), ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("(4.2", "5.2")))
         },
         testM("with closed min and closed max") {
           for {
-            result <- Task(ScoreRangeInput.encode(ScoreRange(ScoreMinimum.Closed(4.2d), ScoreMaximum.Closed(5.2d))))
+            result <- Task(
+                        Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
+                          .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
+                      )
           } yield assert(result)(equalTo(respArgs("4.2", "5.2")))
         }
       ),
@@ -790,6 +1011,25 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("NX")))
         }
       ),
+      suite("Id")(
+        testM("valid value") {
+          for {
+            result <- Task(IdInput.encode(10))
+          } yield assert(result)(equalTo(respArgs("ID", "10")))
+        }
+      ),
+      suite("UnblockBehavior")(
+        testM("timeout") {
+          for {
+            result <- Task(UnblockBehaviorInput.encode(UnblockBehavior.Timeout))
+          } yield assert(result)(equalTo(respArgs("TIMEOUT")))
+        },
+        testM("error") {
+          for {
+            result <- Task(UnblockBehaviorInput.encode(UnblockBehavior.Error))
+          } yield assert(result)(equalTo(respArgs("ERROR")))
+        }
+      ),
       suite("Varargs")(
         testM("with multiple elements") {
           for {
@@ -870,35 +1110,51 @@ object InputSpec extends BaseSpec {
       ),
       suite("XGroupCreate")(
         testM("without mkStream") {
-          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = false)))
+          Task(
+            XGroupCreateInput[String, String, String]().encode(
+              XGroupCommand.Create("key", "group", "id", mkStream = false)
+            )
+          )
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id"))))
         },
         testM("with mkStream") {
-          Task(XGroupCreateInput.encode(XGroupCommand.Create("key", "group", "id", mkStream = true)))
+          Task(
+            XGroupCreateInput[String, String, String]().encode(
+              XGroupCommand.Create("key", "group", "id", mkStream = true)
+            )
+          )
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id", "MKSTREAM"))))
         }
       ),
       suite("XGroupSetId")(
         testM("valid value") {
-          Task(XGroupSetIdInput.encode(XGroupCommand.SetId("key", "group", "id")))
+          Task(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
             .map(assert(_)(equalTo(respArgs("SETID", "key", "group", "id"))))
         }
       ),
       suite("XGroupDestroy")(
         testM("valid value") {
-          Task(XGroupDestroyInput.encode(XGroupCommand.Destroy("key", "group")))
+          Task(XGroupDestroyInput[String, String]().encode(XGroupCommand.Destroy("key", "group")))
             .map(assert(_)(equalTo(respArgs("DESTROY", "key", "group"))))
         }
       ),
       suite("XGroupCreateConsumer")(
         testM("valid value") {
-          Task(XGroupCreateConsumerInput.encode(XGroupCommand.CreateConsumer("key", "group", "consumer")))
+          Task(
+            XGroupCreateConsumerInput[String, String, String]().encode(
+              XGroupCommand.CreateConsumer("key", "group", "consumer")
+            )
+          )
             .map(assert(_)(equalTo(respArgs("CREATECONSUMER", "key", "group", "consumer"))))
         }
       ),
       suite("XGroupDelConsumer")(
         testM("valid value") {
-          Task(XGroupDelConsumerInput.encode(XGroupCommand.DelConsumer("key", "group", "consumer")))
+          Task(
+            XGroupDelConsumerInput[String, String, String]().encode(
+              XGroupCommand.DelConsumer("key", "group", "consumer")
+            )
+          )
             .map(assert(_)(equalTo(respArgs("DELCONSUMER", "key", "group", "consumer"))))
         }
       ),
@@ -918,18 +1174,12 @@ object InputSpec extends BaseSpec {
       ),
       suite("Streams")(
         testM("with one pair") {
-          Task(StreamsInput.encode(("a" -> "b", Chunk.empty)))
+          Task(StreamsInput[String, String]().encode(("a" -> "b", Chunk.empty)))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "b"))))
         },
         testM("with multiple pairs") {
-          Task(StreamsInput.encode(("a" -> "b", Chunk.single("c" -> "d"))))
+          Task(StreamsInput[String, String]().encode(("a" -> "b", Chunk.single("c" -> "d"))))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
-        }
-      ),
-      suite("Group")(
-        testM("valid value") {
-          Task(GroupInput.encode(Group("group", "consumer")))
-            .map(assert(_)(equalTo(respArgs("GROUP", "group", "consumer"))))
         }
       ),
       suite("NoAck")(
@@ -939,11 +1189,11 @@ object InputSpec extends BaseSpec {
       ),
       suite("MaxLen")(
         testM("with approximate") {
-          Task(MaxLenInput.encode(MaxLen(approximate = true, 10)))
+          Task(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "~", "10"))))
         },
         testM("without approximate") {
-          Task(MaxLenInput.encode(MaxLen(approximate = false, 10)))
+          Task(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
         }
       ),
@@ -955,6 +1205,77 @@ object InputSpec extends BaseSpec {
       suite("WithJustId")(
         testM("valid value") {
           Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
+        }
+      ),
+      suite("Side")(
+        testM("left") {
+          for {
+            result <- Task(SideInput.encode(Side.Left))
+          } yield assert(result)(equalTo(respArgs("LEFT")))
+        },
+        testM("right") {
+          for {
+            result <- Task(SideInput.encode(Side.Right))
+          } yield assert(result)(equalTo(respArgs("RIGHT")))
+        }
+      ),
+      suite("ListMaxLen")(
+        testM("valid value") {
+          Task(ListMaxLenInput.encode(ListMaxLen(10L))).map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
+        }
+      ),
+      suite("Rank")(
+        testM("valid value") {
+          Task(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(respArgs("RANK", "10"))))
+        }
+      ),
+      suite("GetEx")(
+        testM("GetExInput - valid value") {
+          for {
+            resultSeconds <-
+              Task(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
+            resultMilliseconds <-
+              Task(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
+          } yield assert(resultSeconds)(equalTo(respArgs("key", "EX", "1"))) && assert(resultMilliseconds)(
+            equalTo(respArgs("key", "PX", "100"))
+          )
+        },
+        testM("GetExAtInput - valid value") {
+          for {
+            resultSeconds <-
+              Task(
+                GetExAtInput[String]().encode(
+                  scala.Tuple3("key", ExpiredAt.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
+                )
+              )
+            resultMilliseconds <-
+              Task(
+                GetExAtInput[String]().encode(
+                  scala.Tuple3("key", ExpiredAt.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
+                )
+              )
+          } yield assert(resultSeconds)(equalTo(respArgs("key", "EXAT", "1617667200"))) && assert(resultMilliseconds)(
+            equalTo(respArgs("key", "PXAT", "1617667200000"))
+          )
+        },
+        testM("GetExPersistInput - valid value") {
+          for {
+            result              <- Task(GetExPersistInput[String]().encode("key" -> true))
+            resultWithoutOption <- Task(GetExPersistInput[String]().encode("key" -> false))
+          } yield assert(result)(equalTo(respArgs("key", "PERSIST"))) &&
+            assert(resultWithoutOption)(equalTo(respArgs("key")))
+        }
+      ),
+      suite("YesNo")(
+        testM("yes") {
+          for {
+            result <- Task(YesNoInput.encode(true))
+          } yield assert(result)(equalTo(respArgs("YES")))
+        },
+        testM("no") {
+          for {
+            result <- Task(YesNoInput.encode(false))
+          } yield assert(result)(equalTo(respArgs("NO")))
         }
       )
     )

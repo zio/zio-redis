@@ -27,7 +27,7 @@ trait HyperLogLogSpec extends BaseSpec {
             value <- uuid
             _     <- set(key, value, None, None, None)
             add   <- pfAdd(key, "one", "two", "three").either
-          } yield assert(add)(isLeft)
+          } yield assert(add)(isLeft(isSubtype[RedisError.WrongType](anything)))
         }
       ),
       suite("count elements")(

@@ -12,6 +12,7 @@ package object redis
     with api.SortedSets
     with api.Streams
     with api.Scripting
+    with options.Connection
     with options.Geo
     with options.Keys
     with options.Shared
