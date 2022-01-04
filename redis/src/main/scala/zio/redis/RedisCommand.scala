@@ -1,7 +1,7 @@
 package zio.redis
 
 import zio.ZIO
-import zio.redis.Input.{ StringInput, Varargs }
+import zio.redis.Input.{StringInput, Varargs}
 
 final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out]) {
   private[redis] def run(in: In): ZIO[RedisExecutor, RedisError, Out] =
