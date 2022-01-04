@@ -2,12 +2,13 @@ package zio.redis.api
 
 import java.time.Instant
 
+import zio.{Chunk, ZIO}
 import zio.duration._
+import zio.redis._
 import zio.redis.Input._
 import zio.redis.Output._
-import zio.redis._
+import zio.redis.ResultBuilder._
 import zio.schema.Schema
-import zio.{Chunk, ZIO}
 
 trait Strings {
   import Strings._
@@ -150,10 +151,11 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it does not exist.
    */
-  final def get[K: Schema, R: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command = RedisCommand(Get, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]()))
-    command.run(key)
-  }
+  final def get[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(Get, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
+    }
 
   /**
    * Returns the bit value at offset in the string value stored at key.
@@ -180,10 +182,12 @@ trait Strings {
    * @return
    *   Returns the substring.
    */
-  final def getRange[K: Schema, R: Schema](key: K, range: Range): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command = RedisCommand(GetRange, Tuple2(ArbitraryInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]()))
-    command.run((key, range))
-  }
+  final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(GetRange, Tuple2(ArbitraryInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]()))
+          .run((key, range))
+    }
 
   /**
    * Set the string value of a key and return its old value.
@@ -195,11 +199,12 @@ trait Strings {
    * @return
    *   Returns the previous value of the string or None if it did not previously have a value.
    */
-  final def getSet[K: Schema, V: Schema, R: Schema](key: K, value: V): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command =
-      RedisCommand(GetSet, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), OptionalOutput(ArbitraryOutput[R]()))
-    command.run((key, value))
-  }
+  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(GetSet, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), OptionalOutput(ArbitraryOutput[R]()))
+          .run((key, value))
+    }
 
   /**
    * Get the string value of a key and delete it on success (if and only if the key's value type is a string).
@@ -209,10 +214,11 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getDel[K: Schema, R: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command = RedisCommand(GetDel, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]()))
-    command.run(key)
-  }
+  final def getDel[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(GetDel, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
+    }
 
   /**
    * Get the value of key and set its expiration.
@@ -227,14 +233,11 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getEx[K: Schema, R: Schema](
-    key: K,
-    expire: Expire,
-    expireTime: Duration
-  ): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command = RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]()))
-    command.run((key, expire, expireTime))
-  }
+  final def getEx[K: Schema](key: K, expire: Expire, expireTime: Duration): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expire, expireTime))
+    }
 
   /**
    * Get the value of key and set its expiration.
@@ -249,14 +252,11 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getEx[K: Schema, R: Schema](
-    key: K,
-    expiredAt: ExpiredAt,
-    timestamp: Instant
-  ): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command = RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]()))
-    command.run((key, expiredAt, timestamp))
-  }
+  final def getEx[K: Schema](key: K, expiredAt: ExpiredAt, timestamp: Instant): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expiredAt, timestamp))
+    }
 
   /**
    * Get the value of key and remove the time to live associated with the key.
@@ -268,10 +268,11 @@ trait Strings {
    * @return
    *   Returns the value of the string or None if it did not previously have a value.
    */
-  final def getEx[K: Schema, R: Schema](key: K, persist: Boolean): ZIO[RedisExecutor, RedisError, Option[R]] = {
-    val command = RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]()))
-    command.run((key, persist))
-  }
+  final def getEx[K: Schema](key: K, persist: Boolean): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: ZIO[RedisExecutor, RedisError, Option[R]] =
+        RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, persist))
+    }
 
   /**
    * Increment the integer value of a key by one.
@@ -312,8 +313,8 @@ trait Strings {
    * @return
    *   Returns the value of key after the increment.
    */
-  final def incrByFloat[K: Schema, R: Schema](key: K, increment: Double): ZIO[RedisExecutor, RedisError, R] = {
-    val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryInput[K](), DoubleInput), ArbitraryOutput[R]())
+  final def incrByFloat[K: Schema](key: K, increment: Double): ZIO[RedisExecutor, RedisError, Double] = {
+    val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryInput[K](), DoubleInput), DoubleOutput)
     command.run((key, increment))
   }
 
@@ -327,11 +328,17 @@ trait Strings {
    * @return
    *   Returns the values of the given keys.
    */
-  final def mGet[K: Schema, R: Schema](key: K, keys: K*): ZIO[RedisExecutor, RedisError, Chunk[Option[R]]] = {
-    val command =
-      RedisCommand(MGet, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(ArbitraryOutput[R]())))
-    command.run((key, keys.toList))
-  }
+  final def mGet[K: Schema](
+    key: K,
+    keys: K*
+  ): ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[Option[V]]] = {
+        val command =
+          RedisCommand(MGet, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(ArbitraryOutput[V]())))
+        command.run((key, keys.toList))
+      }
+    }
 
   /**
    * Set multiple keys to multiple values.
