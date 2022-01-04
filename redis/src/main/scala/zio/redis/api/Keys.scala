@@ -2,12 +2,13 @@ package zio.redis.api
 
 import java.time.Instant
 
-import zio.duration._
-import zio.redis.Input._
-import zio.redis.Output.{Tuple2Output, _}
-import zio.redis._
-import zio.schema.Schema
 import zio.{Chunk, ZIO}
+import zio.duration._
+import zio.redis._
+import zio.redis.Input._
+import zio.redis.Output._
+import zio.redis.ResultBuilder._
+import zio.schema.Schema
 
 trait Keys {
   import Keys.{Keys => _, _}
@@ -103,10 +104,11 @@ trait Keys {
    * @return
    *   keys matching pattern.
    */
-  final def keys[V: Schema](pattern: String): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
-    val command = RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]()))
-    command.run(pattern)
-  }
+  final def keys(pattern: String): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] =
+        RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]())).run(pattern)
+    }
 
   /**
    * Atomically transfer a key from a source Redis instance to a destination Redis instance. On success the key is
@@ -246,10 +248,11 @@ trait Keys {
    * @return
    *   key or None when the database is empty.
    */
-  final def randomKey[V: Schema](): ZIO[RedisExecutor, RedisError, Option[V]] = {
-    val command = RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]()))
-    command.run(())
-  }
+  final def randomKey: ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
+        RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]())).run(())
+    }
 
   /**
    * Renames key to newKey. It returns an error when key does not exist. If newKey already exists it is overwritten.
@@ -344,19 +347,22 @@ trait Keys {
    *   returns an updated cursor that the user needs to use as the cursor argument in the next call along with the
    *   values.
    */
-  final def scan[K: Schema](
+  final def scan(
     cursor: Long,
     pattern: Option[String] = None,
     count: Option[Count] = None,
     `type`: Option[RedisType] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[K])] = {
-    val command = RedisCommand(
-      Scan,
-      Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
-      Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
-    )
-    command.run((cursor, pattern.map(Pattern), count, `type`))
-  }
+  ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
+      def returning[K: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[K])] = {
+        val command = RedisCommand(
+          Scan,
+          Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
+          Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
+        )
+        command.run((cursor, pattern.map(Pattern), count, `type`))
+      }
+    }
 
   /**
    * Sorts the list, set, or sorted set stored at key. Returns the sorted elements.
@@ -376,28 +382,31 @@ trait Keys {
    * @return
    *   the sorted values, or the values found using the get patterns.
    */
-  final def sort[K: Schema, V: Schema](
+  final def sort[K: Schema](
     key: K,
     by: Option[String] = None,
     limit: Option[Limit] = None,
     order: Order = Order.Ascending,
     get: Option[(String, List[String])] = None,
     alpha: Option[Alpha] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
-    val command = RedisCommand(
-      Sort,
-      Tuple6(
-        ArbitraryInput[K](),
-        OptionalInput(ByInput),
-        OptionalInput(LimitInput),
-        OptionalInput(NonEmptyList(GetInput)),
-        OrderInput,
-        OptionalInput(AlphaInput)
-      ),
-      ChunkOutput(ArbitraryOutput[V]())
-    )
-    command.run((key, by, limit, get, order, alpha))
-  }
+  ): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] = {
+        val command = RedisCommand(
+          Sort,
+          Tuple6(
+            ArbitraryInput[K](),
+            OptionalInput(ByInput),
+            OptionalInput(LimitInput),
+            OptionalInput(NonEmptyList(GetInput)),
+            OrderInput,
+            OptionalInput(AlphaInput)
+          ),
+          ChunkOutput(ArbitraryOutput[V]())
+        )
+        command.run((key, by, limit, get, order, alpha))
+      }
+    }
 
   /**
    * Sorts the list, set, or sorted set stored at key. Stores the results at storeAt. Returns the number of values

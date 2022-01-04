@@ -1,10 +1,11 @@
 package zio.redis.api
 
+import zio.{Chunk, ZIO}
+import zio.redis._
 import zio.redis.Input._
 import zio.redis.Output._
-import zio.redis._
+import zio.redis.ResultBuilder._
 import zio.schema.Schema
-import zio.{Chunk, ZIO}
 
 trait Hashes {
   import Hashes._
@@ -51,11 +52,12 @@ trait Hashes {
    * @return
    *   value stored in the field, if any.
    */
-  final def hGet[K: Schema, F: Schema, O: Schema](key: K, field: F): ZIO[RedisExecutor, RedisError, Option[O]] = {
-    val command =
-      RedisCommand(HGet, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), OptionalOutput(ArbitraryOutput[O]()))
-    command.run((key, field))
-  }
+  final def hGet[K: Schema, F: Schema](key: K, field: F): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
+        RedisCommand(HGet, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), OptionalOutput(ArbitraryOutput[V]()))
+          .run((key, field))
+    }
 
   /**
    * Returns all fields and values of the hash stored at `key`.
@@ -65,9 +67,12 @@ trait Hashes {
    * @return
    *   map of `field -> value` pairs under the key.
    */
-  final def hGetAll[K: Schema, F: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Map[F, V]] = {
-    val command = RedisCommand(HGetAll, ArbitraryInput[K](), KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]()))
-    command.run(key)
+  final def hGetAll[K: Schema](key: K): ResultBuilder2[Map] = new ResultBuilder2[Map] {
+    def returning[F: Schema, V: Schema]: ZIO[RedisExecutor, RedisError, Map[F, V]] = {
+      val command =
+        RedisCommand(HGetAll, ArbitraryInput[K](), KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]()))
+      command.run(key)
+    }
   }
 
   /**
@@ -119,10 +124,11 @@ trait Hashes {
    * @return
    *   chunk of field names.
    */
-  final def hKeys[K: Schema, F: Schema](key: K): ZIO[RedisExecutor, RedisError, Chunk[F]] = {
-    val command = RedisCommand(HKeys, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[F]()))
-    command.run(key)
-  }
+  final def hKeys[K: Schema](key: K): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[F: Schema]: ZIO[RedisExecutor, RedisError, Chunk[F]] =
+        RedisCommand(HKeys, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[F]())).run(key)
+    }
 
   /**
    * Returns the number of fields contained in the hash stored at `key`.
@@ -149,18 +155,21 @@ trait Hashes {
    * @return
    *   chunk of values, where value is `None` if the field is not in the hash.
    */
-  final def hmGet[K: Schema, F: Schema, V: Schema](
+  final def hmGet[K: Schema, F: Schema](
     key: K,
     field: F,
     fields: F*
-  ): ZIO[RedisExecutor, RedisError, Chunk[Option[V]]] = {
-    val command = RedisCommand(
-      HmGet,
-      Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[F]())),
-      ChunkOutput(OptionalOutput(ArbitraryOutput[V]()))
-    )
-    command.run((key, (field, fields.toList)))
-  }
+  ): ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[Option[V]]] = {
+        val command = RedisCommand(
+          HmGet,
+          Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[F]())),
+          ChunkOutput(OptionalOutput(ArbitraryOutput[V]()))
+        )
+        command.run((key, (field, fields.toList)))
+      }
+    }
 
   /**
    * Sets the specified `field -> value` pairs in the hash stored at `key`. Deprecated: As per Redis 4.0.0, HMSET is
@@ -202,19 +211,22 @@ trait Hashes {
    * @return
    *   pair containing the next cursor and list of elements scanned.
    */
-  final def hScan[K: Schema, F: Schema, V: Schema](
+  final def hScan[K: Schema](
     key: K,
     cursor: Long,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, (Long, Chunk[(F, V)])] = {
-    val command = RedisCommand(
-      HScan,
-      Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-      Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
-    )
-    command.run((key, cursor, pattern.map(Pattern), count))
-  }
+  ): ResultBuilder2[({ type lambda[x, y] = (Long, Chunk[(x, y)]) })#lambda] =
+    new ResultBuilder2[({ type lambda[x, y] = (Long, Chunk[(x, y)]) })#lambda] {
+      def returning[F: Schema, V: Schema]: ZIO[RedisExecutor, RedisError, (Long, Chunk[(F, V)])] = {
+        val command = RedisCommand(
+          HScan,
+          Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
+          Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
+        )
+        command.run((key, cursor, pattern.map(Pattern), count))
+      }
+    }
 
   /**
    * Sets `field -> value` pairs in the hash stored at `key`
@@ -286,10 +298,11 @@ trait Hashes {
    * @return
    *   list of values in the hash, or an empty list when `key` does not exist.
    */
-  final def hVals[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
-    val command = RedisCommand(HVals, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[V]()))
-    command.run(key)
-  }
+  final def hVals[K: Schema](key: K): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] =
+        RedisCommand(HVals, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[V]())).run(key)
+    }
 
   /**
    * Returns a random field from the hash value stored at `key`
@@ -299,10 +312,11 @@ trait Hashes {
    * @return
    *   random field in the hash or `None` when `key` does not exist.
    */
-  final def hRandField[K: Schema, V: Schema](key: K): ZIO[RedisExecutor, RedisError, Option[V]] = {
-    val command = RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))
-    command.run(key)
-  }
+  final def hRandField[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Option[V]] =
+        RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
+    }
 
   /**
    * Returns an array of at most `count` distinct fields randomly. If called with a negative `count`, the command will
@@ -318,18 +332,17 @@ trait Hashes {
    * @return
    *   a list of fields or fields and values if `withValues` is true.
    */
-  final def hRandField[K: Schema, V: Schema](
-    key: K,
-    count: Long,
-    withValues: Boolean = false
-  ): ZIO[RedisExecutor, RedisError, Chunk[V]] = {
-    val command = RedisCommand(
-      HRandField,
-      Tuple3(ArbitraryInput[K](), LongInput, OptionalInput(StringInput)),
-      ChunkOutput(ArbitraryOutput[V]())
-    )
-    command.run((key, count, if (withValues) Some("WITHVALUES") else None))
-  }
+  final def hRandField[K: Schema](key: K, count: Long, withValues: Boolean = false): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[V: Schema]: ZIO[RedisExecutor, RedisError, Chunk[V]] = {
+        val command = RedisCommand(
+          HRandField,
+          Tuple3(ArbitraryInput[K](), LongInput, OptionalInput(StringInput)),
+          ChunkOutput(ArbitraryOutput[V]())
+        )
+        command.run((key, count, if (withValues) Some("WITHVALUES") else None))
+      }
+    }
 }
 
 private[redis] object Hashes {
