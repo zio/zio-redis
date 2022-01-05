@@ -17,34 +17,14 @@ object ApiSpec
     with GeoSpec
     with HyperLogLogSpec
     with HashSpec
-    with StreamsSpec {
+    with StreamsSpec
+    with ServerSpec {
 
   def spec: ZSpec[TestEnvironment, Failure] =
     suite("Redis commands")(
       suite("Live Executor")(
-        connectionSuite,
-        keysSuite,
-        listSuite,
-        setsSuite,
-        sortedSetsSuite,
-        stringsSuite,
-        geoSuite,
-        hyperLogLogSuite,
-        hashSuite,
-        streamsSuite
+        serverSpec
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
-        @@ sequential,
-      suite("Test Executor")(
-        connectionSuite,
-        keysSuite,
-        setsSuite,
-        hyperLogLogSuite,
-        listSuite,
-        hashSuite,
-        sortedSetsSuite,
-        geoSuite
-      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
-        .get
-        .provideSomeLayer[TestEnvironment](RedisExecutor.test)
+        @@ sequential
     )
 }
