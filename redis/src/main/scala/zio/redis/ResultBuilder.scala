@@ -27,4 +27,8 @@ object ResultBuilder {
   trait ResultBuilder3[+F[_, _, _]] extends ResultBuilder {
     def returning[R1: Schema, R2: Schema, R3: Schema]: ZIO[RedisExecutor, RedisError, F[R1, R2, R3]]
   }
+
+  trait ResultOutputBuilder extends ResultBuilder {
+    def returning[R: Output]: ZIO[RedisExecutor, RedisError, R]
+  }
 }

@@ -18,6 +18,10 @@ sealed trait Output[+A] {
         throw RedisError.BusyGroup(msg.drop(9).trim)
       case RespValue.Error(msg) if msg.startsWith("NOGROUP") =>
         throw RedisError.NoGroup(msg.drop(7).trim)
+      case RespValue.Error(msg) if msg.startsWith("NOSCRIPT") =>
+        throw RedisError.NoScript(msg.drop(8).trim)
+      case RespValue.Error(msg) if msg.startsWith("NOTBUSY") =>
+        throw RedisError.NotBusy(msg.drop(7).trim)
       case RespValue.Error(msg) =>
         throw RedisError.ProtocolError(msg.trim)
       case success =>
@@ -36,6 +40,12 @@ sealed trait Output[+A] {
 object Output {
 
   import RedisError._
+
+  def apply[A](implicit output: Output[A]): Output[A] = output
+
+  case object RespValueOutput extends Output[RespValue] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): RespValue = respValue
+  }
 
   case object BoolOutput extends Output[Boolean] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Boolean =

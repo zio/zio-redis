@@ -5,14 +5,23 @@ import java.util.concurrent.TimeUnit
 
 import zio.Chunk
 import zio.duration.Duration
+import zio.redis.RespValue.BulkString
 import zio.schema.Schema
 import zio.schema.codec.Codec
 
 sealed trait Input[-A] {
+  self =>
+
   private[redis] def encode(data: A)(implicit codec: Codec): Chunk[RespValue.BulkString]
+
+  final def contramap[B](f: B => A): Input[B] = new Input[B] {
+    def encode(data: B)(implicit codec: Codec): Chunk[BulkString] = self.encode(f(data))
+  }
 }
 
 object Input {
+
+  def apply[A](implicit input: Input[A]): Input[A] = input
 
   @inline
   private[this] def encodeString(s: String): RespValue.BulkString = RespValue.bulkString(s)
@@ -555,6 +564,21 @@ object Input {
   final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
     def encode(data: Iterable[A])(implicit codec: Codec): Chunk[RespValue.BulkString] =
       data.foldLeft(Chunk.empty: Chunk[RespValue.BulkString])((acc, a) => acc ++ input.encode(a))
+  }
+
+  final case class EvalInput[-K, -V](inputK: Input[K], inputV: Input[V]) extends Input[(String, Chunk[K], Chunk[V])] {
+    def encode(data: (String, Chunk[K], Chunk[V]))(implicit codec: Codec): Chunk[RespValue.BulkString] = {
+      val (lua, keys, args) = data
+      val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
+      val encodedKeys       = keys.flatMap(inputK.encode)
+      val encodedArgs       = args.flatMap(inputV.encode)
+      encodedScript ++ encodedKeys ++ encodedArgs
+    }
+  }
+
+  case object ScriptDebugInput extends Input[DebugMode] {
+    def encode(data: DebugMode)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      Chunk.single(encodeString(data.stringify))
   }
 
   case object WithScoresInput extends Input[WithScores] {
