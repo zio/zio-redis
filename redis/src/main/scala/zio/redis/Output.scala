@@ -787,4 +787,32 @@ object Output {
         case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
       }
   }
+
+  /**
+   * Todo: Implement test
+   */
+  case object AclCategoryOutput extends Output[AclCategory] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): AclCategory =
+      respValue match {
+        case bulk @ RespValue.BulkString(_) => bulk.asString match {
+          case AclCategory(category) => category
+          case other => throw ProtocolError(s"$other isn't a category")
+        }
+        case other => throw ProtocolError(s"$other isn't a string")
+      }
+  }
+
+  /**
+   * Todo: Implement test
+   */
+  case object ServerCommandOutput extends Output[ServerCommand] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): ServerCommand =
+      respValue match {
+        case bulk @ RespValue.BulkString(_) => bulk.asString match {
+          case ServerCommand(command) => command
+          case other => throw ProtocolError(s"$other isn't a server command")
+        }
+        case other => throw ProtocolError(s"$other isn't a string")
+      }
+  }
 }

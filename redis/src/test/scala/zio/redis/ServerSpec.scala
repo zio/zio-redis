@@ -10,18 +10,18 @@ trait ServerSpec extends BaseSpec {
       suite("acl cat")(
         testM("acl cat with no category parameter") {
           for {
-            aclList <- aclCat(None)
+            aclList <- aclCat()
           } yield assert(aclList)(isNonEmpty)
         },
         testM("acl cat with some category parameter") {
           for {
-            aclList <- aclCat(Some("dangerous"))
+            aclList <- aclCat(AclCategory.Dangerous)
           } yield assert(aclList)(isNonEmpty)
         },
-        testM("acl cat with some category unknown parameter") {
+        testM("acl cat with another category parameter") {
           for {
-            aclList <- aclCat(Some("foobar")).run
-          } yield assert(aclList)(fails(isSubtype[ProtocolError](anything)))
+            aclList <- aclCat(AclCategory.Hyperloglog)
+          } yield assert(aclList)(isNonEmpty)
         }
       ),
       suite("acl setuser")(

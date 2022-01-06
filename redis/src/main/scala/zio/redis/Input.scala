@@ -591,4 +591,12 @@ object Input {
     def encode(data: Boolean)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeString(if (data) "YES" else "NO"))
   }
+
+  /**
+   * Todo: Implement test
+   */
+  case object AclCategoryInput extends Input[AclCategory] {
+    def encode(data: AclCategory)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      Chunk.single(encodeString(data.stringify))
+  }
 }
