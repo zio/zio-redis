@@ -17,7 +17,8 @@ object ApiSpec
     with GeoSpec
     with HyperLogLogSpec
     with HashSpec
-    with StreamsSpec {
+    with StreamsSpec
+    with ScriptingSpec {
 
   def spec: ZSpec[TestEnvironment, Failure] =
     suite("Redis commands")(
@@ -31,7 +32,8 @@ object ApiSpec
         geoSuite,
         hyperLogLogSuite,
         hashSuite,
-        streamsSuite
+        streamsSuite,
+        scriptingSpec
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
         @@ sequential,
       suite("Test Executor")(
