@@ -50,7 +50,7 @@ trait Scripting {
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
     def returning[R: Output]: ZIO[RedisExecutor, RedisError, R] = {
-      val command = RedisCommand(Eval, EvalInput(implicitly[Input[K]], implicitly[Input[A]]), implicitly[Output[R]])
+      val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R])
       command.run((script, keys, args))
     }
   }
@@ -75,7 +75,7 @@ trait Scripting {
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
     def returning[R: Output]: ZIO[RedisExecutor, RedisError, R] = {
-      val command = RedisCommand(EvalSha, EvalInput(implicitly[Input[K]], implicitly[Input[A]]), implicitly[Output[R]])
+      val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R])
       command.run((sha1, keys, args))
     }
   }

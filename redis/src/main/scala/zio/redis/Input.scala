@@ -21,6 +21,8 @@ sealed trait Input[-A] {
 
 object Input {
 
+  def apply[A](implicit input: Input[A]): Input[A] = input
+
   @inline
   private[this] def encodeString(s: String): RespValue.BulkString = RespValue.bulkString(s)
   @inline
@@ -568,8 +570,8 @@ object Input {
     def encode(data: (String, Chunk[K], Chunk[V]))(implicit codec: Codec): Chunk[RespValue.BulkString] = {
       val (lua, keys, args) = data
       val encodedScript     = Chunk(encodeString(lua), encodeString(keys.size.toString))
-      val encodedKeys       = keys.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputK.encode(next))
-      val encodedArgs       = args.foldLeft[Chunk[BulkString]](Chunk.empty)((cur, next) => cur ++ inputV.encode(next))
+      val encodedKeys       = keys.flatMap(inputK.encode)
+      val encodedArgs       = args.flatMap(inputV.encode)
       encodedScript ++ encodedKeys ++ encodedArgs
     }
   }
@@ -613,13 +615,4 @@ object Input {
     def encode(data: Boolean)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeString(if (data) "YES" else "NO"))
   }
-
-  trait Implicits {
-    implicit val bytesEncoder: Input[Chunk[Byte]] = ByteInput
-    implicit val booleanInput: Input[Boolean]     = BoolInput
-    implicit val stringInput: Input[String]       = StringInput
-    implicit val longInput: Input[Long]           = LongInput
-  }
-
-  object Implicits extends Implicits
 }

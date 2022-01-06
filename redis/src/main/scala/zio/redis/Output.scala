@@ -41,6 +41,8 @@ object Output {
 
   import RedisError._
 
+  def apply[A](implicit output: Output[A]): Output[A] = output
+
   case object RespValueOutput extends Output[RespValue] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): RespValue = respValue
   }

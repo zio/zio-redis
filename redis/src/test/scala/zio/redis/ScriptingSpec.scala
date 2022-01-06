@@ -1,11 +1,10 @@
 package zio.redis
 
 import zio._
-import zio.redis.Input.{LongInput, StringInput}
-import zio.redis.Input.Implicits._
+import zio.redis.Input.{BoolInput, ByteInput, LongInput, StringInput}
 import zio.redis.Output._
 import zio.redis.RedisError._
-import zio.redis.ScriptingSpec.CustomInputValue
+import zio.redis.ScriptingSpec._
 import zio.test._
 import zio.test.Assertion._
 
@@ -16,7 +15,6 @@ trait ScriptingSpec extends BaseSpec {
     suite("scripting")(
       suite("eval")(
         testM("put boolean and return existence of key") {
-          import ScriptingSpec.booleanOutput
           for {
             key <- uuid
             arg  = true
@@ -26,10 +24,9 @@ trait ScriptingSpec extends BaseSpec {
                 |return redis.call('exists',KEYS[1])
               """.stripMargin
             res <- eval(lua, Chunk(key), Chunk(arg)).returning[Boolean]
-          } yield assert(res)(equalTo(true))
+          } yield assertTrue(res)
         },
         testM("take strings return strings") {
-          import ScriptingSpec.chunkStringOutput
           for {
             key1 <- uuid
             key2 <- uuid
@@ -37,10 +34,9 @@ trait ScriptingSpec extends BaseSpec {
             arg2 <- uuid
             lua   = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
             res  <- eval(lua, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
-          } yield assert(res)(equalTo(Chunk(key1, key2, arg1, arg2)))
+          } yield assertTrue(res == Chunk(key1, key2, arg1, arg2))
         },
         testM("put custom input value return custom input value") {
-          import ScriptingSpec.keyValueOutput
           for {
             key1 <- uuid
             key2 <- uuid
@@ -49,19 +45,17 @@ trait ScriptingSpec extends BaseSpec {
             arg   = CustomInputValue(arg1, arg2)
             lua   = """return {ARGV[1],ARGV[2]}"""
             res  <- eval(lua, Chunk(key1, key2), Chunk(arg)).returning[Map[String, String]]
-          } yield assert(res)(equalTo(Map(arg1 -> arg2.toString)))
+          } yield assertTrue(res == Map(arg1 -> arg2.toString))
         },
         testM("return custom data type") {
-          import ScriptingSpec.CustomData
           val lua                     = """return {1,2,{3,'Hello World!'}}"""
           val expected                = CustomData(1, 2, (3, "Hello World!"))
           val emptyInput: Chunk[Long] = Chunk.empty
           for {
             res <- eval(lua, emptyInput, emptyInput).returning[CustomData]
-          } yield assert(res)(equalTo(expected))
+          } yield assertTrue(res == expected)
         },
         testM("throw an error when incorrect script's sent") {
-          import ScriptingSpec.simpleStringOutput
           for {
             key  <- uuid
             arg  <- uuid
@@ -71,18 +65,16 @@ trait ScriptingSpec extends BaseSpec {
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         },
         testM("throw an error if couldn't decode resp value") {
-          import ScriptingSpec.errorOutput
           val customError                      = "custom error"
           implicit val decoder: Output[String] = errorOutput(customError)
           for {
             key <- uuid
             arg <- uuid
             lua  = ""
-            res <- eval(lua, Chunk(key), Chunk(arg)).returning[String].either
+            res <- eval(lua, Chunk(key), Chunk(arg)).returning[String](decoder).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         testM("throw custom error from script") {
-          import ScriptingSpec.simpleStringOutput
           for {
             key    <- uuid
             arg    <- uuid
@@ -94,7 +86,6 @@ trait ScriptingSpec extends BaseSpec {
       ),
       suite("evalSHA")(
         testM("put boolean and return existence of key") {
-          import ScriptingSpec.booleanOutput
           for {
             key <- uuid
             arg  = true
@@ -105,10 +96,9 @@ trait ScriptingSpec extends BaseSpec {
               """.stripMargin
             sha <- scriptLoad(lua)
             res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[Boolean]
-          } yield assert(res)(equalTo(true))
+          } yield assertTrue(res)
         },
         testM("take strings return strings") {
-          import ScriptingSpec.chunkStringOutput
           for {
             key1 <- uuid
             key2 <- uuid
@@ -117,19 +107,17 @@ trait ScriptingSpec extends BaseSpec {
             lua   = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
             sha  <- scriptLoad(lua)
             res  <- evalSha(sha, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
-          } yield assert(res)(equalTo(Chunk(key1, key2, arg1, arg2)))
+          } yield assertTrue(res == Chunk(key1, key2, arg1, arg2))
         },
         testM("return custom data type") {
-          import ScriptingSpec.CustomData
           val lua                       = """return {1,2,{3,'Hello World!'}}"""
           val expected                  = CustomData(1, 2, (3, "Hello World!"))
           val emptyInput: Chunk[String] = Chunk.empty
           for {
             res <- eval(lua, emptyInput, emptyInput).returning[CustomData]
-          } yield assert(res)(equalTo(expected))
+          } yield assertTrue(res == expected)
         },
         testM("throw an error if couldn't decode resp value") {
-          import ScriptingSpec.errorOutput
           val customError                      = "custom error"
           implicit val decoder: Output[String] = errorOutput(customError)
           for {
@@ -137,11 +125,10 @@ trait ScriptingSpec extends BaseSpec {
             arg <- uuid
             lua  = ""
             sha <- scriptLoad(lua)
-            res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[String].either
+            res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[String](decoder).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         testM("throw custom error from script") {
-          import ScriptingSpec.simpleStringOutput
           for {
             key    <- uuid
             arg    <- uuid
@@ -152,7 +139,6 @@ trait ScriptingSpec extends BaseSpec {
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(myError)))))
         },
         testM("throw NoScript error if script isn't found in cache") {
-          import ScriptingSpec.simpleStringOutput
           val lua                       = """return "1""""
           val error                     = "No matching script. Please use EVAL."
           val emptyInput: Chunk[String] = Chunk.empty
@@ -169,14 +155,14 @@ trait ScriptingSpec extends BaseSpec {
             sha1 <- scriptLoad(lua1)
             sha2 <- scriptLoad(lua2)
             res  <- scriptExists(sha1, sha2)
-          } yield assert(res)(equalTo(Chunk(true, true)))
+          } yield assertTrue(res == Chunk(true, true))
         },
         testM("return false if scripts aren't found in the cache") {
           val lua1 = """return "1""""
           val lua2 = """return "2""""
           for {
             res <- scriptExists(lua1, lua2)
-          } yield assert(res)(equalTo(Chunk(false, false)))
+          } yield assertTrue(res == Chunk(false, false))
         }
       ),
       suite("scriptLoad")(
@@ -210,21 +196,12 @@ object ScriptingSpec {
   final case class CustomData(count: Long, avg: Long, pair: (Int, String))
 
   object CustomData {
-    private val tryDecodeLong: RespValue => Long = {
-      case RespValue.Integer(value) => value
-      case other                    => throw ProtocolError(s"$other isn't a integer type")
-    }
-    private val tryDecodeString: RespValue => String = {
-      case s @ RespValue.BulkString(_) => s.asString
-      case other                       => throw ProtocolError(s"$other isn't a string type")
-    }
-
     implicit val decoder: Output[CustomData] = RespValueOutput.map {
       case RespValue.Array(elements) =>
-        val count = tryDecodeLong(elements(0))
-        val avg   = tryDecodeLong(elements(1))
+        val count = RespToLong(elements(0))
+        val avg   = RespToLong(elements(1))
         val pair = elements(2) match {
-          case RespValue.Array(elements) => (tryDecodeLong(elements(0)).toInt, tryDecodeString(elements(1)))
+          case RespValue.Array(elements) => (RespToLong(elements(0)).toInt, RespToString(elements(1)))
           case other                     => throw ProtocolError(s"$other isn't an array type")
         }
         CustomData(count, avg, pair)
@@ -232,19 +209,30 @@ object ScriptingSpec {
     }
   }
 
-  implicit val keyValueOutput: KeyValueOutput[String, String] = KeyValueOutput(MultiStringOutput, MultiStringOutput)
+  private val RespToLong: RespValue => Long = {
+    case RespValue.Integer(value) => value
+    case other                    => throw ProtocolError(s"$other isn't a integer type")
+  }
+  private val RespToString: RespValue => String = {
+    case s @ RespValue.BulkString(_) => s.asString
+    case other                       => throw ProtocolError(s"$other isn't a string type")
+  }
 
+  implicit val bytesEncoder: Input[Chunk[Byte]] = ByteInput
+  implicit val booleanInput: Input[Boolean]     = BoolInput
+  implicit val stringInput: Input[String]       = StringInput
+  implicit val longInput: Input[Long]           = LongInput
+
+  implicit val keyValueOutput: KeyValueOutput[String, String] = KeyValueOutput(MultiStringOutput, MultiStringOutput)
   implicit val booleanOutput: Output[Boolean] = RespValueOutput.map {
     case RespValue.Integer(0) => false
     case RespValue.Integer(1) => true
     case other                => throw ProtocolError(s"$other isn't a string nor an array")
   }
-
   implicit val simpleStringOutput: Output[String] = RespValueOutput.map {
     case RespValue.SimpleString(value) => value
     case other                         => throw ProtocolError(s"$other isn't a string nor an array")
   }
-
   implicit val chunkStringOutput: Output[Chunk[String]] = RespValueOutput.map {
     case RespValue.Array(elements) =>
       elements.map {
