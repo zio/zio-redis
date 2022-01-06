@@ -763,5 +763,24 @@ trait Server {
     case object Exec                 extends ServerCommand
   }
 
-  
+  sealed trait ServerRule
+
+  object ServerRule {
+    case object On extends ServerRule
+    case object Off extends ServerRule
+
+    case class KeyPattern(pattern: String) extends ServerRule
+    case object ResetKeys extends ServerRule
+
+    case class ChannelPattern(pattern: String) extends ServerRule // Channles also known as pubSub
+    case object RestChannels extends ServerRule
+
+    case class AddCommand(command: ServerCommand) extends ServerRule
+    case class AddCategory(category: AclCategory) extends ServerRule
+
+    
+
+    val allKeys = KeyPattern("*")
+    val allChannels = ChannelPattern("*")
+  }
 }
