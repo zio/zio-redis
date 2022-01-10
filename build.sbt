@@ -80,17 +80,16 @@ lazy val example =
 lazy val docs = project
   .in(file("zio-redis-docs"))
   .settings(
-    publish / skip                             := true,
-    moduleName                                 := "zio-redis-docs",
+    publish / skip := true,
+    moduleName     := "zio-redis-docs",
     scalacOptions -= "-Yno-imports",
     scalacOptions -= "-Xfatal-warnings",
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
     ScalaUnidoc / unidoc / target              := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
     cleanFiles += (ScalaUnidoc / unidoc / target).value,
-    docusaurusCreateSite                       := docusaurusCreateSite.dependsOn(Compile / unidoc).value,
-    docusaurusPublishGhpages                   := docusaurusPublishGhpages.dependsOn(Compile / unidoc).value
+    docusaurusCreateSite     := docusaurusCreateSite.dependsOn(Compile / unidoc).value,
+    docusaurusPublishGhpages := docusaurusPublishGhpages.dependsOn(Compile / unidoc).value
   )
   .settings(macroDefinitionSettings)
   .dependsOn(redis)
   .enablePlugins(MdocPlugin, DocusaurusPlugin, ScalaUnidocPlugin)
-
