@@ -31,6 +31,17 @@ object BuildHelper {
       buildInfoObject  := "BuildInfo"
     )
 
+  def macroDefinitionSettings =
+    List(
+      scalacOptions += "-language:experimental.macros",
+      libraryDependencies ++= {
+        List(
+          "org.scala-lang" % "scala-reflect"  % scalaVersion.value % Provided,
+          "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided
+        )
+      }
+    )
+
   def stdSettings(prjName: String) =
     List(
       name                     := s"$prjName",

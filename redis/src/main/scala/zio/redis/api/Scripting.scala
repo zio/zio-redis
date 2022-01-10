@@ -26,29 +26,7 @@ trait Scripting {
   import Scripting._
 
   /**
-   * Evaluates a Lua script
-   *
-   * Example of custom data:
-   * {{{
-   * final case class Person(name: String, age: Long)
-   *
-   * val encoder = Input.Tuple2(StringInput, LongInput).contramap[Person] { civ =>
-   *   (civ.name, civ.age)
-   * }
-   * val decoder = RespValueOutput.map {
-   *   case RespValue.Array(elements) =>
-   *     val name = elements(0) match {
-   *       case s @ RespValue.BulkString(_) => s.asString
-   *       case other                       => throw ProtocolError(s"$other isn't a string type")
-   *     }
-   *     val age = elements(1) match {
-   *       case RespValue.Integer(value) => value
-   *       case other                    => throw ProtocolError(s"$other isn't a integer type")
-   *     }
-   *     Person(name, age)
-   *   case other => throw ProtocolError(s"$other isn't an array type")
-   * }
-   * }}}
+   * Evaluates a Lua script.
    *
    * @param script
    *   Lua script
