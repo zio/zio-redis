@@ -104,11 +104,11 @@ class Index extends React.Component {
             <Block layout="fourColumn">
                 {[
                     {
-                        content: 'Use the full power of the Scala compiler to catch bugs at compile time'
+                        content: 'Use the full power of the Scala compiler to catch bugs at compile time',
                         title: 'Type-safe'
                     },
                     {
-                        content: 'Built from scratch using ZIO'
+                        content: 'Built from scratch using ZIO',
                         title: 'ZIO native'
                     }
                 ]}
