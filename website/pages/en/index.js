@@ -92,37 +92,9 @@ class Index extends React.Component {
         );
 
         const FeatureCallout = () => (
-            <div
-                className="productShowcaseSection paddingBottom"
-                style={{textAlign: 'center'}}>
-                <h2>Welcome to ZIO Prelude</h2>
-                <MarkdownBlock>
-                    ZIO Prelude provides functional abstractions and data types to solve common problems in application development.
-                </MarkdownBlock>
-
-                <MarkdownBlock>
-                    ZIO Prelude includes zero overhead new types to increase type safety of your domain models and an alternative to monad transformers with dramatically better performance and ergonomics.
-                </MarkdownBlock>
-            </div>
         );
 
         const Features = () => (
-            <Block layout="fourColumn">
-                {[
-                    {
-                        content: 'Practical tools to solve common problems with no unecessary ceremony or obsfucation',
-                        image: `${baseUrl}img/undraw_tweetstorm.svg`,
-                        imageAlign: 'top',
-                        title: 'Practical',
-                    },
-                    {
-                        content: 'Highly principled abstractions reflecting deep understanding of problem domain',
-                        image: `${baseUrl}img/undraw_operating_system.svg`,
-                        imageAlign: 'top',
-                        title: 'Principled',
-                    },
-                ]}
-            </Block>
         );
 
         return (
