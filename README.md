@@ -4,7 +4,7 @@
 | --- | --- | --- | --- | --- |
 | [![Project stage][Stage]][Stage-Page] | ![CI][Badge-CI] | [![Release Artifacts][Badge-SonatypeReleases]][Link-SonatypeReleases] | [![Snapshot Artifacts][Badge-SonatypeSnapshots]][Link-SonatypeSnapshots] | [![Discord][Badge-Discord]][Link-Discord] |
 
-ZIO-based Redis client.
+ZIO Redis is a type-safe, performant, ZIO native Redis client.
 
 > The client is still a work-in-progress. Watch this space!
 
