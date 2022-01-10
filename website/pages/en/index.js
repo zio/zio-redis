@@ -92,9 +92,27 @@ class Index extends React.Component {
         );
 
         const FeatureCallout = () => (
+            <div className="productShowcaseSection paddingBottom" style={{textAlign: "center"}}>
+                <h2>Welcome to ZIO Redis</h2>
+                <MarkdownBlock>
+                    ZIO Redis is a type-safe, performant, ZIO native Redis client.
+                </MarkdownBlock>
+            </div>
         );
 
         const Features = () => (
+            <Block layout="fourColumn">
+                {[
+                    {
+                        content: 'Use the full power of the Scala compiler to catch bugs at compile time'
+                        title: 'Type-safe'
+                    },
+                    {
+                        content: 'Built from scratch using ZIO'
+                        title: 'ZIO native'
+                    }
+                ]}
+            </Block>
         );
 
         return (
