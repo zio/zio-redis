@@ -15,12 +15,12 @@ trait ServerSpec extends BaseSpec {
         },
         testM("acl cat with some category parameter") {
           for {
-            aclList <- aclCat(AclCategory.Dangerous)
+            aclList <- aclCat("dangerous")
           } yield assert(aclList)(isNonEmpty)
         },
         testM("acl cat with another category parameter") {
           for {
-            aclList <- aclCat(AclCategory.Hyperloglog)
+            aclList <- aclCat("hyperloglog")
           } yield assert(aclList)(isNonEmpty)
         }
       ),
@@ -34,13 +34,13 @@ trait ServerSpec extends BaseSpec {
         testM("acl setuser with rules") {
           for {
             user   <- uuid
-            result <- aclSetUser(user, "allkeys", "+@string", "+@set")
+            result <- aclSetUser(user, Rule.AllKeys, Rule.AddCategory("string"), Rule.AddCategory("set"))
           } yield assert(result)(isUnit)
         },
         testM("acl setuser with invalid rules") {
           for {
             user   <- uuid
-            result <- aclSetUser(user, "heeyyyy").run
+            result <- aclSetUser(user, Rule.AddCategory("heeyyyy")).run
           } yield assert(result)(fails(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -68,7 +68,7 @@ trait ServerSpec extends BaseSpec {
           } yield assert(result)(equalTo(0L))
         }
       ),
-      suite("acl genpass") (
+      suite("acl genpass")(
         testM("acl genpass") {
           for {
             pw <- aclGenPass(None)
@@ -78,6 +78,13 @@ trait ServerSpec extends BaseSpec {
           for {
             pw <- aclGenPass(Some(32L))
           } yield assert(pw)(isNonEmpty)
+        }
+      ),
+      suite("acl getuser")(
+        testM("get default user") {
+          for {
+            userInfo <- aclGetUser("default")
+          } yield assert(userInfo)(isSubtype[UserInfo](anything))
         }
       )
     )

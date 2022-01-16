@@ -1006,6 +1006,37 @@ object OutputSpec extends BaseSpec {
             res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
+      ),
+      suite("UserInfoOutput") (
+        testM("read user info successful") {
+          for {
+            resp <- UIO(
+              RespValue
+                .array(
+                  RespValue.bulkString("flags"),
+                  RespValue.array(
+                    RespValue.bulkString("on"),
+                    RespValue.bulkString("on"),
+                    RespValue.bulkString("allcommands"),
+                    RespValue.bulkString("nopass"),
+                  ),
+                  RespValue.bulkString("passwords"),
+                  RespValue.NullArray,
+                  RespValue.bulkString("commands"),
+                  RespValue.bulkString("+@all"),
+                  RespValue.bulkString("keys"),
+                  RespValue.array(
+                    RespValue.bulkString("*")
+                  ),
+                  RespValue.bulkString("channels"),
+                  RespValue.array(
+                    RespValue.bulkString("*")
+                  )
+                )
+            )
+            res <- Task(UserinfoOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isRight)
+        }
       )
     )
 

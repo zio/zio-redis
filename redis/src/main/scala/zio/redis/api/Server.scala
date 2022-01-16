@@ -17,8 +17,8 @@ trait Server {
    * @return
    *   a list of server commands for a given category
    */
-  final def aclCat(categoryName: AclCategory): ZIO[RedisExecutor, RedisError, Chunk[ServerCommand]] = {
-    val command = RedisCommand(AclCat, AclCategoryInput, ChunkOutput(ServerCommandOutput))
+  final def aclCat(categoryName: String): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
+    val command = RedisCommand(AclCat, StringInput, ChunkOutput(MultiStringOutput))
     command.run(categoryName)
   }
 
@@ -29,8 +29,8 @@ trait Server {
    * @return
    * a list of categories
    */
-  final def aclCat(): ZIO[RedisExecutor, RedisError, Chunk[AclCategory]] = {
-    val command = RedisCommand(AclCat, NoInput, ChunkOutput(AclCategoryOutput))
+  final def aclCat(): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
+    val command = RedisCommand(AclCat, NoInput, ChunkOutput(MultiStringOutput))
     command.run(())
   }
 
@@ -44,8 +44,8 @@ trait Server {
    * @return
    *   the Unit value
    */
-  final def aclSetUser(username: String, rules: String*): ZIO[RedisExecutor, RedisError, Unit] = {
-    val command = RedisCommand(AclSetUser, Tuple2(StringInput, Varargs(StringInput)), UnitOutput)
+  final def aclSetUser(username: String, rules: Rule*): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(AclSetUser, Tuple2(StringInput, Varargs(AclRuleInput)), UnitOutput)
     command.run((username, rules))
   }
 
@@ -78,7 +78,19 @@ trait Server {
     command.run(bits)
   }
 
-  // final def aclGetUser(username: String): ZIO[RedisExecutor, RedisError, ]
+  /**
+   * The command returns all the rules defined for an existing ACL user.
+   * Specifically, it lists the user's ACL flags, password hashes and key name patterns.
+   *
+   * @param username
+   *  the username to request
+   * @return
+   *  the users information
+   */
+  final def aclGetUser(username: String): ZIO[RedisExecutor, RedisError, UserInfo] = {
+    val command = RedisCommand(AclGetUser, StringInput, UserinfoOutput)
+    command.run(username)
+  }
 }
 
 private[redis] object Server {

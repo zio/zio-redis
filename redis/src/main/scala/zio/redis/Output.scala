@@ -788,31 +788,37 @@ object Output {
       }
   }
 
-  /**
-   * Todo: Implement test
-   */
-  case object AclCategoryOutput extends Output[AclCategory] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): AclCategory =
+  case object UserinfoOutput extends Output[UserInfo] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): UserInfo =
       respValue match {
-        case bulk @ RespValue.BulkString(_) => bulk.asString match {
-          case AclCategory(category) => category
-          case other => throw ProtocolError(s"$other isn't a category")
-        }
-        case other => throw ProtocolError(s"$other isn't a string")
+        case RespValue.NullArray =>
+          throw ProtocolError(s"Array must not be empty")
+
+        case RespValue.Array(values) =>
+          val flags = ChunkOutput(MultiStringOutput).unsafeDecode(values(1))
+          val passwords = ChunkOutput(MultiStringOutput).unsafeDecode(values(3))
+          val commnads = MultiStringOutput.unsafeDecode(values(5))
+          val keys = ChunkOutput(MultiStringOutput).unsafeDecode(values(7))
+          val channels = ChunkOutput(MultiStringOutput).unsafeDecode(values(9))
+
+          UserInfo(flags.toList, passwords.toList, commnads, keys.toList, channels.toList)
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
       }
   }
 
-  /**
-   * Todo: Implement test
-   */
-  case object ServerCommandOutput extends Output[ServerCommand] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): ServerCommand =
+  case object UserEntryOutput extends Output[UserEntry] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): UserEntry =
       respValue match {
-        case bulk @ RespValue.BulkString(_) => bulk.asString match {
-          case ServerCommand(command) => command
-          case other => throw ProtocolError(s"$other isn't a server command")
-        }
-        case other => throw ProtocolError(s"$other isn't a string")
+        case RespValue.NullArray =>
+          throw ProtocolError(s"Array must not be empty")
+
+        case RespValue.Array(values) =>
+
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
       }
   }
 }

@@ -595,8 +595,8 @@ object Input {
   /**
    * Todo: Implement test
    */
-  case object AclCategoryInput extends Input[AclCategory] {
-    def encode(data: AclCategory)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+  case object AclRuleInput extends Input[Rule] {
+    def encode(data: Rule)(implicit codec: Codec) =
       Chunk.single(encodeString(data.stringify))
   }
 }

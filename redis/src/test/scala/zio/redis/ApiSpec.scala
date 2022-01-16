@@ -23,7 +23,8 @@ object ApiSpec
   def spec: ZSpec[TestEnvironment, Failure] =
     suite("Redis commands")(
       suite("Live Executor")(
-        serverSpec
+        serverSpec,
+        OutputSpec.spec
       ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
         @@ sequential
     )
