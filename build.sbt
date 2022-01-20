@@ -35,7 +35,7 @@ lazy val redis =
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"  % Zio,
         "dev.zio" %% "zio-logging"  % "0.5.14",
-        "dev.zio" %% "zio-schema"   % "0.1.1",
+        "dev.zio" %% "zio-schema"   % "0.1.7",
         "dev.zio" %% "zio-test"     % Zio % Test,
         "dev.zio" %% "zio-test-sbt" % Zio % Test
       ),
@@ -68,11 +68,11 @@ lazy val example =
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.3.18",
         "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.3.18",
         "dev.zio"                       %% "zio-streams"                   % Zio,
-        "dev.zio"                       %% "zio-config-magnolia"           % "1.0.10",
-        "dev.zio"                       %% "zio-config-typesafe"           % "1.0.10",
+        "dev.zio"                       %% "zio-config-magnolia"           % "2.0.0",
+        "dev.zio"                       %% "zio-config-typesafe"           % "2.0.0",
         "dev.zio"                       %% "zio-prelude"                   % "1.0.0-RC7",
         "dev.zio"                       %% "zio-json"                      % "0.1.5",
-        "io.d11"                        %% "zhttp"                         % "1.0.0.0-RC17",
+        "io.d11"                        %% "zhttp"                         % "1.0.0.0-RC22",
         "io.github.kitlangton"          %% "zio-magic"                     % "0.3.11"
       )
     )
