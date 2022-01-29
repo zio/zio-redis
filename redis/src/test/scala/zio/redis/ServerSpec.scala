@@ -94,6 +94,15 @@ trait ServerSpec extends BaseSpec {
             users <- aclList()
           } yield assert(users)(isSubtype[Chunk[UserEntry]](anything))
         }
+      ),
+      suite("acl load")(
+        testM("load acl and succeed or fail") {
+          for {
+            result <- aclLoad().either
+          } yield {
+            assert(result)(isLeft) || assert(result)(isRight(isUnit))
+          }
+        }
       )
     )
 

@@ -27,7 +27,7 @@ trait Server {
    * command shows all the Redis commands in the specified category.
    *
    * @return
-   * a list of categories
+   *   a list of categories
    */
   final def aclCat(): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
     val command = RedisCommand(AclCat, NoInput, ChunkOutput(MultiStringOutput))
@@ -79,13 +79,13 @@ trait Server {
   }
 
   /**
-   * The command returns all the rules defined for an existing ACL user.
-   * Specifically, it lists the user's ACL flags, password hashes and key name patterns.
+   * The command returns all the rules defined for an existing ACL user. Specifically, it lists the user's ACL flags,
+   * password hashes and key name patterns.
    *
    * @param username
-   *  the username to request
+   *   the username to request
    * @return
-   *  the users information
+   *   the users information
    */
   final def aclGetUser(username: String): ZIO[RedisExecutor, RedisError, UserInfo] = {
     val command = RedisCommand(AclGetUser, StringInput, UserinfoOutput)
@@ -93,16 +93,25 @@ trait Server {
   }
 
   /**
-   * The command shows the currently active ACL rules in the Redis server. Each
-   * line in the returned array defines a different user, and the format is the
-   * same used in the redis.conf file or the external ACL file, so you can cut
-   * and paste what is returned by the ACL LIST command directly inside a
-   * configuration file if you wish
+   * The command shows the currently active ACL rules in the Redis server. Each line in the returned array defines a
+   * different user, and the format is the same used in the redis.conf file or the external ACL file, so you can cut and
+   * paste what is returned by the ACL LIST command directly inside a configuration file if you wish
    * @return
-   *  the user entries of the server
+   *   the user entries of the server
    */
   final def aclList(): ZIO[RedisExecutor, RedisError, Chunk[UserEntry]] = {
     val command = RedisCommand(AclList, NoInput, ChunkOutput(UserEntryOutput))
+    command.run(())
+  }
+
+  /**
+   * When Redis is configured to use an ACL file (with the aclfile configuration option), this command will reload the
+   * ACLs from the file, replacing all the current ACL rules with the ones defined in the file.
+   * @return
+   *   load acl file was successful
+   */
+  final def aclLoad(): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(AclLoad, NoInput, UnitOutput)
     command.run(())
   }
 }
@@ -113,5 +122,6 @@ private[redis] object Server {
   final val AclGenPass = "ACL GENPASS"
   final val AclSetUser = "ACL SETUSER"
   final val AclGetUser = "ACL GETUSER"
-  final val AclList = "ACL LIST"
+  final val AclList    = "ACL LIST"
+  final val AclLoad    = "ACL LOAD"
 }
