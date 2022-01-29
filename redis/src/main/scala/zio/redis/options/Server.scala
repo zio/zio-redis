@@ -1,5 +1,7 @@
 package zio.redis.options
 
+import zio.prelude._
+
 trait Server {
   sealed trait Rule { self =>
     private[redis] final def stringify: String =
@@ -78,4 +80,18 @@ trait Server {
   )
 
   sealed case class UserEntry(username: String, rules: List[Rule])
+
+  object UserEntry {
+    def unapply(value: String): Option[UserEntry] = value match {
+      case s"user $username $rulesString" =>
+        rulesString
+          .split(' ')
+          .toList
+          .forEach(Rule.unapply)
+          .map(rules => UserEntry(username, rules))
+
+      case _ =>
+        None
+    }
+  }
 }

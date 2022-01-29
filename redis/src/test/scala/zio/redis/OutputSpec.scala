@@ -1037,6 +1037,34 @@ object OutputSpec extends BaseSpec {
             res <- Task(UserinfoOutput.unsafeDecode(resp)).either
           } yield assert(res)(isRight)
         }
+      ),
+      suite("UserEntryOutput") (
+        testM("read user entry successfully") {
+          val userEntryRaw = "user default on nopass ~* &* +@all"
+
+          for {
+            resp <- UIO(RespValue.bulkString(userEntryRaw))
+            res <- Task(UserEntryOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isRight)
+        },
+
+        testM("read invalid user entries, missing user prefix") {
+          val userEntryRaw = "foo default on nopass ~* &* +@all"
+
+          for {
+            resp <- UIO(RespValue.bulkString(userEntryRaw))
+            res <- Task(UserEntryOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft)
+        },
+
+        testM("read invalid user entries, invalid rules") {
+          val userEntryRaw = "user default on nopass ~* &* +@all foo bar"
+
+          for {
+            resp <- UIO(RespValue.bulkString(userEntryRaw))
+            res <- Task(UserEntryOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft)
+        }
       )
     )
 

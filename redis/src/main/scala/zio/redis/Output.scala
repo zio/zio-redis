@@ -810,15 +810,9 @@ object Output {
 
   case object UserEntryOutput extends Output[UserEntry] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): UserEntry =
-      respValue match {
-        case RespValue.NullArray =>
-          throw ProtocolError(s"Array must not be empty")
-
-        case RespValue.Array(values) =>
-
-
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
+      MultiStringOutput.unsafeDecode(respValue) match {
+        case UserEntry(entry) => entry
+        case other => throw ProtocolError(s"$other isn't an valid UserEntry")
       }
   }
 }

@@ -91,6 +91,20 @@ trait Server {
     val command = RedisCommand(AclGetUser, StringInput, UserinfoOutput)
     command.run(username)
   }
+
+  /**
+   * The command shows the currently active ACL rules in the Redis server. Each
+   * line in the returned array defines a different user, and the format is the
+   * same used in the redis.conf file or the external ACL file, so you can cut
+   * and paste what is returned by the ACL LIST command directly inside a
+   * configuration file if you wish
+   * @return
+   *  the user entries of the server
+   */
+  final def aclList(): ZIO[RedisExecutor, RedisError, Chunk[UserEntry]] = {
+    val command = RedisCommand(AclList, NoInput, ChunkOutput(UserEntryOutput))
+    command.run(())
+  }
 }
 
 private[redis] object Server {
@@ -99,4 +113,5 @@ private[redis] object Server {
   final val AclGenPass = "ACL GENPASS"
   final val AclSetUser = "ACL SETUSER"
   final val AclGetUser = "ACL GETUSER"
+  final val AclList = "ACL LIST"
 }

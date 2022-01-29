@@ -1,4 +1,5 @@
 package zio.redis
+import zio.Chunk
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test._
@@ -85,6 +86,13 @@ trait ServerSpec extends BaseSpec {
           for {
             userInfo <- aclGetUser("default")
           } yield assert(userInfo)(isSubtype[UserInfo](anything))
+        }
+      ),
+      suite("acl list")(
+        testM("list users") {
+          for {
+            users <- aclList()
+          } yield assert(users)(isSubtype[Chunk[UserEntry]](anything))
         }
       )
     )
