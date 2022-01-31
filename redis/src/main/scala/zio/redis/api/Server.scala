@@ -121,7 +121,7 @@ trait Server {
    *   - Commands denied because against the current ACL rules.
    *   - Commands denied because accessing keys not allowed in the current ACL rules.
    * @return
-   *  list of log entries
+   *   list of log entries
    */
   final def aclLog(): ZIO[RedisExecutor, RedisError, Chunk[LogEntry]] = {
     val command = RedisCommand(AclLog, NoInput, ChunkOutput(LogEntryOutput))
@@ -134,7 +134,7 @@ trait Server {
    *   - Commands denied because against the current ACL rules.
    *   - Commands denied because accessing keys not allowed in the current ACL rules.
    * @return
-   *  OK if the security log was cleared.
+   *   OK if the security log was cleared.
    */
   final def aclLogReset(): ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(AclLog, StringInput, UnitOutput)
@@ -147,11 +147,77 @@ trait Server {
    *   - Commands denied because against the current ACL rules.
    *   - Commands denied because accessing keys not allowed in the current ACL rules.
    * @return
-   *  list of log entries
+   *   list of log entries
    */
   final def aclLog(count: Long): ZIO[RedisExecutor, RedisError, Chunk[LogEntry]] = {
     val command = RedisCommand(AclLog, LongInput, ChunkOutput(LogEntryOutput))
     command.run(count)
+  }
+
+  /**
+   * When Redis is configured to use an ACL file (with the aclfile configuration option), this command will save the
+   * currently defined ACLs from the server memory to the ACL file.
+   * @return
+   *   OK on success
+   */
+  final def aclSave(): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(AclLog, NoInput, UnitOutput)
+    command.run(())
+  }
+
+  /**
+   * The command shows a list of all the usernames of the currently configured users in the Redis ACL system.
+   * @return
+   *   an array of strings.
+   */
+  final def aclUsers(): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
+    val command = RedisCommand(AclUsers, NoInput, ChunkOutput(MultiStringOutput))
+    command.run(())
+  }
+
+  /**
+   * Return the username the current connection is authenticated with. New connections are authenticated with the
+   * "default" user. They can change user using AUTH
+   * @return
+   *   he username of the current connection
+   */
+  final def aclWhoAmI(): ZIO[RedisExecutor, RedisError, String] = {
+    val command = RedisCommand(AclWhoAmI, NoInput, MultiStringOutput)
+    command.run(())
+  }
+
+  /**
+   * Instruct Redis to start an Append Only File rewrite process. The rewrite will create a small optimized version of
+   * the current Append Only File. If BGREWRITEAOF fails, no data gets lost as the old AOF will be untouched.
+   * @return
+   *   A simple string reply indicating that the rewriting started or is about to start ASAP, when the call is executed
+   *   with success.
+   */
+  final def bgWriteAof(): ZIO[RedisExecutor, RedisError, String] = {
+    val command = RedisCommand(BgWriteAof, NoInput, StringOutput)
+    command.run(())
+  }
+
+  /**
+   * Save the DB in background. Normally the OK code is immediately returned. Redis forks, the parent continues
+   * to serve the clients, the child saves the DB on disk then exits.
+   * @return
+   *  Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE subcommand.
+   */
+  final def bgSave(): ZIO[RedisExecutor, RedisError, String] = {
+    val command = RedisCommand(BgSave, NoInput, StringOutput)
+    command.run(())
+  }
+
+  /**
+   * Save the DB in background. Normally the OK code is immediately returned. Redis forks, the parent continues
+   * to serve the clients, the child saves the DB on disk then exits.
+   * @return
+   *  Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE subcommand.
+   */
+  final def bgSaveSchedule(): ZIO[RedisExecutor, RedisError, String] = {
+    val command = RedisCommand(BgSave, StringInput, StringOutput)
+    command.run("SCHEDULE")
   }
 }
 
@@ -164,4 +230,9 @@ private[redis] object Server {
   final val AclList    = "ACL LIST"
   final val AclLoad    = "ACL LOAD"
   final val AclLog     = "ACL LOG"
+  final val AclSave    = "ACL SAVE"
+  final val AclUsers   = "ACL USERS"
+  final val AclWhoAmI  = "ACL WHOAMI"
+  final val BgWriteAof = "BGREWRITEAOF"
+  final val BgSave     = "BGSAVE"
 }

@@ -3,6 +3,8 @@ import zio.Chunk
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion._
 import zio.test._
+import zio.duration._
+import zio.test.TestAspect.eventually
 
 trait ServerSpec extends BaseSpec {
 
@@ -138,7 +140,52 @@ trait ServerSpec extends BaseSpec {
             assert(res)(isEmpty)
           }
         }
+      ),
+      suite("acl save")(
+        testM("error or success (depends on the redis server config") {
+          for {
+            res <- aclSave().either
+          } yield {
+            assert(res)(isLeft) || assert(res)(isRight)
+          }
+        }
+      ),
+      suite("acl users")(
+        testM("successfully list all usernames") {
+          for {
+            res <- aclUsers()
+          } yield assert(res)(isSubtype[Chunk[String]](anything))
+        }
+      ),
+      suite("acl whoami")(
+        testM("successfully get my username") {
+          for {
+            res <- aclWhoAmI()
+          } yield assert(res)(isSubtype[String](anything))
+        }
+      ),
+      suite("acl bgwriteaof")(
+        testM("successfully call bgwriteaof") {
+          for {
+            res <- bgWriteAof()
+          } yield assert(res)(isSubtype[String](anything))
+        }
+      ),
+      suite("acl bgsave")(
+        testM("successfully call bgsave") {
+          for {
+            _ <- zio.clock.sleep(1.second)
+            res <- bgSave()
+          } yield assert(res)(isSubtype[String](anything))
+        } @@ eventually,
+        testM("successfully call bgsave") {
+          for {
+            _ <- zio.clock.sleep(1.second)
+            res <- bgSaveSchedule()
+          } yield assert(res)(isSubtype[String](anything))
+        } @@ eventually
       )
+
     )
 
 }
