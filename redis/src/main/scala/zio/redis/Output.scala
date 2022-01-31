@@ -815,4 +815,26 @@ object Output {
         case other => throw ProtocolError(s"$other isn't an valid UserEntry")
       }
   }
+
+  case object LogEntryOutput extends Output[LogEntry] {
+     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): LogEntry =
+       respValue match {
+         case RespValue.NullArray =>
+           throw ProtocolError(s"Array must not be empty")
+
+         case RespValue.Array(values) =>
+           val count = LongOutput.unsafeDecode(values(1))
+           val reason = MultiStringOutput.unsafeDecode(values(3))
+           val context = MultiStringOutput.unsafeDecode(values(5))
+           val `object` = MultiStringOutput.unsafeDecode(values(7))
+           val username = MultiStringOutput.unsafeDecode(values(9))
+           val ageDuration = Duration.fromMillis((DoubleOutput.unsafeDecode(values(11)) * 1000).toLong)
+           val clientInfo = MultiStringOutput.unsafeDecode(values(13))
+
+           LogEntry(count.toInt, reason, context, `object`, username, ageDuration, clientInfo)
+
+         case other =>
+           throw ProtocolError(s"$other isn't an array")
+       }
+  }
 }

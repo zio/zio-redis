@@ -114,6 +114,45 @@ trait Server {
     val command = RedisCommand(AclLoad, NoInput, UnitOutput)
     command.run(())
   }
+
+  /**
+   * The command shows a list of recent ACL security events:
+   *   - Failures to authenticate their connections with AUTH or HELLO.
+   *   - Commands denied because against the current ACL rules.
+   *   - Commands denied because accessing keys not allowed in the current ACL rules.
+   * @return
+   *  list of log entries
+   */
+  final def aclLog(): ZIO[RedisExecutor, RedisError, Chunk[LogEntry]] = {
+    val command = RedisCommand(AclLog, NoInput, ChunkOutput(LogEntryOutput))
+    command.run(())
+  }
+
+  /**
+   * The command shows a list of recent ACL security events:
+   *   - Failures to authenticate their connections with AUTH or HELLO.
+   *   - Commands denied because against the current ACL rules.
+   *   - Commands denied because accessing keys not allowed in the current ACL rules.
+   * @return
+   *  OK if the security log was cleared.
+   */
+  final def aclLogReset(): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(AclLog, StringInput, UnitOutput)
+    command.run("RESET")
+  }
+
+  /**
+   * The command shows a list of recent ACL security events:
+   *   - Failures to authenticate their connections with AUTH or HELLO.
+   *   - Commands denied because against the current ACL rules.
+   *   - Commands denied because accessing keys not allowed in the current ACL rules.
+   * @return
+   *  list of log entries
+   */
+  final def aclLog(count: Long): ZIO[RedisExecutor, RedisError, Chunk[LogEntry]] = {
+    val command = RedisCommand(AclLog, LongInput, ChunkOutput(LogEntryOutput))
+    command.run(count)
+  }
 }
 
 private[redis] object Server {
@@ -124,4 +163,5 @@ private[redis] object Server {
   final val AclGetUser = "ACL GETUSER"
   final val AclList    = "ACL LIST"
   final val AclLoad    = "ACL LOAD"
+  final val AclLog     = "ACL LOG"
 }

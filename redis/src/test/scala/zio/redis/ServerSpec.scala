@@ -103,6 +103,41 @@ trait ServerSpec extends BaseSpec {
             assert(result)(isLeft) || assert(result)(isRight(isUnit))
           }
         }
+      ),
+      suite("acl log")(
+        testM("acl log without parameters") {
+          for {
+            _ <- auth("Someuser", "wrongpassword").either
+            log <- aclLog()
+          } yield {
+            assert(log)(isSubtype[Chunk[Chunk[String]]](anything))
+          }
+        },
+        testM("acl log with reset") {
+          for {
+            _ <- auth("Someuser", "wrongpassword").either
+            res <- aclLogReset()
+          } yield {
+            assert(res)(isUnit)
+          }
+        },
+        testM("acl log with count") {
+          for {
+            _ <- auth("Someuser", "wrongpassword").either
+            res <- aclLog(1L)
+          } yield {
+            assert(res)(isSubtype[Chunk[Chunk[String]]](anything))
+          }
+        },
+        testM("acl log empty after reset") {
+          for {
+            _ <- auth("Someuser", "wrongpassword").either
+            _ <- aclLogReset()
+            res <- aclLog()
+          } yield {
+            assert(res)(isEmpty)
+          }
+        }
       )
     )
 

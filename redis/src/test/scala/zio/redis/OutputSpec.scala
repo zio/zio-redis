@@ -1065,6 +1065,55 @@ object OutputSpec extends BaseSpec {
             res <- Task(UserEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft)
         }
+      ),
+      suite("LogEntryOutput") (
+        testM("read log entry output successfully") {
+          val logEntry = List(
+            RespValue.bulkString("count"),
+            RespValue.Integer(1),
+            RespValue.bulkString("reason"),
+            RespValue.bulkString("auth"),
+            RespValue.bulkString("context"),
+            RespValue.bulkString("toplevel"),
+            RespValue.bulkString("object"),
+            RespValue.bulkString("AUTH"),
+            RespValue.bulkString("username"),
+            RespValue.bulkString("someuser"),
+            RespValue.bulkString("age-seconds"),
+            RespValue.bulkString("4.0960000000000001"),
+            RespValue.bulkString("client-info"),
+            RespValue.bulkString("id=6 addr=127.0.0.1:63026 fd=8 name= age=9 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=48 qbuf-free=32720 obl=0 oll=0 omem=0 events=r cmd=auth user=default")
+          )
+
+          for {
+            resp <- UIO(RespValue.array(logEntry: _*))
+            res <- Task(LogEntryOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isRight)
+        },
+
+        testM("read invalid log entry output") {
+          val logEntry = List(
+            RespValue.bulkString("count"),
+            RespValue.bulkString("NotAnInt"),
+            RespValue.bulkString("reason"),
+            RespValue.bulkString("auth"),
+            RespValue.bulkString("context"),
+            RespValue.bulkString("toplevel"),
+            RespValue.bulkString("object"),
+            RespValue.bulkString("AUTH"),
+            RespValue.bulkString("username"),
+            RespValue.bulkString("someuser"),
+            RespValue.bulkString("age-seconds"),
+            RespValue.bulkString("NotADouble"),
+            RespValue.bulkString("client-info"),
+            RespValue.bulkString("id=6 addr=127.0.0.1:63026 fd=8 name= age=9 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=48 qbuf-free=32720 obl=0 oll=0 omem=0 events=r cmd=auth user=default")
+          )
+
+          for {
+            resp <- UIO(RespValue.array(logEntry: _*))
+            res <- Task(LogEntryOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft)
+        }
       )
     )
 

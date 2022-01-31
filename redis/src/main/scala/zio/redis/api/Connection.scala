@@ -28,6 +28,26 @@ trait Connection {
   }
 
   /**
+   * Authenticates the current connection to the server in two cases:
+   *    - If the Redis server is password protected via the the ''requirepass'' option
+   *    - If a Redis 6.0 instance, or greater, is using the [[https://redis.io/topics/acl Redis ACL system]]. In this
+   *      case it is assumed that the implicit username is ''default''.
+   *
+   * @param username
+   *  the username
+   * @param password
+   *  the password used to authenticate the connection
+   * @return
+   *   if the password provided via AUTH matches the password in the configuration file, the Unit value is returned and
+   *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
+   */
+  final def auth(username: String, password: String): ZIO[RedisExecutor, RedisError, Unit] = {
+    val command = RedisCommand(Auth, Tuple2(StringInput, StringInput), UnitOutput)
+
+    command.run((username, password))
+  }
+
+  /**
    * Controls the tracking of the keys in the next command executed by the connection, when tracking is enabled in Optin
    * or Optout mode.
    *

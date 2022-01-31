@@ -1,8 +1,10 @@
 package zio.redis.options
 
 import zio.prelude._
+import zio.duration._
 
 trait Server {
+
   sealed trait Rule { self =>
     private[redis] final def stringify: String =
       self match {
@@ -27,7 +29,6 @@ trait Server {
   }
 
   object Rule {
-
     def unapply(value: String): Option[Rule] = value match {
       case "on"                     => Some(On)
       case "off"                    => Some(Off)
@@ -94,4 +95,14 @@ trait Server {
         None
     }
   }
+
+  sealed case class LogEntry(
+    count: Int,
+    reason: String,
+    context: String,
+    `object`: String,
+    username: String,
+    ageDuration: Duration,
+    clientInfo: String
+  )
 }
