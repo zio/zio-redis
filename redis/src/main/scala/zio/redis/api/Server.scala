@@ -199,10 +199,11 @@ trait Server {
   }
 
   /**
-   * Save the DB in background. Normally the OK code is immediately returned. Redis forks, the parent continues
-   * to serve the clients, the child saves the DB on disk then exits.
+   * Save the DB in background. Normally the OK code is immediately returned. Redis forks, the parent continues to serve
+   * the clients, the child saves the DB on disk then exits.
    * @return
-   *  Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE subcommand.
+   *   Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE
+   *   subcommand.
    */
   final def bgSave(): ZIO[RedisExecutor, RedisError, String] = {
     val command = RedisCommand(BgSave, NoInput, StringOutput)
@@ -210,29 +211,54 @@ trait Server {
   }
 
   /**
-   * Save the DB in background. Normally the OK code is immediately returned. Redis forks, the parent continues
-   * to serve the clients, the child saves the DB on disk then exits.
+   * Save the DB in background. Normally the OK code is immediately returned. Redis forks, the parent continues to serve
+   * the clients, the child saves the DB on disk then exits.
    * @return
-   *  Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE subcommand.
+   *   Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE
+   *   subcommand.
    */
   final def bgSaveSchedule(): ZIO[RedisExecutor, RedisError, String] = {
     val command = RedisCommand(BgSave, StringInput, StringOutput)
     command.run("SCHEDULE")
   }
+
+  /**
+   * Return an array with details about every Redis command. The COMMAND command is introspective. Its reply describes
+   * all commands that the server can process. Redis clients can call it to obtain the server's runtime capabilities
+   * during the handshake.
+   * @return
+   *   list of command details
+   */
+  final def command(): ZIO[RedisExecutor, RedisError, Chunk[CommandDetail]] = {
+    val command = RedisCommand(Command, NoInput, ChunkOutput(CommandDetailOutput))
+    command.run(())
+  }
+
+  /**
+   * Returns Integer reply of number of total commands in this Redis server.
+   * @return
+   *  number of commands returned by COMMAND
+   */
+  final def commandCount(): ZIO[RedisExecutor, RedisError, Long] = {
+    val command = RedisCommand(CommandCount, NoInput, LongOutput)
+    command.run(())
+  }
 }
 
 private[redis] object Server {
-  final val AclCat     = "ACL CAT"
-  final val AclDelUser = "ACL DELUSER"
-  final val AclGenPass = "ACL GENPASS"
-  final val AclSetUser = "ACL SETUSER"
-  final val AclGetUser = "ACL GETUSER"
-  final val AclList    = "ACL LIST"
-  final val AclLoad    = "ACL LOAD"
-  final val AclLog     = "ACL LOG"
-  final val AclSave    = "ACL SAVE"
-  final val AclUsers   = "ACL USERS"
-  final val AclWhoAmI  = "ACL WHOAMI"
-  final val BgWriteAof = "BGREWRITEAOF"
-  final val BgSave     = "BGSAVE"
+  final val AclCat       = "ACL CAT"
+  final val AclDelUser   = "ACL DELUSER"
+  final val AclGenPass   = "ACL GENPASS"
+  final val AclSetUser   = "ACL SETUSER"
+  final val AclGetUser   = "ACL GETUSER"
+  final val AclList      = "ACL LIST"
+  final val AclLoad      = "ACL LOAD"
+  final val AclLog       = "ACL LOG"
+  final val AclSave      = "ACL SAVE"
+  final val AclUsers     = "ACL USERS"
+  final val AclWhoAmI    = "ACL WHOAMI"
+  final val BgWriteAof   = "BGREWRITEAOF"
+  final val BgSave       = "BGSAVE"
+  final val Command      = "COMMAND"
+  final val CommandCount = "COMMAND COUNT"
 }

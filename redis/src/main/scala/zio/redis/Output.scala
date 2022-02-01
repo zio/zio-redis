@@ -795,11 +795,11 @@ object Output {
           throw ProtocolError(s"Array must not be empty")
 
         case RespValue.Array(values) =>
-          val flags = ChunkOutput(MultiStringOutput).unsafeDecode(values(1))
+          val flags     = ChunkOutput(MultiStringOutput).unsafeDecode(values(1))
           val passwords = ChunkOutput(MultiStringOutput).unsafeDecode(values(3))
-          val commnads = MultiStringOutput.unsafeDecode(values(5))
-          val keys = ChunkOutput(MultiStringOutput).unsafeDecode(values(7))
-          val channels = ChunkOutput(MultiStringOutput).unsafeDecode(values(9))
+          val commnads  = MultiStringOutput.unsafeDecode(values(5))
+          val keys      = ChunkOutput(MultiStringOutput).unsafeDecode(values(7))
+          val channels  = ChunkOutput(MultiStringOutput).unsafeDecode(values(9))
 
           UserInfo(flags.toList, passwords.toList, commnads, keys.toList, channels.toList)
 
@@ -812,29 +812,51 @@ object Output {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): UserEntry =
       MultiStringOutput.unsafeDecode(respValue) match {
         case UserEntry(entry) => entry
-        case other => throw ProtocolError(s"$other isn't an valid UserEntry")
+        case other            => throw ProtocolError(s"$other isn't an valid UserEntry")
       }
   }
 
   case object LogEntryOutput extends Output[LogEntry] {
-     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): LogEntry =
-       respValue match {
-         case RespValue.NullArray =>
-           throw ProtocolError(s"Array must not be empty")
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): LogEntry =
+      respValue match {
+        case RespValue.NullArray =>
+          throw ProtocolError(s"Array must not be empty")
 
-         case RespValue.Array(values) =>
-           val count = LongOutput.unsafeDecode(values(1))
-           val reason = MultiStringOutput.unsafeDecode(values(3))
-           val context = MultiStringOutput.unsafeDecode(values(5))
-           val `object` = MultiStringOutput.unsafeDecode(values(7))
-           val username = MultiStringOutput.unsafeDecode(values(9))
-           val ageDuration = Duration.fromMillis((DoubleOutput.unsafeDecode(values(11)) * 1000).toLong)
-           val clientInfo = MultiStringOutput.unsafeDecode(values(13))
+        case RespValue.Array(values) =>
+          val count       = LongOutput.unsafeDecode(values(1))
+          val reason      = MultiStringOutput.unsafeDecode(values(3))
+          val context     = MultiStringOutput.unsafeDecode(values(5))
+          val `object`    = MultiStringOutput.unsafeDecode(values(7))
+          val username    = MultiStringOutput.unsafeDecode(values(9))
+          val ageDuration = Duration.fromMillis((DoubleOutput.unsafeDecode(values(11)) * 1000).toLong)
+          val clientInfo  = MultiStringOutput.unsafeDecode(values(13))
 
-           LogEntry(count.toInt, reason, context, `object`, username, ageDuration, clientInfo)
+          LogEntry(count.toInt, reason, context, `object`, username, ageDuration, clientInfo)
 
-         case other =>
-           throw ProtocolError(s"$other isn't an array")
-       }
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object CommandDetailOutput extends Output[CommandDetail] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): _root_.zio.redis.CommandDetail =
+      respValue match {
+        case RespValue.NullArray =>
+          throw ProtocolError(s"Array must not be empty")
+
+        case RespValue.Array(values) =>
+          val name = MultiStringOutput.unsafeDecode(values(0))
+          val arity = LongOutput.unsafeDecode(values(1))
+          val flags = ChunkOutput(StringOutput).unsafeDecode(values(2))
+          val firstKey = LongOutput.unsafeDecode(values(3))
+          val lastKey = LongOutput.unsafeDecode(values(4))
+          val step = LongOutput.unsafeDecode(values(5))
+          val aclCategories = ChunkOutput(StringOutput).unsafeDecode(values(6))
+
+          CommandDetail(name, arity.toInt, flags.toList, firstKey.toInt, lastKey.toInt, step.toInt, aclCategories.toList)
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
   }
 }

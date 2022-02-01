@@ -1,7 +1,7 @@
 package zio.redis.options
 
-import zio.prelude._
 import zio.duration._
+import zio.prelude._
 
 trait Server {
 
@@ -104,5 +104,15 @@ trait Server {
     username: String,
     ageDuration: Duration,
     clientInfo: String
+  )
+
+  sealed case class CommandDetail(
+    name: String,
+    artity: Int,
+    flags: List[String],
+    firstKey: Int,
+    lastKey: Int,
+    step: Int,
+    aclCategories: List[String]
   )
 }

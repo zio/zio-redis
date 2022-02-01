@@ -164,14 +164,14 @@ trait ServerSpec extends BaseSpec {
           } yield assert(res)(isSubtype[String](anything))
         }
       ),
-      suite("acl bgwriteaof")(
+      suite("bgwriteaof")(
         testM("successfully call bgwriteaof") {
           for {
             res <- bgWriteAof()
           } yield assert(res)(isSubtype[String](anything))
         }
       ),
-      suite("acl bgsave")(
+      suite("bgsave")(
         testM("successfully call bgsave") {
           for {
             _ <- zio.clock.sleep(1.second)
@@ -184,7 +184,21 @@ trait ServerSpec extends BaseSpec {
             res <- bgSaveSchedule()
           } yield assert(res)(isSubtype[String](anything))
         } @@ eventually
-      )
+      ),
+      suite("command")(
+        testM("successfully call command") {
+          for {
+            res <- command()
+          } yield assert(res)(isSubtype[Chunk[CommandDetail]](anything))
+        }
+      ),
+      suite("command count")(
+        testM("successfully call command cunt") {
+          for {
+            res <- commandCount()
+          } yield assert(res)(isSubtype[Long](anything))
+        }
+      ),
 
     )
 

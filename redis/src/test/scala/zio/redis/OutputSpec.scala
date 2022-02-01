@@ -1114,6 +1114,44 @@ object OutputSpec extends BaseSpec {
             res <- Task(LogEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft)
         }
+      ),
+      suite("CommandDetailOutput") (
+        testM("read command output successfully") {
+          val commandDetail = RespValue.array(
+            RespValue.bulkString("get"),
+            RespValue.Integer(2),
+            RespValue.array(RespValue.SimpleString("readonly"), RespValue.SimpleString("fast")),
+            RespValue.Integer(1),
+            RespValue.Integer(1),
+            RespValue.Integer(1),
+            RespValue.array(RespValue.SimpleString("@read"), RespValue.SimpleString("@string"), RespValue.SimpleString("@fast"))
+          )
+
+
+          for {
+            resp <- UIO(commandDetail)
+            res <- Task(CommandDetailOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isRight)
+        },
+
+        testM("read invalid command output successfully") {
+          val commandDetail = RespValue.array(
+            RespValue.bulkString("get"),
+            RespValue.array(RespValue.SimpleString("@read"), RespValue.SimpleString("@string"), RespValue.SimpleString("@fast")),
+            RespValue.Integer(2),
+            RespValue.array(RespValue.SimpleString("readonly"), RespValue.SimpleString("fast")),
+            RespValue.Integer(1),
+            RespValue.Integer(1),
+            RespValue.Integer(1),
+            RespValue.array(RespValue.SimpleString("@read"), RespValue.SimpleString("@string"), RespValue.SimpleString("@fast")),
+            RespValue.Integer(2),
+          )
+
+          for {
+            resp <- UIO(commandDetail)
+            res <- Task(CommandDetailOutput.unsafeDecode(resp)).either
+          } yield assert(res)(isLeft)
+        }
       )
     )
 
