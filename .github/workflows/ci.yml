@@ -32,23 +32,6 @@ jobs:
       - name: Check code formatting
         run: ./sbt fmtCheck
 
-  doc:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout current branch
-        uses: actions/checkout@v2.4.0
-      - name: Setup Java
-        uses: actions/setup-java@v2.5.0
-        with:
-          distribution: temurin
-          java-version: 17
-          check-latest: true
-      - name: Cache scala dependencies
-        uses: coursier/cache-action@v6
-      - name: Check generation of ScalaDoc
-        run: ./sbt +Test/doc
-
   publishLocal:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
@@ -111,7 +94,7 @@ jobs:
 
   ci:
     runs-on: ubuntu-20.04
-    needs: [lint, doc, publishLocal, website, test]
+    needs: [lint, publishLocal, website, test]
     steps:
       - name: Aggregate outcomes
         run: echo "build succeeded"
