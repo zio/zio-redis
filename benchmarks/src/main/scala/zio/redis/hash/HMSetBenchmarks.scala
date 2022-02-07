@@ -40,7 +40,6 @@ class HMSetBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit =
     items = (0 to size).map(e => e.toString -> e.toString).toList
-//    zioUnsafeRun(hSet(key, items.head, items.tail: _*).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -63,7 +62,9 @@ class HMSetBenchmarks extends BenchmarkRuntime {
   @Benchmark
   def redis4cats(): Unit = {
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(it => c.hmSet(key, Map(it._1 -> it._2))))
+    unsafeRun[Redis4CatsClient[String]](c =>
+      items.traverse_(it => c.hmSet(key, Map(it._1 -> it._2)): @annotation.nowarn)
+    )
   }
 
   @Benchmark
