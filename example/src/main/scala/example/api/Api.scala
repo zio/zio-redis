@@ -17,7 +17,7 @@
 package example.api
 
 import example._
-import zhttp.http.{HttpApp, _}
+import zhttp.http._
 import zhttp.service.Server
 
 import zio._
@@ -25,11 +25,11 @@ import zio.json._
 
 object Api {
 
-  private val app: HttpApp[ContributorsCache, Nothing] = HttpApp.collectM {
-    case Method.GET -> Root / "repositories" / owner / name / "contributors" =>
+  private val app: HttpApp[ContributorsCache, Nothing] = Http.collectZIO {
+    case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
       ZIO
         .serviceWith[ContributorsCache.Service](_.fetchAll(Repository(Owner(owner), Name(name))))
-        .mapBoth(ApiError.errorResponse, r => Response.jsonString(r.toJson))
+        .mapBoth(_.toResponse, r => Response.json(r.toJson))
         .merge
   }
 
