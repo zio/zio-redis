@@ -62,7 +62,9 @@ class HMSetBenchmarks extends BenchmarkRuntime {
   @Benchmark
   def redis4cats(): Unit = {
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(it => c.hmSet(key, Map(it._1 -> it._2))))
+    unsafeRun[Redis4CatsClient[String]](c =>
+      items.traverse_(it => c.hmSet(key, Map(it._1 -> it._2)): @annotation.nowarn)
+    )
   }
 
   @Benchmark
