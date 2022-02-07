@@ -35,11 +35,8 @@ import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
 
 object Main extends App {
-
-  private val config = TypesafeConfig.fromTypesafeConfigM[Any, Throwable, AppConfig](
-    ZIO.effect(ConfigFactory.load().getConfig("example")),
-    AppConfig.descriptor
-  )
+  private val config =
+    TypesafeConfig.fromTypesafeConfig(ConfigFactory.load().getConfig("example"), AppConfig.descriptor)
 
   private val serverConfig = config.narrow(_.server)
   private val redisConfig  = config.narrow(_.redis)
