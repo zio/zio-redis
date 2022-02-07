@@ -40,7 +40,6 @@ class HSetBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit =
     items = (0 to size).map(e => e.toString -> e.toString).toList
-  //    zioUnsafeRun(hSet(key, items.head, items.tail: _*).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
