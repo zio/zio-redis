@@ -1,5 +1,6 @@
 package zio.redis.options
 
+import zio.Chunk
 import zio.duration._
 import zio.prelude._
 
@@ -49,45 +50,44 @@ trait Server {
       case _                        => None
     }
 
-    case object On                                                            extends Rule
-    case object Off                                                           extends Rule
-    case class KeyPattern(pattern: String)                                    extends Rule
-    case object ResetKeys                                                     extends Rule
-    case class ChannelPattern(pattern: String)                                extends Rule
-    case object RestChannels                                                  extends Rule
-    case class AddCommand(command: String, subcommand: Option[String] = None) extends Rule
-    case class RemoveCommand(command: String)                                 extends Rule
-    case class AddCategory(category: String)                                  extends Rule
-    case class RemoveCategory(category: String)                               extends Rule
-    case object NoPass                                                        extends Rule
-    case class AddTextPassword(pw: String)                                    extends Rule
-    case class RemoveTextPassword(pw: String)                                 extends Rule
-    case class AddHashedPassword(hash: String)                                extends Rule
-    case class RemoveHashedPassword(hash: String)                             extends Rule
-    case object Reset                                                         extends Rule
+    case object On                                                                   extends Rule
+    case object Off                                                                  extends Rule
+    sealed case class KeyPattern(pattern: String)                                    extends Rule
+    case object ResetKeys                                                            extends Rule
+    sealed case class ChannelPattern(pattern: String)                                extends Rule
+    case object RestChannels                                                         extends Rule
+    sealed case class AddCommand(command: String, subcommand: Option[String] = None) extends Rule
+    sealed case class RemoveCommand(command: String)                                 extends Rule
+    sealed case class AddCategory(category: String)                                  extends Rule
+    sealed case class RemoveCategory(category: String)                               extends Rule
+    case object NoPass                                                               extends Rule
+    sealed case class AddTextPassword(pw: String)                                    extends Rule
+    sealed case class RemoveTextPassword(pw: String)                                 extends Rule
+    sealed case class AddHashedPassword(hash: String)                                extends Rule
+    sealed case class RemoveHashedPassword(hash: String)                             extends Rule
+    case object Reset                                                                extends Rule
 
-    val AllKeys     = KeyPattern("*")
-    val AllChannels = ChannelPattern("*")
-    val AllCommands = AddCommand("all")
-    val NoCommands  = RemoveCommand("all")
+    final val AllKeys: KeyPattern         = KeyPattern("*")
+    final val AllChannels: ChannelPattern = ChannelPattern("*")
+    final val AllCommands: AddCommand     = AddCommand("all")
+    final val NoCommands: RemoveCommand   = RemoveCommand("all")
   }
 
   sealed case class UserInfo(
-    flags: List[String],
-    passwords: List[String],
+    flags: Chunk[String],
+    passwords: Chunk[String],
     commands: String,
-    keys: List[String],
-    channels: List[String]
+    keys: Chunk[String],
+    channels: Chunk[String]
   )
 
-  sealed case class UserEntry(username: String, rules: List[Rule])
+  sealed case class UserEntry(username: String, rules: Chunk[Rule])
 
   object UserEntry {
     def unapply(value: String): Option[UserEntry] = value match {
       case s"user $username $rulesString" =>
-        rulesString
-          .split(' ')
-          .toList
+        Chunk
+          .fromArray(rulesString.split(' '))
           .forEach(Rule.unapply)
           .map(rules => UserEntry(username, rules))
 
@@ -109,10 +109,10 @@ trait Server {
   sealed case class CommandDetail(
     name: String,
     artity: Int,
-    flags: List[String],
+    flags: Chunk[String],
     firstKey: Int,
     lastKey: Int,
     step: Int,
-    aclCategories: List[String]
+    aclCategories: Chunk[String]
   )
 }

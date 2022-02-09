@@ -797,11 +797,11 @@ object Output {
         case RespValue.Array(values) =>
           val flags     = ChunkOutput(MultiStringOutput).unsafeDecode(values(1))
           val passwords = ChunkOutput(MultiStringOutput).unsafeDecode(values(3))
-          val commnads  = MultiStringOutput.unsafeDecode(values(5))
+          val commands  = MultiStringOutput.unsafeDecode(values(5))
           val keys      = ChunkOutput(MultiStringOutput).unsafeDecode(values(7))
           val channels  = ChunkOutput(MultiStringOutput).unsafeDecode(values(9))
 
-          UserInfo(flags.toList, passwords.toList, commnads, keys.toList, channels.toList)
+          UserInfo(flags, passwords, commands, keys, channels)
 
         case other =>
           throw ProtocolError(s"$other isn't an array")
@@ -853,7 +853,7 @@ object Output {
           val step = LongOutput.unsafeDecode(values(5))
           val aclCategories = ChunkOutput(StringOutput).unsafeDecode(values(6))
 
-          CommandDetail(name, arity.toInt, flags.toList, firstKey.toInt, lastKey.toInt, step.toInt, aclCategories.toList)
+          CommandDetail(name, arity.toInt, flags, firstKey.toInt, lastKey.toInt, step.toInt, aclCategories)
 
         case other =>
           throw ProtocolError(s"$other isn't an array")

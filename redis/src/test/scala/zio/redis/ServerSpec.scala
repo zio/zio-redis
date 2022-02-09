@@ -13,7 +13,7 @@ trait ServerSpec extends BaseSpec {
       suite("acl cat")(
         testM("acl cat with no category parameter") {
           for {
-            aclList <- aclCat()
+            aclList <- aclCat
           } yield assert(aclList)(isNonEmpty)
         },
         testM("acl cat with some category parameter") {
@@ -93,14 +93,14 @@ trait ServerSpec extends BaseSpec {
       suite("acl list")(
         testM("list users") {
           for {
-            users <- aclList()
+            users <- aclList
           } yield assert(users)(isSubtype[Chunk[UserEntry]](anything))
         }
       ),
       suite("acl load")(
         testM("load acl and succeed or fail") {
           for {
-            result <- aclLoad().either
+            result <- aclLoad.either
           } yield {
             assert(result)(isLeft) || assert(result)(isRight(isUnit))
           }
@@ -110,7 +110,7 @@ trait ServerSpec extends BaseSpec {
         testM("acl log without parameters") {
           for {
             _ <- auth("Someuser", "wrongpassword").either
-            log <- aclLog()
+            log <- aclLog
           } yield {
             assert(log)(isSubtype[Chunk[Chunk[String]]](anything))
           }
@@ -118,7 +118,7 @@ trait ServerSpec extends BaseSpec {
         testM("acl log with reset") {
           for {
             _ <- auth("Someuser", "wrongpassword").either
-            res <- aclLogReset()
+            res <- aclLogReset
           } yield {
             assert(res)(isUnit)
           }
@@ -134,8 +134,8 @@ trait ServerSpec extends BaseSpec {
         testM("acl log empty after reset") {
           for {
             _ <- auth("Someuser", "wrongpassword").either
-            _ <- aclLogReset()
-            res <- aclLog()
+            _ <- aclLogReset
+            res <- aclLog
           } yield {
             assert(res)(isEmpty)
           }
@@ -144,7 +144,7 @@ trait ServerSpec extends BaseSpec {
       suite("acl save")(
         testM("error or success (depends on the redis server config") {
           for {
-            res <- aclSave().either
+            res <- aclSave.either
           } yield {
             assert(res)(isLeft) || assert(res)(isRight)
           }
@@ -153,21 +153,21 @@ trait ServerSpec extends BaseSpec {
       suite("acl users")(
         testM("successfully list all usernames") {
           for {
-            res <- aclUsers()
+            res <- aclUsers
           } yield assert(res)(isSubtype[Chunk[String]](anything))
         }
       ),
       suite("acl whoami")(
         testM("successfully get my username") {
           for {
-            res <- aclWhoAmI()
+            res <- aclWhoAmI
           } yield assert(res)(isSubtype[String](anything))
         }
       ),
       suite("bgwriteaof")(
         testM("successfully call bgwriteaof") {
           for {
-            res <- bgWriteAof()
+            res <- bgWriteAof
           } yield assert(res)(isSubtype[String](anything))
         }
       ),
@@ -175,27 +175,27 @@ trait ServerSpec extends BaseSpec {
         testM("successfully call bgsave") {
           for {
             _ <- zio.clock.sleep(1.second)
-            res <- bgSave()
+            res <- bgSave
           } yield assert(res)(isSubtype[String](anything))
         } @@ eventually,
         testM("successfully call bgsave") {
           for {
             _ <- zio.clock.sleep(1.second)
-            res <- bgSaveSchedule()
+            res <- bgSaveSchedule
           } yield assert(res)(isSubtype[String](anything))
         } @@ eventually
       ),
       suite("command")(
         testM("successfully call command") {
           for {
-            res <- command()
+            res <- command
           } yield assert(res)(isSubtype[Chunk[CommandDetail]](anything))
         }
       ),
       suite("command count")(
         testM("successfully call command cunt") {
           for {
-            res <- commandCount()
+            res <- commandCount
           } yield assert(res)(isSubtype[Long](anything))
         }
       ),

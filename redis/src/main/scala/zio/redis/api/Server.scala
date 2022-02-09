@@ -29,7 +29,7 @@ trait Server {
    * @return
    *   a list of categories
    */
-  final def aclCat(): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
+  final def aclCat: ZIO[RedisExecutor, RedisError, Chunk[String]] = {
     val command = RedisCommand(AclCat, NoInput, ChunkOutput(MultiStringOutput))
     command.run(())
   }
@@ -99,7 +99,7 @@ trait Server {
    * @return
    *   the user entries of the server
    */
-  final def aclList(): ZIO[RedisExecutor, RedisError, Chunk[UserEntry]] = {
+  final def aclList: ZIO[RedisExecutor, RedisError, Chunk[UserEntry]] = {
     val command = RedisCommand(AclList, NoInput, ChunkOutput(UserEntryOutput))
     command.run(())
   }
@@ -110,7 +110,7 @@ trait Server {
    * @return
    *   load acl file was successful
    */
-  final def aclLoad(): ZIO[RedisExecutor, RedisError, Unit] = {
+  final def aclLoad: ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(AclLoad, NoInput, UnitOutput)
     command.run(())
   }
@@ -123,7 +123,7 @@ trait Server {
    * @return
    *   list of log entries
    */
-  final def aclLog(): ZIO[RedisExecutor, RedisError, Chunk[LogEntry]] = {
+  final def aclLog: ZIO[RedisExecutor, RedisError, Chunk[LogEntry]] = {
     val command = RedisCommand(AclLog, NoInput, ChunkOutput(LogEntryOutput))
     command.run(())
   }
@@ -136,7 +136,7 @@ trait Server {
    * @return
    *   OK if the security log was cleared.
    */
-  final def aclLogReset(): ZIO[RedisExecutor, RedisError, Unit] = {
+  final def aclLogReset: ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(AclLog, StringInput, UnitOutput)
     command.run("RESET")
   }
@@ -160,7 +160,7 @@ trait Server {
    * @return
    *   OK on success
    */
-  final def aclSave(): ZIO[RedisExecutor, RedisError, Unit] = {
+  final def aclSave: ZIO[RedisExecutor, RedisError, Unit] = {
     val command = RedisCommand(AclLog, NoInput, UnitOutput)
     command.run(())
   }
@@ -170,7 +170,7 @@ trait Server {
    * @return
    *   an array of strings.
    */
-  final def aclUsers(): ZIO[RedisExecutor, RedisError, Chunk[String]] = {
+  final def aclUsers: ZIO[RedisExecutor, RedisError, Chunk[String]] = {
     val command = RedisCommand(AclUsers, NoInput, ChunkOutput(MultiStringOutput))
     command.run(())
   }
@@ -181,7 +181,7 @@ trait Server {
    * @return
    *   he username of the current connection
    */
-  final def aclWhoAmI(): ZIO[RedisExecutor, RedisError, String] = {
+  final def aclWhoAmI: ZIO[RedisExecutor, RedisError, String] = {
     val command = RedisCommand(AclWhoAmI, NoInput, MultiStringOutput)
     command.run(())
   }
@@ -193,7 +193,7 @@ trait Server {
    *   A simple string reply indicating that the rewriting started or is about to start ASAP, when the call is executed
    *   with success.
    */
-  final def bgWriteAof(): ZIO[RedisExecutor, RedisError, String] = {
+  final def bgWriteAof: ZIO[RedisExecutor, RedisError, String] = {
     val command = RedisCommand(BgWriteAof, NoInput, StringOutput)
     command.run(())
   }
@@ -205,7 +205,7 @@ trait Server {
    *   Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE
    *   subcommand.
    */
-  final def bgSave(): ZIO[RedisExecutor, RedisError, String] = {
+  final def bgSave: ZIO[RedisExecutor, RedisError, String] = {
     val command = RedisCommand(BgSave, NoInput, StringOutput)
     command.run(())
   }
@@ -217,7 +217,7 @@ trait Server {
    *   Background saving started if BGSAVE started correctly or Background saving scheduled when used with the SCHEDULE
    *   subcommand.
    */
-  final def bgSaveSchedule(): ZIO[RedisExecutor, RedisError, String] = {
+  final def bgSaveSchedule: ZIO[RedisExecutor, RedisError, String] = {
     val command = RedisCommand(BgSave, StringInput, StringOutput)
     command.run("SCHEDULE")
   }
@@ -229,7 +229,7 @@ trait Server {
    * @return
    *   list of command details
    */
-  final def command(): ZIO[RedisExecutor, RedisError, Chunk[CommandDetail]] = {
+  final def command: ZIO[RedisExecutor, RedisError, Chunk[CommandDetail]] = {
     val command = RedisCommand(Command, NoInput, ChunkOutput(CommandDetailOutput))
     command.run(())
   }
@@ -239,7 +239,7 @@ trait Server {
    * @return
    *  number of commands returned by COMMAND
    */
-  final def commandCount(): ZIO[RedisExecutor, RedisError, Long] = {
+  final def commandCount: ZIO[RedisExecutor, RedisError, Long] = {
     val command = RedisCommand(CommandCount, NoInput, LongOutput)
     command.run(())
   }

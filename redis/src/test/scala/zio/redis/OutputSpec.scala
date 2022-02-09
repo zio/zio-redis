@@ -1007,149 +1007,158 @@ object OutputSpec extends BaseSpec {
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
-      suite("UserInfoOutput") (
+      suite("UserInfoOutput")(
         testM("read user info successful") {
           for {
             resp <- UIO(
-              RespValue
-                .array(
-                  RespValue.bulkString("flags"),
-                  RespValue.array(
-                    RespValue.bulkString("on"),
-                    RespValue.bulkString("on"),
-                    RespValue.bulkString("allcommands"),
-                    RespValue.bulkString("nopass"),
-                  ),
-                  RespValue.bulkString("passwords"),
-                  RespValue.NullArray,
-                  RespValue.bulkString("commands"),
-                  RespValue.bulkString("+@all"),
-                  RespValue.bulkString("keys"),
-                  RespValue.array(
-                    RespValue.bulkString("*")
-                  ),
-                  RespValue.bulkString("channels"),
-                  RespValue.array(
-                    RespValue.bulkString("*")
-                  )
-                )
-            )
+                      RespValue
+                        .array(
+                          RespValue.bulkString("flags"),
+                          RespValue.array(
+                            RespValue.bulkString("on"),
+                            RespValue.bulkString("on"),
+                            RespValue.bulkString("allcommands"),
+                            RespValue.bulkString("nopass")
+                          ),
+                          RespValue.bulkString("passwords"),
+                          RespValue.NullArray,
+                          RespValue.bulkString("commands"),
+                          RespValue.bulkString("+@all"),
+                          RespValue.bulkString("keys"),
+                          RespValue.array(
+                            RespValue.bulkString("*")
+                          ),
+                          RespValue.bulkString("channels"),
+                          RespValue.array(
+                            RespValue.bulkString("*")
+                          )
+                        )
+                    )
             res <- Task(UserinfoOutput.unsafeDecode(resp)).either
           } yield assert(res)(isRight)
         }
       ),
-      suite("UserEntryOutput") (
+      suite("UserEntryOutput")(
         testM("read user entry successfully") {
-          val userEntryRaw = "user default on nopass ~* &* +@all"
-
           for {
-            resp <- UIO(RespValue.bulkString(userEntryRaw))
-            res <- Task(UserEntryOutput.unsafeDecode(resp)).either
+            resp <- UIO(RespValue.bulkString("user default on nopass ~* &* +@all"))
+            res  <- Task(UserEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isRight)
         },
-
         testM("read invalid user entries, missing user prefix") {
-          val userEntryRaw = "foo default on nopass ~* &* +@all"
-
           for {
-            resp <- UIO(RespValue.bulkString(userEntryRaw))
-            res <- Task(UserEntryOutput.unsafeDecode(resp)).either
+            resp <- UIO(RespValue.bulkString("foo default on nopass ~* &* +@all"))
+            res  <- Task(UserEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft)
         },
-
         testM("read invalid user entries, invalid rules") {
-          val userEntryRaw = "user default on nopass ~* &* +@all foo bar"
-
           for {
-            resp <- UIO(RespValue.bulkString(userEntryRaw))
-            res <- Task(UserEntryOutput.unsafeDecode(resp)).either
+            resp <- UIO(RespValue.bulkString("user default on nopass ~* &* +@all foo bar"))
+            res  <- Task(UserEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft)
         }
       ),
-      suite("LogEntryOutput") (
+      suite("LogEntryOutput")(
         testM("read log entry output successfully") {
-          val logEntry = List(
-            RespValue.bulkString("count"),
-            RespValue.Integer(1),
-            RespValue.bulkString("reason"),
-            RespValue.bulkString("auth"),
-            RespValue.bulkString("context"),
-            RespValue.bulkString("toplevel"),
-            RespValue.bulkString("object"),
-            RespValue.bulkString("AUTH"),
-            RespValue.bulkString("username"),
-            RespValue.bulkString("someuser"),
-            RespValue.bulkString("age-seconds"),
-            RespValue.bulkString("4.0960000000000001"),
-            RespValue.bulkString("client-info"),
-            RespValue.bulkString("id=6 addr=127.0.0.1:63026 fd=8 name= age=9 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=48 qbuf-free=32720 obl=0 oll=0 omem=0 events=r cmd=auth user=default")
-          )
-
           for {
+            logEntry <- UIO {
+                          List(
+                            RespValue.bulkString("count"),
+                            RespValue.Integer(1),
+                            RespValue.bulkString("reason"),
+                            RespValue.bulkString("auth"),
+                            RespValue.bulkString("context"),
+                            RespValue.bulkString("toplevel"),
+                            RespValue.bulkString("object"),
+                            RespValue.bulkString("AUTH"),
+                            RespValue.bulkString("username"),
+                            RespValue.bulkString("someuser"),
+                            RespValue.bulkString("age-seconds"),
+                            RespValue.bulkString("4.0960000000000001"),
+                            RespValue.bulkString("client-info"),
+                            RespValue.bulkString(
+                              "id=6 addr=127.0.0.1:63026 fd=8 name= age=9 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=48 qbuf-free=32720 obl=0 oll=0 omem=0 events=r cmd=auth user=default"
+                            )
+                          )
+                        }
             resp <- UIO(RespValue.array(logEntry: _*))
-            res <- Task(LogEntryOutput.unsafeDecode(resp)).either
+            res  <- Task(LogEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isRight)
         },
-
         testM("read invalid log entry output") {
-          val logEntry = List(
-            RespValue.bulkString("count"),
-            RespValue.bulkString("NotAnInt"),
-            RespValue.bulkString("reason"),
-            RespValue.bulkString("auth"),
-            RespValue.bulkString("context"),
-            RespValue.bulkString("toplevel"),
-            RespValue.bulkString("object"),
-            RespValue.bulkString("AUTH"),
-            RespValue.bulkString("username"),
-            RespValue.bulkString("someuser"),
-            RespValue.bulkString("age-seconds"),
-            RespValue.bulkString("NotADouble"),
-            RespValue.bulkString("client-info"),
-            RespValue.bulkString("id=6 addr=127.0.0.1:63026 fd=8 name= age=9 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=48 qbuf-free=32720 obl=0 oll=0 omem=0 events=r cmd=auth user=default")
-          )
-
           for {
+            logEntry <- UIO {
+                          List(
+                            RespValue.bulkString("count"),
+                            RespValue.bulkString("NotAnInt"),
+                            RespValue.bulkString("reason"),
+                            RespValue.bulkString("auth"),
+                            RespValue.bulkString("context"),
+                            RespValue.bulkString("toplevel"),
+                            RespValue.bulkString("object"),
+                            RespValue.bulkString("AUTH"),
+                            RespValue.bulkString("username"),
+                            RespValue.bulkString("someuser"),
+                            RespValue.bulkString("age-seconds"),
+                            RespValue.bulkString("NotADouble"),
+                            RespValue.bulkString("client-info"),
+                            RespValue.bulkString(
+                              "id=6 addr=127.0.0.1:63026 fd=8 name= age=9 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=48 qbuf-free=32720 obl=0 oll=0 omem=0 events=r cmd=auth user=default"
+                            )
+                          )
+                        }
             resp <- UIO(RespValue.array(logEntry: _*))
-            res <- Task(LogEntryOutput.unsafeDecode(resp)).either
+            res  <- Task(LogEntryOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft)
         }
       ),
-      suite("CommandDetailOutput") (
+      suite("CommandDetailOutput")(
         testM("read command output successfully") {
-          val commandDetail = RespValue.array(
-            RespValue.bulkString("get"),
-            RespValue.Integer(2),
-            RespValue.array(RespValue.SimpleString("readonly"), RespValue.SimpleString("fast")),
-            RespValue.Integer(1),
-            RespValue.Integer(1),
-            RespValue.Integer(1),
-            RespValue.array(RespValue.SimpleString("@read"), RespValue.SimpleString("@string"), RespValue.SimpleString("@fast"))
-          )
-
-
           for {
+            commandDetail <- UIO {
+                               RespValue.array(
+                                 RespValue.bulkString("get"),
+                                 RespValue.Integer(2),
+                                 RespValue.array(RespValue.SimpleString("readonly"), RespValue.SimpleString("fast")),
+                                 RespValue.Integer(1),
+                                 RespValue.Integer(1),
+                                 RespValue.Integer(1),
+                                 RespValue.array(
+                                   RespValue.SimpleString("@read"),
+                                   RespValue.SimpleString("@string"),
+                                   RespValue.SimpleString("@fast")
+                                 )
+                               )
+                             }
             resp <- UIO(commandDetail)
-            res <- Task(CommandDetailOutput.unsafeDecode(resp)).either
+            res  <- Task(CommandDetailOutput.unsafeDecode(resp)).either
           } yield assert(res)(isRight)
         },
-
         testM("read invalid command output successfully") {
-          val commandDetail = RespValue.array(
-            RespValue.bulkString("get"),
-            RespValue.array(RespValue.SimpleString("@read"), RespValue.SimpleString("@string"), RespValue.SimpleString("@fast")),
-            RespValue.Integer(2),
-            RespValue.array(RespValue.SimpleString("readonly"), RespValue.SimpleString("fast")),
-            RespValue.Integer(1),
-            RespValue.Integer(1),
-            RespValue.Integer(1),
-            RespValue.array(RespValue.SimpleString("@read"), RespValue.SimpleString("@string"), RespValue.SimpleString("@fast")),
-            RespValue.Integer(2),
-          )
-
           for {
+            commandDetail <- UIO {
+                               RespValue.array(
+                                 RespValue.bulkString("get"),
+                                 RespValue.array(
+                                   RespValue.SimpleString("@read"),
+                                   RespValue.SimpleString("@string"),
+                                   RespValue.SimpleString("@fast")
+                                 ),
+                                 RespValue.Integer(2),
+                                 RespValue.array(RespValue.SimpleString("readonly"), RespValue.SimpleString("fast")),
+                                 RespValue.Integer(1),
+                                 RespValue.Integer(1),
+                                 RespValue.Integer(1),
+                                 RespValue.array(
+                                   RespValue.SimpleString("@read"),
+                                   RespValue.SimpleString("@string"),
+                                   RespValue.SimpleString("@fast")
+                                 ),
+                                 RespValue.Integer(2)
+                               )
+                             }
             resp <- UIO(commandDetail)
-            res <- Task(CommandDetailOutput.unsafeDecode(resp)).either
+            res  <- Task(CommandDetailOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft)
         }
       )
