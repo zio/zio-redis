@@ -2,7 +2,8 @@ name: Website
 
 on:
   push:
-    branches: [master]
+    branches: 
+      - 'master'
   release:
     types:
       - published
@@ -11,10 +12,16 @@ jobs:
   publish:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
-    if: github.event_name != 'pull_request'
     steps:
-      - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v13
-      - run: ./sbt docs/docusaurusPublishGhpages
+      - name: Checkout current branch
+        uses: actions/checkout@v2
+      - name: Setup Java
+        uses: actions/setup-java@v2.5.0
+        with:
+          distribution: temurin
+          java-version: 17
+          check-latest: true
+      - name: Publish the site
+        run: ./sbt docs/docusaurusPublishGhpages
         env:
           GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}
