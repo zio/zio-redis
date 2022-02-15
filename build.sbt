@@ -65,15 +65,15 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.3.18",
-        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.3.18",
-        "dev.zio"                       %% "zio-streams"                   % Zio,
-        "dev.zio"                       %% "zio-config-magnolia"           % "2.0.0",
-        "dev.zio"                       %% "zio-config-typesafe"           % "2.0.0",
-        "dev.zio"                       %% "zio-prelude"                   % "1.0.0-RC8",
-        "dev.zio"                       %% "zio-json"                      % "0.1.5",
-        "io.d11"                        %% "zhttp"                         % "1.0.0.0-RC24",
-        "io.github.kitlangton"          %% "zio-magic"                     % "0.3.11"
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio1" % "3.4.2",
+        "com.softwaremill.sttp.client3" %% "zio1-json"                      % "3.4.2",
+        "dev.zio"                       %% "zio-streams"                    % Zio,
+        "dev.zio"                       %% "zio-config-magnolia"            % "2.0.0",
+        "dev.zio"                       %% "zio-config-typesafe"            % "2.0.0",
+        "dev.zio"                       %% "zio-prelude"                    % "1.0.0-RC8",
+        "dev.zio"                       %% "zio-json"                       % "0.1.5",
+        "io.d11"                        %% "zhttp"                          % "1.0.0.0-RC24",
+        "io.github.kitlangton"          %% "zio-magic"                      % "0.3.11"
       )
     )
 
