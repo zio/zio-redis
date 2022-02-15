@@ -1657,7 +1657,7 @@ trait StringsSpec extends BaseSpec {
             value  <- uuid
             _      <- pSetEx(key, 10.millis, value)
             exists <- getEx(key, true).returning[String]
-            fiber  <- ZIO.sleep(20.millis) <* TestClock.adjust(20.millis)
+            fiber  <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
             _      <- fiber.join
             res    <- get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
