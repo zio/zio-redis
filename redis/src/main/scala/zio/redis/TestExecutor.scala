@@ -79,7 +79,7 @@ private[redis] final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
-                  case "CLIENT" =>
+                  case "CLIENT" | "STRALGO" =>
                     val command1 = command.tail
                     val name1    = command1.head
                     runCommand(name.asString + " " + name1.asString, command1.tail, now).commit
@@ -1082,25 +1082,44 @@ private[redis] final class TestExecutor private (
 
       case api.Strings.Get =>
         val key = input.head.asString
+
         orWrongType(isString(key))(
           strings.get(key).map(_.fold(RespValue.NullBulkString: RespValue)(RespValue.bulkString))
         )
 
-      case api.Strings.Set =>
-        // not a full implementation. Just enough to make set tests work
-        val key   = input(0).asString
-        val value = input(1).asString
-        orWrongType(isString(key))(
-          putString(key, value).as(Replies.Ok)
-        )
+      case api.Strings.SetEx =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption     = stringInput.headOption
+        val secondsOption = stringInput.lift(1)
+        val valueOption   = stringInput.lift(2)
+
+        orMissingParameter3(keyOption, secondsOption, valueOption) { (key, seconds, value) =>
+          toLongOption(seconds).fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
+            if (longSeconds > 0) {
+              val unixtime = now.plusSeconds(longSeconds)
+
+              putString(key, value, Some(unixtime)).as[RespValue](Replies.Ok)
+            } else STM.succeed(Replies.Error)
+          }
+        }
 
       case api.Strings.PSetEx =>
-        val key      = input(0).asString
-        val unixtime = Instant.ofEpochMilli(input(1).asLong)
-        val value    = input(2).asString
-        orWrongType(isString(key))(
-          putString(key, value, Some(unixtime)).as(Replies.Ok)
-        )
+        val stringInput = input.map(_.asString)
+
+        val keyOption    = stringInput.headOption
+        val millisOption = stringInput.lift(1)
+        val valueOption  = stringInput.lift(2)
+
+        orMissingParameter3(keyOption, millisOption, valueOption) { (key, millis, value) =>
+          toLongOption(millis).fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
+            if (longMillis > 0) {
+              val unixtime = now.plusMillis(longMillis)
+
+              putString(key, value, Some(unixtime)).as[RespValue](Replies.Ok)
+            } else STM.succeed(Replies.Error)
+          }
+        }
 
       case api.HyperLogLog.PfAdd =>
         val key    = input.head.asString
@@ -2886,6 +2905,688 @@ private[redis] final class TestExecutor private (
           } yield res
         )
 
+      case api.Strings.Append =>
+        val keyOption   = input.headOption.map(_.asString)
+        val valueOption = input.lift(1).map(_.asString)
+
+        orMissingParameter2(keyOption, valueOption) { (key, value) =>
+          orWrongType(isString(key))(
+            for {
+              string <- strings.getOrElse(key, "")
+              result  = string + value
+              _      <- putString(key, result)
+            } yield RespValue.Integer(result.length.toLong)
+          )
+        }
+
+      case api.Strings.BitCount =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption = stringInput.headOption
+        val startEnd = for {
+          start <- stringInput.lift(1)
+          end   <- stringInput.lift(2)
+        } yield (start, end)
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").map { string =>
+              val startEndString = startEnd.getOrElse(("0", (string.length - 1).toString))
+              val respOption = for {
+                start   <- toIntOption(startEndString._1)
+                end     <- toIntOption(startEndString._2)
+                newStart = if (start < 0) string.length + start else start
+                newEnd   = if (end < 0) string.length + end else end
+                value = string
+                          .slice(newStart, newEnd + 1)
+                          .map(_.toInt.toBinaryString.count(_ == '1').toLong)
+                          .sum
+              } yield RespValue.Integer(value)
+
+              respOption.getOrElse(Replies.Error)
+            }
+          )
+        }
+
+      case api.Strings.BitOp =>
+        val stringInput = input.map(_.asString)
+
+        val operationOption = stringInput.headOption
+        val destKeyOption   = stringInput.lift(1)
+        val keyChunkOption  = Some(stringInput.drop(2)).filter(_.nonEmpty)
+
+        def bitOp(op: (Byte, Byte) => Int, destKey: String, keyChunk: Chunk[String]): USTM[RespValue] =
+          STM.ifM(STM.foreach(keyChunk)(key => isString(key)).map(_.forall(_ == true)))(
+            STM.foreach(keyChunk)(key => strings.getOrElse(key, "")).flatMap { chunk =>
+              val string = chunk.foldLeft("") { (a, b) =>
+                a.getBytes.zipAll(b.getBytes, 0.toByte, 0.toByte).map(ab => op(ab._1, ab._2).toChar).mkString
+              }
+
+              putString(destKey, string).as(RespValue.Integer(string.length.toLong))
+            },
+            STM.succeed(Replies.WrongType)
+          )
+
+        orMissingParameter3(operationOption, destKeyOption, keyChunkOption) { (operation, destKey, keyChunk) =>
+          orWrongType(isString(destKey))(
+            operation match {
+              case "AND" =>
+                bitOp(_ & _, destKey, keyChunk)
+              case "OR" =>
+                bitOp(_ | _, destKey, keyChunk)
+              case "XOR" =>
+                bitOp(_ ^ _, destKey, keyChunk)
+              case "NOT" if keyChunk.length == 1 =>
+                bitOp((_, b) => ~b, destKey, keyChunk)
+              case _ =>
+                STM.succeed(Replies.Error)
+            }
+          )
+        }
+
+      case api.Strings.BitPos =>
+        val keyOption = input.headOption.map(_.asString)
+        val bitOption = input.lift(1).map(_.asString)
+        val start     = input.lift(2).map(_.asString)
+        val end       = input.lift(3).map(_.asString)
+
+        orMissingParameter2(keyOption, bitOption) { (key, bit) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").map { string =>
+              val respOption = for {
+                bit     <- Option(bit).filter(_ => bit == "0" || bit == "1")
+                start   <- start.map(start => toIntOption(start)).getOrElse(Some(0))
+                end     <- end.map(end => toIntOption(end)).getOrElse(Some(string.length))
+                newStart = if (start < 0) string.length + start else start
+                newEnd   = (if (end < 0) string.length + end else end) + 1
+                index = string.zipWithIndex
+                          .slice(newStart, newEnd)
+                          .map(tuple => f"${tuple._1.toInt.toBinaryString}%8s".replace(' ', '0') -> tuple._2)
+                          .collectFirst { case (byte, index) if byte.contains(bit) => byte.indexOf(bit) + index * 8L }
+                value = index.getOrElse(
+                          if (bit == "0" && (string.isEmpty || newStart <= newEnd && newStart < string.length))
+                            string.length * 8L
+                          else -1L
+                        )
+              } yield RespValue.Integer(value)
+
+              respOption.getOrElse(Replies.Error)
+            }
+          )
+        }
+
+      case api.Strings.Decr =>
+        val keyOption = input.headOption.map(_.asString)
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            strings.get(key).flatMap { stringOption =>
+              val respOption = for {
+                num    <- stringOption.map(string => toLongOption(string)).getOrElse(Some(0L))
+                result <- if (num > Long.MinValue) Some(num - 1) else None
+              } yield putString(key, result.toString).as(RespValue.Integer(result))
+
+              respOption.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
+      case api.Strings.DecrBy =>
+        val keyOption  = input.headOption.map(_.asString)
+        val decrOption = input.lift(1).map(_.asLong)
+
+        orMissingParameter2(keyOption, decrOption) { (key, decr) =>
+          orWrongType(isString(key))(
+            strings.get(key).flatMap { stringOption =>
+              val respOption = for {
+                num <- stringOption.map(string => toLongOption(string)).getOrElse(Some(0L))
+                result <- if (decr >= 0 && num >= Long.MinValue + decr || decr < 0 && num <= Long.MaxValue + decr) {
+                            Some(num - decr)
+                          } else None
+              } yield putString(key, result.toString).as(RespValue.Integer(result))
+
+              respOption.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
+      case api.Strings.GetBit =>
+        val keyOption    = input.headOption.map(_.asString)
+        val offsetOption = input.lift(1).map(_.asString)
+
+        orMissingParameter2(keyOption, offsetOption) { (key, offset) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").map { string =>
+              val respOption = for {
+                offset <- toIntOption(offset).filter(_ >= 0)
+                value   = string.getBytes.lift(offset / 8).fold(0L)(byte => (byte >> (7 - offset % 8) & 1).toLong)
+              } yield RespValue.Integer(value)
+
+              respOption.getOrElse(Replies.Error)
+            }
+          )
+        }
+
+      case api.Strings.GetRange =>
+        val keyOption   = input.headOption.map(_.asString)
+        val startOption = input.lift(1).map(_.asString)
+        val endOption   = input.lift(2).map(_.asString)
+
+        orMissingParameter3(keyOption, startOption, endOption) { (key, start, end) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").map { string =>
+              val respOption = for {
+                a       <- toIntOption(start)
+                b       <- toIntOption(end)
+                range    = (a, b)
+                newStart = if (range._1 < 0) string.length + range._1 else range._1
+                newEnd   = (if (range._2 < 0) string.length + range._2 else range._2) + 1
+              } yield RespValue.bulkString(string.slice(newStart, newEnd))
+
+              respOption.getOrElse(Replies.Error)
+            }
+          )
+        }
+
+      case api.Strings.GetSet =>
+        val keyOption   = input.headOption.map(_.asString)
+        val valueOption = input.lift(1).map(_.asString)
+
+        orMissingParameter2(keyOption, valueOption) { (key, value) =>
+          orWrongType(isString(key))(
+            for {
+              string <- strings.get(key)
+              _      <- putString(key, value)
+            } yield string.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString)
+          )
+        }
+
+      case api.Strings.Incr =>
+        val keyOption = input.headOption.map(_.asString)
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            strings.get(key).flatMap { stringOption =>
+              val respOption = for {
+                num    <- stringOption.map(string => toLongOption(string)).getOrElse(Some(0L))
+                result <- if (num < Long.MaxValue) Some(num + 1) else None
+              } yield putString(key, result.toString).as(RespValue.Integer(result))
+
+              respOption.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
+      case api.Strings.IncrBy =>
+        val keyOption  = input.headOption.map(_.asString)
+        val incrOption = input.lift(1).map(_.asString)
+
+        orMissingParameter2(keyOption, incrOption) { (key, incr) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "0").flatMap { string =>
+              val respOption = for {
+                num  <- toLongOption(string)
+                incr <- toLongOption(incr)
+                result <- if (incr >= 0 && num <= Long.MaxValue - incr || incr < 0 && num >= Long.MinValue - incr) {
+                            Some(num + incr)
+                          } else None
+              } yield putString(key, result.toString).as(RespValue.Integer(result))
+
+              respOption.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
+      case api.Strings.IncrByFloat =>
+        val keyOption  = input.headOption.map(_.asString)
+        val incrOption = input.lift(1).map(_.asString)
+
+        orMissingParameter2(keyOption, incrOption) { (key, incr) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "0").flatMap { string =>
+              val respOption = for {
+                num  <- toDoubleOption(string)
+                incr <- toDoubleOption(incr)
+                result <- if (incr >= 0 && num <= Double.MaxValue - incr || incr < 0 && num >= Double.MinValue - incr) {
+                            Some((num + incr).toString)
+                          } else None
+              } yield putString(key, result).as(RespValue.bulkString(result))
+
+              respOption.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
+      case api.Strings.MGet =>
+        val keysOption = Some(input.map(_.asString)).filter(_.nonEmpty)
+
+        orMissingParameter(keysOption) { keys =>
+          val respChunk = keys.map { key =>
+            strings.get(key).map {
+              case Some(string) => Chunk.single(RespValue.bulkString(string))
+              case None         => Chunk.single(RespValue.NullBulkString)
+            }
+          }.fold[USTM[Chunk[RespValue]]](STM.succeed(Chunk.empty))((a, b) => a.flatMap(x => b.map(y => x ++ y)))
+
+          respChunk.map(RespValue.Array)
+        }
+
+      case api.Strings.MSet =>
+        val keyValuesOption =
+          if (input.size % 2 == 0)
+            Some(Chunk.fromIterator(input.toList.map(_.asString).grouped(2)).collect { case List(key, value) =>
+              key -> value
+            })
+          else None
+
+        orMissingParameter(keyValuesOption) { keyValues =>
+          STM.foreach(keyValues)(keyValue => putString(keyValue._1, keyValue._2)).as(RespValue.SimpleString("OK"))
+        }
+
+      case api.Strings.MSetNx =>
+        val keyValuesOption =
+          if (input.size % 2 == 0)
+            Some(Chunk.fromIterator(input.toList.map(_.asString).grouped(2)).collect { case List(key, value) =>
+              key -> value
+            })
+          else None
+
+        orMissingParameter(keyValuesOption) { keyValues =>
+          STM.ifM(STM.foreach(keyValues.map(_._1))(isUsed).map(_.forall(_ == false)))(
+            STM.foreach(keyValues)(keyValue => putString(keyValue._1, keyValue._2)).as(RespValue.Integer(1L)),
+            STM.succeed(RespValue.Integer(0L))
+          )
+        }
+
+      case api.Strings.Set =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption   = stringInput.headOption
+        val valueOption = stringInput.lift(1)
+
+        val option = stringInput.find {
+          case "EX" | "PX" | "EXAT" | "PXAT" | "KEEPTTL" => true
+          case _                                         => false
+        }
+        val update = stringInput.find {
+          case "NX" | "XX" => true
+          case _           => false
+        }
+        val get = stringInput.contains("GET")
+
+        orMissingParameter2(keyOption, valueOption) { (key, value) =>
+          STM.ifM(
+            isUsed(key).map(used => update.isEmpty || used && update.contains("XX") || !used && update.contains("NX"))
+          )(
+            option match {
+              case Some("EX") =>
+                val secondsOption = stringInput.lift(stringInput.indexOf("EX") + 1)
+
+                orMissingParameter(secondsOption) { seconds =>
+                  toLongOption(seconds).fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
+                    if (longSeconds > 0) {
+                      val unixtime = now.plusSeconds(longSeconds)
+
+                      if (get)
+                        orWrongType(isString(key))(
+                          strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                            <* putString(key, value, Some(unixtime))
+                        )
+                      else STM.succeed(Replies.Ok) <* putString(key, value, Some(unixtime))
+                    } else STM.succeed(Replies.Error)
+                  }
+                }
+              case Some("PX") =>
+                val millisOption = stringInput.lift(stringInput.indexOf("PX") + 1)
+
+                orMissingParameter(millisOption) { millis =>
+                  toLongOption(millis).fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
+                    if (longMillis > 0) {
+                      val unixtime = now.plusMillis(longMillis)
+
+                      if (get)
+                        orWrongType(isString(key))(
+                          strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                            <* putString(key, value, Some(unixtime))
+                        )
+                      else STM.succeed(Replies.Ok) <* putString(key, value, Some(unixtime))
+                    } else STM.succeed(Replies.Error)
+                  }
+                }
+              case Some("EXAT") =>
+                val timestampOption = stringInput.lift(stringInput.indexOf("EXAT") + 1)
+
+                orMissingParameter(timestampOption) { timestamp =>
+                  toLongOption(timestamp).fold(STM.succeed[RespValue](Replies.Error)) { longTimestamp =>
+                    if (longTimestamp >= 0) {
+                      val unixtime = Instant.ofEpochSecond(longTimestamp)
+
+                      if (get)
+                        orWrongType(isString(key))(
+                          strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                            <* putString(key, value, Some(unixtime))
+                        )
+                      else STM.succeed(Replies.Ok) <* putString(key, value, Some(unixtime))
+                    } else STM.succeed(Replies.Error)
+                  }
+                }
+              case Some("PXAT") =>
+                val milliTimestampOption = stringInput.lift(stringInput.indexOf("PXAT") + 1)
+
+                orMissingParameter(milliTimestampOption) { milliTimestamp =>
+                  toLongOption(milliTimestamp).fold(STM.succeed[RespValue](Replies.Error)) { longMilliTimestamp =>
+                    if (longMilliTimestamp >= 0) {
+                      val unixtime = Instant.ofEpochMilli(longMilliTimestamp)
+
+                      if (get)
+                        orWrongType(isString(key))(
+                          strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                            <* putString(key, value, Some(unixtime))
+                        )
+                      else STM.succeed(Replies.Ok) <* putString(key, value, Some(unixtime))
+                    } else STM.succeed(Replies.Error)
+                  }
+                }
+              case Some("KEEPTTL") =>
+                keys.get(key).flatMap { keyInfoOption =>
+                  val expireAt = keyInfoOption.flatMap(_.expireAt)
+
+                  if (get)
+                    orWrongType(isString(key))(
+                      strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                        <* putString(key, value, expireAt)
+                    )
+                  else STM.succeed(Replies.Ok) <* putString(key, value, expireAt)
+                }
+              case None =>
+                if (get)
+                  orWrongType(isString(key))(
+                    strings.get(key).map(_.fold[RespValue](RespValue.NullBulkString)(RespValue.bulkString))
+                      <* putString(key, value)
+                  )
+                else STM.succeed(Replies.Ok) <* putString(key, value)
+              case _ =>
+                STM.succeed(Replies.Error)
+            },
+            STM.succeed(RespValue.NullBulkString)
+          )
+        }
+
+      case api.Strings.SetBit =>
+        val keyOption    = input.headOption.map(_.asString)
+        val offsetOption = input.lift(1).map(_.asString)
+        val valueOption  = input.lift(2).map(_.asString)
+
+        orMissingParameter3(keyOption, offsetOption, valueOption) { (key, offset, value) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").flatMap { string =>
+              val respOption = for {
+                offset   <- toIntOption(offset).filter(_ >= 0)
+                value    <- toIntOption(value).filter(num => num == 0 || num == 1)
+                newString = string + "\u0000" * (offset / 8 + 1 - string.length)
+                char     <- newString.lift(offset / 8)
+                resp      = (char >> (7 - offset % 8) & 1).toLong
+                updatedChar = (if (value == 1) char | (1 << (7 - offset % 8))
+                               else char & ~(1 << (7 - offset % 8))).toChar
+              } yield putString(key, newString.updated(offset / 8, updatedChar)).as(RespValue.Integer(resp))
+
+              respOption.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
+      case api.Strings.SetNx =>
+        val keyOption   = input.headOption.map(_.asString)
+        val valueOption = input.lift(1).map(_.asString)
+
+        orMissingParameter2(keyOption, valueOption) { (key, value) =>
+          STM.ifM(isUsed(key))(
+            STM.succeed(RespValue.Integer(0L)),
+            putString(key, value).as(RespValue.Integer(1L))
+          )
+        }
+
+      case api.Strings.SetRange =>
+        val keyOption    = input.headOption.map(_.asString)
+        val offsetOption = input.lift(1).map(_.asString)
+        val valueOption  = input.lift(2).map(_.asString)
+
+        orMissingParameter3(keyOption, offsetOption, valueOption) { (key, stringOffset, value) =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").flatMap { string =>
+              toIntOption(stringOffset).filter(_ >= 0).fold(STM.succeed(Replies.Error: RespValue)) { offset =>
+                val result = (if (offset > string.length) string + "\u0000" * (offset - string.length)
+                              else string.substring(0, offset)) + value
+
+                putString(key, result).as(RespValue.Integer(result.length.toLong))
+              }
+            }
+          )
+        }
+
+      case api.Strings.StrLen =>
+        val keyOption = input.headOption.map(_.asString)
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").map(string => RespValue.Integer(string.length.toLong))
+          )
+        }
+
+      case api.Strings.StrAlgoLcs =>
+        val stringInput       = input.map(_.asString)
+        val stringsKeysOption = stringInput.headOption
+        val aOption           = stringInput.lift(1)
+        val bOption           = stringInput.lift(2)
+        val len               = stringInput.contains("LEN")
+        val idx               = stringInput.contains("IDX")
+        val minMatchLen =
+          stringInput.lift(stringInput.indexOf("MINMATCHLEN") + 1).flatMap(string => toLongOption(string))
+        val withMatchLen = stringInput.contains("WITHMATCHLEN")
+
+        type Match = (((Long, Long), (Long, Long)), Long)
+
+        def longestCommonSubsequence(
+          a: Seq[Char],
+          b: Seq[Char],
+          matchAB: Option[(Long, Long)] = None,
+          indexAB: (Long, Long) = (0L, 0L),
+          lcs: Seq[Char] = Seq(),
+          matches: Chunk[Match] = Chunk.empty,
+          currentLcsMatches: (Seq[Char], Chunk[Match]) = (Seq(), Chunk.empty)
+        ): (Seq[Char], Chunk[Match]) = (a, b) match {
+          case (ah +: at, bh +: bt) if ah == bh =>
+            longestCommonSubsequence(
+              at,
+              bt,
+              Some(matchAB.getOrElse(indexAB)),
+              (indexAB._1 + 1L, indexAB._2 + 1L),
+              lcs :+ ah,
+              matches,
+              currentLcsMatches
+            )
+          case (_ +: at, _ +: bt) =>
+            val newMatches = matchAB.fold(matches) { matchAB =>
+              (((matchAB._1, indexAB._1 - 1), (matchAB._2, indexAB._2 - 1)), indexAB._1 - matchAB._1) +: matches
+            }
+
+            longestCommonSubsequence(
+              a,
+              bt,
+              None,
+              (indexAB._1, indexAB._2 + 1),
+              lcs,
+              newMatches,
+              longestCommonSubsequence(at, b, None, (indexAB._1 + 1, indexAB._2), lcs, newMatches, currentLcsMatches)
+            )
+          case _ =>
+            val newMatches = matchAB.fold(matches) { matchAB =>
+              (((matchAB._1, indexAB._1 - 1), (matchAB._2, indexAB._2 - 1)), indexAB._1 - matchAB._1) +: matches
+            }
+
+            if (lcs.length > currentLcsMatches._1.length) (lcs, newMatches) else currentLcsMatches
+        }
+
+        val resp: (String, String) => USTM[RespValue] = (a, b) => {
+          val (lcs, matches) = longestCommonSubsequence(a.toSeq, b.toSeq)
+
+          if (len) STM.succeed(RespValue.Integer(lcs.length.toLong))
+          else if (idx)
+            STM.succeed(
+              RespValue.array(
+                RespValue.bulkString("matches"),
+                RespValue.Array(
+                  matches.collect {
+                    case (matchRange, matchLen) if minMatchLen.fold(true)(_ <= matchLen) =>
+                      val (rangeA, rangeB) = matchRange
+
+                      RespValue.Array(
+                        Chunk(
+                          RespValue.array(RespValue.Integer(rangeA._1), RespValue.Integer(rangeA._2)),
+                          RespValue.array(RespValue.Integer(rangeB._1), RespValue.Integer(rangeB._2))
+                        )
+                          ++ (if (withMatchLen) Chunk.single(RespValue.Integer(matchLen)) else Chunk.empty)
+                      )
+                  }
+                ),
+                RespValue.bulkString("len"),
+                RespValue.Integer(lcs.length.toLong)
+              )
+            )
+          else STM.succeed(RespValue.bulkString(lcs.mkString))
+        }
+
+        orMissingParameter3(stringsKeysOption, aOption, bOption) { (stringsKeys, a, b) =>
+          stringsKeys match {
+            case "STRINGS" =>
+              resp(a, b)
+            case "KEYS" =>
+              for {
+                stringA <- strings.getOrElse(a, "")
+                stringB <- strings.getOrElse(b, "")
+                result  <- resp(stringA, stringB)
+              } yield result
+            case _ =>
+              STM.succeed(Replies.Error)
+          }
+        }
+
+      case api.Strings.GetDel =>
+        val keyOption = input.headOption.map(_.asString)
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            for {
+              string <- strings.get(key)
+              _      <- delete(key)
+            } yield string.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string))
+          )
+        }
+
+      case api.Strings.GetEx =>
+        val stringInput = input.map(_.asString)
+
+        val keyOption = stringInput.headOption
+
+        stringInput.lift(1) match {
+          case Some("EX") =>
+            val secondsOption = stringInput.lift(2)
+
+            orMissingParameter2(keyOption, secondsOption) { (key, seconds) =>
+              orWrongType(isString(key))(
+                toLongOption(seconds).fold(STM.succeed[RespValue](Replies.Error)) { longSeconds =>
+                  if (longSeconds > 0) {
+                    val unixtime = now.plusSeconds(longSeconds)
+
+                    keys
+                      .get(key)
+                      .flatMap(_.fold(STM.unit)(info => keys.put(key, info.copy(expireAt = Some(unixtime))))) *>
+                      strings
+                        .get(key)
+                        .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
+                  } else STM.succeed(Replies.Error)
+                }
+              )
+            }
+          case Some("PX") =>
+            val millisOption = stringInput.lift(2)
+
+            orMissingParameter2(keyOption, millisOption) { (key, millis) =>
+              orWrongType(isString(key))(
+                toLongOption(millis).fold(STM.succeed[RespValue](Replies.Error)) { longMillis =>
+                  if (longMillis > 0) {
+                    val unixtime = now.plusMillis(longMillis)
+
+                    keys
+                      .get(key)
+                      .flatMap(_.fold(STM.unit)(info => keys.put(key, info.copy(expireAt = Some(unixtime))))) *>
+                      strings
+                        .get(key)
+                        .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
+                  } else STM.succeed(Replies.Error)
+                }
+              )
+            }
+          case Some("EXAT") =>
+            val timestampOption = stringInput.lift(2)
+
+            orMissingParameter2(keyOption, timestampOption) { (key, timestamp) =>
+              orWrongType(isString(key))(
+                toLongOption(timestamp).fold(STM.succeed[RespValue](Replies.Error)) { longTimestamp =>
+                  if (longTimestamp >= 0) {
+                    val unixtime = Instant.ofEpochSecond(longTimestamp)
+
+                    keys
+                      .get(key)
+                      .flatMap(_.fold(STM.unit)(info => keys.put(key, info.copy(expireAt = Some(unixtime))))) *>
+                      strings
+                        .get(key)
+                        .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
+                  } else STM.succeed(RespValue.Error("Error:" + longTimestamp))
+                }
+              )
+            }
+          case Some("PXAT") =>
+            val milliTimestampOption = stringInput.lift(2)
+
+            orMissingParameter2(keyOption, milliTimestampOption) { (key, milliTimestamp) =>
+              orWrongType(isString(key))(
+                toLongOption(milliTimestamp).fold(STM.succeed[RespValue](Replies.Error)) { longMilliTimestamp =>
+                  if (longMilliTimestamp >= 0) {
+                    val unixtime = Instant.ofEpochMilli(longMilliTimestamp)
+
+                    keys
+                      .get(key)
+                      .flatMap(_.fold(STM.unit)(info => keys.put(key, info.copy(expireAt = Some(unixtime))))) *>
+                      strings
+                        .get(key)
+                        .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
+                  } else STM.succeed(Replies.Error)
+                }
+              )
+            }
+          case Some("PERSIST") =>
+            orMissingParameter(keyOption) { key =>
+              orWrongType(isString(key))(
+                keys.get(key).flatMap(_.fold(STM.unit)(info => keys.put(key, info.copy(expireAt = None)))) *>
+                  strings
+                    .get(key)
+                    .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
+              )
+            }
+          case None =>
+            orMissingParameter(keyOption) { key =>
+              orWrongType(isString(key))(
+                strings
+                  .get(key)
+                  .map(_.fold[RespValue](RespValue.NullBulkString)(string => RespValue.bulkString(string)))
+              )
+            }
+
+          case _ =>
+            STM.succeed[RespValue](Replies.Error)
+        }
+
       case _ => STM.succeedNow(RespValue.Error("ERR unknown command"))
     }
   }
@@ -2928,6 +3629,10 @@ private[redis] final class TestExecutor private (
   ): USTM[RespValue] =
     apply(apply(apply(apply(Some(program.curried))(paramA))(paramB))(paramC))(paramD)
       .getOrElse(STM.succeedNow(Replies.Error))
+
+  // check if the key is used
+  private[this] def isUsed(name: String): STM[Nothing, Boolean] =
+    keys.contains(name)
 
   // check whether the key is a set or unused.
   private[this] def isSet(name: String): USTM[Boolean] =
@@ -3096,6 +3801,12 @@ private[redis] final class TestExecutor private (
                 }
     } yield result
   }
+
+  private[this] def toIntOption(s: String): Option[Int] = Try(s.toInt).toOption
+
+  private[this] def toLongOption(s: String): Option[Long] = Try(s.toLong).toOption
+
+  private[this] def toDoubleOption(s: String): Option[Double] = Try(s.toDouble).toOption
 
   private[this] object Hash {
     val longRange: (Double, Double) = (-180.0, 180.0)
