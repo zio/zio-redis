@@ -44,7 +44,8 @@ object ApiSpec
         listSuite,
         hashSuite,
         sortedSetsSuite,
-        geoSuite
+        geoSuite,
+        stringsSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
         .provideSomeLayer[TestEnvironment](RedisExecutor.test)
