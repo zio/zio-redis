@@ -34,8 +34,11 @@ object ApiSpec
         hashSuite,
         streamsSuite,
         scriptingSpec
-      ).provideCustomLayerShared((Logging.ignore ++ ZLayer.succeed(codec) >>> RedisExecutor.local.orDie) ++ Clock.live)
-        @@ sequential,
+      ).provideCustomLayerShared {
+        val executor = Logging.ignore >>> RedisExecutor.local.orDie
+        val redis    = executor ++ ZLayer.succeed(codec) >>> Redis.live
+        redis ++ Clock.live
+      } @@ sequential,
       suite("Test Executor")(
         connectionSuite,
         keysSuite,
@@ -48,6 +51,6 @@ object ApiSpec
         stringsSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(TestExecutorUnsupportedTag))
         .get
-        .provideSomeLayer[TestEnvironment](RedisExecutor.test)
+        .provideSomeLayer[TestEnvironment](RedisExecutor.test ++ ZLayer.succeed(codec) >>> Redis.live)
     )
 }

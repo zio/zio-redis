@@ -4,10 +4,10 @@ import zio.redis.RedisError.WrongType
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, NonEmptyChunk, ZIO}
+import zio.{Chunk, Has, NonEmptyChunk, ZIO}
 
 trait SetsSpec extends BaseSpec {
-  val setsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val setsSuite: Spec[Has[Redis], TestFailure[RedisError], TestSuccess] =
     suite("sets")(
       suite("sAdd")(
         testM("to empty set") {
@@ -783,7 +783,7 @@ trait SetsSpec extends BaseSpec {
     key: String,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[String]] =
+  ): ZIO[Has[Redis], RedisError, Chunk[String]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
         sScan(key, cursor, pattern, count).returning[String].map {

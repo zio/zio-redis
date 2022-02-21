@@ -2,10 +2,11 @@ package zio.redis
 
 import zio.test.Assertion._
 import zio.test._
+import zio.Has
 
 trait HyperLogLogSpec extends BaseSpec {
 
-  val hyperLogLogSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val hyperLogLogSuite: Spec[Has[Redis], TestFailure[RedisError], TestSuccess] =
     suite("hyperloglog")(
       suite("add elements")(
         testM("pfAdd elements to key") {

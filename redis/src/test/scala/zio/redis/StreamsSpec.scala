@@ -2,14 +2,13 @@ package zio.redis
 
 import zio.duration._
 import zio.redis.RedisError._
+import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect.ignore
-import zio.test._
 import zio.{Chunk, Has}
 
 trait StreamsSpec extends BaseSpec {
-  val streamsSuite
-    : Spec[Has[RedisExecutor.Service] with Has[Annotations.Service], TestFailure[RedisError], TestSuccess] =
+  val streamsSuite: Spec[Has[Redis] with Annotations, TestFailure[RedisError], TestSuccess] =
     suite("streams")(
       suite("xAck")(
         testM("one message") {

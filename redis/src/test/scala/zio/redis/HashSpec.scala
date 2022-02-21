@@ -1,13 +1,13 @@
 package zio.redis
 
-import zio.Chunk
+import zio.{Chunk, Has}
 import zio.random.Random
 import zio.test.Assertion._
 import zio.test._
 
 trait HashSpec extends BaseSpec {
 
-  val hashSuite: Spec[RedisExecutor with Random with TestConfig, TestFailure[RedisError], TestSuccess] =
+  val hashSuite: Spec[Has[Redis] with Random with TestConfig, TestFailure[RedisError], TestSuccess] =
     suite("hash")(
       suite("hSet, hGet, hGetAll and hDel")(
         testM("set followed by get") {

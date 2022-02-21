@@ -5,10 +5,10 @@ import zio.redis.RedisError.{ProtocolError, WrongType}
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, ZIO}
+import zio.{Chunk, Has, ZIO}
 
 trait SortedSetsSpec extends BaseSpec {
-  val sortedSetsSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val sortedSetsSuite: Spec[Has[Redis], TestFailure[RedisError], TestSuccess] =
     suite("sorted sets")(
       suite("bzPopMax")(
         testM("non-empty set")(
@@ -1770,7 +1770,7 @@ trait SortedSetsSpec extends BaseSpec {
     key: String,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[RedisExecutor, RedisError, Chunk[MemberScore[String]]] =
+  ): ZIO[Has[Redis], RedisError, Chunk[MemberScore[String]]] =
     ZStream
       .paginateChunkM(0L) { cursor =>
         zScan(key, cursor, pattern, count).returning[String].map {
