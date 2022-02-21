@@ -38,7 +38,5 @@ package object redis
     with options.Streams
     with options.Scripting {
 
-  type Id[+A]        = A
-  type RedisExecutor = Has[RedisExecutor.Service]
-
+  type Id[+A] = A
 }

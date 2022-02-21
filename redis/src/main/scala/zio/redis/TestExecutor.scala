@@ -24,9 +24,7 @@ import zio.clock.Clock
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{bulkString, BulkString}
-import zio.redis.codec.StringUtf8Codec
 import zio.redis.TestExecutor.{KeyInfo, KeyType}
-import zio.schema.codec.Codec
 import zio.stm.{random => _, _}
 
 import scala.annotation.tailrec
@@ -45,9 +43,7 @@ private[redis] final class TestExecutor private (
   hashes: TMap[String, Map[String, String]],
   sortedSets: TMap[String, Map[String, Double]],
   clock: Clock
-) extends RedisExecutor.Service {
-
-  override val codec: Codec = StringUtf8Codec
+) extends RedisExecutor {
 
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
@@ -3931,7 +3927,7 @@ private[redis] object TestExecutor {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
-  lazy val live: URLayer[zio.random.Random with Clock, RedisExecutor] = {
+  lazy val live: URLayer[zio.random.Random with Clock, Has[RedisExecutor]] = {
     val executor = for {
       seed         <- random.nextInt
       clock        <- ZIO.identity[Clock]

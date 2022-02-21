@@ -1,12 +1,12 @@
 package zio.redis
 
-import zio.Chunk
+import zio.{Chunk, Has}
 import zio.test.Assertion._
 import zio.test._
 
 trait GeoSpec extends BaseSpec {
 
-  val geoSuite: Spec[RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val geoSuite: Spec[Has[Redis], TestFailure[RedisError], TestSuccess] =
     suite("geo")(
       testM("geoAdd followed by geoPos") {
         import GeoSpec.Serbia._

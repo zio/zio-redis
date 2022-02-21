@@ -16,7 +16,7 @@
 
 package zio.redis.api
 
-import zio.ZIO
+import zio.{Has, ZIO}
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
@@ -37,7 +37,7 @@ trait HyperLogLog {
    * @return
    *   boolean indicating if at least 1 HyperLogLog register was altered.
    */
-  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisExecutor, RedisError, Boolean] = {
+  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[Has[Redis], RedisError, Boolean] = {
     val command = RedisCommand(PfAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), BoolOutput)
     command.run((key, (element, elements.toList)))
   }
@@ -52,7 +52,7 @@ trait HyperLogLog {
    * @return
    *   approximate number of unique elements observed via PFADD.
    */
-  final def pfCount[K: Schema](key: K, keys: K*): ZIO[RedisExecutor, RedisError, Long] = {
+  final def pfCount[K: Schema](key: K, keys: K*): ZIO[Has[Redis], RedisError, Long] = {
     val command = RedisCommand(PfCount, NonEmptyList(ArbitraryInput[K]()), LongOutput)
     command.run((key, keys.toList))
   }
@@ -67,7 +67,7 @@ trait HyperLogLog {
    * @param sourceKeys
    *   additional keys to merge
    */
-  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): ZIO[RedisExecutor, RedisError, Unit] = {
+  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): ZIO[Has[Redis], RedisError, Unit] = {
     val command = RedisCommand(PfMerge, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[K]())), UnitOutput)
     command.run((destKey, (sourceKey, sourceKeys.toList)))
   }

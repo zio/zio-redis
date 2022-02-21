@@ -11,7 +11,7 @@ import zio.test.Assertion._
 import scala.util.Random
 
 trait ScriptingSpec extends BaseSpec {
-  val scriptingSpec: Spec[Annotations with RedisExecutor, TestFailure[Any], TestSuccess] =
+  val scriptingSpec: Spec[Has[Redis] with Annotations, TestFailure[Any], TestSuccess] =
     suite("scripting")(
       suite("eval")(
         testM("put boolean and return existence of key") {

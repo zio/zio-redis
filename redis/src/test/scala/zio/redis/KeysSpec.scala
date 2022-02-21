@@ -1,6 +1,6 @@
 package zio.redis
 
-import zio.{clock, Chunk, ZIO, ZLayer}
+import zio.{clock, Chunk, Has, Layer, ZIO, ZLayer}
 import zio.clock.Clock
 import zio.duration._
 import zio.logging.Logging
@@ -15,9 +15,11 @@ import zio.test.environment.TestClock
 
 trait KeysSpec extends BaseSpec {
 
-  val keysSuite: Spec[Annotations with RedisExecutor with Random with TestConfig with ZTestEnv with Clock, TestFailure[
-    RedisError
-  ], TestSuccess] = {
+  val keysSuite: Spec[
+    Has[Redis] with Annotations with Random with TestConfig with ZTestEnv with Clock,
+    TestFailure[RedisError],
+    TestSuccess
+  ] = {
     suite("keys")(
       testM("set followed by get") {
         for {
@@ -423,8 +425,8 @@ trait KeysSpec extends BaseSpec {
 object KeysSpec {
   final val MigrateTimeout: Duration = 5.seconds
 
-  final val SecondExecutor: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    (Logging.ignore ++
-      ZLayer.succeed(RedisConfig("localhost", 6380)) ++
-      ZLayer.succeed[Codec](StringUtf8Codec) >>> RedisExecutor.live).fresh
+  final val SecondExecutor: Layer[RedisError.IOError, Has[Redis]] = {
+    val executor = Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live
+    (executor ++ ZLayer.succeed[Codec](StringUtf8Codec) >>> Redis.live).fresh
+  }
 }

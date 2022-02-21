@@ -2,8 +2,8 @@ package zio.redis
 
 import java.util.concurrent.TimeUnit
 
-import zio.Chunk
-import zio.clock.{Clock, currentTime}
+import zio.{Chunk, Has}
+import zio.clock.{currentTime, Clock}
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
@@ -11,7 +11,7 @@ import zio.test._
 import zio.test.environment.TestClock
 
 trait ListSpec extends BaseSpec {
-  val listSuite: Spec[Clock with TestClock with RedisExecutor, TestFailure[java.io.Serializable], TestSuccess] =
+  val listSuite: Spec[Has[Redis] with Clock with TestClock, TestFailure[java.io.Serializable], TestSuccess] =
     suite("lists")(
       suite("pop")(
         testM("lPop non-empty list") {

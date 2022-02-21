@@ -32,7 +32,7 @@ object ContributorsCache {
     def fetchAll(repository: Repository): IO[ApiError, Contributors]
   }
 
-  lazy val live: ZLayer[RedisExecutor with SttpClient, Nothing, ContributorsCache] =
+  lazy val live: ZLayer[Has[Redis] with SttpClient, Nothing, ContributorsCache] =
     ZLayer.fromFunction { env =>
       new Service {
         def fetchAll(repository: Repository): IO[ApiError, Contributors] =
@@ -40,7 +40,7 @@ object ContributorsCache {
       }
     }
 
-  private[this] def read(repository: Repository): ZIO[RedisExecutor, ApiError, Contributors] =
+  private[this] def read(repository: Repository): ZIO[Has[Redis], ApiError, Contributors] =
     get(repository.key)
       .returning[String]
       .someOrFail(ApiError.CacheMiss(repository.key))
@@ -48,7 +48,7 @@ object ContributorsCache {
       .rightOrFail(ApiError.CorruptedData)
       .refineToOrDie[ApiError]
 
-  private[this] def retrieve(repository: Repository): ZIO[RedisExecutor with SttpClient, ApiError, Contributors] =
+  private[this] def retrieve(repository: Repository): ZIO[Has[Redis] with SttpClient, ApiError, Contributors] =
     for {
       req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
       res          <- send(req).orElseFail(GithubUnreachable)
@@ -56,7 +56,7 @@ object ContributorsCache {
       _            <- cache(repository, contributors)
     } yield Contributors(contributors)
 
-  private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[RedisExecutor, Any] =
+  private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[Has[Redis], Any] =
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
       .map(Contributors(_).toJson)

@@ -19,22 +19,21 @@ package zio.redis
 import zio._
 import zio.clock.Clock
 import zio.logging._
-import zio.schema.codec.Codec
+
+trait RedisExecutor {
+  def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
+}
 
 object RedisExecutor {
-  trait Service {
-    def codec: Codec
 
-    def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
-  }
+  lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, Has[RedisExecutor]] =
+    ZLayer.identity[Logging] ++ ByteStream.live >>> StreamedExecutor
 
-  lazy val live: ZLayer[Logging with Has[RedisConfig] with Has[Codec], RedisError.IOError, RedisExecutor] =
-    ZLayer.identity[Logging] ++ ByteStream.live ++ ZLayer.identity[Has[Codec]] >>> StreamedExecutor
+  lazy val local: ZLayer[Logging, RedisError.IOError, Has[RedisExecutor]] =
+    ZLayer.identity[Logging] ++ ByteStream.default >>> StreamedExecutor
 
-  lazy val local: ZLayer[Logging with Has[Codec], RedisError.IOError, RedisExecutor] =
-    ZLayer.identity[Logging] ++ ByteStream.default ++ ZLayer.identity[Has[Codec]] >>> StreamedExecutor
-
-  lazy val test: URLayer[zio.random.Random with Clock, RedisExecutor] = TestExecutor.live
+  lazy val test: URLayer[zio.random.Random with Clock, Has[RedisExecutor]] =
+    TestExecutor.live
 
   private[this] final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
@@ -44,12 +43,12 @@ object RedisExecutor {
 
   private[this] final val StreamedExecutor =
     ZLayer
-      .fromServicesManaged[ByteStream.Service, Logger[String], Codec, Any, RedisError.IOError, RedisExecutor.Service] {
-        (byteStream, logging, codec) =>
+      .fromServicesManaged[ByteStream.Service, Logger[String], Any, RedisError.IOError, RedisExecutor] {
+        (byteStream, logging) =>
           for {
             reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
             resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
-            live      = new Live(reqQueue, resQueue, byteStream, logging, codec)
+            live      = new Live(reqQueue, resQueue, byteStream, logging)
             _        <- live.run.forkManaged
           } yield live
       }
@@ -58,9 +57,8 @@ object RedisExecutor {
     reqQueue: Queue[Request],
     resQueue: Queue[Promise[RedisError, RespValue]],
     byteStream: ByteStream.Service,
-    logger: Logger[String],
-    override val codec: Codec
-  ) extends Service {
+    logger: Logger[String]
+  ) extends RedisExecutor {
 
     def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
       Promise
