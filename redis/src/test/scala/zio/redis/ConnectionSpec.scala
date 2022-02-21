@@ -6,10 +6,11 @@ import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
+import zio.Has
 
 trait ConnectionSpec extends BaseSpec {
 
-  val connectionSuite: Spec[Annotations with RedisExecutor, TestFailure[RedisError], TestSuccess] =
+  val connectionSuite: Spec[Has[Redis] with Annotations, TestFailure[RedisError], TestSuccess] =
     suite("connection")(
       suite("clientCaching")(
         testM("track keys") {

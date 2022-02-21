@@ -16,25 +16,27 @@
 
 package zio.redis
 
-import cats.effect.{IO => CatsIO}
-import zio.{BootstrapRuntime, Has, ZIO, ZLayer}
-import zio.logging.Logging
-import zio.redis.codec.StringUtf8Codec
+import zio.{Has, URLayer, ZIO, ZLayer}
 import zio.schema.codec.Codec
 
-trait BenchmarksUtils {
-  self: RedisClients with BootstrapRuntime =>
-
-  def unsafeRun[CL](f: CL => CatsIO[Unit])(implicit unsafeRunner: QueryUnsafeRunner[CL]): Unit =
-    unsafeRunner.unsafeRun(f)
-
-  def zioUnsafeRun(source: ZIO[Has[Redis], RedisError, Unit]): Unit =
-    unsafeRun(source.provideLayer(BenchmarksUtils.Layer))
+trait Redis {
+  def codec: Codec
+  def executor: RedisExecutor
 }
 
-object BenchmarksUtils {
-  private final val Layer = {
-    val executor = Logging.ignore >>> RedisExecutor.local.orDie
-    executor ++ ZLayer.succeed[Codec](StringUtf8Codec) >>> Redis.live
-  }
+object Redis {
+
+  lazy val live: URLayer[Has[RedisExecutor] with Has[Codec], Has[Redis]] =
+    ZLayer.identity[Has[Codec]] ++ ZLayer.identity[Has[RedisExecutor]] >>> RedisService
+
+  private[this] final val RedisService: ZLayer[Has[Codec] with Has[RedisExecutor], Nothing, Has[Redis]] =
+    ZIO
+      .services[Codec, RedisExecutor]
+      .map { env =>
+        new Redis {
+          val codec: Codec            = env._1
+          val executor: RedisExecutor = env._2
+        }
+      }
+      .toLayer
 }

@@ -16,7 +16,7 @@
 
 package zio.redis
 
-import zio.ZIO
+import zio.{Has, ZIO}
 import zio.redis.ResultBuilder.NeedsReturnType
 import zio.schema.Schema
 
@@ -33,18 +33,18 @@ object ResultBuilder {
   final abstract class NeedsReturnType
 
   trait ResultBuilder1[+F[_]] extends ResultBuilder {
-    def returning[R: Schema]: ZIO[RedisExecutor, RedisError, F[R]]
+    def returning[R: Schema]: ZIO[Has[Redis], RedisError, F[R]]
   }
 
   trait ResultBuilder2[+F[_, _]] extends ResultBuilder {
-    def returning[R1: Schema, R2: Schema]: ZIO[RedisExecutor, RedisError, F[R1, R2]]
+    def returning[R1: Schema, R2: Schema]: ZIO[Has[Redis], RedisError, F[R1, R2]]
   }
 
   trait ResultBuilder3[+F[_, _, _]] extends ResultBuilder {
-    def returning[R1: Schema, R2: Schema, R3: Schema]: ZIO[RedisExecutor, RedisError, F[R1, R2, R3]]
+    def returning[R1: Schema, R2: Schema, R3: Schema]: ZIO[Has[Redis], RedisError, F[R1, R2, R3]]
   }
 
   trait ResultOutputBuilder extends ResultBuilder {
-    def returning[R: Output]: ZIO[RedisExecutor, RedisError, R]
+    def returning[R: Output]: ZIO[Has[Redis], RedisError, R]
   }
 }
