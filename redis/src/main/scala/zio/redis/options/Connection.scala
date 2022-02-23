@@ -16,9 +16,9 @@
 
 package zio.redis.options
 
-import java.net.InetAddress
-
 import zio.duration.Duration
+
+import java.net.InetAddress
 
 trait Connection {
   sealed case class Address(ip: InetAddress, port: Int) {

@@ -5,8 +5,8 @@ import zio.redis.Input.{BoolInput, ByteInput, LongInput, StringInput}
 import zio.redis.Output._
 import zio.redis.RedisError._
 import zio.redis.ScriptingSpec._
-import zio.test._
 import zio.test.Assertion._
+import zio.test._
 
 import scala.util.Random
 

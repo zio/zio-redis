@@ -1,6 +1,5 @@
 package zio.redis
 
-import zio.{clock, Chunk, Has, Layer, ZIO, ZLayer}
 import zio.clock.Clock
 import zio.duration._
 import zio.logging.Logging
@@ -8,10 +7,11 @@ import zio.random.Random
 import zio.redis.RedisError.ProtocolError
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
-import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
+import zio.test._
 import zio.test.environment.TestClock
+import zio.{Chunk, Has, Layer, ZIO, ZLayer, clock}
 
 trait KeysSpec extends BaseSpec {
 

@@ -16,9 +16,9 @@
 
 package example
 
-import scala.util.control.NoStackTrace
-
 import zhttp.http._
+
+import scala.util.control.NoStackTrace
 
 sealed trait ApiError extends NoStackTrace { self =>
   import ApiError._

@@ -16,13 +16,13 @@
 
 package zio.redis.benchmarks
 
-import zio.internal.Platform
 import cats.effect.{IO => CIO}
-import zio.{BootstrapRuntime, Has, ZIO, ZLayer}
+import zio.internal.Platform
 import zio.logging.Logging
 import zio.redis._
 import zio.redis.codec.StringUtf8Codec
 import zio.schema.codec.Codec
+import zio.{BootstrapRuntime, Has, ZIO, ZLayer}
 
 trait BenchmarkRuntime extends BootstrapRuntime {
   override val platform: Platform = Platform.benchmark

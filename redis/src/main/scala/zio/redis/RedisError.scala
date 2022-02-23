@@ -17,7 +17,6 @@
 package zio.redis
 
 import java.io.IOException
-
 import scala.util.control.NoStackTrace
 
 sealed trait RedisError extends NoStackTrace

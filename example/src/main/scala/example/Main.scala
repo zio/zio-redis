@@ -20,8 +20,8 @@ import com.typesafe.config.ConfigFactory
 import example.api.Api
 import example.config.{AppConfig, ServerConfig}
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
-import zhttp.service.{EventLoopGroup, Server}
 import zhttp.service.server.ServerChannelFactory
+import zhttp.service.{EventLoopGroup, Server}
 import zio._
 import zio.config.getConfig
 import zio.config.syntax._
@@ -29,8 +29,8 @@ import zio.config.typesafe.TypesafeConfig
 import zio.console._
 import zio.logging.Logging
 import zio.magic._
-import zio.redis.{Redis, RedisExecutor}
 import zio.redis.codec.StringUtf8Codec
+import zio.redis.{Redis, RedisExecutor}
 import zio.schema.codec.Codec
 
 object Main extends App {
