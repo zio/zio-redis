@@ -64,9 +64,7 @@ class HIncrbyBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    execute[RediculousClient](c =>
-      items.traverse_(it => RedisCommands.hincrby[RedisIO](key, it._1, increment).run(c))
-    )
+    execute[RediculousClient](c => items.traverse_(it => RedisCommands.hincrby[RedisIO](key, it._1, increment).run(c)))
   }
 
   @Benchmark

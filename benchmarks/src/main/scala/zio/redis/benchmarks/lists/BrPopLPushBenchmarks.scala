@@ -79,9 +79,7 @@ class BrPopLPushBenchmarks extends BenchmarkRuntime {
     import cats.syntax.foldable._
     import scala.concurrent.duration._
 
-    execute[Redis4CatsClient[String]](c =>
-      items.traverse_(_ => c.brPopLPush(Duration(1, TimeUnit.SECONDS), key, key))
-    )
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.brPopLPush(Duration(1, TimeUnit.SECONDS), key, key)))
   }
 
   @Benchmark
