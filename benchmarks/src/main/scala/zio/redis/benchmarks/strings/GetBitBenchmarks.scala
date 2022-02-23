@@ -43,7 +43,7 @@ class GetBitBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    unsafeRun(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
@@ -62,5 +62,5 @@ class GetBitBenchmarks extends BenchmarkRuntime {
     unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.getBit(i, 0L)))
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => getBit(i, 0L)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => getBit(i, 0L)))
 }

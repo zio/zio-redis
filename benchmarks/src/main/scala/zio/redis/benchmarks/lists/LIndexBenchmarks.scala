@@ -41,12 +41,12 @@ class LIndexBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList
-    zioUnsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    zioUnsafeRun(del(key).unit)
+    unsafeRun(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -77,5 +77,5 @@ class LIndexBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lIndex(key, i.toLong).returning[String]))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lIndex(key, i.toLong).returning[String]))
 }

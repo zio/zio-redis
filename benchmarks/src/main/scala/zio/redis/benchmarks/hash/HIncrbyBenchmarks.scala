@@ -44,7 +44,7 @@ class HIncrbyBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    zioUnsafeRun(hSet(key, items.head, items.tail: _*).unit)
+    unsafeRun(hSet(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -76,5 +76,5 @@ class HIncrbyBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(it => hIncrBy(key, it._1, increment)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(it => hIncrBy(key, it._1, increment)))
 }

@@ -43,7 +43,7 @@ class AppendBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    unsafeRun(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
@@ -62,5 +62,5 @@ class AppendBenchmarks extends BenchmarkRuntime {
     unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.append(i, i)))
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => append(i, i)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => append(i, i)))
 }

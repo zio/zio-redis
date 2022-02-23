@@ -41,12 +41,12 @@ class RPushXBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(rPush(key, items.head).unit)
+    unsafeRun(rPush(key, items.head).unit)
   }
 
   @TearDown(Level.Invocation)
   def tearDown(): Unit =
-    zioUnsafeRun(del(key).unit)
+    unsafeRun(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -75,5 +75,5 @@ class RPushXBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => rPushX[String, String](key, i)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => rPushX[String, String](key, i)))
 }

@@ -42,7 +42,7 @@ class SIsMemberBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
+    unsafeRun(sAdd(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -70,5 +70,5 @@ class SIsMemberBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sIsMember(key, i)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => sIsMember(key, i)))
 }

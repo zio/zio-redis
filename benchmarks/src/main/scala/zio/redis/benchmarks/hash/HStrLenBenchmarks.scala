@@ -40,7 +40,7 @@ class HStrLenBenchmarks extends BenchmarkRuntime {
 
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    zioUnsafeRun(hSet(key, items.head, items.tail: _*).unit)
+    unsafeRun(hSet(key, items.head, items.tail: _*).unit)
   }
   @Benchmark
   def laserdisc(): Unit = {
@@ -67,5 +67,5 @@ class HStrLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(it => hStrLen(key, it._1)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(it => hStrLen(key, it._1)))
 }

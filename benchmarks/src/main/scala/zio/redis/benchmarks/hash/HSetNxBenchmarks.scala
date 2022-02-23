@@ -68,5 +68,5 @@ class HSetNxBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(it => hSetNx(key, it._1, it._2)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(it => hSetNx(key, it._1, it._2)))
 }

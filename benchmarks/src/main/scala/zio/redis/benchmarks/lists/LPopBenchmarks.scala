@@ -41,7 +41,7 @@ class LPopBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -71,5 +71,5 @@ class LPopBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => lPop(key).returning[String]))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => lPop(key).returning[String]))
 }

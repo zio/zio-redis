@@ -46,8 +46,8 @@ class SDiffStoreBenchmarks extends BenchmarkRuntime {
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
     otherItems = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(sAdd(key, items.head, items.tail: _*).unit)
-    zioUnsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+    unsafeRun(sAdd(key, items.head, items.tail: _*).unit)
+    unsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
 
   }
 
@@ -82,5 +82,5 @@ class SDiffStoreBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(_ => sDiffStore(destinationKey, key, otherKey)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => sDiffStore(destinationKey, key, otherKey)))
 }

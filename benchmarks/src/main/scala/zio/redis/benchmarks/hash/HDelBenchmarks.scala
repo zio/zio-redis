@@ -41,7 +41,7 @@ class HDelBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    zioUnsafeRun(hSet(key, items.head, items.tail: _*).unit)
+    unsafeRun(hSet(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -68,5 +68,5 @@ class HDelBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(it => hDel(key, it._1)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(it => hDel(key, it._1)))
 }

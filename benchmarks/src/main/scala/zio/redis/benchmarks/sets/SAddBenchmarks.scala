@@ -68,5 +68,5 @@ class SAddBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => sAdd(key, i)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => sAdd(key, i)))
 }

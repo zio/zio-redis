@@ -41,12 +41,12 @@ class LInsertBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    zioUnsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @TearDown(Level.Invocation)
   def tearDown(): Unit =
-    zioUnsafeRun(del(key).unit)
+    unsafeRun(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -78,5 +78,5 @@ class LInsertBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lInsert[String, String](key, Position.Before, i, i)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lInsert[String, String](key, Position.Before, i, i)))
 }

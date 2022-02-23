@@ -16,9 +16,27 @@
 
 package zio.redis.benchmarks
 
-import zio.BootstrapRuntime
 import zio.internal.Platform
+import cats.effect.{IO => CIO}
+import zio.{BootstrapRuntime, Has, ZIO, ZLayer}
+import zio.logging.Logging
+import zio.redis._
+import zio.redis.codec.StringUtf8Codec
+import zio.schema.codec.Codec
 
-trait BenchmarkRuntime extends BootstrapRuntime with BenchmarksUtils {
+trait BenchmarkRuntime extends BootstrapRuntime {
   override val platform: Platform = Platform.benchmark
+
+  final def unsafeRun(query: ZIO[Has[Redis], RedisError, Unit]): Unit =
+    unsafeRun(query.provideLayer(BenchmarkRuntime.Layer))
+
+  final def unsafeRun[Client: QueryRunner](query: Client => CIO[Unit]): Unit =
+    QueryRunner[Client].unsafeRunWith(query)
+}
+
+object BenchmarkRuntime {
+  private final val Layer = {
+    val executor = Logging.ignore >>> RedisExecutor.local.orDie
+    executor ++ ZLayer.succeed[Codec](StringUtf8Codec) >>> Redis.live
+  }
 }

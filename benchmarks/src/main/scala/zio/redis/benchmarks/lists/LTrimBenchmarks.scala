@@ -41,7 +41,7 @@ class LTrimBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (count to 0 by -1).toList
-    zioUnsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -73,5 +73,5 @@ class LTrimBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = zioUnsafeRun(ZIO.foreach_(items)(i => lTrim[String](key, 1 to i)))
+  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lTrim[String](key, 1 to i)))
 }
