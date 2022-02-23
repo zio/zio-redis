@@ -37,11 +37,12 @@ lazy val redis =
     .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-streams"  % Zio,
-        "dev.zio" %% "zio-logging"  % "0.5.14",
-        "dev.zio" %% "zio-schema"   % "0.1.1",
-        "dev.zio" %% "zio-test"     % Zio % Test,
-        "dev.zio" %% "zio-test-sbt" % Zio % Test
+        "dev.zio" %% "zio-streams"     % Zio,
+        "dev.zio" %% "zio-logging"     % "0.5.14",
+        "dev.zio" %% "zio-schema"      % "0.1.8",
+        "dev.zio" %% "zio-schema-json" % "0.1.8" % Test,
+        "dev.zio" %% "zio-test"        % Zio     % Test,
+        "dev.zio" %% "zio-test-sbt"    % Zio     % Test
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
@@ -57,7 +58,8 @@ lazy val benchmarks =
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects" % "1.1.1",
         "io.chrisdavenport" %% "rediculous"         % "0.1.1",
-        "io.laserdisc"      %% "laserdisc-fs2"      % "0.5.0"
+        "io.laserdisc"      %% "laserdisc-fs2"      % "0.5.0",
+        "dev.zio"           %% "zio-schema-json"    % "0.1.8"
       )
     )
 
@@ -74,7 +76,7 @@ lazy val example =
         "dev.zio"                       %% "zio-streams"                    % Zio,
         "dev.zio"                       %% "zio-config-magnolia"            % "2.0.0",
         "dev.zio"                       %% "zio-config-typesafe"            % "2.0.0",
-        "dev.zio"                       %% "zio-prelude"                    % "1.0.0-RC8",
+        "dev.zio"                       %% "zio-schema-json"                % "0.1.8",
         "dev.zio"                       %% "zio-json"                       % "0.1.5",
         "io.d11"                        %% "zhttp"                          % "1.0.0.0-RC24",
         "io.github.kitlangton"          %% "zio-magic"                      % "0.3.11"

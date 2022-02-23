@@ -5,8 +5,7 @@ import zio.duration._
 import zio.logging.Logging
 import zio.random.Random
 import zio.redis.RedisError.ProtocolError
-import zio.redis.codec.StringUtf8Codec
-import zio.schema.codec.Codec
+import zio.schema.codec.{Codec, JsonCodec}
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -427,6 +426,6 @@ object KeysSpec {
 
   final val SecondExecutor: Layer[RedisError.IOError, Has[Redis]] = {
     val executor = Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live
-    (executor ++ ZLayer.succeed[Codec](StringUtf8Codec) >>> Redis.live).fresh
+    (executor ++ ZLayer.succeed[Codec](JsonCodec) >>> Redis.live).fresh
   }
 }
