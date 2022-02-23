@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{Benchmark, rPop, rPush}
+import zio.redis.{BenchmarkRuntime, rPop, rPush}
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -29,7 +29,7 @@ import zio.redis.{Benchmark, rPop, rPush}
 @Measurement(iterations = 15)
 @Warmup(iterations = 15)
 @Fork(2)
-class RPopBenchmarks extends Benchmark {
+class RPopBenchmarks extends BenchmarkRuntime {
   @Param(Array("500"))
   var count: Int = _
 

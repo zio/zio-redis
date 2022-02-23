@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 import zio.ZIO
-import zio.redis.{Benchmark, sAdd, sMove}
+import zio.redis.{BenchmarkRuntime, sAdd, sMove}
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -29,7 +29,7 @@ import zio.redis.{Benchmark, sAdd, sMove}
 @Measurement(iterations = 15)
 @Warmup(iterations = 15)
 @Fork(2)
-class SMoveBenchmarks extends Benchmark {
+class SMoveBenchmarks extends BenchmarkRuntime {
 
   @Param(Array("500"))
   var count: Int = _
