@@ -32,7 +32,7 @@ import zio.redis._
 @Measurement(iterations = 15)
 @Warmup(iterations = 15)
 @Fork(2)
-class DecrBenchmarks extends BenchmarkRuntime {
+class DecrBenchmarks extends Benchmark {
 
   @Param(Array("500"))
   var count: Int = _
