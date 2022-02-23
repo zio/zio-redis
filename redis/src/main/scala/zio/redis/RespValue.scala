@@ -16,10 +16,10 @@
 
 package zio.redis
 
-import java.nio.charset.StandardCharsets
-
 import zio._
 import zio.stream._
+
+import java.nio.charset.StandardCharsets
 
 sealed trait RespValue extends Product with Serializable { self =>
   import RespValue._

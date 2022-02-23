@@ -16,11 +16,11 @@
 
 package zio.redis.api
 
-import zio.{Chunk, Has, ZIO}
-import zio.redis._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder.ResultOutputBuilder
+import zio.redis._
+import zio.{Chunk, Has, ZIO}
 
 trait Scripting {
   import Scripting._

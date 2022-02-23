@@ -16,9 +16,9 @@
 
 package zio.redis
 
-import zio.{Has, ZIO}
 import zio.redis.ResultBuilder.NeedsReturnType
 import zio.schema.Schema
+import zio.{Has, ZIO}
 
 sealed trait ResultBuilder {
 

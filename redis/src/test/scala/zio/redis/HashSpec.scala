@@ -1,9 +1,9 @@
 package zio.redis
 
-import zio.{Chunk, Has}
 import zio.random.Random
 import zio.test.Assertion._
 import zio.test._
+import zio.{Chunk, Has}
 
 trait HashSpec extends BaseSpec {
 

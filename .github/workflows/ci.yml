@@ -30,7 +30,7 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Check code formatting
-        run: ./sbt fmtCheck
+        run: ./sbt check
 
   publishLocal:
     runs-on: ubuntu-20.04

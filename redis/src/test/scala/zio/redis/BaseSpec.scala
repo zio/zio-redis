@@ -1,8 +1,5 @@
 package zio.redis
 
-import java.time.Instant
-import java.util.UUID
-
 import zio.UIO
 import zio.duration._
 import zio.random.Random
@@ -11,6 +8,9 @@ import zio.schema.codec.Codec
 import zio.test.TestAspect.tag
 import zio.test._
 import zio.test.environment.Live
+
+import java.time.Instant
+import java.util.UUID
 
 trait BaseSpec extends DefaultRunnableSpec {
   override def aspects: List[TestAspectAtLeastR[Live]] = List(TestAspect.timeout(60.seconds))

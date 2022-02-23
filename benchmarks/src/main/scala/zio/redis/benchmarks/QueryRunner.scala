@@ -1,19 +1,18 @@
 package zio.redis.benchmarks
 
-import cats.effect.{IO => CIO, Resource}
 import cats.effect.unsafe.implicits.global
+import cats.effect.{IO => CIO, Resource}
 import com.comcast.ip4s._
-import dev.profunktor.redis4cats.RedisCommands
+import dev.profunktor.redis4cats.codecs.Codecs
+import dev.profunktor.redis4cats.codecs.splits._
 import dev.profunktor.redis4cats.data.RedisCodec
+import dev.profunktor.redis4cats.effect.Log.NoOp.instance
+import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import fs2.io.net.Network
 import io.chrisdavenport.rediculous.RedisConnection
 import io.lettuce.core.ClientOptions
-import laserdisc.fs2.RedisClient
 import laserdisc.auto.autoRefine
-import dev.profunktor.redis4cats.Redis
-import dev.profunktor.redis4cats.effect.Log.NoOp.instance
-import dev.profunktor.redis4cats.codecs.Codecs
-import dev.profunktor.redis4cats.codecs.splits._
+import laserdisc.fs2.RedisClient
 
 trait QueryRunner[Client] {
   def unsafeRunWith(query: Client => CIO[Unit]): Unit

@@ -1,8 +1,8 @@
 package zio.redis
 
+import zio.Has
 import zio.test.Assertion._
 import zio.test._
-import zio.Has
 
 trait HyperLogLogSpec extends BaseSpec {
 

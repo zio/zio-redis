@@ -1,10 +1,10 @@
 package zio.redis
-import java.nio.charset.StandardCharsets
-
 import zio.Chunk
 import zio.stream.Stream
 import zio.test.Assertion._
 import zio.test._
+
+import java.nio.charset.StandardCharsets
 
 object RespValueSpec extends BaseSpec {
 
