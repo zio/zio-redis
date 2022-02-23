@@ -2,9 +2,9 @@ package zio.redis
 
 import zio.duration._
 import zio.redis.RedisError._
-import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect.ignore
+import zio.test._
 import zio.{Chunk, Has}
 
 trait StreamsSpec extends BaseSpec {

@@ -1,8 +1,8 @@
 package zio.redis
 
-import zio.{Chunk, Has}
 import zio.test.Assertion._
 import zio.test._
+import zio.{Chunk, Has}
 
 trait GeoSpec extends BaseSpec {
 

@@ -1,12 +1,12 @@
 package zio.redis
 
-import java.net.InetAddress
-
+import zio.Has
 import zio.duration._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.Has
+
+import java.net.InetAddress
 
 trait ConnectionSpec extends BaseSpec {
 

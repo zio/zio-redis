@@ -16,14 +16,14 @@
 
 package zio.redis
 
+import zio._
+import zio.logging._
+import zio.stream.Stream
+
 import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousSocketChannel, Channel, CompletionHandler}
-
-import zio._
-import zio.logging._
-import zio.stream.Stream
 
 private[redis] object ByteStream {
   trait Service {

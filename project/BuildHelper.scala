@@ -51,10 +51,10 @@ object BuildHelper {
       scalacOptions            := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
       semanticdbEnabled        := true,
       semanticdbOptions += "-P:semanticdb:synthetics:on",
-      semanticdbVersion                      := scalafixSemanticdb.revision,
-      ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
+      semanticdbVersion                                          := scalafixSemanticdb.revision,
+      ThisBuild / scalafixScalaBinaryVersion                     := CrossVersion.binaryScalaVersion(scalaVersion.value),
       ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0",
-      Test / parallelExecution := true,
+      Test / parallelExecution                                   := true,
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true
     )

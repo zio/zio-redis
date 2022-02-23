@@ -16,11 +16,11 @@
 
 package zio.redis.api
 
-import zio.{Has, ZIO}
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
 import zio.schema.Schema
+import zio.{Has, ZIO}
 
 trait HyperLogLog {
   import HyperLogLog._

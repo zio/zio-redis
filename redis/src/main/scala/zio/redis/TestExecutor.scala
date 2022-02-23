@@ -16,17 +16,16 @@
 
 package zio.redis
 
-import java.nio.file.{FileSystems, Paths}
-import java.time.Instant
-
 import zio._
 import zio.clock.Clock
 import zio.duration._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RespValue.{bulkString, BulkString}
+import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.TestExecutor.{KeyInfo, KeyType}
 import zio.stm.{random => _, _}
 
+import java.nio.file.{FileSystems, Paths}
+import java.time.Instant
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try

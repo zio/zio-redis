@@ -1,14 +1,14 @@
 package zio.redis
 
-import java.util.concurrent.TimeUnit
-
-import zio.{Chunk, Has}
-import zio.clock.{currentTime, Clock}
+import zio.clock.{Clock, currentTime}
 import zio.duration._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
 import zio.test._
 import zio.test.environment.TestClock
+import zio.{Chunk, Has}
+
+import java.util.concurrent.TimeUnit
 
 trait ListSpec extends BaseSpec {
   val listSuite: Spec[Has[Redis] with Clock with TestClock, TestFailure[java.io.Serializable], TestSuccess] =

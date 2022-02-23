@@ -16,13 +16,12 @@
 
 package zio.redis.benchmarks.strings
 
-import java.util.concurrent.TimeUnit
-
 import org.openjdk.jmh.annotations._
-
 import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+
+import java.util.concurrent.TimeUnit
 
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))

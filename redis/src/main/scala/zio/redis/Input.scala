@@ -16,14 +16,14 @@
 
 package zio.redis
 
-import java.time.Instant
-import java.util.concurrent.TimeUnit
-
 import zio.Chunk
 import zio.duration.Duration
 import zio.redis.RespValue.BulkString
 import zio.schema.Schema
 import zio.schema.codec.Codec
+
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 sealed trait Input[-A] {
   self =>

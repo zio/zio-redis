@@ -16,8 +16,8 @@
 
 package zio.redis
 
-import zio.{Has, URLayer, ZIO, ZLayer}
 import zio.schema.codec.Codec
+import zio.{Has, URLayer, ZIO, ZLayer}
 
 trait Redis {
   def codec: Codec

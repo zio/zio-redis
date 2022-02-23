@@ -1,13 +1,13 @@
 package zio.redis
 
-import java.net.InetAddress
-import java.time.Instant
-
 import zio.duration._
 import zio.redis.Input._
 import zio.test.Assertion._
 import zio.test._
 import zio.{Chunk, Task, UIO}
+
+import java.net.InetAddress
+import java.time.Instant
 
 object InputSpec extends BaseSpec {
   import StrAlgoLcsQueryType._
