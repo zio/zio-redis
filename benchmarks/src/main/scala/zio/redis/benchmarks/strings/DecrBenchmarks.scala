@@ -43,24 +43,24 @@ class DecrBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    execute(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
     import _root_.laserdisc.{all => cmd, _}
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.decr[Long](Key.unsafeFrom(i)))))
+    execute[LaserDiscClient](c => items.traverse_(i => c.send(cmd.decr[Long](Key.unsafeFrom(i)))))
   }
 
   @Benchmark
   def rediculous(): Unit =
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.decr[RedisIO](i).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.decr[RedisIO](i).run(c)))
 
   @Benchmark
   def redis4cats(): Unit =
-    unsafeRun[Redis4CatsClient[Long]](c => items.traverse_(i => c.decr(i)))
+    execute[Redis4CatsClient[Long]](c => items.traverse_(i => c.decr(i)))
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => decr(i)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => decr(i)))
 }

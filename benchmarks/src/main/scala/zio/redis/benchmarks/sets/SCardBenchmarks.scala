@@ -42,7 +42,7 @@ class SCardBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(sAdd(key, items.head, items.tail: _*).unit)
+    execute(sAdd(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -52,23 +52,23 @@ class SCardBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.scard(Key.unsafeFrom(key)))))
+    execute[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.scard(Key.unsafeFrom(key)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.scard[RedisIO](key).run(c)))
+    execute[RediculousClient](c => items.traverse_(_ => RedisCommands.scard[RedisIO](key).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.sCard(key)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.sCard(key)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => sCard(key)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sCard(key)))
 }

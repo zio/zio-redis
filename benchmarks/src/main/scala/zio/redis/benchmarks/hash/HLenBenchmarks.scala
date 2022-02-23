@@ -41,7 +41,7 @@ class HLenBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    unsafeRun(hSet(key, items.head, items.tail: _*).unit)
+    execute(hSet(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -50,23 +50,23 @@ class HLenBenchmarks extends BenchmarkRuntime {
     import _root_.laserdisc.{all => cmd, _}
     import cats.implicits.toFoldableOps
     import cats.instances.list._
-    unsafeRun[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.hlen(Key.unsafeFrom(key)))))
+    execute[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.hlen(Key.unsafeFrom(key)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.hlen[RedisIO](key).run(c)))
+    execute[RediculousClient](c => items.traverse_(_ => RedisCommands.hlen[RedisIO](key).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.hLen(key)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.hLen(key)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => hLen(key)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(_ => hLen(key)))
 }

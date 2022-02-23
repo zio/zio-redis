@@ -49,7 +49,7 @@ class LLenBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.llen(Key.unsafeFrom(key)))))
+    execute[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.llen(Key.unsafeFrom(key)))))
   }
 
   @Benchmark
@@ -57,7 +57,7 @@ class LLenBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.llen[RedisIO](key).run(c)))
+    execute[RediculousClient](c => items.traverse_(_ => RedisCommands.llen[RedisIO](key).run(c)))
   }
 
   @Benchmark
@@ -65,9 +65,9 @@ class LLenBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.lLen(key)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.lLen(key)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => lLen[String](key)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(_ => lLen[String](key)))
 }

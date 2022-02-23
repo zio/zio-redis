@@ -43,24 +43,24 @@ class GetBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    execute(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
     import _root_.laserdisc.{all => cmd, _}
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.get[String](Key.unsafeFrom(i)))))
+    execute[LaserDiscClient](c => items.traverse_(i => c.send(cmd.get[String](Key.unsafeFrom(i)))))
   }
 
   @Benchmark
   def rediculous(): Unit =
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.get[RedisIO](i).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.get[RedisIO](i).run(c)))
 
   @Benchmark
   def redis4cats(): Unit =
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.get(i)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.get(i)))
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(get(_).returning[String]))
+  def zio(): Unit = execute(ZIO.foreach_(items)(get(_).returning[String]))
 }

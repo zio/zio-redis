@@ -41,7 +41,7 @@ class LTrimBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (count to 0 by -1).toList
-    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    execute(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -51,7 +51,7 @@ class LTrimBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(i => c.send(cmd.ltrim(Key.unsafeFrom(key), Index(1L), Index.unsafeFrom(i.toLong))))
     )
   }
@@ -61,7 +61,7 @@ class LTrimBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.ltrim[RedisIO](key, 1L, i.toLong).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.ltrim[RedisIO](key, 1L, i.toLong).run(c)))
   }
 
   @Benchmark
@@ -69,9 +69,9 @@ class LTrimBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.lTrim(key, 1L, i.toLong)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.lTrim(key, 1L, i.toLong)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lTrim[String](key, 1 to i)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => lTrim[String](key, 1 to i)))
 }

@@ -46,8 +46,8 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
     otherItems = (0 to count).toList.map(_.toString)
-    unsafeRun(sAdd(key, items.head, items.tail: _*).unit)
-    unsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+    execute(sAdd(key, items.head, items.tail: _*).unit)
+    execute(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
 
   }
 
@@ -58,7 +58,7 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(_ =>
         c.send(cmd.sunionstore(Key.unsafeFrom(key), Key.unsafeFrom(key), Key.unsafeFrom(destinationKey)))
       )
@@ -69,7 +69,7 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c =>
+    execute[RediculousClient](c =>
       items.traverse_(_ => RedisCommands.sunionstore[RedisIO](destinationKey, List(key, otherKey)).run(c))
     )
   }
@@ -78,9 +78,9 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.sUnionStore(destinationKey, key, otherKey)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.sUnionStore(destinationKey, key, otherKey)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => sUnionStore(destinationKey, key, otherKey)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sUnionStore(destinationKey, key, otherKey)))
 }

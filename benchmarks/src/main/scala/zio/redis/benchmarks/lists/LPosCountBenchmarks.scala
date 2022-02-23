@@ -41,13 +41,13 @@ class LPosCountBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    execute(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    unsafeRun(del(key).unit)
+    execute(del(key).unit)
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lPosCount[String, String](key, i, Count(0L))))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => lPosCount[String, String](key, i, Count(0L))))
 }

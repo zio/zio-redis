@@ -41,12 +41,12 @@ class LSetBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toLong)
-    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    execute(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    unsafeRun(del(key).unit)
+    execute(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -55,7 +55,7 @@ class LSetBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(i => c.send(cmd.lset[String](Key.unsafeFrom(key), Index.unsafeFrom(i), i.toString)))
     )
   }
@@ -65,7 +65,7 @@ class LSetBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.lset[RedisIO](key, i, i.toString).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.lset[RedisIO](key, i, i.toString).run(c)))
   }
 
   @Benchmark
@@ -73,9 +73,9 @@ class LSetBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.lSet(key, i, i.toString)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.lSet(key, i, i.toString)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lSet[String, String](key, i, i.toString)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => lSet[String, String](key, i, i.toString)))
 }

@@ -40,7 +40,7 @@ class StrLenBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    execute(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
@@ -49,23 +49,23 @@ class StrLenBenchmarks extends BenchmarkRuntime {
     import _root_.laserdisc.{all => cmd, _}
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.strlen(Key.unsafeFrom(i)))))
+    execute[LaserDiscClient](c => items.traverse_(i => c.send(cmd.strlen(Key.unsafeFrom(i)))))
   }
 
   @Benchmark
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.strlen[RedisIO](i).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.strlen[RedisIO](i).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.strLen(i)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.strLen(i)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(strLen[String]))
+  def zio(): Unit = execute(ZIO.foreach_(items)(strLen[String]))
 }

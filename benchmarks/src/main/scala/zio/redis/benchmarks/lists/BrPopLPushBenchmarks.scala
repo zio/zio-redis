@@ -42,12 +42,12 @@ class BrPopLPushBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    execute(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    unsafeRun(del(key).unit)
+    execute(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -56,7 +56,7 @@ class BrPopLPushBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(_ =>
         c.send(
           cmd.blocking.brpoplpush[String](Key.unsafeFrom(key), Key.unsafeFrom(key), PosInt.unsafeFrom(1))
@@ -70,7 +70,7 @@ class BrPopLPushBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.brpoplpush[RedisIO](key, key, 1).run(c)))
+    execute[RediculousClient](c => items.traverse_(_ => RedisCommands.brpoplpush[RedisIO](key, key, 1).run(c)))
   }
 
   @Benchmark
@@ -79,13 +79,13 @@ class BrPopLPushBenchmarks extends BenchmarkRuntime {
     import cats.syntax.foldable._
     import scala.concurrent.duration._
 
-    unsafeRun[Redis4CatsClient[String]](c =>
+    execute[Redis4CatsClient[String]](c =>
       items.traverse_(_ => c.brPopLPush(Duration(1, TimeUnit.SECONDS), key, key))
     )
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(
+  def zio(): Unit = execute(
     ZIO.foreach_(items)(_ => brPopLPush(key, key, 1.second).returning[String])
   )
 }

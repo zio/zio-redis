@@ -41,7 +41,7 @@ class LPopBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    execute(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -51,7 +51,7 @@ class LPopBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.lpop[String](Key.unsafeFrom(key)))))
+    execute[LaserDiscClient](c => items.traverse_(_ => c.send(cmd.lpop[String](Key.unsafeFrom(key)))))
   }
 
   @Benchmark
@@ -59,7 +59,7 @@ class LPopBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.lpop[RedisIO](key).run(c)))
+    execute[RediculousClient](c => items.traverse_(_ => RedisCommands.lpop[RedisIO](key).run(c)))
   }
 
   @Benchmark
@@ -67,9 +67,9 @@ class LPopBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.lPop(key)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.lPop(key)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => lPop(key).returning[String]))
+  def zio(): Unit = execute(ZIO.foreach_(items)(_ => lPop(key).returning[String]))
 }

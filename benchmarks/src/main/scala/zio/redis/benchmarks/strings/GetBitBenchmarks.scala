@@ -43,24 +43,24 @@ class GetBitBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(ZIO.foreach_(items)(i => set(i, i)))
+    execute(ZIO.foreach_(items)(i => set(i, i)))
   }
 
   @Benchmark
   def laserdisc(): Unit = {
     import _root_.laserdisc.fs2._
     import _root_.laserdisc.{all => cmd, _}
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
+    execute[LaserDiscClient](c => items.traverse_(i => c.send(cmd.getbit(Key.unsafeFrom(i), PosLong.unsafeFrom(0L)))))
   }
 
   @Benchmark
   def rediculous(): Unit =
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.getbit[RedisIO](i, 0L).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.getbit[RedisIO](i, 0L).run(c)))
 
   @Benchmark
   def redis4cats(): Unit =
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.getBit(i, 0L)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.getBit(i, 0L)))
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => getBit(i, 0L)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => getBit(i, 0L)))
 }

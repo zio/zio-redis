@@ -41,7 +41,7 @@ class HGetBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    unsafeRun(hSet(key, items.head, items.tail: _*).unit)
+    execute(hSet(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -50,7 +50,7 @@ class HGetBenchmarks extends BenchmarkRuntime {
     import _root_.laserdisc.{all => cmd, _}
     import cats.implicits.toFoldableOps
     import cats.instances.list._
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(it => c.send(cmd.hget[String](Key.unsafeFrom(key), Key.unsafeFrom(it._1))))
     )
   }
@@ -59,15 +59,15 @@ class HGetBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(it => RedisCommands.hget[RedisIO](key, it._1).run(c)))
+    execute[RediculousClient](c => items.traverse_(it => RedisCommands.hget[RedisIO](key, it._1).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(it => c.hGet(key, it._1)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(it => c.hGet(key, it._1)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(it => hGet(key, it._1).returning[String]))
+  def zio(): Unit = execute(ZIO.foreach_(items)(it => hGet(key, it._1).returning[String]))
 }

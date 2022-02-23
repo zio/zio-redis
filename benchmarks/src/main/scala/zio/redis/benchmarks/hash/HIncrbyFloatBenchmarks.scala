@@ -44,7 +44,7 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    unsafeRun(hSet(key, items.head, items.tail: _*).unit)
+    execute(hSet(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -53,7 +53,7 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
     import _root_.laserdisc.{all => cmd, _}
     import cats.implicits.toFoldableOps
     import cats.instances.list._
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(it =>
         c.send(cmd.hincrby(Key.unsafeFrom(key), Key.unsafeFrom(it._1), NonZeroDouble.unsafeFrom(increment)))
       )
@@ -64,7 +64,7 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c =>
+    execute[RediculousClient](c =>
       items.traverse_(it => RedisCommands.hincrbyfloat[RedisIO](key, it._1, increment).run(c))
     )
   }
@@ -72,9 +72,9 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   @Benchmark
   def redis4cats(): Unit = {
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[Long]](c => items.traverse_(it => c.hIncrByFloat(key, it._1, increment)))
+    execute[Redis4CatsClient[Long]](c => items.traverse_(it => c.hIncrByFloat(key, it._1, increment)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(it => hIncrByFloat(key, it._1, increment)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(it => hIncrByFloat(key, it._1, increment)))
 }

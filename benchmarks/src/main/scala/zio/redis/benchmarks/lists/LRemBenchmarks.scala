@@ -41,7 +41,7 @@ class LRemBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    unsafeRun(rPush(key, items.head, items.tail: _*).unit)
+    execute(rPush(key, items.head, items.tail: _*).unit)
   }
 
   @Benchmark
@@ -51,7 +51,7 @@ class LRemBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.lrem[String](Key.unsafeFrom(key), Index(0), i))))
+    execute[LaserDiscClient](c => items.traverse_(i => c.send(cmd.lrem[String](Key.unsafeFrom(key), Index(0), i))))
   }
 
   @Benchmark
@@ -59,7 +59,7 @@ class LRemBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.lrem[RedisIO](key, 0, i).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.lrem[RedisIO](key, 0, i).run(c)))
   }
 
   @Benchmark
@@ -67,9 +67,9 @@ class LRemBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.lRem(key, 0, i)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.lRem(key, 0, i)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lRem[String](key, 0, i)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => lRem[String](key, 0, i)))
 }

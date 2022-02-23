@@ -45,8 +45,8 @@ class SInterBenchmarks extends BenchmarkRuntime {
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
     otherItems = (0 to count).toList.map(_.toString)
-    unsafeRun(sAdd(key, items.head, items.tail: _*).unit)
-    unsafeRun(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+    execute(sAdd(key, items.head, items.tail: _*).unit)
+    execute(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
 
   }
 
@@ -57,7 +57,7 @@ class SInterBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c =>
+    execute[LaserDiscClient](c =>
       items.traverse_(_ => c.send(cmd.sinter(Key.unsafeFrom(key), Key.unsafeFrom(otherKey))))
     )
   }
@@ -66,16 +66,16 @@ class SInterBenchmarks extends BenchmarkRuntime {
   def rediculous(): Unit = {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
-    unsafeRun[RediculousClient](c => items.traverse_(_ => RedisCommands.sinter[RedisIO](List(key, otherKey)).run(c)))
+    execute[RediculousClient](c => items.traverse_(_ => RedisCommands.sinter[RedisIO](List(key, otherKey)).run(c)))
   }
 
   @Benchmark
   def redis4cats(): Unit = {
     import cats.instances.list._
     import cats.syntax.foldable._
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(_ => c.sInter(key, otherKey)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(_ => c.sInter(key, otherKey)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(_ => sInter(key, otherKey).returning[String]))
+  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sInter(key, otherKey).returning[String]))
 }

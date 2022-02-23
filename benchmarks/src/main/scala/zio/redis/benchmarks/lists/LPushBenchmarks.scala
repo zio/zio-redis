@@ -44,7 +44,7 @@ class LPushBenchmarks extends BenchmarkRuntime {
 
   @TearDown(Level.Invocation)
   def tearDown(): Unit =
-    unsafeRun(del(key).unit)
+    execute(del(key).unit)
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -53,7 +53,7 @@ class LPushBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[LaserDiscClient](c => items.traverse_(i => c.send(cmd.lpush[String](Key.unsafeFrom(key), i))))
+    execute[LaserDiscClient](c => items.traverse_(i => c.send(cmd.lpush[String](Key.unsafeFrom(key), i))))
   }
 
   @Benchmark
@@ -61,7 +61,7 @@ class LPushBenchmarks extends BenchmarkRuntime {
     import cats.implicits._
     import io.chrisdavenport.rediculous._
 
-    unsafeRun[RediculousClient](c => items.traverse_(i => RedisCommands.lpush[RedisIO](key, List(i)).run(c)))
+    execute[RediculousClient](c => items.traverse_(i => RedisCommands.lpush[RedisIO](key, List(i)).run(c)))
   }
 
   @Benchmark
@@ -69,9 +69,9 @@ class LPushBenchmarks extends BenchmarkRuntime {
     import cats.instances.list._
     import cats.syntax.foldable._
 
-    unsafeRun[Redis4CatsClient[String]](c => items.traverse_(i => c.lPush(key, i)))
+    execute[Redis4CatsClient[String]](c => items.traverse_(i => c.lPush(key, i)))
   }
 
   @Benchmark
-  def zio(): Unit = unsafeRun(ZIO.foreach_(items)(i => lPush[String, String](key, i)))
+  def zio(): Unit = execute(ZIO.foreach_(items)(i => lPush[String, String](key, i)))
 }

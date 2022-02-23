@@ -27,10 +27,10 @@ import zio.schema.codec.Codec
 trait BenchmarkRuntime extends BootstrapRuntime {
   override val platform: Platform = Platform.benchmark
 
-  final def unsafeRun(query: ZIO[Has[Redis], RedisError, Unit]): Unit =
+  final def execute(query: ZIO[Has[Redis], RedisError, Unit]): Unit =
     unsafeRun(query.provideLayer(BenchmarkRuntime.Layer))
 
-  final def unsafeRun[Client: QueryRunner](query: Client => CIO[Unit]): Unit =
+  final def execute[Client: QueryRunner](query: Client => CIO[Unit]): Unit =
     QueryRunner[Client].unsafeRunWith(query)
 }
 
