@@ -3,7 +3,7 @@ package zio.redis
 import zio.UIO
 import zio.duration._
 import zio.random.Random
-import zio.schema.codec.{Codec, JsonCodec}
+import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.TestAspect.tag
 import zio.test._
 import zio.test.environment.Live
@@ -12,7 +12,7 @@ import java.time.Instant
 import java.util.UUID
 
 trait BaseSpec extends DefaultRunnableSpec {
-  implicit val codec: Codec = JsonCodec
+  implicit val codec: Codec = ProtobufCodec
 
   override def aspects: List[TestAspectAtLeastR[Live]] = List(TestAspect.timeout(60.seconds))
 
