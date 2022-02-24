@@ -22,11 +22,12 @@ import zio.redis.Input.{StringInput, Varargs}
 final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out]) {
   private[redis] def run(in: In): ZIO[Has[Redis], RedisError, Out] =
     ZIO
-      .serviceWith[Redis] { service =>
-        val executor = service.executor
-        val codec    = service.codec
-        val command  = Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
-        executor.execute(command).flatMap[Any, Throwable, Out](out => ZIO.effect(output.unsafeDecode(out)(codec)))
+      .serviceWith[Redis] { redis =>
+        val command = Varargs(StringInput).encode(name.split(" "))(redis.codec) ++ input.encode(in)(redis.codec)
+
+        redis.executor
+          .execute(command)
+          .flatMap(out => ZIO(output.unsafeDecode(out)(redis.codec)))
       }
       .refineToOrDie[RedisError]
 }
