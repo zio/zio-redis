@@ -20,7 +20,7 @@ import cats.effect.{IO => CIO}
 import zio.internal.Platform
 import zio.logging.Logging
 import zio.redis._
-import zio.schema.codec.{Codec, JsonCodec}
+import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.{BootstrapRuntime, Has, ZIO, ZLayer}
 
 trait BenchmarkRuntime extends BootstrapRuntime {
@@ -36,6 +36,6 @@ trait BenchmarkRuntime extends BootstrapRuntime {
 object BenchmarkRuntime {
   private final val Layer = {
     val executor = Logging.ignore >>> RedisExecutor.local.orDie
-    executor ++ ZLayer.succeed[Codec](JsonCodec) >>> Redis.live
+    executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> Redis.live
   }
 }
