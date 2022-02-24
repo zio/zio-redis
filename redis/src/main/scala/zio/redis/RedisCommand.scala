@@ -27,7 +27,7 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
 
         redis.executor
           .execute(command)
-          .flatMap(out => ZIO(output.unsafeDecode(out)(redis.codec)))
+          .flatMap[Any, Throwable, Out](out => ZIO(output.unsafeDecode(out)(redis.codec)))
       }
       .refineToOrDie[RedisError]
 }
