@@ -23,12 +23,12 @@ import java.nio.charset.StandardCharsets
 
 sealed trait RespValue extends Product with Serializable { self =>
   import RespValue._
-  import RespValue.internal.{Headers, NullStrEncoded, NullArrEncoded, CrLf}
+  import RespValue.internal.{Headers, NullStringEncoded, NullArrayEncoded, CrLf}
 
   final def serialize: Chunk[Byte] =
     self match {
-      case NullBulkString  => NullStrEncoded
-      case NullArray       => NullArrEncoded
+      case NullBulkString  => NullStringEncoded
+      case NullArray       => NullArrayEncoded
       case SimpleString(s) => Headers.SimpleString +: encode(s)
       case Error(s)        => Headers.Error +: encode(s)
       case Integer(i)      => Headers.Integer +: encode(i.toString)
@@ -102,11 +102,11 @@ object RespValue {
       final val Array: Byte        = '*'
     }
 
-    final val CrLf: Chunk[Byte]           = Chunk('\r', '\n')
-    final val NullStringPrefix: String    = "$-1"
-    final val NullArrayPrefix: String     = "*-1"
-    final val NullStrEncoded: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
-    final val NullArrEncoded: Chunk[Byte] = Chunk.fromArray("*-1\r\n".getBytes(StandardCharsets.US_ASCII))
+    final val CrLf: Chunk[Byte]              = Chunk('\r', '\n')
+    final val NullArrayEncoded: Chunk[Byte]  = Chunk.fromArray("*-1\r\n".getBytes(StandardCharsets.US_ASCII))
+    final val NullArrayPrefix: String        = "*-1"
+    final val NullStringEncoded: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
+    final val NullStringPrefix: String       = "$-1"
 
     sealed trait State { self =>
       import State._
