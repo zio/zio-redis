@@ -29,9 +29,8 @@ import zio.config.typesafe.TypesafeConfig
 import zio.console._
 import zio.logging.Logging
 import zio.magic._
-import zio.redis.codec.StringUtf8Codec
 import zio.redis.{Redis, RedisExecutor}
-import zio.schema.codec.Codec
+import zio.schema.codec.{Codec, ProtobufCodec}
 
 object Main extends App {
   private val config =
@@ -40,7 +39,7 @@ object Main extends App {
   private val serverConfig = config.narrow(_.server)
   private val redisConfig  = config.narrow(_.redis)
 
-  private val codec         = ZLayer.succeed[Codec](StringUtf8Codec)
+  private val codec         = ZLayer.succeed[Codec](ProtobufCodec)
   private val redisExecutor = Logging.ignore ++ redisConfig >>> RedisExecutor.live
   private val redis         = redisExecutor ++ codec >>> Redis.live
   private val sttp          = AsyncHttpClientZioBackend.layer()
