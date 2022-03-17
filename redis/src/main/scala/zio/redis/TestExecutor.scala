@@ -2943,6 +2943,236 @@ private[redis] final class TestExecutor private (
           )
         }
 
+      case api.Strings.BitField =>
+        val stringInput = input.map(_.asString)
+        val keyOption   = stringInput.headOption
+
+        val unsignedIntRegex = "u(\\d+)".r
+        val signedIntRegex   = "i(\\d+)".r
+        val offsetRegex      = "([#]?)(\\d+)".r
+
+        import BitFieldCommand.BitFieldOverflow
+
+        def decodeBitFieldType(s: String): Option[BitFieldType] = s match {
+          case unsignedIntRegex(size) => toIntOption(size).filter(_ <= 64).map(size => BitFieldType.UnsignedInt(size))
+          case signedIntRegex(size)   => toIntOption(size).filter(_ <= 63).map(size => BitFieldType.SignedInt(size))
+          case _                      => None
+        }
+
+        def decodeOffset(s: String): Option[Int] = s match {
+          case offsetRegex("#", number) => toIntOption(number).filter(_ >= 0).map(_ * 8)
+          case offsetRegex("", number)  => toIntOption(number).filter(_ >= 0)
+          case _                        => None
+        }
+
+        def parseSignedLong(string: String): Option[Long] =
+          Some(string).filter(_.length <= 64).flatMap { string =>
+            Try {
+              val unsigned = BigInt(string, 2)
+              val limit    = BigInt(1) << (string.length - 1)
+              val signed   = if (unsigned >= limit) unsigned - 2 * limit else unsigned
+
+              signed.toLong
+            }.toOption
+          }
+
+        def parseUnsignedLong(string: String): Option[Long] =
+          parseSignedLong("0" + string).filter(_ >= 0L)
+
+        def parseValue(
+          value: Long,
+          bitFieldType: BitFieldType,
+          overflow: BitFieldOverflow
+        ): Option[Long] = overflow match {
+          case BitFieldOverflow.Fail =>
+            Some(value).filter { value =>
+              bitFieldType match {
+                case BitFieldType.UnsignedInt(size) =>
+                  value >= 0L && value <= Math.pow(2, size.toDouble) - 1L
+                case BitFieldType.SignedInt(size) =>
+                  value >= -Math.pow(2, (size - 1).toDouble) && value <= Math.pow(2, (size - 1).toDouble) - 1L
+              }
+            }
+          case BitFieldOverflow.Sat =>
+            Some(value).map { value =>
+              bitFieldType match {
+                case BitFieldType.UnsignedInt(size) =>
+                  if (value < 0L) 0L
+                  else if (value > Math.pow(2, size.toDouble) - 1L) Math.pow(2, size.toDouble).toLong - 1L
+                  else value
+                case BitFieldType.SignedInt(size) =>
+                  if (value < -Math.pow(2, (size - 1).toDouble)) -Math.pow(2, (size - 1).toDouble).toLong
+                  else if (value > Math.pow(2, (size - 1).toDouble) - 1L) Math.pow(2, (size - 1).toDouble).toLong - 1L
+                  else value
+              }
+            }
+          case BitFieldOverflow.Wrap =>
+            Some(value).map { value =>
+              bitFieldType match {
+                case BitFieldType.UnsignedInt(size) =>
+                  value % Math.pow(2, size.toDouble).toLong
+                case BitFieldType.SignedInt(size) =>
+                  value % (Math.pow(2, (size - 1).toDouble).toLong - 1L) - Math.pow(2, (size - 1).toDouble).toLong
+              }
+            }
+        }
+
+        def getBitField(string: String, offset: Int, size: Int): String = {
+          val newString       = string + "\u0000" * ((offset + size - 1) / 8 + 1 - string.length)
+          val substring       = newString.slice(offset / 8, (offset + size - 1) / 8 + 1)
+          val binarySubstring = substring.foldLeft("")((a, b) => a + f"${b.toInt.toBinaryString}%8s".replace(' ', '0'))
+
+          binarySubstring.slice(offset % 8, offset % 8 + size)
+        }
+
+        def setBitField(string: String, offset: Int, size: Int, value: Long): String = {
+          val newString       = string + "\u0000" * ((offset + size - 1) / 8 + 1 - string.length)
+          val substring       = newString.slice(offset / 8, (offset + size - 1) / 8 + 1)
+          val binarySubstring = substring.foldLeft("")((a, b) => a + f"${b.toInt.toBinaryString}%8s".replace(' ', '0'))
+          val binaryValue     = value.toBinaryString
+          val newBinarySubstring =
+            binarySubstring.slice(0, offset % 8) + s"%${size}s".format(binaryValue).replace(' ', '0') + binarySubstring
+              .slice(offset % 8 + size, binarySubstring.length)
+          val newSubstring = newBinarySubstring.grouped(8).toList.map(x => Integer.parseInt(x, 2).toChar).mkString
+
+          newString.slice(0, offset / 8) + newSubstring + newString.slice((offset + size - 1) / 8 + 1, newString.length)
+        }
+
+        def runCommands(
+          input: List[String],
+          overflow: BitFieldOverflow,
+          resp: STM[Option[Nothing], (String, Chunk[RespValue])]
+        ): Option[STM[Option[Nothing], (String, Chunk[RespValue])]] =
+          input match {
+            case "GET" :: encoding :: offset :: tail =>
+              val respOption = for {
+                bitFieldType <- decodeBitFieldType(encoding)
+                offset       <- decodeOffset(offset)
+                newResp = resp.flatMap { case (string, respChunk) =>
+                            bitFieldType match {
+                              case BitFieldType.UnsignedInt(size) =>
+                                val bitField = getBitField(string, offset, size)
+
+                                STM.fromOption(
+                                  parseUnsignedLong(bitField).map(long =>
+                                    (string, respChunk :+ RespValue.Integer(long))
+                                  )
+                                )
+                              case BitFieldType.SignedInt(size) =>
+                                val bitField = getBitField(string, offset, size)
+
+                                STM.fromOption(
+                                  parseSignedLong(bitField).map(long => (string, respChunk :+ RespValue.Integer(long)))
+                                )
+                            }
+                          }
+              } yield newResp
+
+              respOption match {
+                case Some(resp) => runCommands(tail, overflow, resp)
+                case None       => None
+              }
+            case "SET" :: encoding :: offset :: value :: tail =>
+              val respOption = for {
+                bitFieldType <- decodeBitFieldType(encoding)
+                offset       <- decodeOffset(offset)
+                value        <- toLongOption(value)
+                newResp = resp.flatMap { case (string, respChunk) =>
+                            bitFieldType match {
+                              case BitFieldType.UnsignedInt(size) =>
+                                val bitField = getBitField(string, offset, size)
+
+                                STM.fromOption {
+                                  parseUnsignedLong(bitField).map { long =>
+                                    parseValue(value, bitFieldType, overflow).map { value =>
+                                      (setBitField(string, offset, size, value), respChunk :+ RespValue.Integer(long))
+                                    }.getOrElse((string, respChunk :+ RespValue.NullBulkString))
+                                  }
+                                }
+                              case BitFieldType.SignedInt(size) =>
+                                val bitField = getBitField(string, offset, size)
+
+                                STM.fromOption {
+                                  parseSignedLong(bitField).map { long =>
+                                    parseValue(value, bitFieldType, overflow).map { value =>
+                                      (setBitField(string, offset, size, value), respChunk :+ RespValue.Integer(long))
+                                    }.getOrElse((string, respChunk :+ RespValue.NullBulkString))
+                                  }
+                                }
+                            }
+                          }
+              } yield newResp
+
+              respOption match {
+                case Some(resp) => runCommands(tail, overflow, resp)
+                case None       => None
+              }
+            case "INCRBY" :: encoding :: offset :: increment :: tail =>
+              val respOption = for {
+                bitFieldType <- decodeBitFieldType(encoding)
+                offset       <- decodeOffset(offset)
+                increment    <- toLongOption(increment)
+                newResp = resp.flatMap { case (string, respChunk) =>
+                            bitFieldType match {
+                              case BitFieldType.UnsignedInt(size) =>
+                                val bitField = getBitField(string, offset, size)
+
+                                STM.fromOption {
+                                  parseUnsignedLong(bitField).map { long =>
+                                    parseValue(long + increment, bitFieldType, overflow).map { value =>
+                                      (setBitField(string, offset, size, value), respChunk :+ RespValue.Integer(value))
+                                    }.getOrElse((string, respChunk :+ RespValue.NullBulkString))
+                                  }
+                                }
+                              case BitFieldType.SignedInt(size) =>
+                                val bitField = getBitField(string, offset, size)
+
+                                STM.fromOption {
+                                  parseUnsignedLong(bitField).map { long =>
+                                    parseValue(long + increment, bitFieldType, overflow).map { value =>
+                                      (setBitField(string, offset, size, value), respChunk :+ RespValue.Integer(value))
+                                    }.getOrElse((string, respChunk :+ RespValue.NullBulkString))
+                                  }
+                                }
+                            }
+                          }
+              } yield newResp
+
+              respOption match {
+                case Some(resp) => runCommands(tail, overflow, resp)
+                case None       => None
+              }
+            case "OVERFLOW" :: overflow :: tail =>
+              overflow match {
+                case "FAIL" =>
+                  runCommands(tail, BitFieldOverflow.Fail, resp)
+                case "SAT" =>
+                  runCommands(tail, BitFieldOverflow.Sat, resp)
+                case "WRAP" =>
+                  runCommands(tail, BitFieldOverflow.Wrap, resp)
+                case _ =>
+                  None
+              }
+            case Nil =>
+              Some(resp)
+            case _ =>
+              None
+          }
+
+        orMissingParameter(keyOption) { key =>
+          orWrongType(isString(key))(
+            strings.getOrElse(key, "").flatMap { string =>
+              runCommands(stringInput.tail.toList, BitFieldOverflow.Wrap, STM.succeed((string, Chunk.empty))).map {
+                resp =>
+                  resp.flatMap { case (string, respChunk) =>
+                    strings.put(key, string) *> STM
+                      .succeed(if (respChunk.isEmpty) RespValue.NullArray else RespValue.Array(respChunk))
+                  }.orElseSucceed(Replies.Error)
+              }.getOrElse(STM.succeed(Replies.Error))
+            }
+          )
+        }
+
       case api.Strings.BitOp =>
         val stringInput = input.map(_.asString)
 

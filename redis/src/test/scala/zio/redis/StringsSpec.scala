@@ -287,7 +287,7 @@ trait StringsSpec extends BaseSpec {
                       )
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
-      ) @@ testExecutorUnsupported,
+      ),
       suite("Stralgo")(
         testM("get LCS from 2 strings") {
           val str1 = "foo"
