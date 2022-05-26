@@ -72,20 +72,14 @@ object RespValue {
       }
   }
 
-  private[redis] final val Decoder: ZPipeline[Any, Throwable, Byte, RespValue] = {
+  private[redis] final val Decoder = ZPipeline.utf8Decode >>> ZPipeline.splitLines
+  private[redis] final val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, RespValue] = {
     import internal.State
-    // FIXME
-    val processLine: ZPipeline[Any, RedisError.ProtocolError, String, RespValue] =
-      ZPipeline.mapAccumZIO[Any, RedisError.ProtocolError, String, State, RespValue](State.Start)((acc, next) =>
-        acc match {
-          case s @ State.Start   => ZIO.succeedNow(s.feed(next) -> RespValue.bulkString(next))
-          case State.Done(value) => ZIO.succeedNow(State.ExpectingBulk -> value)
-          case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
-          case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
-        }
-      )
-
-    ZPipeline.utf8Decode >>> ZPipeline.splitLines >>> processLine
+    ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
+      case State.Done(value) => ZIO.succeedNow(value)
+      case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
+      case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
+    }
   }
 
   private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))

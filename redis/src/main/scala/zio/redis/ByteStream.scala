@@ -41,7 +41,7 @@ private[redis] object ByteStream {
       } yield service
     }
 
-  private[this] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, ByteStream.Service] =
+  private[this] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, Connection] =
     (for {
       address     <- ZIO.succeed(address)
       makeBuffer   = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
@@ -70,20 +70,18 @@ private[redis] object ByteStream {
     }
 
   private[this] def openChannel(address: SocketAddress): ZIO[Scope, IOException, AsynchronousSocketChannel] =
-    ZIO.scoped[Scope] {
-      ZIO.fromAutoCloseable {
-        for {
-          channel <- ZIO.attempt {
-                       val channel = AsynchronousSocketChannel.open()
-                       channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
-                       channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
-                       channel
-                     }
-          _ <- closeWith[Void](channel)(channel.connect(address, null, _))
-          _ <- ZIO.logInfo("Connected to the redis server.")
-        } yield channel
-      }.refineToOrDie[IOException]
-    }
+    ZIO.fromAutoCloseable {
+      for {
+        channel <- ZIO.attempt {
+                     val channel = AsynchronousSocketChannel.open()
+                     channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+                     channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
+                     channel
+                   }
+        _ <- closeWith[Void](channel)(channel.connect(address, null, _))
+        _ <- ZIO.logInfo("Connected to the redis server.")
+      } yield channel
+    }.refineToOrDie[IOException]
 
   private[this] final class Connection(
     readBuffer: ByteBuffer,
@@ -112,7 +110,7 @@ private[redis] object ByteStream {
         }
       }
 
-    def write(chunk: Chunk[Byte]): ZIO[Any, IOException, Option[Unit]] =
+    def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
       ZIO.when(chunk.nonEmpty) {
         ZIO.suspendSucceed {
           writeBuffer.clear()
@@ -123,7 +121,8 @@ private[redis] object ByteStream {
           closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
             .repeatWhile(_ => writeBuffer.hasRemaining)
             .zipRight(write(remainder))
-        }.map(_.fold(())(x => x))
+            .map(_.getOrElse(()))
+        }
       }
   }
 }

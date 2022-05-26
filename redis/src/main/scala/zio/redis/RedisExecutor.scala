@@ -99,9 +99,10 @@ object RedisExecutor {
     private def receive: IO[RedisError, Unit] =
       byteStream.read
         .via(RespValue.Decoder)
+        .transduce(RespValue.Sinker)
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
         .mapError {
-          // FIXME
+          // FIXME, Can remove mapError?
           case io: IOException => RedisError.IOError(io)
           case rex: RedisError => rex
           case ex              => RedisError.ProtocolError(ex.getLocalizedMessage)

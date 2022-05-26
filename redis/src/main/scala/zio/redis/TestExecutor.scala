@@ -25,6 +25,7 @@ import zio.{Clock, Random, _}
 import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
 import scala.annotation.tailrec
+import scala.collection.compat.immutable.LazyList
 import scala.util.Try
 
 private[redis] final class TestExecutor private (
@@ -300,7 +301,7 @@ private[redis] final class TestExecutor private (
                       .getAndUpdate(trackingInfo => trackingInfo.copy(prefixes = trackingInfo.prefixes ++ prefixes))
                       .as(())
                   )
-                  (addTracking *> addMode *> addNoLoop *> addRedirectId *> addPrefixes.as(RespValue.SimpleString("OK")))
+                  addTracking *> addMode *> addNoLoop *> addRedirectId *> addPrefixes.as(RespValue.SimpleString("OK"))
                 }
               }
             } else
@@ -3925,7 +3926,7 @@ private[redis] object TestExecutor {
   lazy val live: URLayer[Random with Clock, RedisExecutor] = {
     val executor = for {
       seed         <- Random.nextInt
-      clock        <- ZIO.environment[Clock]
+      clock        <- ZIO.clock
       sRandom       = new scala.util.Random(seed)
       ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
       randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
@@ -3951,7 +3952,7 @@ private[redis] object TestExecutor {
       hyperLogLogs,
       hashes,
       sortedSets,
-      clock.get
+      clock
     )
     ZLayer {
       executor
