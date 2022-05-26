@@ -75,5 +75,5 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(it => hIncrByFloat(key, it._1, increment)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hIncrByFloat(key, it._1, increment)))
 }

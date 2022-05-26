@@ -76,5 +76,5 @@ class LRangeBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => lRange(key, 0 to i).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lRange(key, 0 to i).returning[String]))
 }

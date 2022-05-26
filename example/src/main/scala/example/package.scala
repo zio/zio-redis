@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-import zio.Has
-
 package object example {
-  type ContributorsCache = Has[ContributorsCache.Service]
+  type ContributorsCache = ContributorsCache.Service
   type Contributions     = Contributions.Type
   type Login             = Login.Type
   type Owner             = Owner.Type

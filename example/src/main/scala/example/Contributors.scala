@@ -23,6 +23,6 @@ final case class Contributors(contributors: Chunk[Contributor]) extends AnyVal
 
 object Contributors {
   implicit val codec: JsonCodec[Contributors] =
-    JsonCodec.chunk[Contributor].xmap(Contributors(_), _.contributors)
+    JsonCodec.chunk[Contributor].transform(Contributors(_), _.contributors)
 
 }

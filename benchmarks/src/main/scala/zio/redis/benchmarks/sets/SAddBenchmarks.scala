@@ -67,5 +67,5 @@ class SAddBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => sAdd(key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => sAdd(key, i)))
 }

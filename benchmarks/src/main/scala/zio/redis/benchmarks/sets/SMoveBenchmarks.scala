@@ -72,5 +72,5 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => sMove(key, destinationKey, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => sMove(key, destinationKey, i)))
 }

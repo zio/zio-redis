@@ -72,19 +72,20 @@ object RespValue {
       }
   }
 
-  private[redis] final val Decoder: Transducer[RedisError.ProtocolError, Byte, RespValue] = {
+  private[redis] final val Decoder: ZPipeline[Any, Throwable, Byte, RespValue] = {
     import internal.State
-
-    val processLine =
-      Transducer
-        .fold[String, State](State.Start)(_.inProgress)(_ feed _)
-        .mapM {
-          case State.Done(value) => IO.succeedNow(value)
-          case State.Failed      => IO.fail(RedisError.ProtocolError("Invalid data received."))
-          case other             => IO.dieMessage(s"Deserialization bug, should not get $other")
+    // FIXME
+    val processLine: ZPipeline[Any, RedisError.ProtocolError, String, RespValue] =
+      ZPipeline.mapAccumZIO[Any, RedisError.ProtocolError, String, State, RespValue](State.Start)((acc, next) =>
+        acc match {
+          case s @ State.Start   => ZIO.succeedNow(s.feed(next) -> RespValue.bulkString(next))
+          case State.Done(value) => ZIO.succeedNow(State.ExpectingBulk -> value)
+          case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
+          case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
         }
+      )
 
-    Transducer.utf8Decode >>> Transducer.splitLines >>> processLine
+    ZPipeline.utf8Decode >>> ZPipeline.splitLines >>> processLine
   }
 
   private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))

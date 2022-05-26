@@ -17,7 +17,7 @@
 package zio.redis
 
 import zio.schema.codec.Codec
-import zio.{Has, URLayer, ZIO, ZLayer}
+import zio.{URLayer, ZIO, ZLayer}
 
 trait Redis {
   def codec: Codec
@@ -26,17 +26,15 @@ trait Redis {
 
 object Redis {
 
-  lazy val live: URLayer[Has[RedisExecutor] with Has[Codec], Has[Redis]] =
-    ZLayer.identity[Has[Codec]] ++ ZLayer.identity[Has[RedisExecutor]] >>> RedisService
+  lazy val live: URLayer[RedisExecutor with Codec, Redis] =
+    ZLayer.service[Codec] ++ ZLayer.service[RedisExecutor] >>> RedisService
 
-  private[this] final val RedisService: ZLayer[Has[Codec] with Has[RedisExecutor], Nothing, Has[Redis]] =
-    ZIO
-      .services[Codec, RedisExecutor]
-      .map { env =>
-        new Redis {
-          val codec: Codec            = env._1
-          val executor: RedisExecutor = env._2
-        }
-      }
-      .toLayer
+  private[this] final val RedisService: ZLayer[Codec with RedisExecutor, Nothing, Redis] =
+    ZLayer.scoped(for {
+      cc            <- ZIO.service[Codec]
+      redisExecutor <- ZIO.service[RedisExecutor]
+    } yield new Redis {
+      val codec: Codec            = cc
+      val executor: RedisExecutor = redisExecutor
+    })
 }

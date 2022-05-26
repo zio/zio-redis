@@ -72,5 +72,5 @@ class RPushBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => rPush[String, String](key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => rPush[String, String](key, i)))
 }

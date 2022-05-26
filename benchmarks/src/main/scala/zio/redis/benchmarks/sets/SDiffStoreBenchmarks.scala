@@ -81,5 +81,5 @@ class SDiffStoreBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sDiffStore(destinationKey, key, otherKey)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sDiffStore(destinationKey, key, otherKey)))
 }

@@ -16,11 +16,10 @@
 
 package zio.redis
 
-import zio.Chunk
-import zio.duration.Duration
 import zio.redis.RespValue.BulkString
 import zio.schema.Schema
 import zio.schema.codec.Codec
+import zio.{Chunk, Duration}
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit

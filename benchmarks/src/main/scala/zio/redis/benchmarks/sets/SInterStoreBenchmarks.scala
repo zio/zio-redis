@@ -81,5 +81,5 @@ class SInterStoreBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sInterStore(destinationKey, key, otherKey)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sInterStore(destinationKey, key, otherKey)))
 }

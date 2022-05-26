@@ -69,5 +69,5 @@ class SCardBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sCard(key)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sCard(key)))
 }

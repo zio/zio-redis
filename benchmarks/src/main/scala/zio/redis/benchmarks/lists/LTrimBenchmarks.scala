@@ -72,5 +72,5 @@ class LTrimBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => lTrim[String](key, 1 to i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lTrim[String](key, 1 to i)))
 }

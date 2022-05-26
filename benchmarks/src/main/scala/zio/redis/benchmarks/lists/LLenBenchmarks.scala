@@ -68,5 +68,5 @@ class LLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => lLen[String](key)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => lLen[String](key)))
 }

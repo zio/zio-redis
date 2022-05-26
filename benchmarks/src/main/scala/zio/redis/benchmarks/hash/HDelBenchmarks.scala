@@ -67,5 +67,5 @@ class HDelBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(it => hDel(key, it._1)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hDel(key, it._1)))
 }

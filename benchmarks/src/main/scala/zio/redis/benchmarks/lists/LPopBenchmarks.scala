@@ -70,5 +70,5 @@ class LPopBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => lPop(key).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => lPop(key).returning[String]))
 }

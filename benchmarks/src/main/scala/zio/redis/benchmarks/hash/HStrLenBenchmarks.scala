@@ -66,5 +66,5 @@ class HStrLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(it => hStrLen(key, it._1)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hStrLen(key, it._1)))
 }

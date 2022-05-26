@@ -48,5 +48,5 @@ class LPosBenchmarks extends BenchmarkRuntime {
     execute(del(key).unit)
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => lPos[String, String](key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lPos[String, String](key, i)))
 }

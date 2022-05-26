@@ -17,16 +17,14 @@
 package zio.redis.benchmarks
 
 import cats.effect.{IO => CIO}
-import zio.internal.Platform
-import zio.logging.Logging
+import zio.Runtime.default.unsafeRun
 import zio.redis._
 import zio.schema.codec.{Codec, ProtobufCodec}
-import zio.{BootstrapRuntime, Has, ZIO, ZLayer}
+import zio.{ZIO, ZLayer}
 
-trait BenchmarkRuntime extends BootstrapRuntime {
-  override val platform: Platform = Platform.benchmark
+trait BenchmarkRuntime {
 
-  final def execute(query: ZIO[Has[Redis], RedisError, Unit]): Unit =
+  final def execute(query: ZIO[Redis, RedisError, Unit]): Unit =
     unsafeRun(query.provideLayer(BenchmarkRuntime.Layer))
 
   final def execute[Client: QueryRunner](query: Client => CIO[Unit]): Unit =
@@ -35,7 +33,7 @@ trait BenchmarkRuntime extends BootstrapRuntime {
 
 object BenchmarkRuntime {
   private final val Layer = {
-    val executor = Logging.ignore >>> RedisExecutor.local.orDie
+    val executor = RedisExecutor.local.orDie
     executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> Redis.live
   }
 }

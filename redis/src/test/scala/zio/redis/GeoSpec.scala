@@ -1,14 +1,14 @@
 package zio.redis
 
+import zio.Chunk
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, Has}
 
 trait GeoSpec extends BaseSpec {
 
-  val geoSuite: Spec[Has[Redis], TestFailure[RedisError], TestSuccess] =
+  val geoSuite: Spec[Redis with TestEnvironment, RedisError] =
     suite("geo")(
-      testM("geoAdd followed by geoPos") {
+      test("geoAdd followed by geoPos") {
         import GeoSpec.Serbia._
         val nonExistentMember = "Tokyo"
         for {
@@ -16,7 +16,7 @@ trait GeoSpec extends BaseSpec {
           locations <- geoPos(key, member1, nonExistentMember, member2)
         } yield assert(locations)(hasSameElements(Chunk(Some(member1LongLat), None, Some(member2LongLat))))
       },
-      testM("calculate distance between geospatial items") {
+      test("calculate distance between geospatial items") {
         val key     = "key"
         val member1 = "point1"
         val member2 = "point2"
@@ -26,7 +26,7 @@ trait GeoSpec extends BaseSpec {
           distance <- geoDist(key, member1, member2, None)
         } yield assert(distance)(isSome(equalTo(0d)))
       },
-      testM("get geoHash") {
+      test("get geoHash") {
         import GeoSpec.Sicily._
         val nonExistentMember = "Tokyo"
         for {
@@ -36,7 +36,7 @@ trait GeoSpec extends BaseSpec {
         } yield assert(result)(hasSameElements(Chunk(Some(member1GeoHash), None, Some(member2GeoHash))))
       },
       suite("geoRadius")(
-        testM("without details") {
+        test("without details") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -45,7 +45,7 @@ trait GeoSpec extends BaseSpec {
             hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
           )
         },
-        testM("storing the result") {
+        test("storing the result") {
           import GeoSpec.Sicily._
           for {
             dest      <- uuid
@@ -53,7 +53,7 @@ trait GeoSpec extends BaseSpec {
             numStored <- geoRadiusStore(key, member1LongLat, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
         },
-        testM("with coordinates") {
+        test("with coordinates") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -67,7 +67,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with coordinates and distance") {
+        test("with coordinates and distance") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -81,7 +81,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with coordinates, distance and hash") {
+        test("with coordinates, distance and hash") {
           import GeoSpec.Sicily._
           for {
             _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -103,7 +103,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with hash") {
+        test("with hash") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -117,7 +117,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with distance and hash") {
+        test("with distance and hash") {
           import GeoSpec.Sicily._
           for {
             _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -138,7 +138,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with distance") {
+        test("with distance") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -152,7 +152,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with coordinates and hash") {
+        test("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
             _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -169,7 +169,7 @@ trait GeoSpec extends BaseSpec {
         }
       ),
       suite("geoRadiusByMember")(
-        testM("without details") {
+        test("without details") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -178,7 +178,7 @@ trait GeoSpec extends BaseSpec {
             hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
           )
         },
-        testM("storing the result") {
+        test("storing the result") {
           import GeoSpec.Sicily._
           for {
             dest      <- uuid
@@ -186,7 +186,7 @@ trait GeoSpec extends BaseSpec {
             numStored <- geoRadiusByMemberStore(key, member1, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
         },
-        testM("with coordinates") {
+        test("with coordinates") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -200,7 +200,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with coordinates and distance") {
+        test("with coordinates and distance") {
           import GeoSpec.Sicily._
           val member1Distance = 0d
           val member2Distance = 166.2742
@@ -216,7 +216,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with coordinates, distance and hash") {
+        test("with coordinates, distance and hash") {
           import GeoSpec.Sicily._
           val member1Distance = 0d
           val member2Distance = 166.2742
@@ -240,7 +240,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with hash") {
+        test("with hash") {
           import GeoSpec.Sicily._
           for {
             _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -254,7 +254,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with distance and hash") {
+        test("with distance and hash") {
           import GeoSpec.Sicily._
           val member1Distance = 0d
           val member2Distance = 166.2742
@@ -277,7 +277,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with distance") {
+        test("with distance") {
           import GeoSpec.Sicily._
           val member1Distance = 0d
           val member2Distance = 166.2742
@@ -293,7 +293,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with coordinates and hash") {
+        test("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
             _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
@@ -308,7 +308,7 @@ trait GeoSpec extends BaseSpec {
             )
           )
         },
-        testM("with a non-existent member") {
+        test("with a non-existent member") {
           import GeoSpec.Sicily._
           val nonExistentMember = "Tokyo"
           for {

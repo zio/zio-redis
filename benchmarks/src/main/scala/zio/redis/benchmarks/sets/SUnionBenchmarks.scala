@@ -75,5 +75,5 @@ class SUnionBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sUnion(key, otherKey).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sUnion(key, otherKey).returning[String]))
 }

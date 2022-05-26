@@ -1,22 +1,20 @@
 package zio.redis
 
-import zio.UIO
-import zio.duration._
-import zio.random.Random
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.TestAspect.tag
-import zio.test._
-import zio.test.environment.Live
+import zio.test.{ZIOSpecDefault, _}
+import zio.{Random, UIO, _}
 
 import java.time.Instant
 import java.util.UUID
 
-trait BaseSpec extends DefaultRunnableSpec {
+trait BaseSpec extends ZIOSpecDefault {
   implicit val codec: Codec = ProtobufCodec
 
-  override def aspects: List[TestAspectAtLeastR[Live]] = List(TestAspect.timeout(60.seconds))
+  override def aspects: Chunk[TestAspectAtLeastR[TestEnvironment with ZIOAppArgs]] =
+    Chunk.succeed(TestAspect.timeout(60.seconds))
 
-  def instantOf(millis: Long): UIO[Instant] = UIO(Instant.now().plusMillis(millis))
+  def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
 
   final val genStringRedisTypeOption: Gen[Random, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
@@ -28,7 +26,7 @@ trait BaseSpec extends DefaultRunnableSpec {
     Gen.option(Gen.constSample(Sample.noShrink("*")))
 
   final val uuid: UIO[String] =
-    UIO(UUID.randomUUID().toString)
+    ZIO.succeed(UUID.randomUUID().toString)
 
   final val testExecutorUnsupported: TestAspectPoly =
     tag(BaseSpec.TestExecutorUnsupported)

@@ -77,5 +77,5 @@ class LInsertBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => lInsert[String, String](key, Position.Before, i, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lInsert[String, String](key, Position.Before, i, i)))
 }

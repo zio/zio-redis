@@ -76,5 +76,5 @@ class LSetBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => lSet[String, String](key, i, i.toString)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lSet[String, String](key, i, i.toString)))
 }

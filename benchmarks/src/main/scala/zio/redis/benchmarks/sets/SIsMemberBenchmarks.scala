@@ -69,5 +69,5 @@ class SIsMemberBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => sIsMember(key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => sIsMember(key, i)))
 }

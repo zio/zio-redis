@@ -68,5 +68,5 @@ class HMGetBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(it => hmGet(key, it._1).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hmGet(key, it._1).returning[String]))
 }

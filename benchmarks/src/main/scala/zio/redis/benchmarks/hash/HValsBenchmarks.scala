@@ -67,5 +67,5 @@ class HValsBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => hVals(key).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => hVals(key).returning[String]))
 }

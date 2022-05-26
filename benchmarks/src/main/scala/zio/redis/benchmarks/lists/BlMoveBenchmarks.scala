@@ -17,14 +17,13 @@
 package zio.redis.benchmarks.lists
 
 import org.openjdk.jmh.annotations._
-import zio.ZIO
-import zio.duration._
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{ZIO, _}
 
 import java.util.concurrent.TimeUnit
 
-@State(Scope.Thread)
+@State(org.openjdk.jmh.annotations.Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
 @Measurement(iterations = 15)
@@ -51,6 +50,6 @@ class BlMoveBenchmarks extends BenchmarkRuntime {
 
   @Benchmark
   def zio(): Unit = execute(
-    ZIO.foreach_(items)(_ => blMove(key, key, Side.Left, Side.Right, 1.second).returning[String])
+    ZIO.foreachDiscard(items)(_ => blMove(key, key, Side.Left, Side.Right, 1.second).returning[String])
   )
 }

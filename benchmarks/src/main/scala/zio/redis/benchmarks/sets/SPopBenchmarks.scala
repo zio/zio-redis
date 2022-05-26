@@ -69,5 +69,5 @@ class SPopBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sPop(key).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sPop(key).returning[String]))
 }

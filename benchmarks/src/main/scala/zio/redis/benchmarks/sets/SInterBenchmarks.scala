@@ -76,5 +76,5 @@ class SInterBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sInter(key, otherKey).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sInter(key, otherKey).returning[String]))
 }

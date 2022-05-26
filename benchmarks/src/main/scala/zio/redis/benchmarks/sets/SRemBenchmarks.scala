@@ -69,5 +69,5 @@ class SRemBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => sRem(key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => sRem(key, i)))
 }

@@ -69,5 +69,5 @@ class HExistsBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(it => hExists(key, it._1)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hExists(key, it._1)))
 }

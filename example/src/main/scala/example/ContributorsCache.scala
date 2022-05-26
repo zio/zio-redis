@@ -22,32 +22,30 @@ import sttp.client3.ziojson.asJson
 import sttp.client3.{UriContext, basicRequest}
 import sttp.model.Uri
 import zio._
-import zio.duration._
 import zio.json._
-import zio.redis._
+import zio.redis.{Redis, _}
 
 object ContributorsCache {
   trait Service {
     def fetchAll(repository: Repository): IO[ApiError, Contributors]
   }
 
-  lazy val live: ZLayer[Has[Redis] with SttpClient, Nothing, ContributorsCache] =
-    ZLayer.fromFunction { env =>
+  lazy val live: ZLayer[Redis with SttpClient, Nothing, ContributorsCache] =
+    ZLayer.fromFunction { (r: Redis, s: SttpClient) =>
       new Service {
         def fetchAll(repository: Repository): IO[ApiError, Contributors] =
-          (read(repository) <> retrieve(repository)).provide(env)
+          (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
       }
     }
 
-  private[this] def read(repository: Repository): ZIO[Has[Redis], ApiError, Contributors] =
+  private[this] def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
     get(repository.key)
       .returning[String]
       .someOrFail(ApiError.CacheMiss(repository.key))
       .map(_.fromJson[Contributors])
-      .rightOrFail(ApiError.CorruptedData)
-      .refineToOrDie[ApiError]
+      .foldZIO(_ => ZIO.fail(ApiError.CorruptedData), s => ZIO.succeed(s.getOrElse(Contributors(Chunk.empty))))
 
-  private[this] def retrieve(repository: Repository): ZIO[Has[Redis] with SttpClient, ApiError, Contributors] =
+  private[this] def retrieve(repository: Repository): ZIO[Redis with SttpClient, ApiError, Contributors] =
     for {
       req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
       res          <- send(req).orElseFail(GithubUnreachable)
@@ -55,7 +53,7 @@ object ContributorsCache {
       _            <- cache(repository, contributors)
     } yield Contributors(contributors)
 
-  private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[Has[Redis], Any] =
+  private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[Redis, Any] =
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
       .map(Contributors(_).toJson)
