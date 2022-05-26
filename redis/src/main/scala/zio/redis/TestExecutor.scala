@@ -26,6 +26,7 @@ import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
 import scala.annotation.tailrec
 import scala.util.Try
+import scala.collection.compat.immutable.LazyList
 
 private[redis] final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
