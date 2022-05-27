@@ -41,16 +41,17 @@ object RedisExecutor {
 
   private[this] final val RequestQueueSize = 16
 
-  private[this] final val StreamedExecutor: ZLayer[ByteStream.Service, Nothing, Live] =
+  private[this] final val StreamedExecutor: ZLayer[ByteStream.Service, Nothing, Live] = {
     ZLayer.scoped {
       for {
         byteStream <- ZIO.service[ByteStream.Service]
-        reqQueue   <- Queue.bounded[Request](RequestQueueSize)
-        resQueue   <- Queue.unbounded[Promise[RedisError, RespValue]]
-        live        = new Live(reqQueue, resQueue, byteStream)
-        _          <- live.run.forkScoped
+        reqQueue <- Queue.bounded[Request](RequestQueueSize)
+        resQueue <- Queue.unbounded[Promise[RedisError, RespValue]]
+        live = new Live(reqQueue, resQueue, byteStream)
+        _ <- live.run.forkScoped
       } yield live
     }
+  }
 
   private[this] final class Live(
     reqQueue: Queue[Request],

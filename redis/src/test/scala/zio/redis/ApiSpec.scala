@@ -21,30 +21,30 @@ object ApiSpec
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite,
-//        keysSuite,
-//        listSuite,
-//        setsSuite,
-//        sortedSetsSuite,
-//        stringsSuite,
-//        geoSuite,
-//        hyperLogLogSuite,
-//        hashSuite,
-//        streamsSuite,
-//        scriptingSpec
-      ).provideCustomLayer(LiveLayer) @@ sequential
-//      suite("Test Executor")(
-//        connectionSuite,
-//        keysSuite,
-//        setsSuite,
-//        hyperLogLogSuite,
-//        listSuite,
-//        hashSuite,
-//        sortedSetsSuite,
-//        geoSuite,
-//        stringsSuite
-//      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported))
-//        .get
-//        .provideCustomLayer(TestLayer)
+        keysSuite,
+        listSuite,
+        setsSuite,
+        sortedSetsSuite,
+        stringsSuite,
+        geoSuite,
+        hyperLogLogSuite,
+        hashSuite,
+        streamsSuite,
+        scriptingSpec
+      ).provideCustomLayer(LiveLayer) @@ sequential,
+      suite("Test Executor")(
+        connectionSuite,
+        keysSuite,
+        setsSuite,
+        hyperLogLogSuite,
+        listSuite,
+        hashSuite,
+        sortedSetsSuite,
+        geoSuite,
+        stringsSuite
+      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported))
+        .get
+        .provideCustomLayer(TestLayer)
     )
 
   private val LiveLayer: ZLayer[Any, Nothing, Redis with ZEnv] = {
@@ -54,8 +54,8 @@ object ApiSpec
 
   }
 
-//  private val TestLayer: ZLayer[Any, Any, Redis with ZEnv] = {
-//    val redis = RedisExecutor.test ++ ZLayer.succeed(codec) >>> Redis.live
-//    liveEnvironment >>> redis ++ liveEnvironment
-//  }
+  private val TestLayer: ZLayer[Any, Any, Redis with ZEnv] = {
+    val redis = RedisExecutor.test ++ ZLayer.succeed(codec) >>> Redis.live
+    liveEnvironment >>> redis ++ liveEnvironment
+  }
 }
