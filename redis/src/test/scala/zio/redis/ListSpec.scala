@@ -9,7 +9,7 @@ import zio.{Chunk, _}
 import java.util.concurrent.TimeUnit
 
 trait ListSpec extends BaseSpec {
-  val listSuite: Spec[Redis, Serializable] =
+  val listSuite: Spec[Redis, scala.Serializable] =
     suite("lists")(
       suite("pop")(
         test("lPop non-empty list") {
