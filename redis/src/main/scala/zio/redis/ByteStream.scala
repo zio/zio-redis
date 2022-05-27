@@ -56,7 +56,7 @@ private[redis] object ByteStream {
     new CompletionHandler[A, Any] {
       def completed(result: A, u: Any): Unit = k(ZIO.succeedNow(result))
 
-      def failed(t: Throwable, u: Any): Unit = 
+      def failed(t: Throwable, u: Any): Unit =
         t match {
           case e: IOException => k(ZIO.fail(e))
           case _              => k(ZIO.die(t))
@@ -122,7 +122,8 @@ private[redis] object ByteStream {
 
           closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
             .repeatWhile(_ => writeBuffer.hasRemaining)
-            .zipRight(write(remainder)).map(_.getOrElse(()))
+            .zipRight(write(remainder))
+            .map(_.getOrElse(()))
         }
       }
   }

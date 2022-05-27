@@ -87,7 +87,7 @@ private[redis] final class TestExecutor private (
     timeout: Int,
     respValue: RespValue,
     now: Instant
-  ): UIO[RespValue] = 
+  ): UIO[RespValue] =
     if (timeout > 0) {
       runCommand(name, input, now).commit
         .timeout(timeout.seconds)
