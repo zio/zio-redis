@@ -120,7 +120,7 @@ private[redis] object ByteStream {
           writeBuffer.put(c.toArray)
           writeBuffer.flip()
 
-          closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
+          closeWith[Integer](channel)(op => channel.write(writeBuffer, null, op))
             .repeatWhile(_ => writeBuffer.hasRemaining)
             .zipRight(write(remainder))
             .map(_.getOrElse(()))
