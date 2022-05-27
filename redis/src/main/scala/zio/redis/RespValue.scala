@@ -72,17 +72,14 @@ object RespValue {
       }
   }
 
-  private[redis] final val Decoder: ZSink[Any, Throwable, Any, Any, RespValue] = {
+  private[redis] final val Decoder = ZPipeline.utf8Decode >>> ZPipeline.splitLines
+  private[redis] final val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, RespValue] = {
     import internal.State
-    val sink = ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
+    ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
       case State.Done(value) => ZIO.succeedNow(value)
       case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
       case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
     }
-
-    // FIXME
-    (ZPipeline.utf8Decode >>> ZPipeline.splitLines >>> sink)
-      .asInstanceOf[zio.stream.ZSink[Any, Throwable, Any, Any, zio.redis.RespValue]]
   }
 
   private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
