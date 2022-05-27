@@ -41,7 +41,7 @@ private[redis] object ByteStream {
       } yield service
     }
 
-  private[this] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, ByteStream.Service] =
+  private[this] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, Connection] =
     (for {
       address     <- ZIO.succeed(address)
       makeBuffer   = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
@@ -69,21 +69,19 @@ private[redis] object ByteStream {
       Left(ZIO.attempt(channel.close()).ignore)
     }
 
-  private[this] def openChannel(address: SocketAddress): ZIO[Any, IOException, AsynchronousSocketChannel] =
-    ZIO.scoped[Any] {
-      ZIO.fromAutoCloseable {
-        for {
-          channel <- ZIO.attempt {
-                       val channel = AsynchronousSocketChannel.open()
-                       channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
-                       channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
-                       channel
-                     }
-          _ <- closeWith[Void](channel)(channel.connect(address, null, _))
-          _ <- ZIO.logInfo("Connected to the redis server.")
-        } yield channel
-      }.refineToOrDie[IOException]
-    }
+  private[this] def openChannel(address: SocketAddress): ZIO[Scope, IOException, AsynchronousSocketChannel] =
+    ZIO.fromAutoCloseable {
+      for {
+        channel <- ZIO.attempt {
+                     val channel = AsynchronousSocketChannel.open()
+                     channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
+                     channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
+                     channel
+                   }
+        _ <- closeWith[Void](channel)(channel.connect(address, null, _))
+        _ <- ZIO.logInfo("Connected to the redis server.")
+      } yield channel
+    }.refineToOrDie[IOException]
 
   private[this] final class Connection(
     readBuffer: ByteBuffer,
@@ -120,7 +118,7 @@ private[redis] object ByteStream {
           writeBuffer.put(c.toArray)
           writeBuffer.flip()
 
-          closeWith[Integer](channel)(op => channel.write(writeBuffer, null, op))
+          closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
             .repeatWhile(_ => writeBuffer.hasRemaining)
             .zipRight(write(remainder))
             .map(_.getOrElse(()))
