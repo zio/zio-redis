@@ -301,7 +301,7 @@ private[redis] final class TestExecutor private (
                       .getAndUpdate(trackingInfo => trackingInfo.copy(prefixes = trackingInfo.prefixes ++ prefixes))
                       .as(())
                   )
-                  (addTracking *> addMode *> addNoLoop *> addRedirectId *> addPrefixes.as(RespValue.SimpleString("OK")))
+                  addTracking *> addMode *> addNoLoop *> addRedirectId *> addPrefixes.as(RespValue.SimpleString("OK"))
                 }
               }
             } else

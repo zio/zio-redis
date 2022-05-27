@@ -27,7 +27,7 @@ trait Redis {
 object Redis {
 
   lazy val live: URLayer[RedisExecutor with Codec, Redis] =
-    ZLayer.service[Codec] ++ ZLayer.service[RedisExecutor] >>> RedisService
+    ZLayer.environment[Codec] ++ ZLayer.environment[RedisExecutor] >>> RedisService
 
   private[this] final val RedisService: ZLayer[Codec with RedisExecutor, Nothing, Redis] =
     ZLayer(for {
