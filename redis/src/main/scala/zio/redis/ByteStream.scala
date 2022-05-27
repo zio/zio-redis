@@ -56,13 +56,11 @@ private[redis] object ByteStream {
     new CompletionHandler[A, Any] {
       def completed(result: A, u: Any): Unit = k(ZIO.succeedNow(result))
 
-      def failed(t: Throwable, u: Any): Unit = {
-        t.printStackTrace()
+      def failed(t: Throwable, u: Any): Unit = 
         t match {
           case e: IOException => k(ZIO.fail(e))
           case _              => k(ZIO.die(t))
         }
-      }
     }
 
   private[this] def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =
