@@ -96,9 +96,9 @@ object RedisExecutor {
           )
       }
 
-    private def receive: IO[RedisError, Unit] =
+    private def receive: IO[RedisError, Unit] = {
       byteStream.read
-        .via(RespValue.Decoder)
+        .transduce(RespValue.Decoder)
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
         .mapError {
           // FIXME
@@ -106,5 +106,6 @@ object RedisExecutor {
           case rex: RedisError => rex
           case ex              => RedisError.ProtocolError(ex.getLocalizedMessage)
         }
+    }
   }
 }

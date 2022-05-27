@@ -87,7 +87,7 @@ private[redis] final class TestExecutor private (
     timeout: Int,
     respValue: RespValue,
     now: Instant
-  ): UIO[RespValue] =
+  ): UIO[RespValue] = 
     if (timeout > 0) {
       runCommand(name, input, now).commit
         .timeout(timeout.seconds)
@@ -3926,7 +3926,7 @@ private[redis] object TestExecutor {
   lazy val live: URLayer[Random with Clock, RedisExecutor] = {
     val executor = for {
       seed         <- Random.nextInt
-      clock        <- ZIO.environment[Clock]
+      clock        <- ZIO.clock
       sRandom       = new scala.util.Random(seed)
       ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
       randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
@@ -3952,7 +3952,7 @@ private[redis] object TestExecutor {
       hyperLogLogs,
       hashes,
       sortedSets,
-      clock.get
+      clock
     )
     ZLayer {
       executor

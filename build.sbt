@@ -39,11 +39,11 @@ lazy val redis =
       libraryDependencies ++= Seq(
         "dev.zio"                %% "zio-streams"             % Zio,
         "dev.zio"                %% "zio-logging"             % "2.0.0-RC10",
-        "dev.zio"                %% "zio-schema"              % "0.2.0-RC6",
-        "dev.zio"                %% "zio-schema-protobuf"     % "0.2.0-RC6" % Test,
+        "dev.zio"                %% "zio-schema"              % "0.2.0-RC5",
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.2.0-RC5" % Test,
         "dev.zio"                %% "zio-test"                % Zio         % Test,
         "dev.zio"                %% "zio-test-sbt"            % Zio         % Test,
-        "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"     % Test
+        "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
@@ -60,7 +60,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.1.1",
         "io.chrisdavenport" %% "rediculous"          % "0.1.1",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.2.0-RC6"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.2.0-RC5"
       )
     )
 
@@ -77,7 +77,7 @@ lazy val example =
         "dev.zio"                       %% "zio-streams"                   % Zio,
         "dev.zio"                       %% "zio-config-magnolia"           % "3.0.0-RC9",
         "dev.zio"                       %% "zio-config-typesafe"           % "3.0.0-RC9",
-        "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.0-RC6",
+        "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.0-RC5",
         "dev.zio"                       %% "zio-json"                      % "0.3.0-RC8",
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC7"
       )
