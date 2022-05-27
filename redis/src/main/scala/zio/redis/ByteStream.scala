@@ -69,8 +69,8 @@ private[redis] object ByteStream {
       Left(ZIO.attempt(channel.close()).ignore)
     }
 
-  private[this] def openChannel(address: SocketAddress): ZIO[Scope, IOException, AsynchronousSocketChannel] =
-    ZIO.scoped[Scope] {
+  private[this] def openChannel(address: SocketAddress): ZIO[Any, IOException, AsynchronousSocketChannel] =
+    ZIO.scoped[Any] {
       ZIO.fromAutoCloseable {
         for {
           channel <- ZIO.attempt {
@@ -112,7 +112,7 @@ private[redis] object ByteStream {
         }
       }
 
-    def write(chunk: Chunk[Byte]): ZIO[Any, IOException, Option[Unit]] =
+    def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
       ZIO.when(chunk.nonEmpty) {
         ZIO.suspendSucceed {
           writeBuffer.clear()
@@ -122,8 +122,8 @@ private[redis] object ByteStream {
 
           closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
             .repeatWhile(_ => writeBuffer.hasRemaining)
-            .zipRight(write(remainder))
-        }.map(_.fold(())(x => x))
+            .zipRight(write(remainder)).map(_.getOrElse(()))
+        }
       }
   }
 }
