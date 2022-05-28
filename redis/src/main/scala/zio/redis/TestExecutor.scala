@@ -3923,40 +3923,38 @@ private[redis] object TestExecutor {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
-  lazy val live: URLayer[Random with Clock, RedisExecutor] = {
-    val executor = for {
-      seed         <- Random.nextInt
-      clock        <- ZIO.clock
-      sRandom       = new scala.util.Random(seed)
-      ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
-      randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
-      keys         <- TMap.empty[String, KeyInfo].commit
-      sets         <- TMap.empty[String, Set[String]].commit
-      strings      <- TMap.empty[String, String].commit
-      hyperLogLogs <- TMap.empty[String, Set[String]].commit
-      lists        <- TMap.empty[String, Chunk[String]].commit
-      hashes       <- TMap.empty[String, Map[String, String]].commit
-      sortedSets   <- TMap.empty[String, Map[String, Double]].commit
-      clientInfo   <- TRef.make(ClientInfo(id = 174716)).commit
-      clientTInfo =
-        ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
-      clientTrackingInfo <- TRef.make(clientTInfo).commit
-    } yield new TestExecutor(
-      clientInfo,
-      clientTrackingInfo,
-      keys,
-      lists,
-      sets,
-      strings,
-      randomPick,
-      hyperLogLogs,
-      hashes,
-      sortedSets,
-      clock
-    )
+  lazy val live: URLayer[Random with Clock, RedisExecutor] =
     ZLayer {
-      executor
+      for {
+        seed         <- zio.Random.nextInt
+        clock        <- ZIO.service[Clock]
+        sRandom       = new scala.util.Random(seed)
+        ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
+        randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
+        keys         <- TMap.empty[String, KeyInfo].commit
+        sets         <- TMap.empty[String, Set[String]].commit
+        strings      <- TMap.empty[String, String].commit
+        hyperLogLogs <- TMap.empty[String, Set[String]].commit
+        lists        <- TMap.empty[String, Chunk[String]].commit
+        hashes       <- TMap.empty[String, Map[String, String]].commit
+        sortedSets   <- TMap.empty[String, Map[String, Double]].commit
+        clientInfo   <- TRef.make(ClientInfo(id = 174716)).commit
+        clientTInfo =
+          ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
+        clientTrackingInfo <- TRef.make(clientTInfo).commit
+      } yield new TestExecutor(
+        clientInfo,
+        clientTrackingInfo,
+        keys,
+        lists,
+        sets,
+        strings,
+        randomPick,
+        hyperLogLogs,
+        hashes,
+        sortedSets,
+        clock
+      )
     }
-  }
 
 }
