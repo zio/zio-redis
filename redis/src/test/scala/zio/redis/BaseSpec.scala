@@ -11,7 +11,7 @@ import java.util.UUID
 trait BaseSpec extends ZIOSpecDefault {
   implicit val codec: Codec = ProtobufCodec
 
-  override def aspects: Chunk[TestAspectAtLeastR[TestEnvironment with ZIOAppArgs]] =
+  override def aspects: Chunk[TestAspectAtLeastR[Live]] =
     Chunk.succeed(TestAspect.timeout(60.seconds))
 
   def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
