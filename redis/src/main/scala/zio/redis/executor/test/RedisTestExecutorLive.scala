@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.executor.test
 
 import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{BulkString, bulkString}
-import zio.redis.TestExecutor.{KeyInfo, KeyType}
+import zio.redis.executor.RedisExecutor
+import zio.redis.executor.test.RedisTestExecutorLive._
+import zio.redis.{ClientTrackingMode, _}
 import zio.stm._
 
 import java.nio.file.{FileSystems, Paths}
@@ -28,7 +30,7 @@ import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
 
-private[redis] final class TestExecutor private (
+private[redis] final class RedisTestExecutorLive private (
   clientInfo: TRef[ClientInfo],
   clientTrackingInfo: TRef[ClientTrackingInfo],
   keys: TMap[String, KeyInfo],
@@ -209,7 +211,7 @@ private[redis] final class TestExecutor private (
         orMissingParameter(onOffOption)(onOff =>
           orInvalidParameter(STM.succeed(onOff == "ON" || onOff == "OFF"))(
             if (onOff == "ON") {
-              val mode = inputList match {
+              val mode: Option[ClientTrackingMode] = inputList match {
                 case list if list.contains(ClientTrackingMode.OptIn.stringify)     => Some(ClientTrackingMode.OptIn)
                 case list if list.contains(ClientTrackingMode.OptOut.stringify)    => Some(ClientTrackingMode.OptOut)
                 case list if list.contains(ClientTrackingMode.Broadcast.stringify) => Some(ClientTrackingMode.Broadcast)
@@ -3894,7 +3896,7 @@ private[redis] final class TestExecutor private (
 
 }
 
-private[redis] object TestExecutor {
+private[redis] object RedisTestExecutorLive {
 
   sealed trait KeyType extends Product with Serializable
 

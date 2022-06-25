@@ -2,6 +2,7 @@ package zio.redis
 
 import zio._
 import zio.redis.RedisError.ProtocolError
+import zio.redis.executor.RedisExecutor
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{restore => _, _}
@@ -417,7 +418,7 @@ object KeysSpec {
   final val SecondExecutor: Layer[RedisError.IOError, Redis] =
     ZLayer
       .make[Redis](
-        ZLayer.succeed(RedisConfig("localhost", 6380)),
+        ZLayer.succeed(RedisUri("localhost", 6380)),
         RedisExecutor.layer,
         ZLayer.succeed[Codec](ProtobufCodec),
         RedisLive.layer
