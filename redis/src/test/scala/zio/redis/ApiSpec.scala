@@ -20,17 +20,17 @@ object ApiSpec
   def spec: Spec[TestEnvironment with Scope, Any] =
     suite("Redis commands")(
       suite("Live Executor")(
-//        connectionSuite,
-//        keysSuite,
-//        listSuite,
-//        setsSuite,
-//        sortedSetsSuite,
-//        stringsSuite,
-//        geoSuite,
-//        hyperLogLogSuite,
-//        hashSuite,
-//        streamsSuite,
-//        scriptingSpec
+        connectionSuite,
+        keysSuite,
+        listSuite,
+        setsSuite,
+        sortedSetsSuite,
+        stringsSuite,
+        geoSuite,
+        hyperLogLogSuite,
+        hashSuite,
+        streamsSuite,
+        scriptingSpec
       ).provideCustomLayer(LiveLayer) @@ sequential,
       suite("Test Executor")(
         connectionSuite,
