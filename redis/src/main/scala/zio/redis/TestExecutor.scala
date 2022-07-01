@@ -92,7 +92,7 @@ private[redis] final class TestExecutor private (
       runCommand(name, input, now).commit
         .timeout(timeout.seconds)
         .map(_.getOrElse(respValue))
-        .provideLayer(Clock.live)
+        .provideLayer(ZLayer.succeedEnvironment(ZEnvironment[Clock](Clock.ClockLive)))
     } else
       runCommand(name, input, now).commit
 

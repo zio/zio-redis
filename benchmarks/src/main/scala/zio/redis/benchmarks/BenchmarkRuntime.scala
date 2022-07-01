@@ -17,15 +17,17 @@
 package zio.redis.benchmarks
 
 import cats.effect.{IO => CIO}
-import zio.Runtime.default.unsafeRun
 import zio.redis._
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.{ZIO, ZLayer}
+import zio.Unsafe
 
 trait BenchmarkRuntime {
 
-  final def execute(query: ZIO[Redis, RedisError, Unit]): Unit =
-    unsafeRun(query.provideLayer(BenchmarkRuntime.Layer))
+  final def execute(query: ZIO[Redis, RedisError, Unit]): Unit = {
+    implicit val un: Unsafe = zio.Unsafe.unsafe
+    zio.Runtime.default.unsafe.run(query.provideLayer(BenchmarkRuntime.Layer)).getOrThrowFiberFailure()
+  }
 
   final def execute[Client: QueryRunner](query: Client => CIO[Unit]): Unit =
     QueryRunner[Client].unsafeRunWith(query)
