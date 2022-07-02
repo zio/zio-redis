@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.test.TestAspect._
 import zio.test._
-import zio.{Scope, ZLayer}
+import zio.{Clock, Random, Scope, ZLayer}
 
 object ApiSpec
     extends ConnectionSpec
@@ -44,7 +44,7 @@ object ApiSpec
         stringsSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported))
         .get
-        .provideCustomLayer(TestLayer)
+        .provideSomeLayer[TestEnvironment](TestLayer)
     )
 
   private val LiveLayer = {
@@ -56,6 +56,10 @@ object ApiSpec
 
   private val TestLayer = {
     val redis = RedisExecutor.test ++ ZLayer.succeed(codec) >>> Redis.live
-    liveEnvironment >>> redis ++ liveEnvironment
+    ZLayer.make[Redis with Random with Clock](
+      redis,
+      ZLayer.fromZIO(testRandom),
+      ZLayer.fromZIO(testClock)
+    )
   }
 }
