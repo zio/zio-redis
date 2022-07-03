@@ -18,8 +18,6 @@ package zio.redis
 
 import zio.{Clock, Random, _}
 
-import java.io.IOException
-
 trait RedisExecutor {
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
 }
@@ -98,14 +96,8 @@ object RedisExecutor {
 
     private def receive: IO[RedisError, Unit] =
       byteStream.read
+        .mapError(RedisError.IOError)
         .via(RespValue.Decoder)
-        .transduce(RespValue.Sinker)
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
-        .mapError {
-          // FIXME, Can remove mapError?
-          case io: IOException => RedisError.IOError(io)
-          case rex: RedisError => rex
-          case ex              => RedisError.ProtocolError(ex.getLocalizedMessage)
-        }
   }
 }

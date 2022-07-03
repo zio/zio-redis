@@ -1085,7 +1085,7 @@ object InputSpec extends BaseSpec {
         test("with negative duration") {
           ZIO
             .attempt(IdleInput.encode((-1).second))
-            .map(assert(_)(equalTo(respArgs("IDLE", "0"))))
+            .map(assert(_)(equalTo(respArgs("IDLE", "-1000"))))
         }
       ),
       suite("Time")(
@@ -1102,7 +1102,7 @@ object InputSpec extends BaseSpec {
         test("with negative duration") {
           ZIO
             .attempt(TimeInput.encode((-1).second))
-            .map(assert(_)(equalTo(respArgs("TIME", "0"))))
+            .map(assert(_)(equalTo(respArgs("TIME", "-1000"))))
         }
       ),
       suite("RetryCount")(
@@ -1187,7 +1187,7 @@ object InputSpec extends BaseSpec {
         test("with negative duration") {
           ZIO
             .attempt(BlockInput.encode((-1).second))
-            .map(assert(_)(equalTo(respArgs("BLOCK", "0"))))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "-1000"))))
         }
       ),
       suite("Streams")(

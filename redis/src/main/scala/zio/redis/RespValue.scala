@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets
 
 sealed trait RespValue extends Product with Serializable { self =>
   import RespValue._
-  import RespValue.internal.{Headers, NullStringEncoded, NullArrayEncoded, CrLf}
+  import RespValue.internal.{CrLf, Headers, NullArrayEncoded, NullStringEncoded}
 
   final def serialize: Chunk[Byte] =
     self match {
@@ -72,14 +72,23 @@ object RespValue {
       }
   }
 
-  private[redis] final val Decoder = ZPipeline.utf8Decode >>> ZPipeline.splitLines
-  private[redis] final val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, RespValue] = {
-    import internal.State
-    ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
-      case State.Done(value) => ZIO.succeedNow(value)
-      case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
-      case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
+  private[redis] final val Decoder: ZPipeline[Any, RedisError.ProtocolError, Byte, RespValue] = {
+    val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, RespValue] = {
+      import internal.State
+      ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
+        case State.Done(value) => ZIO.succeedNow(value)
+        case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
+        case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
+      }
+
     }
+
+    val processLine =
+      ZPipeline.fromSink(Sinker)
+
+    (ZPipeline.utf8Decode >>> ZPipeline.splitLines).mapError(e =>
+      RedisError.ProtocolError(e.getLocalizedMessage)
+    ) >>> processLine
   }
 
   private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))

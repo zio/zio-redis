@@ -12,7 +12,7 @@ trait BaseSpec extends ZIOSpecDefault {
   implicit val codec: Codec = ProtobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk.succeed(TestAspect.timeout(10.seconds))
+    Chunk.succeed(TestAspect.timeout(100000.seconds))
 
   def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
 

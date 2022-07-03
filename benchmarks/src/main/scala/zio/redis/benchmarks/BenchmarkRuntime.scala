@@ -19,8 +19,7 @@ package zio.redis.benchmarks
 import cats.effect.{IO => CIO}
 import zio.redis._
 import zio.schema.codec.{Codec, ProtobufCodec}
-import zio.{ZIO, ZLayer}
-import zio.Unsafe
+import zio.{Unsafe, ZIO, ZLayer}
 
 trait BenchmarkRuntime {
 

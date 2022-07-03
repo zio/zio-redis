@@ -35,7 +35,6 @@ object RespValueSpec extends BaseSpec {
           .fromChunk(values)
           .mapConcat(_.serialize)
           .via(RespValue.Decoder)
-          .transduce(RespValue.Sinker)
           .runCollect
           .map(assert(_)(equalTo(values)))
       }
