@@ -39,8 +39,8 @@ lazy val redis =
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-streams"         % Zio,
         "dev.zio" %% "zio-logging"         % "0.5.14",
-        "dev.zio" %% "zio-schema"          % "0.1.9",
-        "dev.zio" %% "zio-schema-protobuf" % "0.1.9" % Test,
+        "dev.zio" %% "zio-schema"          % "0.2.0",
+        "dev.zio" %% "zio-schema-protobuf" % "0.2.0" % Test,
         "dev.zio" %% "zio-test"            % Zio     % Test,
         "dev.zio" %% "zio-test-sbt"        % Zio     % Test
       ),
@@ -59,7 +59,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.1.1",
         "io.chrisdavenport" %% "rediculous"          % "0.1.1",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.1.9"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.2.0"
       )
     )
 
@@ -76,7 +76,7 @@ lazy val example =
         "dev.zio"                       %% "zio-streams"                    % Zio,
         "dev.zio"                       %% "zio-config-magnolia"            % "2.0.4",
         "dev.zio"                       %% "zio-config-typesafe"            % "2.0.4",
-        "dev.zio"                       %% "zio-schema-protobuf"            % "0.1.9",
+        "dev.zio"                       %% "zio-schema-protobuf"            % "0.2.0",
         "dev.zio"                       %% "zio-json"                       % "0.1.5",
         "io.d11"                        %% "zhttp"                          % "1.0.0.0-RC25",
         "io.github.kitlangton"          %% "zio-magic"                      % "0.3.12"
