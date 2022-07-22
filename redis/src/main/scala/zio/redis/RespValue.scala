@@ -72,13 +72,15 @@ object RespValue {
       }
   }
 
-  private[redis] final val Decoder: ZPipeline[Any, RedisError.ProtocolError, Byte, RespValue] = {
-    val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, RespValue] = {
+  private[redis] final val Decoder: ZPipeline[Any, RedisError.ProtocolError, Byte, Option[RespValue]] = {
+    val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, Option[RespValue]] = {
       import internal.State
       ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
-        case State.Done(value) => ZIO.succeedNow(value)
+        case State.Done(value) => ZIO.succeedNow(Some(value))
         case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
-        case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
+        // ZSink fold will return a State.Start when contFn is false
+        case State.Start => ZIO.succeedNow(None)
+        case other       => ZIO.dieMessage(s"Deserialization bug, should not get $other")
       }
 
     }

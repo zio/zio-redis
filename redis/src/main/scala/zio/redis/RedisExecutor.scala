@@ -98,6 +98,9 @@ object RedisExecutor {
       byteStream.read
         .mapError(RedisError.IOError)
         .via(RespValue.Decoder)
+        .collect { case Some(value) =>
+          value
+        }
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
   }
 }
