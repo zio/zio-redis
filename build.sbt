@@ -57,7 +57,7 @@ lazy val benchmarks =
     .settings(
       publish / skip := true,
       libraryDependencies ++= Seq(
-        "dev.profunktor"    %% "redis4cats-effects"  % "1.1.1",
+        "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.1.1",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
         "dev.zio"           %% "zio-schema-protobuf" % "0.2.0-RC5"
@@ -72,8 +72,8 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.6.2",
-        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.6.2",
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.7.1",
+        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.7.1",
         "dev.zio"                       %% "zio-streams"                   % Zio,
         "dev.zio"                       %% "zio-config-magnolia"           % "3.0.0-RC9",
         "dev.zio"                       %% "zio-config-typesafe"           % "3.0.0-RC9",
