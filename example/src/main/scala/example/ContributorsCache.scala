@@ -17,21 +17,25 @@
 package example
 
 import example.ApiError._
-import sttp.client3.asynchttpclient.zio.{SttpClient, send}
+import sttp.capabilities.WebSockets
+import sttp.capabilities.zio.ZioStreams
 import sttp.client3.ziojson.asJson
-import sttp.client3.{UriContext, basicRequest}
+import sttp.client3.{SttpBackend, UriContext, basicRequest}
 import sttp.model.Uri
 import zio._
 import zio.json._
 import zio.redis.{Redis, _}
 
 object ContributorsCache {
+
+  type Sttp = SttpBackend[Task, ZioStreams with WebSockets]
+
   trait Service {
     def fetchAll(repository: Repository): IO[ApiError, Contributors]
   }
 
-  lazy val live: ZLayer[Redis with SttpClient, Nothing, ContributorsCache] =
-    ZLayer.fromFunction { (r: Redis, s: SttpClient) =>
+  lazy val live: ZLayer[Redis with Sttp, Nothing, ContributorsCache] =
+    ZLayer.fromFunction { (r: Redis, s: Sttp) =>
       new Service {
         def fetchAll(repository: Repository): IO[ApiError, Contributors] =
           (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
@@ -45,10 +49,10 @@ object ContributorsCache {
       .map(_.fromJson[Contributors])
       .foldZIO(_ => ZIO.fail(ApiError.CorruptedData), s => ZIO.succeed(s.getOrElse(Contributors(Chunk.empty))))
 
-  private[this] def retrieve(repository: Repository): ZIO[Redis with SttpClient, ApiError, Contributors] =
+  private[this] def retrieve(repository: Repository): ZIO[Redis with Sttp, ApiError, Contributors] =
     for {
       req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
-      res          <- send(req).orElseFail(GithubUnreachable)
+      res          <- ZIO.service[Sttp].flatMap(_.send(req).orElseFail(GithubUnreachable))
       contributors <- res.body.fold(_ => ZIO.fail(UnknownProject(urlOf(repository).toString)), ZIO.succeed(_))
       _            <- cache(repository, contributors)
     } yield Contributors(contributors)

@@ -31,7 +31,7 @@ object ApiSpec
         hashSuite,
         streamsSuite,
         scriptingSpec
-      ).provideCustomLayer(LiveLayer) @@ sequential,
+      ).provideCustomLayer(LiveLayer) @@ sequential @@ withLiveEnvironment,
       suite("Test Executor")(
         connectionSuite,
         keysSuite,

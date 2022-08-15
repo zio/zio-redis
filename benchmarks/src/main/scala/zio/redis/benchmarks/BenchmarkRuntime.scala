@@ -23,10 +23,10 @@ import zio.{Unsafe, ZIO, ZLayer}
 
 trait BenchmarkRuntime {
 
-  final def execute(query: ZIO[Redis, RedisError, Unit]): Unit = {
-    implicit val un: Unsafe = zio.Unsafe.unsafe
-    zio.Runtime.default.unsafe.run(query.provideLayer(BenchmarkRuntime.Layer)).getOrThrowFiberFailure()
-  }
+  final def execute(query: ZIO[Redis, RedisError, Unit]): Unit =
+    Unsafe.unsafe { implicit unsafe =>
+      zio.Runtime.default.unsafe.run(query.provideLayer(BenchmarkRuntime.Layer)).getOrThrowFiberFailure()
+    }
 
   final def execute[Client: QueryRunner](query: Client => CIO[Unit]): Unit =
     QueryRunner[Client].unsafeRunWith(query)
