@@ -157,6 +157,13 @@ trait ConnectionSpec extends BaseSpec {
         },
         test("PING with input") {
           ping(Some("Hello")).map(assert(_)(equalTo("Hello")))
+        },
+        test("PING with a string argument will not lock executor") {
+          ping(Some("Hello with a newline\n")).map(assert(_)(equalTo("Hello with a newline\n")))
+        },
+        test("PING with a multiline string argument will not lock executor") {
+          ping(Some("Hello with a newline\r\nAnd another line\n"))
+            .map(assert(_)(equalTo("Hello with a newline\r\nAnd another line\n")))
         }
       ),
       test("reset") {
