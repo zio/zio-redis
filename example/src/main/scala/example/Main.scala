@@ -23,12 +23,12 @@ import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, Server}
 import zio.Console.printLine
+import zio._
 import zio.config.getConfig
 import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
 import zio.redis.{Redis, RedisExecutor}
 import zio.schema.codec.{Codec, ProtobufCodec}
-import zio.{ZIOAppDefault, _}
 
 object Main extends ZIOAppDefault {
   private val config =
@@ -41,7 +41,7 @@ object Main extends ZIOAppDefault {
   private val redisExecutor = redisConfig >>> RedisExecutor.live
   private val redis         = redisExecutor ++ codec >>> Redis.live
   private val sttp          = AsyncHttpClientZioBackend.layer()
-  private val cache         = redis ++ sttp >>> ContributorsCache.live
+  private val cache         = redis ++ sttp >>> ContributorsCache.ServiceLive.layer
 
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     getConfig[ServerConfig]

@@ -18,9 +18,10 @@ package example.config
 
 import zio.config.magnolia.descriptor
 import zio.redis.RedisConfig
+import zio.config.ConfigDescriptor
 
 final case class AppConfig(redis: RedisConfig, server: ServerConfig)
 
 object AppConfig {
-  val confDescriptor: _root_.zio.config.ConfigDescriptor[AppConfig] = descriptor[AppConfig]
+  val confDescriptor: ConfigDescriptor[AppConfig] = descriptor[AppConfig]
 }

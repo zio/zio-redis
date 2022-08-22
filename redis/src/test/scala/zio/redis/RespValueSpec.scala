@@ -34,7 +34,7 @@ object RespValueSpec extends BaseSpec {
         zio.stream.ZStream
           .fromChunk(values)
           .mapConcat(_.serialize)
-          .via(RespValue.Decoder)
+          .via(RespValue.decoder)
           .collect { case Some(value) =>
             value
           }

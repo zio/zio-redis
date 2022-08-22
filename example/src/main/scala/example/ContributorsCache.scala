@@ -24,7 +24,7 @@ import sttp.client3.{SttpBackend, UriContext, basicRequest}
 import sttp.model.Uri
 import zio._
 import zio.json._
-import zio.redis.{Redis, _}
+import zio.redis._
 
 object ContributorsCache {
 
@@ -34,13 +34,19 @@ object ContributorsCache {
     def fetchAll(repository: Repository): IO[ApiError, Contributors]
   }
 
-  lazy val live: ZLayer[Redis with Sttp, Nothing, ContributorsCache] =
-    ZLayer.fromFunction { (r: Redis, s: Sttp) =>
-      new Service {
-        def fetchAll(repository: Repository): IO[ApiError, Contributors] =
-          (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
-      }
+  case class ServiceLive(r: Redis, s: Sttp) extends Service {
+    override def fetchAll(repository: Repository): IO[ApiError, Contributors] =
+      (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
+  }
+
+  object ServiceLive {
+    lazy val layer: ZLayer[Redis with Sttp, Nothing, Service] = ZLayer.fromZIO {
+      for {
+        r <- ZIO.service[Redis]
+        s <- ZIO.service[Sttp]
+      } yield ServiceLive(r, s)
     }
+  }
 
   private[this] def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
     get(repository.key)
