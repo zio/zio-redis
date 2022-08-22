@@ -19,7 +19,7 @@ package zio.redis.benchmarks.lists
 import org.openjdk.jmh.annotations._
 import zio.redis._
 import zio.redis.benchmarks._
-import zio.{ZIO, _}
+import zio._
 
 import java.util.concurrent.TimeUnit
 
