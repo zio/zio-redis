@@ -8,7 +8,6 @@ import dev.profunktor.redis4cats.codecs.splits._
 import dev.profunktor.redis4cats.data.RedisCodec
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
-import fs2.io.net.Network
 import io.chrisdavenport.rediculous.RedisConnection
 import io.lettuce.core.ClientOptions
 import laserdisc.auto.autoRefine
@@ -27,10 +26,10 @@ object QueryRunner {
         Laserdisc.use(f).unsafeRunSync()
     }
 
-  implicit val redicoulusRunner: QueryRunner[RediculousClient] =
+  implicit val rediculousRunner: QueryRunner[RediculousClient] =
     new QueryRunner[RediculousClient] {
       def unsafeRunWith(f: RediculousClient => CIO[Unit]): Unit =
-        Redicoulus.use(f).unsafeRunSync()
+        Rediculous.use(f).unsafeRunSync()
     }
 
   implicit val redis4CatsStringRunner: QueryRunner[Redis4CatsClient[String]] =
@@ -50,8 +49,14 @@ object QueryRunner {
 
   private[this] final val Laserdisc: Resource[CIO, LaserDiscClient] = RedisClient[CIO].to(RedisHost, RedisPort)
 
-  private[this] final val Redicoulus: Resource[CIO, RediculousClient] =
-    RedisConnection.queued[CIO](Network[CIO], host"127.0.0.1", port"6379", maxQueued = 10000, workers = 2)
+  private[this] final val Rediculous: Resource[CIO, RediculousClient] =
+    RedisConnection
+      .queued[CIO]
+      .withHost(host"127.0.0.1")
+      .withPort(port"6379")
+      .withMaxQueued(10000)
+      .withWorkers(2)
+      .build
 
   private[this] final val Redis4CatsLong: Resource[CIO, RedisCommands[CIO, String, Long]] = {
     val longCodec = Codecs.derive(RedisCodec.Utf8, stringLongEpi)
