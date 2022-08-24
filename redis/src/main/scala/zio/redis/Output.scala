@@ -18,7 +18,7 @@ package zio.redis
 
 import zio.schema.Schema
 import zio.schema.codec.Codec
-import zio.{Chunk, _}
+import zio._
 
 sealed trait Output[+A] {
   self =>
