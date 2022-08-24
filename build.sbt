@@ -38,9 +38,9 @@ lazy val redis =
     .settings(
       libraryDependencies ++= Seq(
         "dev.zio"                %% "zio-streams"             % Zio,
-        "dev.zio"                %% "zio-logging"             % "2.0.0",
-        "dev.zio"                %% "zio-schema"              % "0.2.0",
-        "dev.zio"                %% "zio-schema-protobuf"     % "0.2.0" % Test,
+        "dev.zio"                %% "zio-logging"             % "2.1.0",
+        "dev.zio"                %% "zio-schema"              % "0.2.1",
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.2.1" % Test,
         "dev.zio"                %% "zio-test"                % Zio     % Test,
         "dev.zio"                %% "zio-test-sbt"            % Zio     % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
@@ -60,7 +60,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.2.0-RC5"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.2.1"
       )
     )
 
@@ -75,10 +75,10 @@ lazy val example =
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.7.4",
         "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.7.4",
         "dev.zio"                       %% "zio-streams"                   % Zio,
-        "dev.zio"                       %% "zio-config-magnolia"           % "3.0.0-RC9",
-        "dev.zio"                       %% "zio-config-typesafe"           % "3.0.0-RC9",
-        "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.0-RC5",
-        "dev.zio"                       %% "zio-json"                      % "0.3.0-RC8",
+        "dev.zio"                       %% "zio-config-magnolia"           % "3.0.2",
+        "dev.zio"                       %% "zio-config-typesafe"           % "3.0.2",
+        "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.1",
+        "dev.zio"                       %% "zio-json"                      % "0.3.0-RC11",
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC10"
       )
     )
