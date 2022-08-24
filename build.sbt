@@ -75,8 +75,8 @@ lazy val example =
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.7.4",
         "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.7.4",
         "dev.zio"                       %% "zio-streams"                   % Zio,
-        "dev.zio"                       %% "zio-config-magnolia"           % "3.0.0-RC9",
-        "dev.zio"                       %% "zio-config-typesafe"           % "3.0.0-RC9",
+        "dev.zio"                       %% "zio-config-magnolia"           % "3.0.2",
+        "dev.zio"                       %% "zio-config-typesafe"           % "3.0.2",
         "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.0-RC5",
         "dev.zio"                       %% "zio-json"                      % "0.3.0-RC8",
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC10"
