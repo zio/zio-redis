@@ -1,7 +1,6 @@
 package zio.redis
 
-import zio.Has
-import zio.duration._
+import zio._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -10,10 +9,10 @@ import java.net.InetAddress
 
 trait ConnectionSpec extends BaseSpec {
 
-  val connectionSuite: Spec[Has[Redis] with Annotations, TestFailure[RedisError], TestSuccess] =
+  val connectionSuite: Spec[Redis with TestEnvironment, RedisError] =
     suite("connection")(
       suite("clientCaching")(
-        testM("track keys") {
+        test("track keys") {
           for {
             _            <- clientTrackingOff
             _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
@@ -21,7 +20,7 @@ trait ConnectionSpec extends BaseSpec {
             trackingInfo <- clientTrackingInfo
           } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
         },
-        testM("don't track keys") {
+        test("don't track keys") {
           for {
             _            <- clientTrackingOff
             _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
@@ -31,24 +30,24 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("clientId")(
-        testM("get client id") {
+        test("get client id") {
           for {
             id <- clientId
           } yield assert(id)(isGreaterThan(0L))
         }
       ),
       suite("clientKill")(
-        testM("error when a connection with the specifed address doesn't exist") {
+        test("error when a connection with the specifed address doesn't exist") {
           for {
             error <- clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either
           } yield assert(error)(isLeft)
         },
-        testM("specify filters that don't kill the connection") {
+        test("specify filters that don't kill the connection") {
           for {
             clientsKilled <- clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L))
           } yield assert(clientsKilled)(equalTo(0L))
         },
-        testM("specify filters that kill the connection but skipme is enabled") {
+        test("specify filters that kill the connection but skipme is enabled") {
           for {
             id            <- clientId
             clientsKilled <- clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
@@ -56,13 +55,13 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("clientGetRedir")(
-        testM("tracking disabled") {
+        test("tracking disabled") {
           for {
             _     <- clientTrackingOff
             redir <- clientGetRedir
           } yield assert(redir)(equalTo(ClientTrackingRedirect.NotEnabled))
         },
-        testM("tracking enabled but not redirecting") {
+        test("tracking enabled but not redirecting") {
           for {
             _     <- clientTrackingOn()
             redir <- clientGetRedir
@@ -70,25 +69,25 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("client pause and unpause")(
-        testM("clientPause") {
+        test("clientPause") {
           for {
             unit <- clientPause(1.second, Some(ClientPauseMode.All))
           } yield assert(unit)(isUnit)
         },
-        testM("clientUnpause") {
+        test("clientUnpause") {
           for {
             unit <- clientUnpause
           } yield assert(unit)(isUnit)
         }
       ),
-      testM("set and get name") {
+      test("set and get name") {
         for {
           _    <- clientSetName("foo")
           name <- clientGetName
         } yield assert(name.getOrElse(""))(equalTo("foo"))
       },
       suite("clientTracking")(
-        testM("enable tracking in broadcast mode and with prefixes") {
+        test("enable tracking in broadcast mode and with prefixes") {
           for {
             _            <- clientTrackingOff
             _            <- clientTrackingOn(None, Some(ClientTrackingMode.Broadcast), prefixes = Set("foo"))
@@ -99,7 +98,7 @@ trait ConnectionSpec extends BaseSpec {
             ) &&
             assert(trackingInfo.prefixes)(equalTo(Set("foo")))
         },
-        testM("disable tracking") {
+        test("disable tracking") {
           for {
             _            <- clientTrackingOff
             trackingInfo <- clientTrackingInfo
@@ -111,7 +110,7 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("clientTrackingInfo")(
-        testM("get tracking info when tracking is disabled") {
+        test("get tracking info when tracking is disabled") {
           for {
             _            <- clientTrackingOff
             trackingInfo <- clientTrackingInfo
@@ -124,7 +123,7 @@ trait ConnectionSpec extends BaseSpec {
             )
           )
         },
-        testM("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
+        test("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
           for {
             _            <- clientTrackingOff
             _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
@@ -146,7 +145,7 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("clientUnblock")(
-        testM("unblock client that isn't blocked") {
+        test("unblock client that isn't blocked") {
           for {
             id   <- clientId
             bool <- clientUnblock(id)
@@ -154,14 +153,14 @@ trait ConnectionSpec extends BaseSpec {
         }
       ),
       suite("ping")(
-        testM("PING with no input") {
+        test("PING with no input") {
           ping(None).map(assert(_)(equalTo("PONG")))
         },
-        testM("PING with input") {
+        test("PING with input") {
           ping(Some("Hello")).map(assert(_)(equalTo("Hello")))
         }
       ),
-      testM("reset") {
+      test("reset") {
         for {
           unit <- reset
         } yield assert(unit)(isUnit)

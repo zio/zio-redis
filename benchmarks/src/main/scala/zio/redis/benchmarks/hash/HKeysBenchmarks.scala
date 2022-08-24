@@ -17,9 +17,9 @@
 package zio.redis.benchmarks.hash
 
 import org.openjdk.jmh.annotations._
-import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{Scope => _, _}
 
 import java.util.concurrent.TimeUnit
 
@@ -67,5 +67,5 @@ class HKeysBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => hKeys(key).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => hKeys(key).returning[String]))
 }

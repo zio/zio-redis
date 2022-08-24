@@ -1,85 +1,84 @@
 package zio.redis
 
-import zio.duration._
+import zio._
 import zio.redis.Input._
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, Task, UIO}
 
 import java.net.InetAddress
 import java.time.Instant
 
 object InputSpec extends BaseSpec {
-  import StrAlgoLcsQueryType._
   import BitFieldCommand._
   import BitFieldType._
   import BitOperation._
   import Order._
   import RadiusUnit._
+  import StrAlgoLcsQueryType._
 
-  def spec: ZSpec[environment.TestEnvironment, Any] =
+  def spec: Spec[TestEnvironment, Throwable] =
     suite("Input encoders")(
       suite("AbsTtl")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(AbsTtlInput.encode(AbsTtl))
+            result <- ZIO.attempt(AbsTtlInput.encode(AbsTtl))
           } yield assert(result)(equalTo(respArgs("ABSTTL")))
         }
       ),
       suite("Address")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            ip     <- UIO(InetAddress.getByName("127.0.0.1"))
-            port   <- UIO(42)
-            result <- Task(AddressInput.encode(Address(ip, port)))
+            ip     <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
+            port   <- ZIO.succeed(42)
+            result <- ZIO.attempt(AddressInput.encode(Address(ip, port)))
           } yield assert(result)(equalTo(respArgs("127.0.0.1:42")))
         }
       ),
       suite("Aggregate")(
-        testM("max") {
+        test("max") {
           for {
-            result <- Task(AggregateInput.encode(Aggregate.Max))
+            result <- ZIO.attempt(AggregateInput.encode(Aggregate.Max))
           } yield assert(result)(equalTo(respArgs("AGGREGATE", "MAX")))
         },
-        testM("min") {
+        test("min") {
           for {
-            result <- Task(AggregateInput.encode(Aggregate.Min))
+            result <- ZIO.attempt(AggregateInput.encode(Aggregate.Min))
           } yield assert(result)(equalTo(respArgs("AGGREGATE", "MIN")))
         },
-        testM("sum") {
+        test("sum") {
           for {
-            result <- Task(AggregateInput.encode(Aggregate.Sum))
+            result <- ZIO.attempt(AggregateInput.encode(Aggregate.Sum))
           } yield assert(result)(equalTo(respArgs("AGGREGATE", "SUM")))
         }
       ),
       suite("Alpha")(
-        testM("alpha") {
+        test("alpha") {
           for {
-            result <- Task(AlphaInput.encode(Alpha))
+            result <- ZIO.attempt(AlphaInput.encode(Alpha))
           } yield assert(result)(equalTo(respArgs("ALPHA")))
         }
       ),
       suite("Auth")(
-        testM("with empty password") {
+        test("with empty password") {
           for {
-            result <- Task(AuthInput.encode(Auth("")))
+            result <- ZIO.attempt(AuthInput.encode(Auth("")))
           } yield assert(result)(equalTo(respArgs("AUTH", "")))
         },
-        testM("with non-empty password") {
+        test("with non-empty password") {
           for {
-            result <- Task(AuthInput.encode(Auth("pass")))
+            result <- ZIO.attempt(AuthInput.encode(Auth("pass")))
           } yield assert(result)(equalTo(respArgs("AUTH", "pass")))
         }
       ),
       suite("Bool")(
-        testM("true") {
+        test("true") {
           for {
-            result <- Task(BoolInput.encode(true))
+            result <- ZIO.attempt(BoolInput.encode(true))
           } yield assert(result)(equalTo(respArgs("1")))
         },
-        testM("false") {
+        test("false") {
           for {
-            result <- Task(BoolInput.encode(false))
+            result <- ZIO.attempt(BoolInput.encode(false))
           } yield assert(result)(equalTo(respArgs("0")))
         }
       ),
@@ -111,177 +110,177 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("BitFieldCommand")(
-        testM("get with unsigned type and positive offset") {
+        test("get with unsigned type and positive offset") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 2)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 2)))
           } yield assert(result)(equalTo(respArgs("GET", "u3", "2")))
         },
-        testM("get with signed type and negative offset") {
+        test("get with signed type and negative offset") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldGet(SignedInt(3), -2)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldGet(SignedInt(3), -2)))
           } yield assert(result)(equalTo(respArgs("GET", "i3", "-2")))
         },
-        testM("get with unsigned type and zero offset") {
+        test("get with unsigned type and zero offset") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 0)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 0)))
           } yield assert(result)(equalTo(respArgs("GET", "u3", "0")))
         },
-        testM("set with unsigned type, positive offset and positive value") {
+        test("set with unsigned type, positive offset and positive value") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldSet(UnsignedInt(3), 2, 100L)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldSet(UnsignedInt(3), 2, 100L)))
           } yield assert(result)(equalTo(respArgs("SET", "u3", "2", "100")))
         },
-        testM("set with signed type, negative offset and negative value") {
+        test("set with signed type, negative offset and negative value") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldSet(SignedInt(3), -2, -100L)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldSet(SignedInt(3), -2, -100L)))
           } yield assert(result)(equalTo(respArgs("SET", "i3", "-2", "-100")))
         },
-        testM("set with unsigned type, zero offset and zero value") {
+        test("set with unsigned type, zero offset and zero value") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldSet(UnsignedInt(3), 0, 0L)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldSet(UnsignedInt(3), 0, 0L)))
           } yield assert(result)(equalTo(respArgs("SET", "u3", "0", "0")))
         },
-        testM("incr with unsigned type, positive offset and positive value") {
+        test("incr with unsigned type, positive offset and positive value") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldIncr(UnsignedInt(3), 2, 100L)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldIncr(UnsignedInt(3), 2, 100L)))
           } yield assert(result)(equalTo(respArgs("INCRBY", "u3", "2", "100")))
         },
-        testM("incr with signed type, negative offset and negative value") {
+        test("incr with signed type, negative offset and negative value") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldIncr(SignedInt(3), -2, -100L)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldIncr(SignedInt(3), -2, -100L)))
           } yield assert(result)(equalTo(respArgs("INCRBY", "i3", "-2", "-100")))
         },
-        testM("incr with unsigned type, zero offset and zero value") {
+        test("incr with unsigned type, zero offset and zero value") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldIncr(UnsignedInt(3), 0, 0L)))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldIncr(UnsignedInt(3), 0, 0L)))
           } yield assert(result)(equalTo(respArgs("INCRBY", "u3", "0", "0")))
         },
-        testM("overflow sat") {
+        test("overflow sat") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldOverflow.Sat))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldOverflow.Sat))
           } yield assert(result)(equalTo(respArgs("OVERFLOW", "SAT")))
         },
-        testM("overflow fail") {
+        test("overflow fail") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldOverflow.Fail))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldOverflow.Fail))
           } yield assert(result)(equalTo(respArgs("OVERFLOW", "FAIL")))
         },
-        testM("overflow warp") {
+        test("overflow warp") {
           for {
-            result <- Task(BitFieldCommandInput.encode(BitFieldOverflow.Wrap))
+            result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldOverflow.Wrap))
           } yield assert(result)(equalTo(respArgs("OVERFLOW", "WRAP")))
         }
       ),
       suite("BitOperation")(
-        testM("and") {
+        test("and") {
           for {
-            result <- Task(BitOperationInput.encode(AND))
+            result <- ZIO.attempt(BitOperationInput.encode(AND))
           } yield assert(result)(equalTo(respArgs("AND")))
         },
-        testM("or") {
+        test("or") {
           for {
-            result <- Task(BitOperationInput.encode(OR))
+            result <- ZIO.attempt(BitOperationInput.encode(OR))
           } yield assert(result)(equalTo(respArgs("OR")))
         },
-        testM("xor") {
+        test("xor") {
           for {
-            result <- Task(BitOperationInput.encode(XOR))
+            result <- ZIO.attempt(BitOperationInput.encode(XOR))
           } yield assert(result)(equalTo(respArgs("XOR")))
         },
-        testM("not") {
+        test("not") {
           for {
-            result <- Task(BitOperationInput.encode(NOT))
+            result <- ZIO.attempt(BitOperationInput.encode(NOT))
           } yield assert(result)(equalTo(respArgs("NOT")))
         }
       ),
       suite("BitPosRange")(
-        testM("with only start") {
+        test("with only start") {
           for {
-            result <- Task(BitPosRangeInput.encode(BitPosRange(1.second.toMillis, None)))
+            result <- ZIO.attempt(BitPosRangeInput.encode(BitPosRange(1.second.toMillis, None)))
           } yield assert(result)(equalTo(respArgs("1000")))
         },
-        testM("with start and the end") {
+        test("with start and the end") {
           for {
-            result <- Task(BitPosRangeInput.encode(BitPosRange(0.second.toMillis, Some(1.second.toMillis))))
+            result <- ZIO.attempt(BitPosRangeInput.encode(BitPosRange(0.second.toMillis, Some(1.second.toMillis))))
           } yield assert(result)(equalTo(respArgs("0", "1000")))
         }
       ),
       suite("By")(
-        testM("with a pattern") {
+        test("with a pattern") {
           for {
-            result <- Task(ByInput.encode("mykey_*"))
+            result <- ZIO.attempt(ByInput.encode("mykey_*"))
           } yield assert(result)(equalTo(respArgs("BY", "mykey_*")))
         }
       ),
       suite("Changed")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(ChangedInput.encode(Changed))
+            result <- ZIO.attempt(ChangedInput.encode(Changed))
           } yield assert(result)(equalTo(respArgs("CH")))
         }
       ),
       suite("ClientKill")(
-        testM("address") {
+        test("address") {
           for {
-            address <- UIO(InetAddress.getByName("127.0.0.1"))
-            port    <- UIO(42)
-            result  <- Task(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
+            address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
+            port    <- ZIO.succeed(42)
+            result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
           } yield assert(result)(equalTo(respArgs("ADDR", "127.0.0.1:42")))
         },
-        testM("local address") {
+        test("local address") {
           for {
-            address <- UIO(InetAddress.getByName("127.0.0.1"))
-            port    <- UIO(42)
-            result  <- Task(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
+            address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
+            port    <- ZIO.succeed(42)
+            result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
           } yield assert(result)(equalTo(respArgs("LADDR", s"127.0.0.1:42")))
         },
-        testM("client id") {
+        test("client id") {
           for {
-            id     <- UIO(42L)
-            result <- Task(ClientKillInput.encode(ClientKillFilter.Id(id)))
+            id     <- ZIO.succeed(42L)
+            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Id(id)))
           } yield assert(result)(equalTo(respArgs("ID", "42")))
         },
-        testM("type") {
+        test("type") {
           for {
-            clientType <- UIO(ClientType.PubSub)
-            result     <- Task(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
+            clientType <- ZIO.succeed(ClientType.PubSub)
+            result     <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
           } yield assert(result)(equalTo(respArgs("TYPE", "pubsub")))
         },
-        testM("user") {
+        test("user") {
           for {
-            user   <- UIO("Foo Bar")
-            result <- Task(ClientKillInput.encode(ClientKillFilter.User(user)))
+            user   <- ZIO.succeed("Foo Bar")
+            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.User(user)))
           } yield assert(result)(equalTo(respArgs("USER", "Foo Bar")))
         },
-        testM("skip me") {
+        test("skip me") {
           for {
-            result <- Task(ClientKillInput.encode(ClientKillFilter.SkipMe(true)))
+            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.SkipMe(true)))
           } yield assert(result)(equalTo(respArgs("SKIPME", "YES")))
         }
       ),
       suite("ClientPauseMode")(
-        testM("all") {
+        test("all") {
           for {
-            result <- Task(ClientPauseModeInput.encode(ClientPauseMode.All))
+            result <- ZIO.attempt(ClientPauseModeInput.encode(ClientPauseMode.All))
           } yield assert(result)(equalTo(respArgs("ALL")))
         },
-        testM("write") {
+        test("write") {
           for {
-            result <- Task(ClientPauseModeInput.encode(ClientPauseMode.Write))
+            result <- ZIO.attempt(ClientPauseModeInput.encode(ClientPauseMode.Write))
           } yield assert(result)(equalTo(respArgs("WRITE")))
         }
       ),
       suite("ClientTracking")(
-        testM("off") {
+        test("off") {
           for {
-            result <- Task(ClientTrackingInput.encode(None))
+            result <- ZIO.attempt(ClientTrackingInput.encode(None))
           } yield assert(result)(equalTo(respArgs("OFF")))
         },
-        testM("client redirect with noloop and prefixes") {
+        test("client redirect with noloop and prefixes") {
           for {
-            clientId <- UIO(42L)
-            prefixes <- UIO(Chunk("prefix1", "prefix2", "prefix3"))
-            result   <- Task(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
+            clientId <- ZIO.succeed(42L)
+            prefixes <- ZIO.succeed(Chunk("prefix1", "prefix2", "prefix3"))
+            result   <- ZIO.attempt(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
           } yield assert(result)(
             equalTo(
               respArgs("ON", "REDIRECT", clientId.toString) ++ prefixes
@@ -289,252 +288,254 @@ object InputSpec extends BaseSpec {
             )
           )
         },
-        testM("broadcast mode") {
+        test("broadcast mode") {
           for {
             result <-
-              Task(ClientTrackingInput.encode(Some((None, Some(ClientTrackingMode.Broadcast), false, Chunk.empty))))
+              ZIO.attempt(
+                ClientTrackingInput.encode(Some((None, Some(ClientTrackingMode.Broadcast), false, Chunk.empty)))
+              )
           } yield assert(result)(equalTo(respArgs("ON", "BCAST")))
         }
       ),
       suite("Copy")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(CopyInput.encode(Copy))
+            result <- ZIO.attempt(CopyInput.encode(Copy))
           } yield assert(result)(equalTo(respArgs("COPY")))
         }
       ),
       suite("Count")(
-        testM("positive value") {
+        test("positive value") {
           for {
-            result <- Task(CountInput.encode(Count(3L)))
+            result <- ZIO.attempt(CountInput.encode(Count(3L)))
           } yield assert(result)(equalTo(respArgs("COUNT", "3")))
         },
-        testM("negative value") {
+        test("negative value") {
           for {
-            result <- Task(CountInput.encode(Count(-3L)))
+            result <- ZIO.attempt(CountInput.encode(Count(-3L)))
           } yield assert(result)(equalTo(respArgs("COUNT", "-3")))
         },
-        testM("zero value") {
+        test("zero value") {
           for {
-            result <- Task(CountInput.encode(Count(0L)))
+            result <- ZIO.attempt(CountInput.encode(Count(0L)))
           } yield assert(result)(equalTo(respArgs("COUNT", "0")))
         }
       ),
       suite("Position")(
-        testM("before") {
+        test("before") {
           for {
-            result <- Task(PositionInput.encode(Position.Before))
+            result <- ZIO.attempt(PositionInput.encode(Position.Before))
           } yield assert(result)(equalTo(respArgs("BEFORE")))
         },
-        testM("after") {
+        test("after") {
           for {
-            result <- Task(PositionInput.encode(Position.After))
+            result <- ZIO.attempt(PositionInput.encode(Position.After))
           } yield assert(result)(equalTo(respArgs("AFTER")))
         }
       ),
       suite("RedisType")(
-        testM("string type") {
+        test("string type") {
           for {
-            result <- Task(RedisTypeInput.encode(RedisType.String))
+            result <- ZIO.attempt(RedisTypeInput.encode(RedisType.String))
           } yield assert(result)(equalTo(respArgs("TYPE", "string")))
         },
-        testM("list type") {
+        test("list type") {
           for {
-            result <- Task(RedisTypeInput.encode(RedisType.List))
+            result <- ZIO.attempt(RedisTypeInput.encode(RedisType.List))
           } yield assert(result)(equalTo(respArgs("TYPE", "list")))
         },
-        testM("set type") {
+        test("set type") {
           for {
-            result <- Task(RedisTypeInput.encode(RedisType.Set))
+            result <- ZIO.attempt(RedisTypeInput.encode(RedisType.Set))
           } yield assert(result)(equalTo(respArgs("TYPE", "set")))
         },
-        testM("sorted set type") {
+        test("sorted set type") {
           for {
-            result <- Task(RedisTypeInput.encode(RedisType.SortedSet))
+            result <- ZIO.attempt(RedisTypeInput.encode(RedisType.SortedSet))
           } yield assert(result)(equalTo(respArgs("TYPE", "zset")))
         },
-        testM("hash type") {
+        test("hash type") {
           for {
-            result <- Task(RedisTypeInput.encode(RedisType.Hash))
+            result <- ZIO.attempt(RedisTypeInput.encode(RedisType.Hash))
           } yield assert(result)(equalTo(respArgs("TYPE", "hash")))
         },
-        testM("stream type") {
+        test("stream type") {
           for {
-            result <- Task(RedisTypeInput.encode(RedisType.Stream))
+            result <- ZIO.attempt(RedisTypeInput.encode(RedisType.Stream))
           } yield assert(result)(equalTo(respArgs("TYPE", "stream")))
         }
       ),
       suite("Double")(
-        testM("positive value") {
+        test("positive value") {
           for {
-            result <- Task(DoubleInput.encode(4.2d))
+            result <- ZIO.attempt(DoubleInput.encode(4.2d))
           } yield assert(result)(equalTo(respArgs("4.2")))
         },
-        testM("negative value") {
+        test("negative value") {
           for {
-            result <- Task(DoubleInput.encode(-4.2d))
+            result <- ZIO.attempt(DoubleInput.encode(-4.2d))
           } yield assert(result)(equalTo(respArgs("-4.2")))
         },
-        testM("zero value") {
+        test("zero value") {
           for {
-            result <- Task(DoubleInput.encode(0d))
+            result <- ZIO.attempt(DoubleInput.encode(0d))
           } yield assert(result)(equalTo(respArgs("0.0")))
         }
       ),
       suite("DurationMilliseconds")(
-        testM("1 second") {
+        test("1 second") {
           for {
-            result <- Task(DurationMillisecondsInput.encode(1.second))
+            result <- ZIO.attempt(DurationMillisecondsInput.encode(1.second))
           } yield assert(result)(equalTo(respArgs("1000")))
         },
-        testM("100 milliseconds") {
+        test("100 milliseconds") {
           for {
-            result <- Task(DurationMillisecondsInput.encode(100.millis))
+            result <- ZIO.attempt(DurationMillisecondsInput.encode(100.millis))
           } yield assert(result)(equalTo(respArgs("100")))
         }
       ),
       suite("DurationSeconds")(
-        testM("1 minute") {
+        test("1 minute") {
           for {
-            result <- Task(DurationSecondsInput.encode(1.minute))
+            result <- ZIO.attempt(DurationSecondsInput.encode(1.minute))
           } yield assert(result)(equalTo(respArgs("60")))
         },
-        testM("1 second") {
+        test("1 second") {
           for {
-            result <- Task(DurationSecondsInput.encode(1.second))
+            result <- ZIO.attempt(DurationSecondsInput.encode(1.second))
           } yield assert(result)(equalTo(respArgs("1")))
         },
-        testM("100 milliseconds") {
+        test("100 milliseconds") {
           for {
-            result <- Task(DurationSecondsInput.encode(100.millis))
+            result <- ZIO.attempt(DurationSecondsInput.encode(100.millis))
           } yield assert(result)(equalTo(respArgs("0")))
         }
       ),
       suite("DurationTtl")(
-        testM("1 second") {
+        test("1 second") {
           for {
-            result <- Task(DurationTtlInput.encode(1.second))
+            result <- ZIO.attempt(DurationTtlInput.encode(1.second))
           } yield assert(result)(equalTo(respArgs("PX", "1000")))
         },
-        testM("100 milliseconds") {
+        test("100 milliseconds") {
           for {
-            result <- Task(DurationTtlInput.encode(100.millis))
+            result <- ZIO.attempt(DurationTtlInput.encode(100.millis))
           } yield assert(result)(equalTo(respArgs("PX", "100")))
         }
       ),
       suite("Freq")(
-        testM("empty string") {
+        test("empty string") {
           for {
-            result <- Task(FreqInput.encode(Freq("")))
+            result <- ZIO.attempt(FreqInput.encode(Freq("")))
           } yield assert(result)(equalTo(respArgs("FREQ", "")))
         },
-        testM("non-empty string") {
+        test("non-empty string") {
           for {
-            result <- Task(FreqInput.encode(Freq("frequency")))
+            result <- ZIO.attempt(FreqInput.encode(Freq("frequency")))
           } yield assert(result)(equalTo(respArgs("FREQ", "frequency")))
         }
       ),
       suite("Get")(
-        testM("with a pattern") {
+        test("with a pattern") {
           for {
-            result <- Task(GetInput.encode("mypattern_*"))
+            result <- ZIO.attempt(GetInput.encode("mypattern_*"))
           } yield assert(result)(equalTo(respArgs("GET", "mypattern_*")))
         }
       ),
       suite("IdleTime")(
-        testM("0 seconds") {
+        test("0 seconds") {
           for {
-            result <- Task(IdleTimeInput.encode(IdleTime(0)))
+            result <- ZIO.attempt(IdleTimeInput.encode(IdleTime(0)))
           } yield assert(result)(equalTo(respArgs("IDLETIME", "0")))
         },
-        testM("5 seconds") {
+        test("5 seconds") {
           for {
-            result <- Task(IdleTimeInput.encode(IdleTime(5)))
+            result <- ZIO.attempt(IdleTimeInput.encode(IdleTime(5)))
           } yield assert(result)(equalTo(respArgs("IDLETIME", "5")))
         }
       ),
       suite("Increment")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(IncrementInput.encode(Increment))
+            result <- ZIO.attempt(IncrementInput.encode(Increment))
           } yield assert(result)(equalTo(respArgs("INCR")))
         }
       ),
       suite("KeepTtl")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(KeepTtlInput.encode(KeepTtl))
+            result <- ZIO.attempt(KeepTtlInput.encode(KeepTtl))
           } yield assert(result)(equalTo(respArgs("KEEPTTL")))
         }
       ),
       suite("LexRange")(
-        testM("with unbound min and unbound max") {
+        test("with unbound min and unbound max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Unbounded.stringify, LexMaximum.Unbounded.stringify))
                       )
           } yield assert(result)(equalTo(respArgs("-", "+")))
         },
-        testM("with open min and unbound max") {
+        test("with open min and unbound max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Open("a").stringify, LexMaximum.Unbounded.stringify))
                       )
           } yield assert(result)(equalTo(respArgs("(a", "+")))
         },
-        testM("with closed min and unbound max") {
+        test("with closed min and unbound max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Closed("a").stringify, LexMaximum.Unbounded.stringify))
                       )
           } yield assert(result)(equalTo(respArgs("[a", "+")))
         },
-        testM("with unbound min and open max") {
+        test("with unbound min and open max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Unbounded.stringify, LexMaximum.Open("z").stringify))
                       )
           } yield assert(result)(equalTo(respArgs("-", "(z")))
         },
-        testM("with open min and open max") {
+        test("with open min and open max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Open("a").stringify, LexMaximum.Open("z").stringify))
                       )
           } yield assert(result)(equalTo(respArgs("(a", "(z")))
         },
-        testM("with closed min and open max") {
+        test("with closed min and open max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Closed("a").stringify, LexMaximum.Open("z").stringify))
                       )
           } yield assert(result)(equalTo(respArgs("[a", "(z")))
         },
-        testM("with unbound min and closed max") {
+        test("with unbound min and closed max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Unbounded.stringify, LexMaximum.Closed("z").stringify))
                       )
           } yield assert(result)(equalTo(respArgs("-", "[z")))
         },
-        testM("with open min and closed max") {
+        test("with open min and closed max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Open("a").stringify, LexMaximum.Closed("z").stringify))
                       )
           } yield assert(result)(equalTo(respArgs("(a", "[z")))
         },
-        testM("with closed min and closed max") {
+        test("with closed min and closed max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((LexMinimum.Closed("a").stringify, LexMaximum.Closed("z").stringify))
                       )
@@ -542,274 +543,274 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Limit")(
-        testM("with positive offset and positive count") {
+        test("with positive offset and positive count") {
           for {
-            result <- Task(LimitInput.encode(Limit(4L, 5L)))
+            result <- ZIO.attempt(LimitInput.encode(Limit(4L, 5L)))
           } yield assert(result)(equalTo(respArgs("LIMIT", "4", "5")))
         },
-        testM("with negative offset and negative count") {
+        test("with negative offset and negative count") {
           for {
-            result <- Task(LimitInput.encode(Limit(-4L, -5L)))
+            result <- ZIO.attempt(LimitInput.encode(Limit(-4L, -5L)))
           } yield assert(result)(equalTo(respArgs("LIMIT", "-4", "-5")))
         },
-        testM("with zero offset and zero count") {
+        test("with zero offset and zero count") {
           for {
-            result <- Task(LimitInput.encode(Limit(0L, 0L)))
+            result <- ZIO.attempt(LimitInput.encode(Limit(0L, 0L)))
           } yield assert(result)(equalTo(respArgs("LIMIT", "0", "0")))
         }
       ),
       suite("Long")(
-        testM("positive value") {
+        test("positive value") {
           for {
-            result <- Task(LongInput.encode(4L))
+            result <- ZIO.attempt(LongInput.encode(4L))
           } yield assert(result)(equalTo(respArgs("4")))
         },
-        testM("negative value") {
+        test("negative value") {
           for {
-            result <- Task(LongInput.encode(-4L))
+            result <- ZIO.attempt(LongInput.encode(-4L))
           } yield assert(result)(equalTo(respArgs("-4")))
         },
-        testM("zero value") {
+        test("zero value") {
           for {
-            result <- Task(LongInput.encode(0L))
+            result <- ZIO.attempt(LongInput.encode(0L))
           } yield assert(result)(equalTo(respArgs("0")))
         }
       ),
       suite("LongLat")(
-        testM("positive longitude and latitude") {
+        test("positive longitude and latitude") {
           for {
-            result <- Task(LongLatInput.encode(LongLat(4.2d, 5.2d)))
+            result <- ZIO.attempt(LongLatInput.encode(LongLat(4.2d, 5.2d)))
           } yield assert(result)(equalTo(respArgs("4.2", "5.2")))
         },
-        testM("negative longitude and latitude") {
+        test("negative longitude and latitude") {
           for {
-            result <- Task(LongLatInput.encode(LongLat(-4.2d, -5.2d)))
+            result <- ZIO.attempt(LongLatInput.encode(LongLat(-4.2d, -5.2d)))
           } yield assert(result)(equalTo(respArgs("-4.2", "-5.2")))
         },
-        testM("zero longitude and latitude") {
+        test("zero longitude and latitude") {
           for {
-            result <- Task(LongLatInput.encode(LongLat(0d, 0d)))
+            result <- ZIO.attempt(LongLatInput.encode(LongLat(0d, 0d)))
           } yield assert(result)(equalTo(respArgs("0.0", "0.0")))
         }
       ),
       suite("MemberScore")(
-        testM("with positive score and empty member") {
+        test("with positive score and empty member") {
           for {
-            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
           } yield assert(result)(equalTo(respArgs("4.2", "")))
         },
-        testM("with negative score and empty member") {
+        test("with negative score and empty member") {
           for {
-            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
           } yield assert(result)(equalTo(respArgs("-4.2", "")))
         },
-        testM("with zero score and empty member") {
+        test("with zero score and empty member") {
           for {
-            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "")))
           } yield assert(result)(equalTo(respArgs("0.0", "")))
         },
-        testM("with positive score and non-empty member") {
+        test("with positive score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("4.2", "member")))
         },
-        testM("with negative score and non-empty member") {
+        test("with negative score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
           } yield assert(result)(equalTo(respArgs("-4.2", "member")))
         },
-        testM("with zero score and non-empty member") {
+        test("with zero score and non-empty member") {
           for {
-            result <- Task(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
           } yield assert(result)(equalTo(respArgs("0.0", "member")))
         }
       ),
       suite("NoInput")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(NoInput.encode(()))
+            result <- ZIO.attempt(NoInput.encode(()))
           } yield assert(result)(isEmpty)
         }
       ),
       suite("NonEmptyList")(
-        testM("with multiple elements") {
+        test("with multiple elements") {
           for {
-            result <- Task(NonEmptyList(StringInput).encode(("a", List("b", "c"))))
+            result <- ZIO.attempt(NonEmptyList(StringInput).encode(("a", List("b", "c"))))
           } yield assert(result)(equalTo(respArgs("a", "b", "c")))
         },
-        testM("with one element") {
+        test("with one element") {
           for {
-            result <- Task(NonEmptyList(StringInput).encode(("a", List.empty)))
+            result <- ZIO.attempt(NonEmptyList(StringInput).encode(("a", List.empty)))
           } yield assert(result)(equalTo(respArgs("a")))
         }
       ),
       suite("Order")(
-        testM("ascending") {
+        test("ascending") {
           for {
-            result <- Task(OrderInput.encode(Ascending))
+            result <- ZIO.attempt(OrderInput.encode(Ascending))
           } yield assert(result)(equalTo(respArgs("ASC")))
         },
-        testM("descending") {
+        test("descending") {
           for {
-            result <- Task(OrderInput.encode(Descending))
+            result <- ZIO.attempt(OrderInput.encode(Descending))
           } yield assert(result)(equalTo(respArgs("DESC")))
         }
       ),
       suite("RadiusUnit")(
-        testM("meters") {
+        test("meters") {
           for {
-            result <- Task(RadiusUnitInput.encode(Meters))
+            result <- ZIO.attempt(RadiusUnitInput.encode(Meters))
           } yield assert(result)(equalTo(respArgs("m")))
         },
-        testM("kilometers") {
+        test("kilometers") {
           for {
-            result <- Task(RadiusUnitInput.encode(Kilometers))
+            result <- ZIO.attempt(RadiusUnitInput.encode(Kilometers))
           } yield assert(result)(equalTo(respArgs("km")))
         },
-        testM("feet") {
+        test("feet") {
           for {
-            result <- Task(RadiusUnitInput.encode(Feet))
+            result <- ZIO.attempt(RadiusUnitInput.encode(Feet))
           } yield assert(result)(equalTo(respArgs("ft")))
         },
-        testM("miles") {
+        test("miles") {
           for {
-            result <- Task(RadiusUnitInput.encode(Miles))
+            result <- ZIO.attempt(RadiusUnitInput.encode(Miles))
           } yield assert(result)(equalTo(respArgs("mi")))
         }
       ),
       suite("Range")(
-        testM("with positive start and positive end") {
+        test("with positive start and positive end") {
           for {
-            result <- Task(RangeInput.encode(Range(1, 5)))
+            result <- ZIO.attempt(RangeInput.encode(Range(1, 5)))
           } yield assert(result)(equalTo(respArgs("1", "5")))
         },
-        testM("with negative start and positive end") {
+        test("with negative start and positive end") {
           for {
-            result <- Task(RangeInput.encode(Range(-1, 5)))
+            result <- ZIO.attempt(RangeInput.encode(Range(-1, 5)))
           } yield assert(result)(equalTo(respArgs("-1", "5")))
         },
-        testM("with positive start and negative end") {
+        test("with positive start and negative end") {
           for {
-            result <- Task(RangeInput.encode(Range(1, -5)))
+            result <- ZIO.attempt(RangeInput.encode(Range(1, -5)))
           } yield assert(result)(equalTo(respArgs("1", "-5")))
         },
-        testM("with negative start and negative end") {
+        test("with negative start and negative end") {
           for {
-            result <- Task(RangeInput.encode(Range(-1, -5)))
+            result <- ZIO.attempt(RangeInput.encode(Range(-1, -5)))
           } yield assert(result)(equalTo(respArgs("-1", "-5")))
         }
       ),
       suite("Pattern")(
-        testM("with valid pattern") {
+        test("with valid pattern") {
           for {
-            result <- Task(PatternInput.encode(Pattern("*[ab]-*")))
+            result <- ZIO.attempt(PatternInput.encode(Pattern("*[ab]-*")))
           } yield assert(result)(equalTo(respArgs("MATCH", "*[ab]-*")))
         },
-        testM("with empty pattern") {
+        test("with empty pattern") {
           for {
-            result <- Task(PatternInput.encode(Pattern("")))
+            result <- ZIO.attempt(PatternInput.encode(Pattern("")))
           } yield assert(result)(equalTo(respArgs("MATCH", "")))
         }
       ),
       suite("Replace")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(ReplaceInput.encode(Replace))
+            result <- ZIO.attempt(ReplaceInput.encode(Replace))
           } yield assert(result)(equalTo(respArgs("REPLACE")))
         }
       ),
       suite("StoreDist")(
-        testM("with non-empty string") {
+        test("with non-empty string") {
           for {
-            result <- Task(StoreDistInput.encode(StoreDist("key")))
+            result <- ZIO.attempt(StoreDistInput.encode(StoreDist("key")))
           } yield assert(result)(equalTo(respArgs("STOREDIST", "key")))
         },
-        testM("with empty string") {
+        test("with empty string") {
           for {
-            result <- Task(StoreDistInput.encode(StoreDist("")))
+            result <- ZIO.attempt(StoreDistInput.encode(StoreDist("")))
           } yield assert(result)(equalTo(respArgs("STOREDIST", "")))
         }
       ),
       suite("Store")(
-        testM("with non-empty string") {
+        test("with non-empty string") {
           for {
-            result <- Task(StoreInput.encode(Store("key")))
+            result <- ZIO.attempt(StoreInput.encode(Store("key")))
           } yield assert(result)(equalTo(respArgs("STORE", "key")))
         },
-        testM("with empty string") {
+        test("with empty string") {
           for {
-            result <- Task(StoreInput.encode(Store("")))
+            result <- ZIO.attempt(StoreInput.encode(Store("")))
           } yield assert(result)(equalTo(respArgs("STORE", "")))
         }
       ),
       suite("ScoreRange")(
-        testM("with infinite min and infinite max") {
+        test("with infinite min and infinite max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Infinity.stringify))
                       )
           } yield assert(result)(equalTo(respArgs("-inf", "+inf")))
         },
-        testM("with open min and infinite max") {
+        test("with open min and infinite max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Infinity.stringify))
                       )
           } yield assert(result)(equalTo(respArgs("(4.2", "+inf")))
         },
-        testM("with closed min and infinite max") {
+        test("with closed min and infinite max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Infinity.stringify))
                       )
           } yield assert(result)(equalTo(respArgs("4.2", "+inf")))
         },
-        testM("with infinite min and open max") {
+        test("with infinite min and open max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Open(5.2d).stringify))
                       )
           } yield assert(result)(equalTo(respArgs("-inf", "(5.2")))
         },
-        testM("with open min and open max") {
+        test("with open min and open max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
                       )
           } yield assert(result)(equalTo(respArgs("(4.2", "(5.2")))
         },
-        testM("with closed min and open max") {
+        test("with closed min and open max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Open(5.2d).stringify))
                       )
           } yield assert(result)(equalTo(respArgs("4.2", "(5.2")))
         },
-        testM("with infinite min and closed max") {
+        test("with infinite min and closed max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Infinity.stringify, ScoreMaximum.Closed(5.2d).stringify))
                       )
           } yield assert(result)(equalTo(respArgs("-inf", "5.2")))
         },
-        testM("with open min and closed max") {
+        test("with open min and closed max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Open(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
                       )
           } yield assert(result)(equalTo(respArgs("(4.2", "5.2")))
         },
-        testM("with closed min and closed max") {
+        test("with closed min and closed max") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple2(ArbitraryInput[String](), ArbitraryInput[String]())
                           .encode((ScoreMinimum.Closed(4.2d).stringify, ScoreMaximum.Closed(5.2d).stringify))
                       )
@@ -817,88 +818,88 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("String")(
-        testM("non-empty value") {
+        test("non-empty value") {
           for {
-            result <- Task(StringInput.encode("non-empty"))
+            result <- ZIO.attempt(StringInput.encode("non-empty"))
           } yield assert(result)(equalTo(respArgs("non-empty")))
         },
-        testM("empty value") {
+        test("empty value") {
           for {
-            result <- Task(StringInput.encode(""))
+            result <- ZIO.attempt(StringInput.encode(""))
           } yield assert(result)(equalTo(respArgs("")))
         }
       ),
       suite("Optional")(
-        testM("none") {
+        test("none") {
           for {
-            result <- Task(OptionalInput(LongInput).encode(None))
+            result <- ZIO.attempt(OptionalInput(LongInput).encode(None))
           } yield assert(result)(isEmpty)
         },
-        testM("some") {
+        test("some") {
           for {
-            result <- Task(OptionalInput(LongInput).encode(Some(2L)))
+            result <- ZIO.attempt(OptionalInput(LongInput).encode(Some(2L)))
           } yield assert(result)(equalTo(respArgs("2")))
         }
       ),
       suite("TimeSeconds")(
-        testM("positiv value") {
+        test("positiv value") {
           for {
-            result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(3L)))
+            result <- ZIO.attempt(TimeSecondsInput.encode(Instant.ofEpochSecond(3L)))
           } yield assert(result)(equalTo(respArgs("3")))
         },
-        testM("zero value") {
+        test("zero value") {
           for {
-            result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(0L)))
+            result <- ZIO.attempt(TimeSecondsInput.encode(Instant.ofEpochSecond(0L)))
           } yield assert(result)(equalTo(respArgs("0")))
         },
-        testM("negative value") {
+        test("negative value") {
           for {
-            result <- Task(TimeSecondsInput.encode(Instant.ofEpochSecond(-3L)))
+            result <- ZIO.attempt(TimeSecondsInput.encode(Instant.ofEpochSecond(-3L)))
           } yield assert(result)(equalTo(respArgs("-3")))
         }
       ),
       suite("TimeMilliseconds")(
-        testM("positiv value") {
+        test("positiv value") {
           for {
-            result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(3L)))
+            result <- ZIO.attempt(TimeMillisecondsInput.encode(Instant.ofEpochSecond(3L)))
           } yield assert(result)(equalTo(respArgs("3000")))
         },
-        testM("zero value") {
+        test("zero value") {
           for {
-            result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(0L)))
+            result <- ZIO.attempt(TimeMillisecondsInput.encode(Instant.ofEpochSecond(0L)))
           } yield assert(result)(equalTo(respArgs("0")))
         },
-        testM("negative value") {
+        test("negative value") {
           for {
-            result <- Task(TimeMillisecondsInput.encode(Instant.ofEpochSecond(-3L)))
+            result <- ZIO.attempt(TimeMillisecondsInput.encode(Instant.ofEpochSecond(-3L)))
           } yield assert(result)(equalTo(respArgs("-3000")))
         }
       ),
       suite("Tuple2")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(Tuple2(StringInput, LongInput).encode(("one", 2L)))
+            result <- ZIO.attempt(Tuple2(StringInput, LongInput).encode(("one", 2L)))
           } yield assert(result)(equalTo(respArgs("one", "2")))
         }
       ),
       suite("Tuple3")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(Tuple3(StringInput, LongInput, StringInput).encode(("one", 2, "three")))
+            result <- ZIO.attempt(Tuple3(StringInput, LongInput, StringInput).encode(("one", 2, "three")))
           } yield assert(result)(equalTo(respArgs("one", "2", "three")))
         }
       ),
       suite("Tuple4")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(Tuple4(StringInput, LongInput, StringInput, LongInput).encode(("one", 2, "three", 4)))
+            result <- ZIO.attempt(Tuple4(StringInput, LongInput, StringInput, LongInput).encode(("one", 2, "three", 4)))
           } yield assert(result)(equalTo(respArgs("one", "2", "three", "4")))
         }
       ),
       suite("Tuple5")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple5(StringInput, LongInput, StringInput, LongInput, StringInput)
                           .encode(("one", 2, "three", 4, "five"))
                       )
@@ -908,9 +909,9 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Tuple7")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple7(StringInput, LongInput, StringInput, LongInput, StringInput, LongInput, StringInput)
                           .encode(("one", 2, "three", 4, "five", 6, "seven"))
                       )
@@ -930,9 +931,9 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Tuple9")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple9(
                           StringInput,
                           LongInput,
@@ -963,9 +964,9 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Tuple11")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(
+            result <- ZIO.attempt(
                         Tuple11(
                           StringInput,
                           LongInput,
@@ -1000,256 +1001,277 @@ object InputSpec extends BaseSpec {
         }
       ),
       suite("Update")(
-        testM("set existing") {
+        test("set existing") {
           for {
-            result <- Task(UpdateInput.encode(Update.SetExisting))
+            result <- ZIO.attempt(UpdateInput.encode(Update.SetExisting))
           } yield assert(result)(equalTo(respArgs("XX")))
         },
-        testM("set new") {
+        test("set new") {
           for {
-            result <- Task(UpdateInput.encode(Update.SetNew))
+            result <- ZIO.attempt(UpdateInput.encode(Update.SetNew))
           } yield assert(result)(equalTo(respArgs("NX")))
         }
       ),
       suite("Id")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(IdInput.encode(10))
+            result <- ZIO.attempt(IdInput.encode(10))
           } yield assert(result)(equalTo(respArgs("ID", "10")))
         }
       ),
       suite("UnblockBehavior")(
-        testM("timeout") {
+        test("timeout") {
           for {
-            result <- Task(UnblockBehaviorInput.encode(UnblockBehavior.Timeout))
+            result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Timeout))
           } yield assert(result)(equalTo(respArgs("TIMEOUT")))
         },
-        testM("error") {
+        test("error") {
           for {
-            result <- Task(UnblockBehaviorInput.encode(UnblockBehavior.Error))
+            result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Error))
           } yield assert(result)(equalTo(respArgs("ERROR")))
         }
       ),
       suite("Varargs")(
-        testM("with multiple elements") {
+        test("with multiple elements") {
           for {
-            result <- Task(Varargs(LongInput).encode(List(1, 2, 3)))
+            result <- ZIO.attempt(Varargs(LongInput).encode(List(1, 2, 3)))
           } yield assert(result)(equalTo(respArgs("1", "2", "3")))
         },
-        testM("with no elements") {
+        test("with no elements") {
           for {
-            result <- Task(Varargs(LongInput).encode(List.empty))
+            result <- ZIO.attempt(Varargs(LongInput).encode(List.empty))
           } yield assert(result)(isEmpty)
         }
       ),
       suite("WithScores")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(WithScoresInput.encode(WithScores))
+            result <- ZIO.attempt(WithScoresInput.encode(WithScores))
           } yield assert(result)(equalTo(respArgs("WITHSCORES")))
         }
       ),
       suite("WithCoord")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(WithCoordInput.encode(WithCoord))
+            result <- ZIO.attempt(WithCoordInput.encode(WithCoord))
           } yield assert(result)(equalTo(respArgs("WITHCOORD")))
         }
       ),
       suite("WithDist")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(WithDistInput.encode(WithDist))
+            result <- ZIO.attempt(WithDistInput.encode(WithDist))
           } yield assert(result)(equalTo(respArgs("WITHDIST")))
         }
       ),
       suite("WithHash")(
-        testM("valid value") {
+        test("valid value") {
           for {
-            result <- Task(WithHashInput.encode(WithHash))
+            result <- ZIO.attempt(WithHashInput.encode(WithHash))
           } yield assert(result)(equalTo(respArgs("WITHHASH")))
         }
       ),
       suite("Idle")(
-        testM("with 1 second") {
-          Task(IdleInput.encode(1.second))
+        test("with 1 second") {
+          ZIO
+            .attempt(IdleInput.encode(1.second))
             .map(assert(_)(equalTo(respArgs("IDLE", "1000"))))
         },
-        testM("with 100 milliseconds") {
-          Task(IdleInput.encode(100.millis))
+        test("with 100 milliseconds") {
+          ZIO
+            .attempt(IdleInput.encode(100.millis))
             .map(assert(_)(equalTo(respArgs("IDLE", "100"))))
         },
-        testM("with negative duration") {
-          Task(IdleInput.encode((-1).second))
-            .map(assert(_)(equalTo(respArgs("IDLE", "0"))))
+        test("with negative duration") {
+          ZIO
+            .attempt(IdleInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("IDLE", "-1000"))))
         }
       ),
       suite("Time")(
-        testM("with 1 second") {
-          Task(TimeInput.encode(1.second))
+        test("with 1 second") {
+          ZIO
+            .attempt(TimeInput.encode(1.second))
             .map(assert(_)(equalTo(respArgs("TIME", "1000"))))
         },
-        testM("with 100 milliseconds") {
-          Task(TimeInput.encode(100.millis))
+        test("with 100 milliseconds") {
+          ZIO
+            .attempt(TimeInput.encode(100.millis))
             .map(assert(_)(equalTo(respArgs("TIME", "100"))))
         },
-        testM("with negative duration") {
-          Task(TimeInput.encode((-1).second))
-            .map(assert(_)(equalTo(respArgs("TIME", "0"))))
+        test("with negative duration") {
+          ZIO
+            .attempt(TimeInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("TIME", "-1000"))))
         }
       ),
       suite("RetryCount")(
-        testM("with positive count") {
-          Task(RetryCountInput.encode(100))
+        test("with positive count") {
+          ZIO
+            .attempt(RetryCountInput.encode(100))
             .map(assert(_)(equalTo(respArgs("RETRYCOUNT", "100"))))
         },
-        testM("with negative count") {
-          Task(RetryCountInput.encode(-100))
+        test("with negative count") {
+          ZIO
+            .attempt(RetryCountInput.encode(-100))
             .map(assert(_)(equalTo(respArgs("RETRYCOUNT", "-100"))))
         }
       ),
       suite("XGroupCreate")(
-        testM("without mkStream") {
-          Task(
-            XGroupCreateInput[String, String, String]().encode(
-              XGroupCommand.Create("key", "group", "id", mkStream = false)
+        test("without mkStream") {
+          ZIO
+            .attempt(
+              XGroupCreateInput[String, String, String]().encode(
+                XGroupCommand.Create("key", "group", "id", mkStream = false)
+              )
             )
-          )
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id"))))
         },
-        testM("with mkStream") {
-          Task(
-            XGroupCreateInput[String, String, String]().encode(
-              XGroupCommand.Create("key", "group", "id", mkStream = true)
+        test("with mkStream") {
+          ZIO
+            .attempt(
+              XGroupCreateInput[String, String, String]().encode(
+                XGroupCommand.Create("key", "group", "id", mkStream = true)
+              )
             )
-          )
             .map(assert(_)(equalTo(respArgs("CREATE", "key", "group", "id", "MKSTREAM"))))
         }
       ),
       suite("XGroupSetId")(
-        testM("valid value") {
-          Task(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
+        test("valid value") {
+          ZIO
+            .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
             .map(assert(_)(equalTo(respArgs("SETID", "key", "group", "id"))))
         }
       ),
       suite("XGroupDestroy")(
-        testM("valid value") {
-          Task(XGroupDestroyInput[String, String]().encode(XGroupCommand.Destroy("key", "group")))
+        test("valid value") {
+          ZIO
+            .attempt(XGroupDestroyInput[String, String]().encode(XGroupCommand.Destroy("key", "group")))
             .map(assert(_)(equalTo(respArgs("DESTROY", "key", "group"))))
         }
       ),
       suite("XGroupCreateConsumer")(
-        testM("valid value") {
-          Task(
-            XGroupCreateConsumerInput[String, String, String]().encode(
-              XGroupCommand.CreateConsumer("key", "group", "consumer")
+        test("valid value") {
+          ZIO
+            .attempt(
+              XGroupCreateConsumerInput[String, String, String]().encode(
+                XGroupCommand.CreateConsumer("key", "group", "consumer")
+              )
             )
-          )
             .map(assert(_)(equalTo(respArgs("CREATECONSUMER", "key", "group", "consumer"))))
         }
       ),
       suite("XGroupDelConsumer")(
-        testM("valid value") {
-          Task(
-            XGroupDelConsumerInput[String, String, String]().encode(
-              XGroupCommand.DelConsumer("key", "group", "consumer")
+        test("valid value") {
+          ZIO
+            .attempt(
+              XGroupDelConsumerInput[String, String, String]().encode(
+                XGroupCommand.DelConsumer("key", "group", "consumer")
+              )
             )
-          )
             .map(assert(_)(equalTo(respArgs("DELCONSUMER", "key", "group", "consumer"))))
         }
       ),
       suite("Block")(
-        testM("with 1 second") {
-          Task(BlockInput.encode(1.second))
+        test("with 1 second") {
+          ZIO
+            .attempt(BlockInput.encode(1.second))
             .map(assert(_)(equalTo(respArgs("BLOCK", "1000"))))
         },
-        testM("with 100 milliseconds") {
-          Task(BlockInput.encode(100.millis))
+        test("with 100 milliseconds") {
+          ZIO
+            .attempt(BlockInput.encode(100.millis))
             .map(assert(_)(equalTo(respArgs("BLOCK", "100"))))
         },
-        testM("with negative duration") {
-          Task(BlockInput.encode((-1).second))
-            .map(assert(_)(equalTo(respArgs("BLOCK", "0"))))
+        test("with negative duration") {
+          ZIO
+            .attempt(BlockInput.encode((-1).second))
+            .map(assert(_)(equalTo(respArgs("BLOCK", "-1000"))))
         }
       ),
       suite("Streams")(
-        testM("with one pair") {
-          Task(StreamsInput[String, String]().encode(("a" -> "b", Chunk.empty)))
+        test("with one pair") {
+          ZIO
+            .attempt(StreamsInput[String, String]().encode(("a" -> "b", Chunk.empty)))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "b"))))
         },
-        testM("with multiple pairs") {
-          Task(StreamsInput[String, String]().encode(("a" -> "b", Chunk.single("c" -> "d"))))
+        test("with multiple pairs") {
+          ZIO
+            .attempt(StreamsInput[String, String]().encode(("a" -> "b", Chunk.single("c" -> "d"))))
             .map(assert(_)(equalTo(respArgs("STREAMS", "a", "c", "b", "d"))))
         }
       ),
       suite("NoAck")(
-        testM("valid value") {
-          Task(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(respArgs("NOACK"))))
+        test("valid value") {
+          ZIO.attempt(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(respArgs("NOACK"))))
         }
       ),
       suite("MaxLen")(
-        testM("with approximate") {
-          Task(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
+        test("with approximate") {
+          ZIO
+            .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "~", "10"))))
         },
-        testM("without approximate") {
-          Task(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
+        test("without approximate") {
+          ZIO
+            .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
             .map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
         }
       ),
       suite("WithForce")(
-        testM("valid value") {
-          Task(WithForceInput.encode(WithForce)).map(assert(_)(equalTo(respArgs("FORCE"))))
+        test("valid value") {
+          ZIO.attempt(WithForceInput.encode(WithForce)).map(assert(_)(equalTo(respArgs("FORCE"))))
         }
       ),
       suite("WithJustId")(
-        testM("valid value") {
-          Task(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
+        test("valid value") {
+          ZIO.attempt(WithJustIdInput.encode(WithJustId)).map(assert(_)(equalTo(respArgs("JUSTID"))))
         }
       ),
       suite("Side")(
-        testM("left") {
+        test("left") {
           for {
-            result <- Task(SideInput.encode(Side.Left))
+            result <- ZIO.attempt(SideInput.encode(Side.Left))
           } yield assert(result)(equalTo(respArgs("LEFT")))
         },
-        testM("right") {
+        test("right") {
           for {
-            result <- Task(SideInput.encode(Side.Right))
+            result <- ZIO.attempt(SideInput.encode(Side.Right))
           } yield assert(result)(equalTo(respArgs("RIGHT")))
         }
       ),
       suite("ListMaxLen")(
-        testM("valid value") {
-          Task(ListMaxLenInput.encode(ListMaxLen(10L))).map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
+        test("valid value") {
+          ZIO.attempt(ListMaxLenInput.encode(ListMaxLen(10L))).map(assert(_)(equalTo(respArgs("MAXLEN", "10"))))
         }
       ),
       suite("Rank")(
-        testM("valid value") {
-          Task(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(respArgs("RANK", "10"))))
+        test("valid value") {
+          ZIO.attempt(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(respArgs("RANK", "10"))))
         }
       ),
       suite("GetEx")(
-        testM("GetExInput - valid value") {
+        test("GetExInput - valid value") {
           for {
             resultSeconds <-
-              Task(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
             resultMilliseconds <-
-              Task(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
           } yield assert(resultSeconds)(equalTo(respArgs("key", "EX", "1"))) && assert(resultMilliseconds)(
             equalTo(respArgs("key", "PX", "100"))
           )
         },
-        testM("GetExAtInput - valid value") {
+        test("GetExAtInput - valid value") {
           for {
             resultSeconds <-
-              Task(
+              ZIO.attempt(
                 GetExAtInput[String]().encode(
                   scala.Tuple3("key", ExpiredAt.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
                 )
               )
             resultMilliseconds <-
-              Task(
+              ZIO.attempt(
                 GetExAtInput[String]().encode(
                   scala.Tuple3("key", ExpiredAt.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
                 )
@@ -1258,23 +1280,23 @@ object InputSpec extends BaseSpec {
             equalTo(respArgs("key", "PXAT", "1617667200000"))
           )
         },
-        testM("GetExPersistInput - valid value") {
+        test("GetExPersistInput - valid value") {
           for {
-            result              <- Task(GetExPersistInput[String]().encode("key" -> true))
-            resultWithoutOption <- Task(GetExPersistInput[String]().encode("key" -> false))
+            result              <- ZIO.attempt(GetExPersistInput[String]().encode("key" -> true))
+            resultWithoutOption <- ZIO.attempt(GetExPersistInput[String]().encode("key" -> false))
           } yield assert(result)(equalTo(respArgs("key", "PERSIST"))) &&
             assert(resultWithoutOption)(equalTo(respArgs("key")))
         }
       ),
       suite("YesNo")(
-        testM("yes") {
+        test("yes") {
           for {
-            result <- Task(YesNoInput.encode(true))
+            result <- ZIO.attempt(YesNoInput.encode(true))
           } yield assert(result)(equalTo(respArgs("YES")))
         },
-        testM("no") {
+        test("no") {
           for {
-            result <- Task(YesNoInput.encode(false))
+            result <- ZIO.attempt(YesNoInput.encode(false))
           } yield assert(result)(equalTo(respArgs("NO")))
         }
       )
