@@ -27,7 +27,7 @@ sealed trait ApiError extends NoStackTrace { self =>
     self match {
       case CorruptedData | GithubUnreachable => Response.fromHttpError(HttpError.InternalServerError())
       case CacheMiss(key)                    => Response.fromHttpError(HttpError.NotFound(Path.empty / key))
-      case UnknownProject(path)              => Response.fromHttpError(HttpError.NotFound(Path(path)))
+      case UnknownProject(path)              => Response.fromHttpError(HttpError.NotFound(Path.root / path))
     }
 }
 
