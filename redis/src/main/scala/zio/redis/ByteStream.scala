@@ -17,7 +17,7 @@
 package zio.redis
 
 import zio._
-import zio.stream.Stream
+import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
@@ -90,7 +90,7 @@ private[redis] object ByteStream {
   ) extends ByteStream {
 
     val read: Stream[IOException, Byte] =
-      zio.stream.ZStream.repeatZIOChunkOption {
+      ZStream.repeatZIOChunkOption {
         val receive =
           for {
             _ <- ZIO.succeed(readBuffer.clear())
