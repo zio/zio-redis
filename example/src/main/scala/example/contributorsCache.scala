@@ -28,7 +28,7 @@ trait ContributorsCache {
   def fetchAll(repository: Repository): IO[ApiError, Contributors]
 }
 
-case class ContributorsCacheLive(r: Redis, s: Sttp) extends ContributorsCache {
+final case class ContributorsCacheLive(r: Redis, s: Sttp) extends ContributorsCache {
 
   private[this] def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
     get(repository.key)
