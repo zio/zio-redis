@@ -19,7 +19,7 @@ package zio.redis
 import zio.redis.RespValue.BulkString
 import zio.schema.Schema
 import zio.schema.codec.Codec
-import zio.{Chunk, Duration}
+import zio._
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
