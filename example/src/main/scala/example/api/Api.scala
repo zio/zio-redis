@@ -24,14 +24,14 @@ import zio.json._
 
 object Api {
 
-  private val app: HttpApp[ContributorsCache.Service, Nothing] = Http.collectZIO {
+  private val app: HttpApp[ContributorsCache, Nothing] = Http.collectZIO {
     case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
       ZIO
-        .serviceWithZIO[ContributorsCache.Service](_.fetchAll(Repository(Owner(owner), Name(name))))
+        .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
         .mapBoth(_.toResponse, r => Response.json(r.toJson))
         .merge
   }
 
-  val routes: Server[ContributorsCache.Service, Nothing] = Server.app(app)
+  val routes: Server[ContributorsCache, Nothing] = Server.app(app)
 
 }

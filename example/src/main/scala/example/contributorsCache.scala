@@ -17,36 +17,18 @@
 package example
 
 import example.ApiError._
-import sttp.capabilities.WebSockets
-import sttp.capabilities.zio.ZioStreams
 import sttp.client3.ziojson.asJson
-import sttp.client3.{SttpBackend, UriContext, basicRequest}
+import sttp.client3.{UriContext, basicRequest}
 import sttp.model.Uri
 import zio._
 import zio.json._
 import zio.redis._
 
-object ContributorsCache {
+trait ContributorsCache {
+  def fetchAll(repository: Repository): IO[ApiError, Contributors]
+}
 
-  type Sttp = SttpBackend[Task, ZioStreams with WebSockets]
-
-  trait Service {
-    def fetchAll(repository: Repository): IO[ApiError, Contributors]
-  }
-
-  case class ServiceLive(r: Redis, s: Sttp) extends Service {
-    override def fetchAll(repository: Repository): IO[ApiError, Contributors] =
-      (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
-  }
-
-  object ServiceLive {
-    lazy val layer: ZLayer[Redis with Sttp, Nothing, Service] = ZLayer.fromZIO {
-      for {
-        r <- ZIO.service[Redis]
-        s <- ZIO.service[Sttp]
-      } yield ServiceLive(r, s)
-    }
-  }
+case class ContributorsCacheLive(r: Redis, s: Sttp) extends ContributorsCache {
 
   private[this] def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
     get(repository.key)
@@ -72,4 +54,15 @@ object ContributorsCache {
 
   private[this] def urlOf(repository: Repository): Uri =
     uri"https://api.github.com/repos/${repository.owner}/${repository.name}/contributors"
+  override def fetchAll(repository: Repository): IO[ApiError, Contributors] =
+    (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
+}
+
+object ContributorsCacheLive {
+  lazy val layer: ZLayer[Redis with Sttp, Nothing, ContributorsCache] = ZLayer {
+    for {
+      r <- ZIO.service[Redis]
+      s <- ZIO.service[Sttp]
+    } yield ContributorsCacheLive(r, s)
+  }
 }

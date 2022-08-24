@@ -16,11 +16,11 @@
 
 package zio.redis
 
+import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.TestExecutor.{KeyInfo, KeyType}
 import zio.stm._
-import zio.{Clock, Random, _}
 
 import java.nio.file.{FileSystems, Paths}
 import java.time.Instant

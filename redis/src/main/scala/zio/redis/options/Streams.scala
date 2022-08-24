@@ -16,7 +16,7 @@
 
 package zio.redis.options
 
-import zio.{Chunk, _}
+import zio._
 
 trait Streams {
 

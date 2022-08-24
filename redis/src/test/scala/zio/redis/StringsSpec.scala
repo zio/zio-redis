@@ -1,10 +1,10 @@
 package zio.redis
 
+import zio._
 import zio.redis.RedisError.{ProtocolError, WrongType}
 import zio.test.Assertion._
 import zio.test.TestAspect.{eventually, ignore}
 import zio.test._
-import zio.{Chunk, Clock, ZIO, _}
 
 trait StringsSpec extends BaseSpec {
   val stringsSuite: Spec[Redis with TestEnvironment, RedisError] =

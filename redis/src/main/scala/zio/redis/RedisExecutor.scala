@@ -16,7 +16,7 @@
 
 package zio.redis
 
-import zio.{Clock, Random, _}
+import zio._
 
 trait RedisExecutor {
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]

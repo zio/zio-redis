@@ -1,10 +1,10 @@
 package zio.redis
 
+import zio._
 import zio.redis.RedisError.WrongType
 import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, NonEmptyChunk, ZIO}
 
 trait SetsSpec extends BaseSpec {
   val setsSuite: Spec[Redis with TestEnvironment, RedisError] =

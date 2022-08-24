@@ -1,11 +1,11 @@
 package zio.redis
 
+import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{Chunk, Clock, Layer, ZIO, ZLayer, _}
 
 trait KeysSpec extends BaseSpec {
 

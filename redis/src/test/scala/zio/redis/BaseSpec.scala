@@ -1,9 +1,9 @@
 package zio.redis
 
+import zio._
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.TestAspect.tag
 import zio.test.{ZIOSpecDefault, _}
-import zio.{Random, UIO, _}
 
 import java.time.Instant
 import java.util.UUID

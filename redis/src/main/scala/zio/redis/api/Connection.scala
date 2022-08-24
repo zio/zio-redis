@@ -16,10 +16,10 @@
 
 package zio.redis.api
 
+import zio._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
-import zio.{Chunk, Duration, ZIO}
 
 trait Connection {
   import Connection._

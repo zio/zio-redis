@@ -1,8 +1,8 @@
 package zio.redis
 
+import zio._
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, ZIO}
 
 import java.nio.charset.StandardCharsets
 

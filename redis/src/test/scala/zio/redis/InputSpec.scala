@@ -1,9 +1,9 @@
 package zio.redis
 
+import zio._
 import zio.redis.Input._
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, _}
 
 import java.net.InetAddress
 import java.time.Instant

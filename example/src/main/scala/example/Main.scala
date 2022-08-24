@@ -22,7 +22,6 @@ import example.config.{AppConfig, ServerConfig}
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, Server}
-import zio.Console.printLine
 import zio._
 import zio.config.getConfig
 import zio.config.syntax._
@@ -41,12 +40,12 @@ object Main extends ZIOAppDefault {
   private val redisExecutor = redisConfig >>> RedisExecutor.live
   private val redis         = redisExecutor ++ codec >>> Redis.live
   private val sttp          = AsyncHttpClientZioBackend.layer()
-  private val cache         = redis ++ sttp >>> ContributorsCache.ServiceLive.layer
+  private val cache         = redis ++ sttp >>> ContributorsCacheLive.layer
 
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     getConfig[ServerConfig]
       .flatMap(conf =>
-        (Server.port(conf.port) ++ Api.routes).make.flatMap(_ => printLine("Server online.") *> ZIO.never)
+        (Server.port(conf.port) ++ Api.routes).make.flatMap(_ => Console.printLine("Server online.") *> ZIO.never)
       )
       .provideSome[Scope](
         serverConfig,
@@ -54,6 +53,6 @@ object Main extends ZIOAppDefault {
         ServerChannelFactory.auto,
         EventLoopGroup.auto(0)
       )
-      .tapError(e => printLine(e.getMessage))
+      .tapError(e => Console.printLine(e.getMessage))
       .exitCode
 }

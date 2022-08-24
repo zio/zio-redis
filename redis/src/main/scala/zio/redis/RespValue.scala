@@ -73,7 +73,7 @@ object RespValue {
   }
 
   private[redis] final val decoder = {
-    val Sinker: ZSink[Any, RedisError.ProtocolError, String, String, Option[RespValue]] = {
+    val Sinker = {
       import internal.State
       ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
         case State.Done(value) => ZIO.succeedNow(Some(value))
