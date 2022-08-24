@@ -24,21 +24,29 @@ import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousSocketChannel, Channel, CompletionHandler}
 
-private[redis] object ByteStream {
-  trait Service {
-    def read: Stream[IOException, Byte]
-    def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
-  }
+private[redis] trait ByteStream {
+  def read: Stream[IOException, Byte]
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
+}
 
-  lazy val default: ZLayer[Any, RedisError.IOError, Service] =
+private[redis] object ByteStream {
+  lazy val default: ZLayer[Any, RedisError.IOError, ByteStream] =
     ZLayer.succeed(RedisConfig.Default) >>> live
 
-  lazy val live: ZLayer[RedisConfig, RedisError.IOError, Service] =
+  lazy val live: ZLayer[RedisConfig, RedisError.IOError, ByteStream] =
     ZLayer.scoped {
       for {
         config  <- ZIO.service[RedisConfig]
         service <- connect(new InetSocketAddress(config.host, config.port))
       } yield service
+    }
+
+  private[this] final val ResponseBufferSize = 1024
+
+  private[this] def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =
+    ZIO.asyncInterrupt { k =>
+      op(completionHandler(k))
+      Left(ZIO.attempt(channel.close()).ignore)
     }
 
   private[this] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, Connection] =
@@ -50,8 +58,6 @@ private[redis] object ByteStream {
       channel     <- openChannel(address)
     } yield new Connection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
 
-  private[this] final val ResponseBufferSize = 1024
-
   private[this] def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
       def completed(result: A, u: Any): Unit = k(ZIO.succeedNow(result))
@@ -61,12 +67,6 @@ private[redis] object ByteStream {
           case e: IOException => k(ZIO.fail(e))
           case _              => k(ZIO.die(t))
         }
-    }
-
-  private[this] def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =
-    ZIO.asyncInterrupt { k =>
-      op(completionHandler(k))
-      Left(ZIO.attempt(channel.close()).ignore)
     }
 
   private[this] def openChannel(address: SocketAddress): ZIO[Scope, IOException, AsynchronousSocketChannel] =
@@ -87,7 +87,7 @@ private[redis] object ByteStream {
     readBuffer: ByteBuffer,
     writeBuffer: ByteBuffer,
     channel: AsynchronousSocketChannel
-  ) extends Service {
+  ) extends ByteStream {
 
     val read: Stream[IOException, Byte] =
       zio.stream.ZStream.repeatZIOChunkOption {

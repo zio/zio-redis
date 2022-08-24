@@ -23,7 +23,6 @@ trait RedisExecutor {
 }
 
 object RedisExecutor {
-
   lazy val live: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
     ByteStream.live >>> StreamedExecutor
 
@@ -39,10 +38,10 @@ object RedisExecutor {
 
   private[this] final val RequestQueueSize = 16
 
-  private[this] final val StreamedExecutor: ZLayer[ByteStream.Service, Nothing, Live] =
+  private[this] final val StreamedExecutor: ZLayer[ByteStream, Nothing, Live] =
     ZLayer.scoped {
       for {
-        byteStream <- ZIO.service[ByteStream.Service]
+        byteStream <- ZIO.service[ByteStream]
         reqQueue   <- Queue.bounded[Request](RequestQueueSize)
         resQueue   <- Queue.unbounded[Promise[RedisError, RespValue]]
         live        = new Live(reqQueue, resQueue, byteStream)
@@ -53,7 +52,7 @@ object RedisExecutor {
   private[this] final class Live(
     reqQueue: Queue[Request],
     resQueue: Queue[Promise[RedisError, RespValue]],
-    byteStream: ByteStream.Service
+    byteStream: ByteStream
   ) extends RedisExecutor {
 
     def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
