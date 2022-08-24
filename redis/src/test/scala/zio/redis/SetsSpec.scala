@@ -7,7 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SetsSpec extends BaseSpec {
-  val setsSuite: Spec[Any, Nothing] =
+  val setsSuite =
     suite("sets")(
       suite("sAdd")(
         test("to empty set") {

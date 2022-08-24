@@ -5,7 +5,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait HashSpec extends BaseSpec {
-  val hashSuite: Spec[TestConfig with Any, Nothing] =
+  val hashSuite =
     suite("hash")(
       suite("hSet, hGet, hGetAll and hDel")(
         test("set followed by get") {
