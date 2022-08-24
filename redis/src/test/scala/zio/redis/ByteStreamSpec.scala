@@ -7,7 +7,7 @@ import zio.test._
 import java.nio.charset.StandardCharsets
 
 object ByteStreamSpec extends BaseSpec {
-  override def spec: Spec[TestEnvironment, Throwable] =
+  def spec: Spec[TestEnvironment, Throwable] =
     suite("Byte stream")(
       test("can write and read") {
         for {

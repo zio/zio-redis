@@ -7,8 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 
 object OutputSpec extends BaseSpec {
-
-  def spec: Spec[TestEnvironment, Throwable] =
+  val spec: Spec[Any, Throwable] =
     suite("Output decoders")(
       suite("errors")(
         test("protocol errors") {

@@ -16,7 +16,7 @@ object InputSpec extends BaseSpec {
   import RadiusUnit._
   import StrAlgoLcsQueryType._
 
-  def spec: Spec[TestEnvironment, Throwable] =
+  val spec =
     suite("Input encoders")(
       suite("AbsTtl")(
         test("valid value") {

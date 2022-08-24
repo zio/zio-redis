@@ -29,8 +29,7 @@ object RedisExecutor {
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     ByteStream.default >>> StreamedExecutor
 
-  lazy val test: URLayer[Random with Clock, RedisExecutor] =
-    TestExecutor.layer
+  lazy val test: ULayer[RedisExecutor] = TestExecutor.layer
 
   private[this] final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 

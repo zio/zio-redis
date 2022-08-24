@@ -6,8 +6,7 @@ import zio.test._
 import java.nio.charset.StandardCharsets
 
 object RespValueSpec extends BaseSpec {
-
-  def spec: Spec[TestEnvironment, Throwable] =
+  val spec: Spec[Any, RedisError.ProtocolError] =
     suite("RespValue")(
       suite("serialization")(
         test("array") {

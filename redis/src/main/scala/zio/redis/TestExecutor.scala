@@ -38,14 +38,13 @@ private[redis] final class TestExecutor private (
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
-  sortedSets: TMap[String, Map[String, Double]],
-  clock: Clock
+  sortedSets: TMap[String, Map[String, Double]]
 ) extends RedisExecutor {
 
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
       name <- ZIO.fromOption(command.headOption).orElseFail(ProtocolError("Malformed command."))
-      now  <- clock.instant
+      now  <- ZIO.clockWith(_.instant)
       _    <- clearExpired(now).commit
       result <- name.asString match {
                   case api.Lists.BlPop =>
@@ -3923,11 +3922,10 @@ private[redis] object TestExecutor {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
-  lazy val layer: URLayer[Random with Clock, RedisExecutor] =
+  lazy val layer: ULayer[RedisExecutor] =
     ZLayer {
       for {
-        seed         <- zio.Random.nextInt
-        clock        <- ZIO.service[Clock]
+        seed         <- ZIO.randomWith(_.nextInt)
         sRandom       = new scala.util.Random(seed)
         ref          <- TRef.make(LazyList.continually((i: Int) => sRandom.nextInt(i))).commit
         randomPick    = (i: Int) => ref.modify(s => (s.head(i), s.tail))
@@ -3952,8 +3950,7 @@ private[redis] object TestExecutor {
         randomPick,
         hyperLogLogs,
         hashes,
-        sortedSets,
-        clock
+        sortedSets
       )
     }
 

@@ -7,7 +7,7 @@ import zio.test.TestAspect.{eventually, ignore}
 import zio.test._
 
 trait StringsSpec extends BaseSpec {
-  val stringsSuite: Spec[Redis with TestEnvironment, RedisError] =
+  val stringsSuite =
     suite("strings")(
       suite("append")(
         test("to the end of non-empty string") {

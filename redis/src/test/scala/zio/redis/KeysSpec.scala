@@ -9,7 +9,7 @@ import zio.test._
 
 trait KeysSpec extends BaseSpec {
 
-  val keysSuite: Spec[Redis with TestEnvironment with zio.Random, RedisError] = {
+  val keysSuite = {
     suite("keys")(
       test("set followed by get") {
         for {
