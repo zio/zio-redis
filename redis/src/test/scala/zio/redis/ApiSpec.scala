@@ -48,7 +48,7 @@ object ApiSpec
     )
 
   private val LiveLayer =
-    ZLayer.make[Redis](RedisExecutor.local, RedisLive.layer, ZLayer.succeed(codec)).orDie
+    ZLayer.make[Redis](RedisExecutor.local, RedisLive.layer, ZLayer.succeed(codec))
 
   private val TestLayer =
     ZLayer.make[Redis](RedisExecutor.test, RedisLive.layer, ZLayer.succeed(codec))

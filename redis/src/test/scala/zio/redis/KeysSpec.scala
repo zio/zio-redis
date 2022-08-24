@@ -8,8 +8,7 @@ import zio.test.TestAspect._
 import zio.test._
 
 trait KeysSpec extends BaseSpec {
-
-  val keysSuite = {
+  def keysSuite: Spec[Redis with TestEnvironment, RedisError] = {
     suite("keys")(
       test("set followed by get") {
         for {
