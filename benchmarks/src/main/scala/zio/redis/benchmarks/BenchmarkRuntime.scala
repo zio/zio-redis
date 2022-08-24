@@ -22,7 +22,6 @@ import zio.redis._
 import zio.schema.codec.{Codec, ProtobufCodec}
 
 trait BenchmarkRuntime {
-
   final def execute(query: ZIO[Redis, RedisError, Unit]): Unit =
     Unsafe.unsafe { implicit unsafe =>
       zio.Runtime.default.unsafe.run(query.provideLayer(BenchmarkRuntime.Layer)).getOrThrowFiberFailure()
@@ -35,8 +34,8 @@ trait BenchmarkRuntime {
 object BenchmarkRuntime {
   private final val Layer =
     ZLayer.make[Redis](
-      RedisExecutor.local.orDie,
+      RedisExecutor.local,
       ZLayer.succeed[Codec](ProtobufCodec),
-      Redis.live
+      RedisLive.layer
     )
 }

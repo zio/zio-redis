@@ -7,7 +7,7 @@ import zio.test.TestAspect.ignore
 import zio.test._
 
 trait StreamsSpec extends BaseSpec {
-  val streamsSuite: Spec[Redis with TestEnvironment, RedisError] =
+  def streamsSuite: Spec[Redis with TestEnvironment, RedisError] =
     suite("streams")(
       suite("xAck")(
         test("one message") {

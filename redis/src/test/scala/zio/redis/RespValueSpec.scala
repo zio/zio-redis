@@ -1,4 +1,5 @@
 package zio.redis
+
 import zio.Chunk
 import zio.test.Assertion._
 import zio.test._
@@ -6,8 +7,7 @@ import zio.test._
 import java.nio.charset.StandardCharsets
 
 object RespValueSpec extends BaseSpec {
-
-  def spec: Spec[TestEnvironment, Throwable] =
+  def spec: Spec[Any, RedisError.ProtocolError] =
     suite("RespValue")(
       suite("serialization")(
         test("array") {

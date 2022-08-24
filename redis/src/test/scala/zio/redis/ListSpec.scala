@@ -4,12 +4,12 @@ import zio.Clock.currentTime
 import zio._
 import zio.redis.RedisError.WrongType
 import zio.test.Assertion._
-import zio.test.{TestClock, _}
+import zio.test._
 
 import java.util.concurrent.TimeUnit
 
 trait ListSpec extends BaseSpec {
-  val listSuite: Spec[Redis, java.io.Serializable] =
+  def listSuite: Spec[Redis, Any] =
     suite("lists")(
       suite("pop")(
         test("lPop non-empty list") {
