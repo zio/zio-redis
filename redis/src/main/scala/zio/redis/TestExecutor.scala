@@ -3923,7 +3923,7 @@ private[redis] object TestExecutor {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
-  lazy val live: URLayer[Random with Clock, RedisExecutor] =
+  lazy val layer: URLayer[Random with Clock, RedisExecutor] =
     ZLayer {
       for {
         seed         <- zio.Random.nextInt

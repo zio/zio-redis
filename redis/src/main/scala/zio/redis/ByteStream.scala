@@ -30,10 +30,7 @@ private[redis] trait ByteStream {
 }
 
 private[redis] object ByteStream {
-  lazy val default: ZLayer[Any, RedisError.IOError, ByteStream] =
-    ZLayer.succeed(RedisConfig.Default) >>> live
-
-  lazy val live: ZLayer[RedisConfig, RedisError.IOError, ByteStream] =
+  lazy val customized: ZLayer[RedisConfig, RedisError.IOError, ByteStream] =
     ZLayer.scoped {
       for {
         config  <- ZIO.service[RedisConfig]
@@ -41,6 +38,9 @@ private[redis] object ByteStream {
       } yield service
     }
 
+  lazy val default: ZLayer[Any, RedisError.IOError, ByteStream] =
+    ZLayer.succeed(RedisConfig.Default) >>> customized
+  
   private[this] final val ResponseBufferSize = 1024
 
   private[this] def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =

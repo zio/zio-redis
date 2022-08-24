@@ -23,14 +23,14 @@ trait RedisExecutor {
 }
 
 object RedisExecutor {
-  lazy val live: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
-    ByteStream.live >>> StreamedExecutor
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
+    ByteStream.customized >>> StreamedExecutor
 
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     ByteStream.default >>> StreamedExecutor
 
   lazy val test: URLayer[Random with Clock, RedisExecutor] =
-    TestExecutor.live
+    TestExecutor.layer
 
   private[this] final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 

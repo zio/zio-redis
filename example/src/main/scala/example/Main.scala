@@ -37,7 +37,7 @@ object Main extends ZIOAppDefault {
   private val redisConfig  = config.narrow(_.redis)
 
   private val codec         = ZLayer.succeed[Codec](ProtobufCodec)
-  private val redisExecutor = redisConfig >>> RedisExecutor.live
+  private val redisExecutor = redisConfig >>> RedisExecutor.layer
   private val redis         = ZLayer.make[Redis](redisExecutor, codec, RedisLive.layer)
   private val sttp          = AsyncHttpClientZioBackend.layer()
   private val cache         = ZLayer.make[ContributorsCache](redis, sttp, ContributorsCacheLive.layer)

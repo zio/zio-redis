@@ -419,7 +419,7 @@ object KeysSpec {
     ZLayer
       .make[Redis](
         ZLayer.succeed(RedisConfig("localhost", 6380)),
-        RedisExecutor.live,
+        RedisExecutor.layer,
         ZLayer.succeed[Codec](ProtobufCodec),
         RedisLive.layer
       )
