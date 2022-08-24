@@ -40,7 +40,7 @@ private[redis] object ByteStream {
 
   lazy val default: ZLayer[Any, RedisError.IOError, ByteStream] =
     ZLayer.succeed(RedisConfig.Default) >>> customized
-  
+
   private[this] final val ResponseBufferSize = 1024
 
   private[this] def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =
