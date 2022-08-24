@@ -33,8 +33,10 @@ trait BenchmarkRuntime {
 }
 
 object BenchmarkRuntime {
-  private final val Layer = {
-    val executor = RedisExecutor.local.orDie
-    executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> Redis.live
-  }
+  private final val Layer =
+    ZLayer.make[Redis](
+      RedisExecutor.local.orDie,
+      ZLayer.succeed[Codec](ProtobufCodec),
+      Redis.live
+    )
 }
