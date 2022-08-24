@@ -29,21 +29,8 @@ trait ContributorsCache {
 }
 
 final case class ContributorsCacheLive(r: Redis, s: Sttp) extends ContributorsCache {
-
-  private[this] def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
-    get(repository.key)
-      .returning[String]
-      .someOrFail(ApiError.CacheMiss(repository.key))
-      .map(_.fromJson[Contributors])
-      .foldZIO(_ => ZIO.fail(ApiError.CorruptedData), s => ZIO.succeed(s.getOrElse(Contributors(Chunk.empty))))
-
-  private[this] def retrieve(repository: Repository): ZIO[Redis with Sttp, ApiError, Contributors] =
-    for {
-      req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
-      res          <- ZIO.service[Sttp].flatMap(_.send(req).orElseFail(GithubUnreachable))
-      contributors <- res.body.fold(_ => ZIO.fail(UnknownProject(urlOf(repository).toString)), ZIO.succeed(_))
-      _            <- cache(repository, contributors)
-    } yield Contributors(contributors)
+  def fetchAll(repository: Repository): IO[ApiError, Contributors] =
+    (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
 
   private def cache(repository: Repository, contributors: Chunk[Contributor]): URIO[Redis, Any] =
     ZIO
@@ -52,17 +39,26 @@ final case class ContributorsCacheLive(r: Redis, s: Sttp) extends ContributorsCa
       .flatMap(data => set(repository.key, data, Some(1.minute)).orDie)
       .ignore
 
-  private[this] def urlOf(repository: Repository): Uri =
+  private def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
+    get(repository.key)
+      .returning[String]
+      .someOrFail(ApiError.CacheMiss(repository.key))
+      .map(_.fromJson[Contributors])
+      .foldZIO(_ => ZIO.fail(ApiError.CorruptedData), s => ZIO.succeed(s.getOrElse(Contributors(Chunk.empty))))
+
+  private def retrieve(repository: Repository): ZIO[Redis with Sttp, ApiError, Contributors] =
+    for {
+      req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
+      res          <- ZIO.service[Sttp].flatMap(_.send(req).orElseFail(GithubUnreachable))
+      contributors <- res.body.fold(_ => ZIO.fail(UnknownProject(urlOf(repository).toString)), ZIO.succeed(_))
+      _            <- cache(repository, contributors)
+    } yield Contributors(contributors)
+
+  private def urlOf(repository: Repository): Uri =
     uri"https://api.github.com/repos/${repository.owner}/${repository.name}/contributors"
-  override def fetchAll(repository: Repository): IO[ApiError, Contributors] =
-    (read(repository) <> retrieve(repository)).provide(ZLayer.succeed(r), ZLayer.succeed(s))
 }
 
 object ContributorsCacheLive {
-  lazy val layer: ZLayer[Redis with Sttp, Nothing, ContributorsCache] = ZLayer {
-    for {
-      r <- ZIO.service[Redis]
-      s <- ZIO.service[Sttp]
-    } yield ContributorsCacheLive(r, s)
-  }
+  lazy val layer: URLayer[Redis with Sttp, ContributorsCache] =
+    ZLayer.fromFunction(ContributorsCacheLive.apply _)
 }
