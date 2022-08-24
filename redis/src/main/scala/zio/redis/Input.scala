@@ -16,8 +16,7 @@
 
 package zio.redis
 
-import zio.Chunk
-import zio.duration.Duration
+import zio._
 import zio.redis.RespValue.BulkString
 import zio.schema.Schema
 import zio.schema.codec.Codec

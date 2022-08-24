@@ -17,9 +17,9 @@
 package zio.redis.benchmarks.strings
 
 import org.openjdk.jmh.annotations._
-import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{Scope => _, _}
 
 import java.util.concurrent.TimeUnit
 
@@ -39,7 +39,7 @@ class StrLenBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(ZIO.foreach_(items)(i => set(i, i)))
+    execute(ZIO.foreachDiscard(items)(i => set(i, i)))
   }
 
   @Benchmark
@@ -66,5 +66,5 @@ class StrLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(strLen[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(strLen[String]))
 }

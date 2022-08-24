@@ -26,37 +26,33 @@ import zio._
 import zio.config.getConfig
 import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
-import zio.console._
-import zio.logging.Logging
-import zio.magic._
 import zio.redis.{Redis, RedisExecutor}
 import zio.schema.codec.{Codec, ProtobufCodec}
 
-object Main extends App {
+object Main extends ZIOAppDefault {
   private val config =
-    TypesafeConfig.fromTypesafeConfig(ConfigFactory.load().getConfig("example"), AppConfig.descriptor)
+    TypesafeConfig.fromTypesafeConfig(ConfigFactory.load().getConfig("example"), AppConfig.confDescriptor)
 
   private val serverConfig = config.narrow(_.server)
   private val redisConfig  = config.narrow(_.redis)
 
   private val codec         = ZLayer.succeed[Codec](ProtobufCodec)
-  private val redisExecutor = Logging.ignore ++ redisConfig >>> RedisExecutor.live
-  private val redis         = redisExecutor ++ codec >>> Redis.live
+  private val redisExecutor = redisConfig >>> RedisExecutor.live
+  private val redis         = ZLayer.make[Redis](redisExecutor, codec, Redis.live)
   private val sttp          = AsyncHttpClientZioBackend.layer()
-  private val cache         = redis ++ sttp >>> ContributorsCache.live
+  private val cache         = ZLayer.make[ContributorsCache](redis, sttp, ContributorsCacheLive.layer)
 
-  def run(args: List[String]): URIO[ZEnv, ExitCode] =
+  def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     getConfig[ServerConfig]
       .flatMap(conf =>
-        (Server.port(conf.port) ++ Api.routes).make
-          .use_(putStrLn("Server online.") *> ZIO.never)
+        (Server.port(conf.port) ++ Api.routes).make.flatMap(_ => Console.printLine("Server online.") *> ZIO.never)
       )
-      .injectCustom(
+      .provideSome[Scope](
         serverConfig,
         cache,
         ServerChannelFactory.auto,
         EventLoopGroup.auto(0)
       )
-      .tapError(e => putStrLn(e.getMessage))
+      .tapError(e => Console.printLine(e.getMessage))
       .exitCode
 }

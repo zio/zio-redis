@@ -17,9 +17,9 @@
 package zio.redis.benchmarks.sets
 
 import org.openjdk.jmh.annotations._
-import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{Scope => _, _}
 
 import java.util.concurrent.TimeUnit
 
@@ -81,5 +81,5 @@ class SInterStoreBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(_ => sInterStore(destinationKey, key, otherKey)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sInterStore(destinationKey, key, otherKey)))
 }

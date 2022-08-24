@@ -27,7 +27,7 @@ object Api {
   private val app: HttpApp[ContributorsCache, Nothing] = Http.collectZIO {
     case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
       ZIO
-        .serviceWith[ContributorsCache.Service](_.fetchAll(Repository(Owner(owner), Name(name))))
+        .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
         .mapBoth(_.toResponse, r => Response.json(r.toJson))
         .merge
   }

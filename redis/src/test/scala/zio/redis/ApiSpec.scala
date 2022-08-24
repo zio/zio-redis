@@ -1,11 +1,8 @@
 package zio.redis
 
-import zio.ZLayer
-import zio.clock.Clock
-import zio.logging.Logging
+import zio._
 import zio.test.TestAspect._
 import zio.test._
-import zio.test.environment._
 
 object ApiSpec
     extends ConnectionSpec
@@ -20,7 +17,7 @@ object ApiSpec
     with StreamsSpec
     with ScriptingSpec {
 
-  def spec: ZSpec[TestEnvironment, Failure] =
+  def spec: Spec[TestEnvironment with Scope, Any] =
     suite("Redis commands")(
       suite("Live Executor")(
         connectionSuite,
@@ -34,7 +31,7 @@ object ApiSpec
         hashSuite,
         streamsSuite,
         scriptingSpec
-      ).provideCustomLayerShared(LiveLayer) @@ sequential,
+      ).provideCustomLayer(LiveLayer) @@ sequential @@ withLiveEnvironment,
       suite("Test Executor")(
         connectionSuite,
         keysSuite,
@@ -51,11 +48,22 @@ object ApiSpec
     )
 
   private val LiveLayer = {
-    val executor = Logging.ignore >>> RedisExecutor.local.orDie
-    val redis    = executor ++ ZLayer.succeed(codec) >>> Redis.live
-    redis ++ Clock.live
+    val executor = RedisExecutor.local.orDie
+    ZLayer.make[Redis with Clock with Console with zio.System with Random](
+      Redis.live,
+      ZLayer.succeed(codec),
+      executor,
+      liveEnvironment
+    )
+
   }
 
   private val TestLayer =
-    RedisExecutor.test ++ ZLayer.succeed(codec) >>> Redis.live
+    ZLayer.make[Redis with Random with Clock](
+      RedisExecutor.test,
+      ZLayer.succeed(codec),
+      Redis.live,
+      ZLayer(testRandom),
+      ZLayer(testClock)
+    )
 }

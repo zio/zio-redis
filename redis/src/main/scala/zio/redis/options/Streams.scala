@@ -16,8 +16,7 @@
 
 package zio.redis.options
 
-import zio.Chunk
-import zio.duration._
+import zio._
 
 trait Streams {
 

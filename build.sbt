@@ -37,12 +37,13 @@ lazy val redis =
     .settings(buildInfoSettings("zio.redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-streams"         % Zio,
-        "dev.zio" %% "zio-logging"         % "0.5.14",
-        "dev.zio" %% "zio-schema"          % "0.1.11",
-        "dev.zio" %% "zio-schema-protobuf" % "0.1.11" % Test,
-        "dev.zio" %% "zio-test"            % Zio      % Test,
-        "dev.zio" %% "zio-test-sbt"        % Zio      % Test
+        "dev.zio"                %% "zio-streams"             % Zio,
+        "dev.zio"                %% "zio-logging"             % "2.0.0",
+        "dev.zio"                %% "zio-schema"              % "0.2.0",
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.2.0" % Test,
+        "dev.zio"                %% "zio-test"                % Zio     % Test,
+        "dev.zio"                %% "zio-test-sbt"            % Zio     % Test,
+        "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
@@ -59,7 +60,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.1.11"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.2.0-RC5"
       )
     )
 
@@ -71,15 +72,14 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio1" % "3.7.4",
-        "com.softwaremill.sttp.client3" %% "zio1-json"                      % "3.7.4",
-        "dev.zio"                       %% "zio-streams"                    % Zio,
-        "dev.zio"                       %% "zio-config-magnolia"            % "2.0.5",
-        "dev.zio"                       %% "zio-config-typesafe"            % "2.0.5",
-        "dev.zio"                       %% "zio-schema-protobuf"            % "0.1.11",
-        "dev.zio"                       %% "zio-json"                       % "0.1.5",
-        "io.d11"                        %% "zhttp"                          % "1.0.0.0-RC25",
-        "io.github.kitlangton"          %% "zio-magic"                      % "0.3.12"
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.7.4",
+        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.7.4",
+        "dev.zio"                       %% "zio-streams"                   % Zio,
+        "dev.zio"                       %% "zio-config-magnolia"           % "3.0.0-RC9",
+        "dev.zio"                       %% "zio-config-typesafe"           % "3.0.0-RC9",
+        "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.0-RC5",
+        "dev.zio"                       %% "zio-json"                      % "0.3.0-RC8",
+        "io.d11"                        %% "zhttp"                         % "2.0.0-RC10"
       )
     )
 

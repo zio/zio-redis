@@ -16,7 +16,7 @@
 
 package zio.redis.options
 
-import zio.duration.Duration
+import zio.Duration
 
 import java.net.InetAddress
 
