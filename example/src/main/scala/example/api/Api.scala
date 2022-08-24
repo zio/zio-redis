@@ -18,20 +18,15 @@ package example.api
 
 import example._
 import zhttp.http._
-import zhttp.service.Server
 import zio._
 import zio.json._
 
 object Api {
-
-  private val app: HttpApp[ContributorsCache, Nothing] = Http.collectZIO {
-    case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
+  val routes: HttpApp[ContributorsCache, Nothing] =
+    Http.collectZIO { case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
       ZIO
         .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
         .mapBoth(_.toResponse, r => Response.json(r.toJson))
         .merge
-  }
-
-  val routes: Server[ContributorsCache, Nothing] = Server.app(app)
-
+    }
 }

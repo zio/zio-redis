@@ -5,8 +5,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait GeoSpec extends BaseSpec {
-
-  val geoSuite: Spec[Redis with TestEnvironment, RedisError] =
+  def geoSuite: Spec[Redis, RedisError] =
     suite("geo")(
       test("geoAdd followed by geoPos") {
         import GeoSpec.Serbia._

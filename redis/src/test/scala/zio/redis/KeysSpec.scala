@@ -8,8 +8,7 @@ import zio.test.TestAspect._
 import zio.test._
 
 trait KeysSpec extends BaseSpec {
-
-  val keysSuite: Spec[Redis with TestEnvironment with zio.Random, RedisError] = {
+  def keysSuite: Spec[Redis with TestEnvironment, RedisError] = {
     suite("keys")(
       test("set followed by get") {
         for {
@@ -415,8 +414,13 @@ trait KeysSpec extends BaseSpec {
 object KeysSpec {
   final val MigrateTimeout: Duration = 5.seconds
 
-  final val SecondExecutor: Layer[RedisError.IOError, Redis] = {
-    val executor = ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live
-    (executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> Redis.live).fresh
-  }
+  final val SecondExecutor: Layer[RedisError.IOError, Redis] =
+    ZLayer
+      .make[Redis](
+        ZLayer.succeed(RedisConfig("localhost", 6380)),
+        RedisExecutor.layer,
+        ZLayer.succeed[Codec](ProtobufCodec),
+        RedisLive.layer
+      )
+      .fresh
 }

@@ -20,11 +20,9 @@ import sttp.client3.SttpBackend
 import zio.Task
 
 package object example {
-
   type Contributions = Contributions.Type
   type Login         = Login.Type
   type Owner         = Owner.Type
   type Name          = Name.Type
   type Sttp          = SttpBackend[Task, ZioStreams with WebSockets]
-
 }

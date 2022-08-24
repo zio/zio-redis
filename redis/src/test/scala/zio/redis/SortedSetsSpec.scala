@@ -7,7 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
-  val sortedSetsSuite: Spec[Redis with TestEnvironment, RedisError] =
+  def sortedSetsSuite: Spec[Redis, RedisError] =
     suite("sorted sets")(
       suite("bzPopMax")(
         test("non-empty set")(

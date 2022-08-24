@@ -8,8 +8,7 @@ import zio.test._
 import java.net.InetAddress
 
 trait ConnectionSpec extends BaseSpec {
-
-  val connectionSuite: Spec[Redis with TestEnvironment, RedisError] =
+  def connectionSuite: Spec[Redis, RedisError] =
     suite("connection")(
       suite("clientCaching")(
         test("track keys") {

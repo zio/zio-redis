@@ -3,7 +3,7 @@ package zio.redis
 import zio._
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.TestAspect.tag
-import zio.test.{ZIOSpecDefault, _}
+import zio.test._
 
 import java.time.Instant
 import java.util.UUID
@@ -16,13 +16,13 @@ trait BaseSpec extends ZIOSpecDefault {
 
   def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
 
-  final val genStringRedisTypeOption: Gen[Random, Option[RedisType]] =
+  final val genStringRedisTypeOption: Gen[Any, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
 
-  final val genCountOption: Gen[Random, Option[Count]] =
+  final val genCountOption: Gen[Any, Option[Count]] =
     Gen.option(Gen.long(0, 100000).map(Count))
 
-  final val genPatternOption: Gen[Random, Option[String]] =
+  final val genPatternOption: Gen[Any, Option[String]] =
     Gen.option(Gen.constSample(Sample.noShrink("*")))
 
   final val uuid: UIO[String] =

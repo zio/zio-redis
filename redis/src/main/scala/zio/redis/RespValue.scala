@@ -73,24 +73,20 @@ object RespValue {
   }
 
   private[redis] final val decoder = {
-    val Sinker = {
-      import internal.State
+    import internal.State
+
+    // ZSink fold will return a State.Start when contFn is false
+    val lineProcessor =
       ZSink.fold[String, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
         case State.Done(value) => ZIO.succeedNow(Some(value))
         case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
-        // ZSink fold will return a State.Start when contFn is false
-        case State.Start => ZIO.succeedNow(None)
-        case other       => ZIO.dieMessage(s"Deserialization bug, should not get $other")
+        case State.Start       => ZIO.succeedNow(None)
+        case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
       }
 
-    }
-
-    val processLine =
-      ZPipeline.fromSink(Sinker)
-
-    (ZPipeline.utf8Decode >>> ZPipeline.splitLines).mapError(e =>
-      RedisError.ProtocolError(e.getLocalizedMessage)
-    ) >>> processLine
+    (ZPipeline.utf8Decode >>> ZPipeline.splitLines)
+      .mapError(e => RedisError.ProtocolError(e.getLocalizedMessage))
+      .andThen(ZPipeline.fromSink(lineProcessor))
   }
 
   private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
