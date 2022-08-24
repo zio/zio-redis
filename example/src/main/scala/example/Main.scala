@@ -26,7 +26,7 @@ import zio._
 import zio.config.getConfig
 import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
-import zio.redis.{Redis, RedisExecutor}
+import zio.redis.{Redis, RedisExecutor, RedisLive}
 import zio.schema.codec.{Codec, ProtobufCodec}
 
 object Main extends ZIOAppDefault {
@@ -38,7 +38,7 @@ object Main extends ZIOAppDefault {
 
   private val codec         = ZLayer.succeed[Codec](ProtobufCodec)
   private val redisExecutor = redisConfig >>> RedisExecutor.live
-  private val redis         = ZLayer.make[Redis](redisExecutor, codec, Redis.live)
+  private val redis         = ZLayer.make[Redis](redisExecutor, codec, RedisLive.layer)
   private val sttp          = AsyncHttpClientZioBackend.layer()
   private val cache         = ZLayer.make[ContributorsCache](redis, sttp, ContributorsCacheLive.layer)
 

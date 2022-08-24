@@ -415,8 +415,13 @@ trait KeysSpec extends BaseSpec {
 object KeysSpec {
   final val MigrateTimeout: Duration = 5.seconds
 
-  final val SecondExecutor: Layer[RedisError.IOError, Redis] = {
-    val executor = ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live
-    (executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> Redis.live).fresh
-  }
+  final val SecondExecutor: Layer[RedisError.IOError, Redis] =
+    ZLayer
+      .make[Redis](
+        ZLayer.succeed(RedisConfig("localhost", 6380)),
+        RedisExecutor.live,
+        ZLayer.succeed[Codec](ProtobufCodec),
+        RedisLive.layer
+      )
+      .fresh
 }

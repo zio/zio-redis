@@ -24,14 +24,9 @@ trait Redis {
   def executor: RedisExecutor
 }
 
-case class RedisLive(cc: Codec, et: RedisExecutor) extends Redis {
-  override def codec: Codec            = cc
-  override def executor: RedisExecutor = et
-}
+final case class RedisLive(codec: Codec, executor: RedisExecutor) extends Redis
 
-object Redis {
-  lazy val live: URLayer[RedisExecutor with Codec, Redis] = ZLayer(for {
-    redisExecutor <- ZIO.service[RedisExecutor]
-    cc            <- ZIO.service[Codec]
-  } yield RedisLive(cc, redisExecutor))
+object RedisLive {
+  lazy val layer: URLayer[RedisExecutor with Codec, Redis] =
+    ZLayer.fromFunction(RedisLive.apply _)
 }

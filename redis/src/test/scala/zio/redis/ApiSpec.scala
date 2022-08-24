@@ -47,22 +47,19 @@ object ApiSpec
         .provideSomeLayer[TestEnvironment](TestLayer)
     )
 
-  private val LiveLayer = {
-    val executor = RedisExecutor.local.orDie
+  private val LiveLayer =
     ZLayer.make[Redis with Clock with Console with zio.System with Random](
-      Redis.live,
+      RedisExecutor.local,
+      RedisLive.layer,
       ZLayer.succeed(codec),
-      executor,
       liveEnvironment
     )
-
-  }
 
   private val TestLayer =
     ZLayer.make[Redis with Random with Clock](
       RedisExecutor.test,
       ZLayer.succeed(codec),
-      Redis.live,
+      RedisLive.layer,
       ZLayer(testRandom),
       ZLayer(testClock)
     )
