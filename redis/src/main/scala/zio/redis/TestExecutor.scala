@@ -27,6 +27,7 @@ import java.time.Instant
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
+import scala.util.matching
 
 private[redis] final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
@@ -2946,15 +2947,23 @@ private[redis] final class TestExecutor private (
         import BitFieldCommand.BitFieldOverflow
 
         def decodeBitFieldType(s: String): Option[BitFieldType] = s match {
-          case Regex.unsignedInt(size) => toIntOption(size).filter(_ <= 64).map(size => BitFieldType.UnsignedInt(size))
-          case Regex.signedInt(size)   => toIntOption(size).filter(_ <= 63).map(size => BitFieldType.SignedInt(size))
-          case _                      => None
+          case Regex.unsignedInt(size) =>
+            toIntOption(size).collect {
+              case size if size <= 64 =>
+                BitFieldType.UnsignedInt(size)
+            }
+          case Regex.signedInt(size) =>
+            toIntOption(size).collect {
+              case size if size <= 63 =>
+                BitFieldType.SignedInt(size)
+            }
+          case _ => None
         }
 
         def decodeOffset(s: String): Option[Int] = s match {
-          case Regex.offset("#", number) => toIntOption(number).filter(_ >= 0).map(_ * 8)
+          case Regex.offset("#", number) => toIntOption(number).collect { case number if number >= 0 => number * 8 }
           case Regex.offset("", number)  => toIntOption(number).filter(_ >= 0)
-          case _                        => None
+          case _                         => None
         }
 
         def parseSignedLong(string: String): Option[Long] =
@@ -4123,9 +4132,9 @@ private[redis] final class TestExecutor private (
 private[redis] object TestExecutor {
 
   object Regex {
-    val unsignedInt = "u(\\d+)".r
-    val signedInt   = "i(\\d+)".r
-    val offset      = "([#]?)(\\d+)".r
+    val unsignedInt: matching.Regex = "u(\\d+)".r
+    val signedInt: matching.Regex   = "i(\\d+)".r
+    val offset: matching.Regex      = "([#]?)(\\d+)".r
   }
 
   sealed trait KeyType extends Product with Serializable
