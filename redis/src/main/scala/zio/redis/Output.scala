@@ -16,8 +16,7 @@
 
 package zio.redis
 
-import zio.Chunk
-import zio.duration._
+import zio._
 import zio.schema.Schema
 import zio.schema.codec.Codec
 
@@ -152,8 +151,9 @@ object Output {
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
     protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Option[A] =
       respValue match {
-        case RespValue.NullBulkString | RespValue.NullArray | RespValue.BulkString(Chunk.empty) => None
-        case other                                                                              => Some(output.tryDecode(other))
+        case RespValue.NullBulkString | RespValue.NullArray => None
+        case RespValue.BulkString(value) if value.isEmpty   => None
+        case other                                          => Some(output.tryDecode(other))
       }
   }
 

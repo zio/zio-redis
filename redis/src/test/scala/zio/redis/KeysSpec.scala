@@ -1,26 +1,16 @@
 package zio.redis
 
-import zio.clock.Clock
-import zio.duration._
-import zio.logging.Logging
-import zio.random.Random
+import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
-import zio.test.environment.TestClock
-import zio.{Chunk, Has, Layer, ZIO, ZLayer, clock}
 
 trait KeysSpec extends BaseSpec {
-
-  val keysSuite: Spec[
-    Has[Redis] with Annotations with Random with TestConfig with ZTestEnv with Clock,
-    TestFailure[RedisError],
-    TestSuccess
-  ] = {
+  def keysSuite: Spec[Redis with TestEnvironment, RedisError] = {
     suite("keys")(
-      testM("set followed by get") {
+      test("set followed by get") {
         for {
           key   <- uuid
           value <- uuid
@@ -28,20 +18,20 @@ trait KeysSpec extends BaseSpec {
           v     <- get(key).returning[String]
         } yield assert(v)(isSome(equalTo(value)))
       },
-      testM("get non-existing key") {
+      test("get non-existing key") {
         for {
           key <- uuid
           v   <- get(key).returning[String]
         } yield assert(v)(isNone)
       },
-      testM("handles wrong types") {
+      test("handles wrong types") {
         for {
           key <- uuid
           _   <- sAdd(key, "1", "2", "3")
           v   <- get(key).returning[String].either
         } yield assert(v)(isLeft)
       },
-      testM("check whether or not key exists") {
+      test("check whether or not key exists") {
         for {
           key   <- uuid
           value <- uuid
@@ -50,7 +40,7 @@ trait KeysSpec extends BaseSpec {
           e2    <- exists("unknown")
         } yield assert(e1)(equalTo(1L)) && assert(e2)(equalTo(0L))
       },
-      testM("delete existing key") {
+      test("delete existing key") {
         for {
           key     <- uuid
           value   <- uuid
@@ -58,7 +48,7 @@ trait KeysSpec extends BaseSpec {
           deleted <- del(key)
         } yield assert(deleted)(equalTo(1L))
       },
-      testM("find all keys matching pattern") {
+      test("find all keys matching pattern") {
         for {
           value    <- uuid
           key1      = "custom_key_1"
@@ -68,7 +58,7 @@ trait KeysSpec extends BaseSpec {
           response <- keys("*custom*").returning[String]
         } yield assert(response)(hasSameElements(Chunk(key1, key2)))
       },
-      testM("unlink existing key") {
+      test("unlink existing key") {
         for {
           key     <- uuid
           value   <- uuid
@@ -76,7 +66,7 @@ trait KeysSpec extends BaseSpec {
           removed <- unlink(key)
         } yield assert(removed)(equalTo(1L))
       },
-      testM("touch two existing keys") {
+      test("touch two existing keys") {
         for {
           key1    <- uuid
           value1  <- uuid
@@ -87,8 +77,8 @@ trait KeysSpec extends BaseSpec {
           touched <- touch(key1, key2)
         } yield assert(touched)(equalTo(2L))
       },
-      testM("scan entries with match, count and type options")(
-        checkM(genPatternOption, genCountOption, genStringRedisTypeOption) { (pattern, count, redisType) =>
+      test("scan entries with match, count and type options")(
+        check(genPatternOption, genCountOption, genStringRedisTypeOption) { (pattern, count, redisType) =>
           for {
             key             <- uuid
             value           <- uuid
@@ -98,7 +88,7 @@ trait KeysSpec extends BaseSpec {
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         }
       ) @@ flaky,
-      testM("fetch random key") {
+      test("fetch random key") {
         for {
           key       <- uuid
           value     <- uuid
@@ -107,7 +97,7 @@ trait KeysSpec extends BaseSpec {
           randomKey <- randomKey.returning[String]
         } yield assert(allKeys)(contains(randomKey.get))
       } @@ ignore,
-      testM("dump followed by restore") {
+      test("dump followed by restore") {
         for {
           key      <- uuid
           value    <- uuid
@@ -119,7 +109,7 @@ trait KeysSpec extends BaseSpec {
         } yield assert(restore)(isRight) && assert(restored)(isSome(equalTo(value)))
       } @@ ignore,
       suite("migrate")(
-        testM("migrate key to another redis server (copy and replace)") {
+        test("migrate key to another redis server (copy and replace)") {
           for {
             key   <- uuid
             value <- uuid
@@ -140,7 +130,7 @@ trait KeysSpec extends BaseSpec {
             assert(originGet)(isSome(equalTo(value))) &&
             assert(destGet)(isSome(equalTo(value)))
         },
-        testM("migrate key to another redis server (move and replace)") {
+        test("migrate key to another redis server (move and replace)") {
           for {
             key   <- uuid
             value <- uuid
@@ -162,7 +152,7 @@ trait KeysSpec extends BaseSpec {
             assert(originGet)(isNone) &&
             assert(destGet)(isSome(equalTo(value)))
         },
-        testM("migrate key to another redis server (move and no replace, should fail when key exists)") {
+        test("migrate key to another redis server (move and no replace, should fail when key exists)") {
           for {
             key   <- uuid
             value <- uuid
@@ -174,7 +164,7 @@ trait KeysSpec extends BaseSpec {
         }
       ) @@ testExecutorUnsupported,
       suite("ttl")(
-        testM("check ttl for existing key") {
+        test("check ttl for existing key") {
           for {
             key   <- uuid
             value <- uuid
@@ -182,13 +172,13 @@ trait KeysSpec extends BaseSpec {
             ttl   <- ttl(key).either
           } yield assert(ttl)(isRight)
         } @@ eventually,
-        testM("check ttl for non-existing key") {
+        test("check ttl for non-existing key") {
           for {
             key <- uuid
             ttl <- ttl(key).either
           } yield assert(ttl)(isLeft)
         },
-        testM("check pTtl for existing key") {
+        test("check pTtl for existing key") {
           for {
             key   <- uuid
             value <- uuid
@@ -196,7 +186,7 @@ trait KeysSpec extends BaseSpec {
             pTtl  <- pTtl(key).either
           } yield assert(pTtl)(isRight)
         } @@ eventually,
-        testM("check pTtl for non-existing key") {
+        test("check pTtl for non-existing key") {
           for {
             key  <- uuid
             pTtl <- pTtl(key).either
@@ -204,7 +194,7 @@ trait KeysSpec extends BaseSpec {
         }
       ),
       suite("expiration")(
-        testM("set key expiration with pExpire command") {
+        test("set key expiration with pExpire command") {
           for {
             key       <- uuid
             value     <- uuid
@@ -216,11 +206,11 @@ trait KeysSpec extends BaseSpec {
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         },
-        testM("set key expiration with pExpireAt command") {
+        test("set key expiration with pExpireAt command") {
           for {
             key       <- uuid
             value     <- uuid
-            expiresAt <- clock.instant.map(_.plusMillis(2000.millis.toMillis))
+            expiresAt <- Clock.instant.map(_.plusMillis(2000.millis.toMillis))
             _         <- set(key, value)
             exp       <- pExpireAt(key, expiresAt)
             response1 <- exists(key)
@@ -229,7 +219,7 @@ trait KeysSpec extends BaseSpec {
             response2 <- exists(key)
           } yield assert(exp)(isTrue) && assert(response1)(equalTo(1L)) && assert(response2)(equalTo(0L))
         },
-        testM("expire followed by persist") {
+        test("expire followed by persist") {
           for {
             key       <- uuid
             value     <- uuid
@@ -238,11 +228,11 @@ trait KeysSpec extends BaseSpec {
             persisted <- persist(key)
           } yield assert(exp)(isTrue) && assert(persisted)(isTrue)
         },
-        testM("set key expiration with expireAt command") {
+        test("set key expiration with expireAt command") {
           for {
             key       <- uuid
             value     <- uuid
-            expiresAt <- clock.instant.map(_.plusMillis(2000.millis.toMillis))
+            expiresAt <- Clock.instant.map(_.plusMillis(2000.millis.toMillis))
             _         <- set(key, value)
             exp       <- expireAt(key, expiresAt)
             response1 <- exists(key)
@@ -253,7 +243,7 @@ trait KeysSpec extends BaseSpec {
         }
       ),
       suite("renaming")(
-        testM("rename existing key") {
+        test("rename existing key") {
           for {
             key     <- uuid
             newKey  <- uuid
@@ -263,14 +253,14 @@ trait KeysSpec extends BaseSpec {
             v       <- get(newKey).returning[String]
           } yield assert(renamed)(isRight) && assert(v)(isSome(equalTo(value)))
         },
-        testM("try to rename non-existing key") {
+        test("try to rename non-existing key") {
           for {
             key     <- uuid
             newKey  <- uuid
             renamed <- rename(key, newKey).either
           } yield assert(renamed)(isLeft)
         },
-        testM("rename key to newkey if newkey does not yet exist") {
+        test("rename key to newkey if newkey does not yet exist") {
           for {
             key     <- uuid
             newKey  <- uuid
@@ -280,7 +270,7 @@ trait KeysSpec extends BaseSpec {
             v       <- get(newKey).returning[String]
           } yield assert(renamed)(isTrue) && assert(v)(isSome(equalTo(value)))
         },
-        testM("try to rename non-existing key with renameNx command") {
+        test("try to rename non-existing key with renameNx command") {
           for {
             key     <- uuid
             newKey  <- uuid
@@ -289,7 +279,7 @@ trait KeysSpec extends BaseSpec {
         }
       ),
       suite("types")(
-        testM("string type") {
+        test("string type") {
           for {
             key    <- uuid
             value  <- uuid
@@ -297,7 +287,7 @@ trait KeysSpec extends BaseSpec {
             string <- typeOf(key)
           } yield assert(string)(equalTo(RedisType.String))
         },
-        testM("list type") {
+        test("list type") {
           for {
             key   <- uuid
             value <- uuid
@@ -305,7 +295,7 @@ trait KeysSpec extends BaseSpec {
             list  <- typeOf(key)
           } yield assert(list)(equalTo(RedisType.List))
         },
-        testM("set type") {
+        test("set type") {
           for {
             key   <- uuid
             value <- uuid
@@ -313,7 +303,7 @@ trait KeysSpec extends BaseSpec {
             set   <- typeOf(key)
           } yield assert(set)(equalTo(RedisType.Set))
         },
-        testM("sorted set type") {
+        test("sorted set type") {
           for {
             key   <- uuid
             value <- uuid
@@ -321,7 +311,7 @@ trait KeysSpec extends BaseSpec {
             zset  <- typeOf(key)
           } yield assert(zset)(equalTo(RedisType.SortedSet))
         },
-        testM("hash type") {
+        test("hash type") {
           for {
             key   <- uuid
             field <- uuid
@@ -330,7 +320,7 @@ trait KeysSpec extends BaseSpec {
             hash  <- typeOf(key)
           } yield assert(hash)(equalTo(RedisType.Hash))
         },
-        testM("stream type") {
+        test("stream type") {
           for {
             key    <- uuid
             field  <- uuid
@@ -341,35 +331,35 @@ trait KeysSpec extends BaseSpec {
         } @@ testExecutorUnsupported
       ),
       suite("sort")(
-        testM("list of numbers") {
+        test("list of numbers") {
           for {
             key    <- uuid
             _      <- lPush(key, "1", "0", "2")
             sorted <- sort(key).returning[String]
           } yield assert(sorted)(equalTo(Chunk("0", "1", "2")))
         },
-        testM("list of strings") {
+        test("list of strings") {
           for {
             key    <- uuid
             _      <- lPush(key, "z", "a", "c")
             sorted <- sort(key, alpha = Some(Alpha)).returning[String]
           } yield assert(sorted)(equalTo(Chunk("a", "c", "z")))
         },
-        testM("list of numbers, limited") {
+        test("list of numbers, limited") {
           for {
             key    <- uuid
             _      <- lPush(key, "1", "0", "2")
             sorted <- sort(key, limit = Some(Limit(1, 1))).returning[String]
           } yield assert(sorted)(equalTo(Chunk("1")))
         },
-        testM("descending sort") {
+        test("descending sort") {
           for {
             key    <- uuid
             _      <- lPush(key, "1", "0", "2")
             sorted <- sort(key, order = Order.Descending).returning[String]
           } yield assert(sorted)(equalTo(Chunk("2", "1", "0")))
         },
-        testM("by the value referenced by a key-value pair") {
+        test("by the value referenced by a key-value pair") {
           for {
             key    <- uuid
             a      <- uuid
@@ -381,7 +371,7 @@ trait KeysSpec extends BaseSpec {
             sorted <- sort(key, by = Some(s"${prefix}_*"), alpha = Some(Alpha)).returning[String]
           } yield assert(sorted)(equalTo(Chunk(a, b)))
         },
-        testM("getting the value referenced by a key-value pair") {
+        test("getting the value referenced by a key-value pair") {
           for {
             key    <- uuid
             value  <- uuid
@@ -391,7 +381,7 @@ trait KeysSpec extends BaseSpec {
             sorted <- sort(key, get = Some(s"${prefix}_*" -> List.empty), alpha = Some(Alpha)).returning[String]
           } yield assert(sorted)(equalTo(Chunk("A")))
         },
-        testM("getting multiple values referenced by a key-value pair") {
+        test("getting multiple values referenced by a key-value pair") {
           for {
             key     <- uuid
             value1  <- uuid
@@ -407,7 +397,7 @@ trait KeysSpec extends BaseSpec {
                         .returning[String]
           } yield assert(sorted)(equalTo(Chunk("A1", "B1", "A2", "B2")))
         } @@ flaky,
-        testM("sort and store result") {
+        test("sort and store result") {
           for {
             key       <- uuid
             resultKey <- uuid
@@ -424,8 +414,13 @@ trait KeysSpec extends BaseSpec {
 object KeysSpec {
   final val MigrateTimeout: Duration = 5.seconds
 
-  final val SecondExecutor: Layer[RedisError.IOError, Has[Redis]] = {
-    val executor = Logging.ignore ++ ZLayer.succeed(RedisConfig("localhost", 6380)) >>> RedisExecutor.live
-    (executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> Redis.live).fresh
-  }
+  final val SecondExecutor: Layer[RedisError.IOError, Redis] =
+    ZLayer
+      .make[Redis](
+        ZLayer.succeed(RedisConfig("localhost", 6380)),
+        RedisExecutor.layer,
+        ZLayer.succeed[Codec](ProtobufCodec),
+        RedisLive.layer
+      )
+      .fresh
 }

@@ -20,14 +20,14 @@ import zio._
 import zio.redis.Input.{StringInput, Varargs}
 
 final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out]) {
-  private[redis] def run(in: In): ZIO[Has[Redis], RedisError, Out] =
+  private[redis] def run(in: In): ZIO[Redis, RedisError, Out] =
     ZIO
-      .serviceWith[Redis] { redis =>
+      .serviceWithZIO[Redis] { redis =>
         val command = Varargs(StringInput).encode(name.split(" "))(redis.codec) ++ input.encode(in)(redis.codec)
 
         redis.executor
           .execute(command)
-          .flatMap[Any, Throwable, Out](out => ZIO(output.unsafeDecode(out)(redis.codec)))
+          .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(redis.codec)))
       }
       .refineToOrDie[RedisError]
 }

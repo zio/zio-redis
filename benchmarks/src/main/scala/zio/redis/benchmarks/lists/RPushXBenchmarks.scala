@@ -17,9 +17,9 @@
 package zio.redis.benchmarks.lists
 
 import org.openjdk.jmh.annotations._
-import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{Scope => _, _}
 
 import java.util.concurrent.TimeUnit
 
@@ -74,5 +74,5 @@ class RPushXBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => rPushX[String, String](key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => rPushX[String, String](key, i)))
 }

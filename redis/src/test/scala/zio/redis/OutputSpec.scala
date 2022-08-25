@@ -1,254 +1,254 @@
 package zio.redis
 
-import zio.duration._
+import zio._
 import zio.redis.Output._
-import zio.redis.RedisError.{ProtocolError, _}
+import zio.redis.RedisError._
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, Task, UIO}
 
 object OutputSpec extends BaseSpec {
-
-  def spec: Spec[Any, TestFailure[Throwable], TestSuccess] =
+  def spec: Spec[Any, Throwable] =
     suite("Output decoders")(
       suite("errors")(
-        testM("protocol errors") {
+        test("protocol errors") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(RespValue.Error(s"ERR $Noise"))).either
+            res <- ZIO.attempt(BoolOutput.unsafeDecode(RespValue.Error(s"ERR $Noise"))).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(Noise))))
         },
-        testM("wrong type") {
+        test("wrong type") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(RespValue.Error(s"WRONGTYPE $Noise"))).either
+            res <- ZIO.attempt(BoolOutput.unsafeDecode(RespValue.Error(s"WRONGTYPE $Noise"))).either
           } yield assert(res)(isLeft(equalTo(WrongType(Noise))))
         }
       ),
       suite("boolean")(
-        testM("extract true") {
+        test("extract true") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(RespValue.Integer(1L)))
+            res <- ZIO.attempt(BoolOutput.unsafeDecode(RespValue.Integer(1L)))
           } yield assert(res)(isTrue)
         },
-        testM("extract false") {
+        test("extract false") {
           for {
-            res <- Task(BoolOutput.unsafeDecode(RespValue.Integer(0)))
+            res <- ZIO.attempt(BoolOutput.unsafeDecode(RespValue.Integer(0)))
           } yield assert(res)(isFalse)
         }
       ),
       suite("chunk")(
-        testM("extract empty arrays") {
+        test("extract empty arrays") {
           for {
-            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- ZIO.attempt(ChunkOutput(MultiStringOutput).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
-        testM("extract non-empty arrays") {
+        test("extract non-empty arrays") {
           val respValue = RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           for {
-            res <- Task(ChunkOutput(MultiStringOutput).unsafeDecode(respValue))
+            res <- ZIO.attempt(ChunkOutput(MultiStringOutput).unsafeDecode(respValue))
           } yield assert(res)(hasSameElements(Chunk("foo", "bar")))
         }
       ),
       suite("double")(
-        testM("extract numbers") {
+        test("extract numbers") {
           val num = 42.3
           for {
-            res <- Task(DoubleOutput.unsafeDecode(RespValue.bulkString(num.toString)))
+            res <- ZIO.attempt(DoubleOutput.unsafeDecode(RespValue.bulkString(num.toString)))
           } yield assert(res)(equalTo(num))
         },
-        testM("report number format exceptions as protocol errors") {
+        test("report number format exceptions as protocol errors") {
           val bad = "ok"
           for {
-            res <- Task(DoubleOutput.unsafeDecode(RespValue.bulkString(bad))).either
+            res <- ZIO.attempt(DoubleOutput.unsafeDecode(RespValue.bulkString(bad))).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(s"'$bad' isn't a double."))))
         }
       ),
       suite("durations")(
         suite("milliseconds")(
-          testM("extract milliseconds") {
+          test("extract milliseconds") {
             val num = 42L
             for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(num)))
+              res <- ZIO.attempt(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(num)))
             } yield assert(res)(equalTo(num.millis))
           },
-          testM("report error for non-existing key") {
+          test("report error for non-existing key") {
             for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(-2L))).either
+              res <- ZIO.attempt(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(-2L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key not found."))))
           },
-          testM("report error for key without TTL") {
+          test("report error for key without TTL") {
             for {
-              res <- Task(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(-1L))).either
+              res <- ZIO.attempt(DurationMillisecondsOutput.unsafeDecode(RespValue.Integer(-1L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key has no expire."))))
           }
         ),
         suite("seconds")(
-          testM("extract seconds") {
+          test("extract seconds") {
             val num = 42L
             for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(RespValue.Integer(num)))
+              res <- ZIO.attempt(DurationSecondsOutput.unsafeDecode(RespValue.Integer(num)))
             } yield assert(res)(equalTo(num.seconds))
           },
-          testM("report error for non-existing key") {
+          test("report error for non-existing key") {
             for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(RespValue.Integer(-2L))).either
+              res <- ZIO.attempt(DurationSecondsOutput.unsafeDecode(RespValue.Integer(-2L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key not found."))))
           },
-          testM("report error for key without TTL") {
+          test("report error for key without TTL") {
             for {
-              res <- Task(DurationSecondsOutput.unsafeDecode(RespValue.Integer(-1L))).either
+              res <- ZIO.attempt(DurationSecondsOutput.unsafeDecode(RespValue.Integer(-1L))).either
             } yield assert(res)(isLeft(equalTo(ProtocolError("Key has no expire."))))
           }
         )
       ),
       suite("long")(
-        testM("extract positive numbers") {
+        test("extract positive numbers") {
           val num = 42L
           for {
-            res <- Task(LongOutput.unsafeDecode(RespValue.Integer(num)))
+            res <- ZIO.attempt(LongOutput.unsafeDecode(RespValue.Integer(num)))
           } yield assert(res)(equalTo(num))
         },
-        testM("extract negative numbers") {
+        test("extract negative numbers") {
           val num = -42L
           for {
-            res <- Task(LongOutput.unsafeDecode(RespValue.Integer(num)))
+            res <- ZIO.attempt(LongOutput.unsafeDecode(RespValue.Integer(num)))
           } yield assert(res)(equalTo(num))
         }
       ),
       suite("chunkLong")(
-        testM("extract empty array") {
+        test("extract empty array") {
           for {
-            res <- Task(ChunkOutput(LongOutput).unsafeDecode(RespValue.NullArray))
+            res <- ZIO.attempt(ChunkOutput(LongOutput).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(equalTo(Chunk.empty))
         },
-        testM("extract array of long values") {
+        test("extract array of long values") {
           val respArray = RespValue.array(RespValue.Integer(1L), RespValue.Integer(2L), RespValue.Integer(3L))
           for {
-            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray))
+            res <- ZIO.attempt(ChunkOutput(LongOutput).unsafeDecode(respArray))
           } yield assert(res)(equalTo(Chunk(1L, 2L, 3L)))
         },
-        testM("fail when one value is not a long") {
+        test("fail when one value is not a long") {
           val respArray =
             RespValue.array(RespValue.Integer(1L), RespValue.bulkString("not a long"), RespValue.Integer(3L))
           for {
-            res <- Task(ChunkOutput(LongOutput).unsafeDecode(respArray)).run
+            res <- ZIO.attempt(ChunkOutput(LongOutput).unsafeDecode(respArray)).exit
           } yield assert(res)(fails(isSubtype[ProtocolError](anything)))
         }
       ),
       suite("optional")(
-        testM("extract None") {
+        test("extract None") {
           for {
-            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(RespValue.NullBulkString))
+            res <- ZIO.attempt(OptionalOutput(UnitOutput).unsafeDecode(RespValue.NullBulkString))
           } yield assert(res)(isNone)
         },
-        testM("extract some") {
+        test("extract some") {
           for {
-            res <- Task(OptionalOutput(UnitOutput).unsafeDecode(RespValue.SimpleString("OK")))
+            res <- ZIO.attempt(OptionalOutput(UnitOutput).unsafeDecode(RespValue.SimpleString("OK")))
           } yield assert(res)(isSome(isUnit))
         }
       ),
       suite("scan")(
-        testM("extract cursor and elements") {
+        test("extract cursor and elements") {
           val input = RespValue.array(
             RespValue.bulkString("5"),
             RespValue.array(RespValue.bulkString("foo"), RespValue.bulkString("bar"))
           )
           for {
-            res <- Task(ScanOutput(MultiStringOutput).unsafeDecode(input))
+            res <- ZIO.attempt(ScanOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(equalTo(5L -> Chunk("foo", "bar")))
         }
       ),
       suite("string")(
-        testM("extract strings") {
+        test("extract strings") {
           for {
-            res <- Task(MultiStringOutput.unsafeDecode(RespValue.bulkString(Noise)))
+            res <- ZIO.attempt(MultiStringOutput.unsafeDecode(RespValue.bulkString(Noise)))
           } yield assert(res)(equalTo(Noise))
         }
       ),
       suite("unit")(
-        testM("extract unit") {
+        test("extract unit") {
           for {
-            res <- Task(UnitOutput.unsafeDecode(RespValue.SimpleString("OK")))
+            res <- ZIO.attempt(UnitOutput.unsafeDecode(RespValue.SimpleString("OK")))
           } yield assert(res)(isUnit)
         }
       ),
       suite("reset") {
-        testM("extract unit") {
+        test("extract unit") {
           for {
-            res <- Task(ResetOutput.unsafeDecode(RespValue.SimpleString("RESET")))
+            res <- ZIO.attempt(ResetOutput.unsafeDecode(RespValue.SimpleString("RESET")))
           } yield assert(res)(isUnit)
         }
       },
       suite("keyElem")(
-        testM("extract none") {
+        test("extract none") {
           for {
-            res <- Task(KeyElemOutput.unsafeDecode(RespValue.NullArray))
+            res <- ZIO.attempt(KeyElemOutput.unsafeDecode(RespValue.NullArray))
           } yield assert(res)(isNone)
         },
-        testM("extract key and element") {
+        test("extract key and element") {
           for {
             res <-
-              Task(KeyElemOutput.unsafeDecode(RespValue.array(RespValue.bulkString("key"), RespValue.bulkString("a"))))
+              ZIO.attempt(
+                KeyElemOutput.unsafeDecode(RespValue.array(RespValue.bulkString("key"), RespValue.bulkString("a")))
+              )
           } yield assert(res)(isSome(equalTo(("key", "a"))))
         },
-        testM("report invalid input as protocol error") {
+        test("report invalid input as protocol error") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(KeyElemOutput.unsafeDecode(input)).either
+            res <- ZIO.attempt(KeyElemOutput.unsafeDecode(input)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
       suite("multiStringChunk")(
-        testM("extract one empty value") {
+        test("extract one empty value") {
           for {
-            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.NullBulkString))
+            res <- ZIO.attempt(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.NullBulkString))
           } yield assert(res)(isEmpty)
         },
-        testM("extract one multi-string value") {
+        test("extract one multi-string value") {
           for {
-            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.bulkString("ab")))
+            res <- ZIO.attempt(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(RespValue.bulkString("ab")))
           } yield assert(res)(hasSameElements(Chunk("ab")))
         },
-        testM("extract one array value") {
+        test("extract one array value") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(input))
+            res <- ZIO.attempt(MultiStringChunkOutput(MultiStringOutput).unsafeDecode(input))
           } yield assert(res)(hasSameElements(Chunk("1", "2", "3")))
         }
       ),
       suite("chunkOptionalMultiString")(
-        testM("extract one empty value") {
+        test("extract one empty value") {
           for {
-            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.NullArray))
+            res <- ZIO.attempt(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(isEmpty)
         },
-        testM("extract array with one non-empty element") {
+        test("extract array with one non-empty element") {
           for {
             res <-
-              Task(
+              ZIO.attempt(
                 ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(RespValue.array(RespValue.bulkString("ab")))
               )
           } yield assert(res)(equalTo(Chunk(Some("ab"))))
         },
-        testM("extract array with multiple non-empty elements") {
+        test("extract array with multiple non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.bulkString("2"), RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
+            res <- ZIO.attempt(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), Some("2"), Some("3"))))
         },
-        testM("extract array with empty and non-empty elements") {
+        test("extract array with empty and non-empty elements") {
           val input = RespValue.array(RespValue.bulkString("1"), RespValue.NullBulkString, RespValue.bulkString("3"))
           for {
-            res <- Task(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
+            res <- ZIO.attempt(ChunkOutput(OptionalOutput(MultiStringOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some("1"), None, Some("3"))))
         }
       ),
       suite("chunkOptionalLong")(
-        testM("extract one empty value") {
+        test("extract one empty value") {
           for {
-            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(RespValue.Array(Chunk.empty)))
+            res <- ZIO.attempt(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(RespValue.Array(Chunk.empty)))
           } yield assert(res)(isEmpty)
         },
-        testM("extract array with empty and non-empty elements") {
+        test("extract array with empty and non-empty elements") {
           val input = RespValue.array(
             RespValue.Integer(1L),
             RespValue.NullBulkString,
@@ -256,10 +256,10 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
+            res <- ZIO.attempt(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), None, Some(2L), Some(3L))))
         },
-        testM("extract array with non-empty elements") {
+        test("extract array with non-empty elements") {
           val input = RespValue.array(
             RespValue.Integer(1L),
             RespValue.Integer(1L),
@@ -267,12 +267,12 @@ object OutputSpec extends BaseSpec {
             RespValue.Integer(3L)
           )
           for {
-            res <- Task(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
+            res <- ZIO.attempt(ChunkOutput(OptionalOutput(LongOutput)).unsafeDecode(input))
           } yield assert(res)(equalTo(Chunk(Some(1L), Some(1L), Some(2L), Some(3L))))
         }
       ),
       suite("stream")(
-        testM("extract valid input") {
+        test("extract valid input") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("id"),
@@ -280,13 +280,16 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input))
+          ZIO
+            .attempt(StreamEntriesOutput[String, String, String]().unsafeDecode(input))
             .map(assert(_)(equalTo(Chunk(StreamEntry("id", Map("field" -> "value"))))))
         },
-        testM("extract empty map") {
-          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(RespValue.array())).map(assert(_)(isEmpty))
+        test("extract empty map") {
+          ZIO
+            .attempt(StreamEntriesOutput[String, String, String]().unsafeDecode(RespValue.array()))
+            .map(assert(_)(isEmpty))
         },
-        testM("error when array of field-value pairs has odd length") {
+        test("error when array of field-value pairs has odd length") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("id"),
@@ -295,10 +298,12 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input)).either
+          ZIO
+            .attempt(StreamEntriesOutput[String, String, String]().unsafeDecode(input))
+            .either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
-        testM("error when message has more then two elements") {
+        test("error when message has more then two elements") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("id"),
@@ -306,12 +311,14 @@ object OutputSpec extends BaseSpec {
             )
           )
 
-          Task(StreamEntriesOutput[String, String, String]().unsafeDecode(input)).either
+          ZIO
+            .attempt(StreamEntriesOutput[String, String, String]().unsafeDecode(input))
+            .either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
       suite("xPending")(
-        testM("extract valid value") {
+        test("extract valid value") {
           val input = RespValue.array(
             RespValue.Integer(1),
             RespValue.bulkString("a"),
@@ -321,10 +328,11 @@ object OutputSpec extends BaseSpec {
               RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
-          Task(XPendingOutput.unsafeDecode(input))
+          ZIO
+            .attempt(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(1L, Some("a"), Some("b"), Map("consumer1" -> 1L, "consumer2" -> 2L)))))
         },
-        testM("extract when the smallest ID is null") {
+        test("extract when the smallest ID is null") {
           val input = RespValue.array(
             RespValue.Integer(1),
             RespValue.NullBulkString,
@@ -334,10 +342,11 @@ object OutputSpec extends BaseSpec {
               RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
-          Task(XPendingOutput.unsafeDecode(input))
+          ZIO
+            .attempt(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(1L, None, Some("b"), Map("consumer1" -> 1L, "consumer2" -> 2L)))))
         },
-        testM("extract when the greatest ID is null") {
+        test("extract when the greatest ID is null") {
           val input = RespValue.array(
             RespValue.Integer(1),
             RespValue.bulkString("a"),
@@ -347,20 +356,22 @@ object OutputSpec extends BaseSpec {
               RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
-          Task(XPendingOutput.unsafeDecode(input))
+          ZIO
+            .attempt(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(1L, Some("a"), None, Map("consumer1" -> 1L, "consumer2" -> 2L)))))
         },
-        testM("extract when total number of pending messages is zero") {
+        test("extract when total number of pending messages is zero") {
           val input = RespValue.array(
             RespValue.Integer(0),
             RespValue.NullBulkString,
             RespValue.NullBulkString,
             RespValue.NullArray
           )
-          Task(XPendingOutput.unsafeDecode(input))
+          ZIO
+            .attempt(XPendingOutput.unsafeDecode(input))
             .map(assert(_)(equalTo(PendingInfo(0L, None, None, Map.empty))))
         },
-        testM("error when consumer array doesn't have two elements") {
+        test("error when consumer array doesn't have two elements") {
           val input = RespValue.array(
             RespValue.Integer(1),
             RespValue.bulkString("a"),
@@ -370,12 +381,14 @@ object OutputSpec extends BaseSpec {
               RespValue.array(RespValue.bulkString("consumer2"), RespValue.bulkString("2"))
             )
           )
-          Task(XPendingOutput.unsafeDecode(input)).either
+          ZIO
+            .attempt(XPendingOutput.unsafeDecode(input))
+            .either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
       suite("pendingMessages")(
-        testM("extract valid value") {
+        test("extract valid value") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("id"),
@@ -390,18 +403,20 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(11)
             )
           )
-          Task(PendingMessagesOutput.unsafeDecode(input)).map(
-            assert(_)(
-              hasSameElements(
-                Chunk(
-                  PendingMessage("id", "consumer", 100.millis, 10),
-                  PendingMessage("id1", "consumer1", 101.millis, 11)
+          ZIO
+            .attempt(PendingMessagesOutput.unsafeDecode(input))
+            .map(
+              assert(_)(
+                hasSameElements(
+                  Chunk(
+                    PendingMessage("id", "consumer", 100.millis, 10),
+                    PendingMessage("id1", "consumer1", 101.millis, 11)
+                  )
                 )
               )
             )
-          )
         },
-        testM("error when message has more than four fields") {
+        test("error when message has more than four fields") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("id"),
@@ -417,10 +432,12 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(11)
             )
           )
-          Task(PendingMessagesOutput.unsafeDecode(input)).either
+          ZIO
+            .attempt(PendingMessagesOutput.unsafeDecode(input))
+            .either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
-        testM("error when message has less than four fields") {
+        test("error when message has less than four fields") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("id"),
@@ -434,12 +451,14 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(11)
             )
           )
-          Task(PendingMessagesOutput.unsafeDecode(input)).either
+          ZIO
+            .attempt(PendingMessagesOutput.unsafeDecode(input))
+            .either
             .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         }
       ),
       suite("xRead")(
-        testM("extract valid value") {
+        test("extract valid value") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("str1"),
@@ -473,20 +492,22 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(
-            ChunkOutput(StreamOutput[String, String, String, String]()).unsafeDecode(input)
-          ).map(
-            assert(_)(
-              equalTo(
-                Chunk(
-                  StreamChunk("str1", Chunk(StreamEntry("id1", Map("a" -> "b")))),
-                  StreamChunk("str2", Chunk(StreamEntry("id2", Map("c" -> "d")), StreamEntry("id3", Map("e" -> "f"))))
+          ZIO
+            .attempt(
+              ChunkOutput(StreamOutput[String, String, String, String]()).unsafeDecode(input)
+            )
+            .map(
+              assert(_)(
+                equalTo(
+                  Chunk(
+                    StreamChunk("str1", Chunk(StreamEntry("id1", Map("a" -> "b")))),
+                    StreamChunk("str2", Chunk(StreamEntry("id2", Map("c" -> "d")), StreamEntry("id3", Map("e" -> "f"))))
+                  )
                 )
               )
             )
-          )
         },
-        testM("error when message content has odd number of fields") {
+        test("error when message content has odd number of fields") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("str1"),
@@ -500,11 +521,15 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(
-            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
-          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          ZIO
+            .attempt(
+              KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]())
+                .unsafeDecode(input)
+            )
+            .either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
-        testM("error when message doesn't have an ID") {
+        test("error when message doesn't have an ID") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.bulkString("str1"),
@@ -518,11 +543,15 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(
-            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
-          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          ZIO
+            .attempt(
+              KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]())
+                .unsafeDecode(input)
+            )
+            .either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
-        testM("error when stream doesn't have an ID") {
+        test("error when stream doesn't have an ID") {
           val input = RespValue.array(
             RespValue.array(
               RespValue.array(
@@ -536,12 +565,16 @@ object OutputSpec extends BaseSpec {
               )
             )
           )
-          Task(
-            KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]()).unsafeDecode(input)
-          ).either.map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
+          ZIO
+            .attempt(
+              KeyValueOutput(ArbitraryOutput[String](), StreamEntriesOutput[String, String, String]())
+                .unsafeDecode(input)
+            )
+            .either
+            .map(assert(_)(isLeft(isSubtype[ProtocolError](anything))))
         },
         suite("xInfoStream")(
-          testM("extract valid value with first and last entry") {
+          test("extract valid value with first and last entry") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -571,7 +604,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfo(
                   1,
@@ -585,7 +618,7 @@ object OutputSpec extends BaseSpec {
               )
             )
           },
-          testM("extract valid value without first and last entry") {
+          test("extract valid value without first and last entry") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -599,13 +632,13 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("0-0")
             )
 
-            assertM(Task(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(StreamInfo[String, String, String](1, 2, 3, 1, "0-0", None, None))
             )
           }
         ),
         suite("xInfoGroups")(
-          testM("extract a valid value") {
+          test("extract a valid value") {
             val resp = RespValue.array(
               RespValue.array(
                 RespValue.bulkString("name"),
@@ -629,7 +662,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamGroupsInfoOutput.unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamGroupsInfoOutput.unsafeDecode(resp)))(
               equalTo(
                 Chunk(
                   StreamGroupsInfo("group1", 1, 1, "1-0"),
@@ -638,14 +671,14 @@ object OutputSpec extends BaseSpec {
               )
             )
           },
-          testM("extract an empty array") {
+          test("extract an empty array") {
             val resp = RespValue.array()
 
-            assertM(Task(StreamGroupsInfoOutput.unsafeDecode(resp)))(isEmpty)
+            assertZIO(ZIO.attempt(StreamGroupsInfoOutput.unsafeDecode(resp)))(isEmpty)
           }
         ),
         suite("xInfoConsumers")(
-          testM("extract a valid value") {
+          test("extract a valid value") {
             val resp = RespValue.array(
               RespValue.array(
                 RespValue.bulkString("name"),
@@ -665,7 +698,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamConsumersInfoOutput.unsafeDecode(resp)))(
               equalTo(
                 Chunk(
                   StreamConsumersInfo("consumer1", 1, 100.millis),
@@ -674,14 +707,14 @@ object OutputSpec extends BaseSpec {
               )
             )
           },
-          testM("extract an empty array") {
+          test("extract an empty array") {
             val resp = RespValue.array()
 
-            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
+            assertZIO(ZIO.attempt(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
           }
         ),
         suite("xInfoStreamFull")(
-          testM("extract a valid value without groups") {
+          test("extract a valid value without groups") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -710,7 +743,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfoWithFull.FullStreamInfo(
                   1,
@@ -723,7 +756,7 @@ object OutputSpec extends BaseSpec {
               )
             )
           },
-          testM("extract a valid value without groups and entries") {
+          test("extract a valid value without groups and entries") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -734,17 +767,17 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("last-generated-id"),
               RespValue.bulkString("0-0")
             )
-            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfoWithFull.FullStreamInfo[String, String, String](1, 2, 3, "0-0", Chunk.empty, Chunk.empty)
               )
             )
           },
-          testM("extract an empty array") {
+          test("extract an empty array") {
             val resp = RespValue.array()
-            assertM(Task(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
+            assertZIO(ZIO.attempt(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
           },
-          testM("extract a valid value with groups") {
+          test("extract a valid value with groups") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -818,7 +851,7 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-            assertM(Task(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
+            assertZIO(ZIO.attempt(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
                 StreamInfoWithFull.FullStreamInfo(
                   1,
@@ -854,9 +887,9 @@ object OutputSpec extends BaseSpec {
         )
       ),
       suite("ClientTrackingInfo")(
-        testM("extract with tracking off") {
+        test("extract with tracking off") {
           for {
-            resp <- UIO(
+            resp <- ZIO.succeed(
                       RespValue
                         .array(
                           RespValue.bulkString("flags"),
@@ -867,7 +900,7 @@ object OutputSpec extends BaseSpec {
                           RespValue.NullArray
                         )
                     )
-            expectedInfo <- UIO(
+            expectedInfo <- ZIO.succeed(
                               ClientTrackingInfo(
                                 ClientTrackingFlags(
                                   clientSideCaching = false
@@ -875,12 +908,12 @@ object OutputSpec extends BaseSpec {
                                 ClientTrackingRedirect.NotEnabled
                               )
                             )
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+            res <- ZIO.attempt(ClientTrackingInfoOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(expectedInfo))
         },
-        testM("extract with flags set") {
+        test("extract with flags set") {
           for {
-            resp <- UIO(
+            resp <- ZIO.succeed(
                       RespValue
                         .array(
                           RespValue.bulkString("flags"),
@@ -896,7 +929,7 @@ object OutputSpec extends BaseSpec {
                           RespValue.NullArray
                         )
                     )
-            expectedInfo <- UIO(
+            expectedInfo <- ZIO.succeed(
                               ClientTrackingInfo(
                                 ClientTrackingFlags(
                                   clientSideCaching = true,
@@ -907,12 +940,12 @@ object OutputSpec extends BaseSpec {
                                 ClientTrackingRedirect.NotRedirected
                               )
                             )
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+            res <- ZIO.attempt(ClientTrackingInfoOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(expectedInfo))
         },
-        testM("extract with redirect id and broken redirect flag") {
+        test("extract with redirect id and broken redirect flag") {
           for {
-            resp <- UIO(
+            resp <- ZIO.succeed(
                       RespValue
                         .array(
                           RespValue.bulkString("flags"),
@@ -923,18 +956,18 @@ object OutputSpec extends BaseSpec {
                           RespValue.NullArray
                         )
                     )
-            expectedInfo <- UIO(
+            expectedInfo <- ZIO.succeed(
                               ClientTrackingInfo(
                                 ClientTrackingFlags(clientSideCaching = true, brokenRedirect = true),
                                 ClientTrackingRedirect.RedirectedTo(42L)
                               )
                             )
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+            res <- ZIO.attempt(ClientTrackingInfoOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(expectedInfo))
         },
-        testM("extract with specified prefixes") {
+        test("extract with specified prefixes") {
           for {
-            resp <- UIO(
+            resp <- ZIO.succeed(
                       RespValue
                         .array(
                           RespValue.bulkString("flags"),
@@ -949,7 +982,7 @@ object OutputSpec extends BaseSpec {
                           )
                         )
                     )
-            expectedInfo <- UIO(
+            expectedInfo <- ZIO.succeed(
                               ClientTrackingInfo(
                                 ClientTrackingFlags(
                                   clientSideCaching = true,
@@ -959,12 +992,12 @@ object OutputSpec extends BaseSpec {
                                 Set("prefix1", "prefix2", "prefix3")
                               )
                             )
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp))
+            res <- ZIO.attempt(ClientTrackingInfoOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(expectedInfo))
         },
-        testM("error when fields are missing") {
+        test("error when fields are missing") {
           for {
-            resp <- UIO(
+            resp <- ZIO.succeed(
                       RespValue
                         .array(
                           RespValue.bulkString("redirect"),
@@ -973,33 +1006,33 @@ object OutputSpec extends BaseSpec {
                           RespValue.NullArray
                         )
                     )
-            res <- Task(ClientTrackingInfoOutput.unsafeDecode(resp)).either
+            res <- ZIO.attempt(ClientTrackingInfoOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
       suite("ClientTrackingRedirect")(
-        testM("extract not enabled") {
+        test("extract not enabled") {
           for {
-            resp <- UIO(RespValue.Integer(-1L))
-            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+            resp <- ZIO.succeed(RespValue.Integer(-1L))
+            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(ClientTrackingRedirect.NotEnabled))
         },
-        testM("extract not redirected") {
+        test("extract not redirected") {
           for {
-            resp <- UIO(RespValue.Integer(0L))
-            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+            resp <- ZIO.succeed(RespValue.Integer(0L))
+            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(ClientTrackingRedirect.NotRedirected))
         },
-        testM("extract redirect id") {
+        test("extract redirect id") {
           for {
-            resp <- UIO(RespValue.Integer(42L))
-            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp))
+            resp <- ZIO.succeed(RespValue.Integer(42L))
+            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp))
           } yield assert(res)(equalTo(ClientTrackingRedirect.RedirectedTo(resp.value)))
         },
-        testM("error when redirect id is invalid") {
+        test("error when redirect id is invalid") {
           for {
-            resp <- UIO(RespValue.Integer(-42L))
-            res  <- Task(ClientTrackingRedirectOutput.unsafeDecode(resp)).either
+            resp <- ZIO.succeed(RespValue.Integer(-42L))
+            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp)).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
         }
       )

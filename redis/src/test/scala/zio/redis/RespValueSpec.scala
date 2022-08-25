@@ -1,14 +1,13 @@
 package zio.redis
+
 import zio.Chunk
-import zio.stream.Stream
 import zio.test.Assertion._
 import zio.test._
 
 import java.nio.charset.StandardCharsets
 
 object RespValueSpec extends BaseSpec {
-
-  def spec: Spec[Any, TestFailure[RedisError.ProtocolError], TestSuccess] =
+  def spec: Spec[Any, RedisError.ProtocolError] =
     suite("RespValue")(
       suite("serialization")(
         test("array") {
@@ -17,7 +16,7 @@ object RespValueSpec extends BaseSpec {
           assert(v.serialize)(equalTo(expected))
         }
       ),
-      testM("deserialization") {
+      test("deserialization") {
         val values = Chunk(
           RespValue.SimpleString("OK"),
           RespValue.bulkString("test1"),
@@ -32,10 +31,13 @@ object RespValueSpec extends BaseSpec {
           RespValue.NullBulkString
         )
 
-        Stream
+        zio.stream.ZStream
           .fromChunk(values)
           .mapConcat(_.serialize)
-          .transduce(RespValue.Decoder)
+          .via(RespValue.decoder)
+          .collect { case Some(value) =>
+            value
+          }
           .runCollect
           .map(assert(_)(equalTo(values)))
       }

@@ -17,9 +17,9 @@
 package zio.redis.benchmarks.hash
 
 import org.openjdk.jmh.annotations._
-import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{Scope => _, _}
 
 import java.util.concurrent.TimeUnit
 
@@ -75,5 +75,5 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(it => hIncrByFloat(key, it._1, increment)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hIncrByFloat(key, it._1, increment)))
 }

@@ -16,12 +16,23 @@
 
 package example.config
 
-import zio.config.ConfigDescriptor
-import zio.config.magnolia.DeriveConfigDescriptor
+import com.typesafe.config.ConfigFactory
+import zio._
+import zio.config.ReadError
+import zio.config.magnolia.descriptor
+import zio.config.syntax._
+import zio.config.typesafe.TypesafeConfig
 import zio.redis.RedisConfig
 
-final case class AppConfig(redis: RedisConfig, server: ServerConfig)
+final case class AppConfig(redis: RedisConfig)
 
 object AppConfig {
-  val descriptor: ConfigDescriptor[AppConfig] = DeriveConfigDescriptor.descriptor[AppConfig]
+  type Env = AppConfig with RedisConfig
+
+  private[this] final val Config     = ZIO.attempt(ConfigFactory.load.resolve.getConfig("example"))
+  private[this] final val Descriptor = descriptor[AppConfig]
+
+  lazy val layer: ZLayer[Any, ReadError[String], Env] =
+    TypesafeConfig.fromTypesafeConfig(Config, Descriptor) >+>
+      ZLayer.service[AppConfig].narrow(_.redis)
 }

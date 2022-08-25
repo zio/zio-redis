@@ -20,9 +20,9 @@ import cats.instances.list._
 import cats.syntax.foldable._
 import io.chrisdavenport.rediculous.{RedisCommands, RedisIO}
 import org.openjdk.jmh.annotations._
-import zio.ZIO
 import zio.redis._
 import zio.redis.benchmarks._
+import zio.{Scope => _, _}
 
 import java.util.concurrent.TimeUnit
 
@@ -42,7 +42,7 @@ class DecrBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(ZIO.foreach_(items)(i => set(i, i)))
+    execute(ZIO.foreachDiscard(items)(i => set(i, i)))
   }
 
   @Benchmark
@@ -61,5 +61,5 @@ class DecrBenchmarks extends BenchmarkRuntime {
     execute[Redis4CatsClient[Long]](c => items.traverse_(i => c.decr(i)))
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreach_(items)(i => decr(i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => decr(i)))
 }

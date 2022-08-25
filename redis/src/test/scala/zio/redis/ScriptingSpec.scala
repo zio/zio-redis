@@ -11,10 +11,10 @@ import zio.test._
 import scala.util.Random
 
 trait ScriptingSpec extends BaseSpec {
-  val scriptingSpec: Spec[Has[Redis] with Annotations, TestFailure[Any], TestSuccess] =
+  def scriptingSpec: Spec[Redis, RedisError] =
     suite("scripting")(
       suite("eval")(
-        testM("put boolean and return existence of key") {
+        test("put boolean and return existence of key") {
           for {
             key <- uuid
             arg  = true
@@ -26,7 +26,7 @@ trait ScriptingSpec extends BaseSpec {
             res <- eval(lua, Chunk(key), Chunk(arg)).returning[Boolean]
           } yield assertTrue(res)
         },
-        testM("take strings return strings") {
+        test("take strings return strings") {
           for {
             key1 <- uuid
             key2 <- uuid
@@ -36,7 +36,7 @@ trait ScriptingSpec extends BaseSpec {
             res  <- eval(lua, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
           } yield assertTrue(res == Chunk(key1, key2, arg1, arg2))
         },
-        testM("put custom input value return custom input value") {
+        test("put custom input value return custom input value") {
           for {
             key1 <- uuid
             key2 <- uuid
@@ -47,7 +47,7 @@ trait ScriptingSpec extends BaseSpec {
             res  <- eval(lua, Chunk(key1, key2), Chunk(arg)).returning[Map[String, String]]
           } yield assertTrue(res == Map(arg1 -> arg2.toString))
         },
-        testM("return custom data type") {
+        test("return custom data type") {
           val lua                     = """return {1,2,{3,'Hello World!'}}"""
           val expected                = CustomData(1, 2, (3, "Hello World!"))
           val emptyInput: Chunk[Long] = Chunk.empty
@@ -55,7 +55,7 @@ trait ScriptingSpec extends BaseSpec {
             res <- eval(lua, emptyInput, emptyInput).returning[CustomData]
           } yield assertTrue(res == expected)
         },
-        testM("throw an error when incorrect script's sent") {
+        test("throw an error when incorrect script's sent") {
           for {
             key  <- uuid
             arg  <- uuid
@@ -64,7 +64,7 @@ trait ScriptingSpec extends BaseSpec {
             res  <- eval(lua, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         },
-        testM("throw an error if couldn't decode resp value") {
+        test("throw an error if couldn't decode resp value") {
           val customError                      = "custom error"
           implicit val decoder: Output[String] = errorOutput(customError)
           for {
@@ -74,7 +74,7 @@ trait ScriptingSpec extends BaseSpec {
             res <- eval(lua, Chunk(key), Chunk(arg)).returning[String](decoder).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
-        testM("throw custom error from script") {
+        test("throw custom error from script") {
           for {
             key    <- uuid
             arg    <- uuid
@@ -85,7 +85,7 @@ trait ScriptingSpec extends BaseSpec {
         }
       ),
       suite("evalSHA")(
-        testM("put boolean and return existence of key") {
+        test("put boolean and return existence of key") {
           for {
             key <- uuid
             arg  = true
@@ -98,7 +98,7 @@ trait ScriptingSpec extends BaseSpec {
             res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[Boolean]
           } yield assertTrue(res)
         },
-        testM("take strings return strings") {
+        test("take strings return strings") {
           for {
             key1 <- uuid
             key2 <- uuid
@@ -109,7 +109,7 @@ trait ScriptingSpec extends BaseSpec {
             res  <- evalSha(sha, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
           } yield assertTrue(res == Chunk(key1, key2, arg1, arg2))
         },
-        testM("return custom data type") {
+        test("return custom data type") {
           val lua                       = """return {1,2,{3,'Hello World!'}}"""
           val expected                  = CustomData(1, 2, (3, "Hello World!"))
           val emptyInput: Chunk[String] = Chunk.empty
@@ -117,7 +117,7 @@ trait ScriptingSpec extends BaseSpec {
             res <- eval(lua, emptyInput, emptyInput).returning[CustomData]
           } yield assertTrue(res == expected)
         },
-        testM("throw an error if couldn't decode resp value") {
+        test("throw an error if couldn't decode resp value") {
           val customError                      = "custom error"
           implicit val decoder: Output[String] = errorOutput(customError)
           for {
@@ -128,7 +128,7 @@ trait ScriptingSpec extends BaseSpec {
             res <- evalSha(sha, Chunk(key), Chunk(arg)).returning[String](decoder).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
-        testM("throw custom error from script") {
+        test("throw custom error from script") {
           for {
             key    <- uuid
             arg    <- uuid
@@ -138,7 +138,7 @@ trait ScriptingSpec extends BaseSpec {
             res    <- evalSha(sha, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(myError)))))
         },
-        testM("throw NoScript error if script isn't found in cache") {
+        test("throw NoScript error if script isn't found in cache") {
           val lua                       = """return "1""""
           val error                     = "No matching script. Please use EVAL."
           val emptyInput: Chunk[String] = Chunk.empty
@@ -148,7 +148,7 @@ trait ScriptingSpec extends BaseSpec {
         }
       ),
       suite("scriptExists")(
-        testM("return true if scripts are found in the cache") {
+        test("return true if scripts are found in the cache") {
           val lua1 = """return "1""""
           val lua2 = """return "2""""
           for {
@@ -157,7 +157,7 @@ trait ScriptingSpec extends BaseSpec {
             res  <- scriptExists(sha1, sha2)
           } yield assertTrue(res == Chunk(true, true))
         },
-        testM("return false if scripts aren't found in the cache") {
+        test("return false if scripts aren't found in the cache") {
           val lua1 = """return "1""""
           val lua2 = """return "2""""
           for {
@@ -166,13 +166,13 @@ trait ScriptingSpec extends BaseSpec {
         }
       ),
       suite("scriptLoad")(
-        testM("return OK") {
+        test("return OK") {
           val lua = """return "1""""
           for {
             sha <- scriptLoad(lua)
           } yield assert(sha)(isSubtype[String](anything))
         },
-        testM("throw an error when incorrect script was sent") {
+        test("throw an error when incorrect script was sent") {
           val lua   = ";"
           val error = "Error compiling script (new function): user_script:1: unexpected symbol near ';'"
           for {

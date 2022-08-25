@@ -17,23 +17,19 @@
 package zio.redis
 
 import zio._
-import zio.clock.Clock
-import zio.logging._
 
 trait RedisExecutor {
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
 }
 
 object RedisExecutor {
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
+    ByteStream.customized >>> StreamedExecutor
 
-  lazy val live: ZLayer[Logging with Has[RedisConfig], RedisError.IOError, Has[RedisExecutor]] =
-    ZLayer.identity[Logging] ++ ByteStream.live >>> StreamedExecutor
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
+    ByteStream.default >>> StreamedExecutor
 
-  lazy val local: ZLayer[Logging, RedisError.IOError, Has[RedisExecutor]] =
-    ZLayer.identity[Logging] ++ ByteStream.default >>> StreamedExecutor
-
-  lazy val test: URLayer[zio.random.Random with Clock, Has[RedisExecutor]] =
-    TestExecutor.live
+  lazy val test: ULayer[RedisExecutor] = TestExecutor.layer
 
   private[this] final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
@@ -41,23 +37,21 @@ object RedisExecutor {
 
   private[this] final val RequestQueueSize = 16
 
-  private[this] final val StreamedExecutor =
-    ZLayer
-      .fromServicesManaged[ByteStream.Service, Logger[String], Any, RedisError.IOError, RedisExecutor] {
-        (byteStream, logging) =>
-          for {
-            reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
-            resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
-            live      = new Live(reqQueue, resQueue, byteStream, logging)
-            _        <- live.run.forkManaged
-          } yield live
-      }
+  private[this] final val StreamedExecutor: ZLayer[ByteStream, Nothing, Live] =
+    ZLayer.scoped {
+      for {
+        byteStream <- ZIO.service[ByteStream]
+        reqQueue   <- Queue.bounded[Request](RequestQueueSize)
+        resQueue   <- Queue.unbounded[Promise[RedisError, RespValue]]
+        live        = new Live(reqQueue, resQueue, byteStream)
+        _          <- live.run.forkScoped
+      } yield live
+    }
 
   private[this] final class Live(
     reqQueue: Queue[Request],
     resQueue: Queue[Promise[RedisError, RespValue]],
-    byteStream: ByteStream.Service,
-    logger: Logger[String]
+    byteStream: ByteStream
   ) extends RedisExecutor {
 
     def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
@@ -71,13 +65,13 @@ object RedisExecutor {
      */
     val run: IO[RedisError, Unit] =
       (send.forever race receive)
-        .tapError(e => logger.warn(s"Reconnecting due to error: $e") *> drainWith(e))
+        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e))
         .retryWhile(True)
-        .tapError(e => logger.error(s"Executor exiting: $e"))
+        .tapError(e => ZIO.logError(s"Executor exiting: $e"))
 
-    private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
+    private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
-    private def send: IO[RedisError, Unit] =
+    private def send: IO[RedisError.IOError, Option[Unit]] =
       reqQueue.takeBetween(1, RequestQueueSize).flatMap { reqs =>
         val buffer = ChunkBuilder.make[Byte]()
         val it     = reqs.iterator
@@ -93,16 +87,16 @@ object RedisExecutor {
           .write(bytes)
           .mapError(RedisError.IOError)
           .tapBoth(
-            e => IO.foreach_(reqs)(_.promise.fail(e)),
-            _ => IO.foreach_(reqs)(req => resQueue.offer(req.promise))
+            e => ZIO.foreachDiscard(reqs)(_.promise.fail(e)),
+            _ => ZIO.foreachDiscard(reqs)(req => resQueue.offer(req.promise))
           )
       }
 
     private def receive: IO[RedisError, Unit] =
       byteStream.read
         .mapError(RedisError.IOError)
-        .transduce(RespValue.Decoder)
+        .via(RespValue.decoder)
+        .collectSome
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
-
   }
 }
