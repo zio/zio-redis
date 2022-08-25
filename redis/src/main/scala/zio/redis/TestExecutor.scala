@@ -2958,7 +2958,7 @@ private[redis] final class TestExecutor private (
         }
 
         def parseSignedLong(string: String): Option[Long] =
-          Some(string).filter(_.length <= 64).flatMap { string =>
+          Option(string).filter(_.length <= 64).flatMap { string =>
             Try {
               val unsigned = BigInt(string, 2)
               val limit    = BigInt(1) << (string.length - 1)
