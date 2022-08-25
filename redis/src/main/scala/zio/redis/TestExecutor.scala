@@ -19,7 +19,7 @@ package zio.redis
 import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{BulkString, bulkString}
-import zio.redis.TestExecutor.{KeyInfo, KeyType}
+import zio.redis.TestExecutor.{KeyInfo, KeyType, Regex}
 import zio.stm._
 
 import java.nio.file.{FileSystems, Paths}
@@ -2943,21 +2943,17 @@ private[redis] final class TestExecutor private (
         val stringInput = input.map(_.asString)
         val keyOption   = stringInput.headOption
 
-        val unsignedIntRegex = "u(\\d+)".r
-        val signedIntRegex   = "i(\\d+)".r
-        val offsetRegex      = "([#]?)(\\d+)".r
-
         import BitFieldCommand.BitFieldOverflow
 
         def decodeBitFieldType(s: String): Option[BitFieldType] = s match {
-          case unsignedIntRegex(size) => toIntOption(size).filter(_ <= 64).map(size => BitFieldType.UnsignedInt(size))
-          case signedIntRegex(size)   => toIntOption(size).filter(_ <= 63).map(size => BitFieldType.SignedInt(size))
+          case Regex.unsignedInt(size) => toIntOption(size).filter(_ <= 64).map(size => BitFieldType.UnsignedInt(size))
+          case Regex.signedInt(size)   => toIntOption(size).filter(_ <= 63).map(size => BitFieldType.SignedInt(size))
           case _                      => None
         }
 
         def decodeOffset(s: String): Option[Int] = s match {
-          case offsetRegex("#", number) => toIntOption(number).filter(_ >= 0).map(_ * 8)
-          case offsetRegex("", number)  => toIntOption(number).filter(_ >= 0)
+          case Regex.offset("#", number) => toIntOption(number).filter(_ >= 0).map(_ * 8)
+          case Regex.offset("", number)  => toIntOption(number).filter(_ >= 0)
           case _                        => None
         }
 
@@ -4125,6 +4121,12 @@ private[redis] final class TestExecutor private (
 }
 
 private[redis] object TestExecutor {
+
+  object Regex {
+    val unsignedInt = "u(\\d+)".r
+    val signedInt   = "i(\\d+)".r
+    val offset      = "([#]?)(\\d+)".r
+  }
 
   sealed trait KeyType extends Product with Serializable
 
