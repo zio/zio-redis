@@ -56,6 +56,7 @@ lazy val benchmarks =
     .dependsOn(redis)
     .settings(stdSettings("benchmarks"))
     .settings(
+      crossScalaVersions --= List(Scala3),
       publish / skip := true,
       libraryDependencies ++= Seq(
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
