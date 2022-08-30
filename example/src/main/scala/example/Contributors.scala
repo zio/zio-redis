@@ -19,7 +19,7 @@ package example
 import zio.Chunk
 import zio.json.{DeriveJsonCodec, JsonCodec}
 
-final case class Contributors(contributors: Chunk[Contributor]) extends AnyVal
+final case class Contributors(contributors: Chunk[Contributor])
 
 object Contributors {
   implicit val codec: JsonCodec[Contributors] = DeriveJsonCodec.gen[Contributors]

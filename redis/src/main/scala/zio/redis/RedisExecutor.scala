@@ -85,7 +85,7 @@ object RedisExecutor {
 
         byteStream
           .write(bytes)
-          .mapError(RedisError.IOError)
+          .mapError(RedisError.IOError(_))
           .tapBoth(
             e => ZIO.foreachDiscard(reqs)(_.promise.fail(e)),
             _ => ZIO.foreachDiscard(reqs)(req => resQueue.offer(req.promise))
@@ -94,7 +94,7 @@ object RedisExecutor {
 
     private def receive: IO[RedisError, Unit] =
       byteStream.read
-        .mapError(RedisError.IOError)
+        .mapError(RedisError.IOError(_))
         .via(RespValue.decoder)
         .collectSome
         .foreach(response => resQueue.take.flatMap(_.succeed(response)))
