@@ -375,7 +375,7 @@ trait Keys {
           Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
           Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
         )
-        command.run((cursor, pattern.map(Pattern), count, `type`))
+        command.run((cursor, pattern.map(Pattern(_)), count, `type`))
       }
     }
 
