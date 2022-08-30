@@ -37,7 +37,7 @@ lazy val redis =
     .settings(scala3Settings)
     .settings(stdSettings("zio-redis"))
     .settings(
-      libraryDependencies ++= Seq(
+      libraryDependencies ++= List(
         "dev.zio"                %% "zio-streams"             % "2.0.1",
         "dev.zio"                %% "zio-logging"             % "2.1.0",
         "dev.zio"                %% "zio-schema"              % "0.2.1",
@@ -46,7 +46,7 @@ lazy val redis =
         "dev.zio"                %% "zio-test-sbt"            % "2.0.1" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1"
       ),
-      testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
+      testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
 
 lazy val benchmarks =
@@ -58,7 +58,7 @@ lazy val benchmarks =
     .settings(
       crossScalaVersions --= List(Scala3),
       publish / skip := true,
-      libraryDependencies ++= Seq(
+      libraryDependencies ++= List(
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
@@ -73,7 +73,7 @@ lazy val example =
     .settings(stdSettings("example"))
     .settings(
       publish / skip := true,
-      libraryDependencies ++= Seq(
+      libraryDependencies ++= List(
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.7.6",
         "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.7.6",
         "dev.zio"                       %% "zio-streams"                   % "2.0.1",
