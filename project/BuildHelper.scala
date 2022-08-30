@@ -72,7 +72,7 @@ object BuildHelper {
       crossScalaVersions       := List(Scala212, Scala213, Scala3),
       ThisBuild / scalaVersion := Scala213,
       scalacOptions            := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
-      semanticdbEnabled        := true,
+      semanticdbEnabled        := scalaVersion.value != Scala3,
       semanticdbOptions += "-P:semanticdb:synthetics:on",
       semanticdbVersion                                          := scalafixSemanticdb.revision,
       ThisBuild / scalafixScalaBinaryVersion                     := CrossVersion.binaryScalaVersion(scalaVersion.value),
@@ -84,7 +84,7 @@ object BuildHelper {
 
   private def extraOptions(scalaVersion: String, optimize: Boolean) =
     CrossVersion.partialVersion(scalaVersion) match {
-      case Some((3, 1)) =>
+      case Some((3, _)) =>
         List("-language:implicitConversions", "-Xignore-scala2-macros")
       case Some((2, 13)) =>
         List("-Ywarn-unused:params,-implicits") ++ std2xOptions ++ optimizerOptions(optimize)
