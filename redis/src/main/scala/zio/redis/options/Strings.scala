@@ -84,8 +84,10 @@ trait Strings {
   }
 
   object BitFieldType {
-    sealed case class UnsignedInt(size: Int) extends BitFieldType
-    sealed case class SignedInt(size: Int)   extends BitFieldType
+    sealed trait Int extends BitFieldType { def size: scala.Int }
+
+    sealed case class UnsignedInt(size: scala.Int) extends Int
+    sealed case class SignedInt(size: scala.Int)   extends Int
   }
 
   sealed trait BitOperation { self =>
