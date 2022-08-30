@@ -672,12 +672,12 @@ private[redis] final class TestExecutor private (
           .foldLeft(input)(0L) { case (acc, key) =>
             STM.ifSTM(keys.contains(key.asString))(STM.succeedNow(acc + 1), STM.succeedNow(acc))
           }
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.Del | api.Keys.Unlink =>
         STM
           .foldLeft(input)(0L) { case (acc, key) => delete(key.asString).map(acc + _) }
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.Keys =>
         val pattern = input.head.asString
@@ -717,7 +717,7 @@ private[redis] final class TestExecutor private (
 
       case api.Keys.TypeOf =>
         val key = input.head.asString
-        keys.get(key).map(info => info.map(_.redisType).fold("none")(_.stringify)).map(RespValue.SimpleString)
+        keys.get(key).map(info => info.map(_.redisType).fold("none")(_.stringify)).map(RespValue.SimpleString(_))
 
       case api.Keys.RandomKey =>
         for {
@@ -735,7 +735,7 @@ private[redis] final class TestExecutor private (
         val newkey = input(1).asString
         STM
           .ifSTM(keys.contains(newkey))(STM.succeedNow(0L), rename(key, newkey).as(1L))
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
           .catchAll(error => STM.succeedNow(error))
 
       case api.Keys.Sort =>
@@ -802,7 +802,7 @@ private[redis] final class TestExecutor private (
             ttlOf(key, now).map(_.fold(-1L)(_.getSeconds)),
             STM.succeedNow(-2L)
           )
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.PTtl =>
         val key = input.head.asString
@@ -811,14 +811,14 @@ private[redis] final class TestExecutor private (
             ttlOf(key, now).map(_.fold(-1L)(_.toMillis)),
             STM.succeedNow(-2L)
           )
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.Persist =>
         val key = input.head.asString
         keys
           .get(key)
           .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = None)).as(1L)))
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.Expire =>
         val key      = input(0).asString
@@ -826,7 +826,7 @@ private[redis] final class TestExecutor private (
         keys
           .get(key)
           .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.ExpireAt =>
         val key      = input(0).asString
@@ -834,7 +834,7 @@ private[redis] final class TestExecutor private (
         keys
           .get(key)
           .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.PExpire =>
         val key      = input(0).asString
@@ -842,7 +842,7 @@ private[redis] final class TestExecutor private (
         keys
           .get(key)
           .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Keys.PExpireAt =>
         val key      = input(0).asString
@@ -850,7 +850,7 @@ private[redis] final class TestExecutor private (
         keys
           .get(key)
           .flatMap(_.fold(STM.succeedNow(0L))(info => keys.put(key, info.copy(expireAt = Some(unixtime))).as(1L)))
-          .map(RespValue.Integer)
+          .map(RespValue.Integer(_))
 
       case api.Sets.SAdd =>
         val key = input.head.asString
@@ -3159,7 +3159,7 @@ private[redis] final class TestExecutor private (
             }
           }.fold[USTM[Chunk[RespValue]]](STM.succeed(Chunk.empty))((a, b) => a.flatMap(x => b.map(y => x ++ y)))
 
-          respChunk.map(RespValue.Array)
+          respChunk.map(RespValue.Array(_))
         }
 
       case api.Strings.MSet =>
@@ -3767,7 +3767,7 @@ private[redis] final class TestExecutor private (
 
     def get(key: String): STM[Nothing, State] =
       STM.ifSTM(isSet(key))(
-        sets.get(key).map(_.fold[State](State.Continue(Set.empty))(State.Continue)),
+        sets.get(key).map(_.fold[State](State.Continue(Set.empty))(State.Continue(_))),
         STM.succeedNow(State.WrongType)
       )
 

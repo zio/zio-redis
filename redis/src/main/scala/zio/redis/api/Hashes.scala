@@ -240,7 +240,7 @@ trait Hashes {
           Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
         )
-        command.run((key, cursor, pattern.map(Pattern), count))
+        command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }
 

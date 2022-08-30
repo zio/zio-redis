@@ -20,7 +20,7 @@ trait BaseSpec extends ZIOSpecDefault {
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
 
   final val genCountOption: Gen[Any, Option[Count]] =
-    Gen.option(Gen.long(0, 100000).map(Count))
+    Gen.option(Gen.long(0, 100000).map(Count(_)))
 
   final val genPatternOption: Gen[Any, Option[String]] =
     Gen.option(Gen.constSample(Sample.noShrink("*")))
