@@ -84,7 +84,7 @@ object RespValue {
         case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
       }
 
-    (ZPipeline.utf8Decode >>> ZPipeline.splitLines)
+    (ZPipeline.utf8Decode >>> ZPipeline.splitOn(internal.CrLfString))
       .mapError(e => RedisError.ProtocolError(e.getLocalizedMessage))
       .andThen(ZPipeline.fromSink(lineProcessor))
   }
@@ -105,6 +105,7 @@ object RespValue {
     }
 
     final val CrLf: Chunk[Byte]              = Chunk('\r', '\n')
+    final val CrLfString: String             = "\r\n"
     final val NullArrayEncoded: Chunk[Byte]  = Chunk.fromArray("*-1\r\n".getBytes(StandardCharsets.US_ASCII))
     final val NullArrayPrefix: String        = "*-1"
     final val NullStringEncoded: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
@@ -121,6 +122,7 @@ object RespValue {
 
       final def feed(line: String): State =
         self match {
+          case Start if line.isEmpty()           => Start
           case Start if line == NullStringPrefix => Done(NullBulkString)
           case Start if line == NullArrayPrefix  => Done(NullArray)
 
@@ -129,7 +131,9 @@ object RespValue {
               case Headers.SimpleString => Done(SimpleString(line.tail))
               case Headers.Error        => Done(Error(line.tail))
               case Headers.Integer      => Done(Integer(unsafeReadLong(line, 1)))
-              case Headers.BulkString   => ExpectingBulk
+              case Headers.BulkString =>
+                val size = unsafeReadLong(line, 1).toInt
+                CollectingBulkString(size, new StringBuilder(size))
               case Headers.Array =>
                 val size = unsafeReadLong(line, 1).toInt
 
@@ -148,16 +152,23 @@ object RespValue {
               case state              => CollectingArray(rem, vals, state.feed)
             }
 
-          case ExpectingBulk => Done(bulkString(line))
-          case _             => Failed
+          case CollectingBulkString(rem, vals) =>
+            if (line.length >= rem) {
+              val stringValue = vals.append(line.substring(0, rem)).toString
+              Done(BulkString(Chunk.fromArray(stringValue.getBytes(StandardCharsets.UTF_8))))
+            } else {
+              CollectingBulkString(rem - line.length - 2, vals.append(line).append(CrLfString))
+            }
+
+          case _ => Failed
         }
     }
 
     object State {
       case object Start                                                                                extends State
-      case object ExpectingBulk                                                                        extends State
       case object Failed                                                                               extends State
       final case class CollectingArray(rem: Int, vals: ChunkBuilder[RespValue], next: String => State) extends State
+      final case class CollectingBulkString(rem: Int, vals: StringBuilder)                             extends State
       final case class Done(value: RespValue)                                                          extends State
     }
 
