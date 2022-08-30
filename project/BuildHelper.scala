@@ -18,12 +18,17 @@ object BuildHelper {
 
     val list = yaml.get("jobs").get("test").get("strategy").get("matrix").get("scala").asScala
 
-    list.map(v => (v.split('.').take(2).mkString("."), v)).toMap
+    list.map { v =>
+      val vs  = v.split('.')
+      val len = if (vs(0) == "2") 2 else 1
+
+      (vs.take(len).mkString("."), v)
+    }.toMap
   }
 
-  val Scala212: String = versions("2.12")
-  val Scala213: String = versions("2.13")
-  val Zio: String      = "2.0.1"
+  val Scala212 = versions("2.12")
+  val Scala213 = versions("2.13")
+  val Scala3   = versions("3")
 
   def buildInfoSettings(packageName: String) =
     List(
@@ -36,17 +41,35 @@ object BuildHelper {
     List(
       scalacOptions += "-language:experimental.macros",
       libraryDependencies ++= {
-        List(
-          "org.scala-lang" % "scala-reflect"  % scalaVersion.value % Provided,
-          "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided
-        )
+        if (scalaVersion.value == Scala3) Seq()
+        else
+          Seq(
+            "org.scala-lang" % "scala-reflect"  % scalaVersion.value % "provided",
+            "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"
+          )
+      }
+    )
+
+  def scala3Settings =
+    List(
+      crossScalaVersions += Scala3,
+      scalacOptions --= {
+        if (scalaVersion.value == Scala3) List("-Xfatal-warnings") else Nil
+      },
+      Compile / doc / sources := {
+        val old = (Compile / doc / sources).value
+        if (scalaVersion.value == Scala3) Nil else old
+      },
+      Test / parallelExecution := {
+        val old = (Test / parallelExecution).value
+        if (scalaVersion.value == Scala3) false else old
       }
     )
 
   def stdSettings(prjName: String) =
     List(
       name                     := s"$prjName",
-      crossScalaVersions       := List(Scala212, Scala213),
+      crossScalaVersions       := List(Scala212, Scala213, Scala3),
       ThisBuild / scalaVersion := Scala213,
       scalacOptions            := stdOptions ++ extraOptions(scalaVersion.value, optimize = !isSnapshot.value),
       semanticdbEnabled        := true,
@@ -61,6 +84,8 @@ object BuildHelper {
 
   private def extraOptions(scalaVersion: String, optimize: Boolean) =
     CrossVersion.partialVersion(scalaVersion) match {
+      case Some((3, 1)) =>
+        List("-language:implicitConversions", "-Xignore-scala2-macros")
       case Some((2, 13)) =>
         List("-Ywarn-unused:params,-implicits") ++ std2xOptions ++ optimizerOptions(optimize)
       case Some((2, 12)) =>

@@ -33,16 +33,17 @@ lazy val redis =
   project
     .in(file("redis"))
     .enablePlugins(BuildInfoPlugin)
-    .settings(stdSettings("zio-redis"))
     .settings(buildInfoSettings("zio.redis"))
+    .settings(scala3Settings)
+    .settings(stdSettings("zio-redis"))
     .settings(
       libraryDependencies ++= Seq(
-        "dev.zio"                %% "zio-streams"             % Zio,
+        "dev.zio"                %% "zio-streams"             % "2.0.1",
         "dev.zio"                %% "zio-logging"             % "2.1.0",
         "dev.zio"                %% "zio-schema"              % "0.2.1",
         "dev.zio"                %% "zio-schema-protobuf"     % "0.2.1" % Test,
-        "dev.zio"                %% "zio-test"                % Zio     % Test,
-        "dev.zio"                %% "zio-test-sbt"            % Zio     % Test,
+        "dev.zio"                %% "zio-test"                % "2.0.1" % Test,
+        "dev.zio"                %% "zio-test-sbt"            % "2.0.1" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1"
       ),
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
@@ -51,9 +52,9 @@ lazy val redis =
 lazy val benchmarks =
   project
     .in(file("benchmarks"))
-    .settings(stdSettings("benchmarks"))
-    .dependsOn(redis)
     .enablePlugins(JmhPlugin)
+    .dependsOn(redis)
+    .settings(stdSettings("benchmarks"))
     .settings(
       publish / skip := true,
       libraryDependencies ++= Seq(
@@ -67,14 +68,14 @@ lazy val benchmarks =
 lazy val example =
   project
     .in(file("example"))
-    .settings(stdSettings("example"))
     .dependsOn(redis)
+    .settings(stdSettings("example"))
     .settings(
       publish / skip := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.7.6",
         "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.7.6",
-        "dev.zio"                       %% "zio-streams"                   % Zio,
+        "dev.zio"                       %% "zio-streams"                   % "2.0.1",
         "dev.zio"                       %% "zio-config-magnolia"           % "3.0.2",
         "dev.zio"                       %% "zio-config-typesafe"           % "3.0.2",
         "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.1",
@@ -85,6 +86,8 @@ lazy val example =
 
 lazy val docs = project
   .in(file("zio-redis-docs"))
+  .enablePlugins(MdocPlugin, DocusaurusPlugin, ScalaUnidocPlugin)
+  .dependsOn(redis)
   .settings(
     publish / skip := true,
     moduleName     := "zio-redis-docs",
@@ -97,5 +100,3 @@ lazy val docs = project
     docusaurusPublishGhpages := docusaurusPublishGhpages.dependsOn(Compile / unidoc).value
   )
   .settings(macroDefinitionSettings)
-  .dependsOn(redis)
-  .enablePlugins(MdocPlugin, DocusaurusPlugin, ScalaUnidocPlugin)
