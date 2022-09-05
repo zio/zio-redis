@@ -43,6 +43,7 @@ lazy val redis =
         "dev.zio"                %% "zio-streams"             % "2.0.1",
         "dev.zio"                %% "zio-logging"             % "2.1.0",
         "dev.zio"                %% "zio-schema"              % "0.2.1",
+        "dev.zio"                %% "zio-schema-derivation"   % "0.2.1",
         "dev.zio"                %% "zio-schema-protobuf"     % "0.2.1" % Test,
         "dev.zio"                %% "zio-test"                % "2.0.1" % Test,
         "dev.zio"                %% "zio-test-sbt"            % "2.0.1" % Test,

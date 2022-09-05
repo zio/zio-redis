@@ -174,6 +174,30 @@ private[redis] final class TestExecutor private (
               .map(bool => RespValue.Integer(if (bool) 1 else 0))
           } else STM.succeedNow(RespValue.Integer(0))
         }
+      case api.Connection.ClientInfo =>
+        clientInfo.get.map(info => RespValue.BulkString(Chunk.fromArray(ClientInfo.encode(info).getBytes)))
+
+      case api.Connection.ClientList =>
+        clientInfo.get.map { info =>
+          val clientInfos = Chunk(info)
+
+          val inputList = input.toList.map(_.asString)
+          val filterId  = inputList.contains("ID")
+          if (filterId) {
+            val ids = inputList.tail.map(_.toLong)
+            val resp = clientInfos
+              .filter(i => ids.contains(i.id))
+              .map(i => ClientInfo.encode(i))
+              .mkString("\n")
+            RespValue.BulkString(Chunk.fromArray(resp.getBytes))
+          } else {
+            val resp = clientInfos
+              .map(i => ClientInfo.encode(i))
+              .mkString("\n")
+
+            RespValue.BulkString(Chunk.fromArray(resp.getBytes))
+          }
+        }
 
       case api.Connection.ClientGetName =>
         clientInfo.get.map(_.name.fold[RespValue](RespValue.NullBulkString)(name => RespValue.bulkString(name)))

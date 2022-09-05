@@ -16,7 +16,7 @@ object InputSpec extends BaseSpec {
   import RadiusUnit._
   import StrAlgoLcsQueryType._
 
-  def spec: Spec[Any, Throwable] =
+  def spec: Spec[TestConfig, Throwable] =
     suite("Input encoders")(
       suite("AbsTtl")(
         test("valid value") {
@@ -257,6 +257,26 @@ object InputSpec extends BaseSpec {
             result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.SkipMe(true)))
           } yield assert(result)(equalTo(respArgs("SKIPME", "YES")))
         }
+      ),
+      suite("ClientList")(
+        test("filter by id") {
+          for {
+            filter <- ZIO.succeed(ClientListFilter.Id(zio.prelude.NonEmptyList(12)))
+            result <- ZIO.attempt(ClientListInput.encode(filter))
+          } yield assert(result)(equalTo(respArgs("ID", "12")))
+        },
+        test("filter by more than one id") {
+          for {
+            filter <- ZIO.succeed(ClientListFilter.Id(zio.prelude.NonEmptyList(12, 13, 14)))
+            result <- ZIO.attempt(ClientListInput.encode(filter))
+          } yield assert(result)(equalTo(respArgs("ID", "12", "13", "14")))
+        },
+        test("filter by type")(check(genClientListType) { clientType =>
+          for {
+            filter <- ZIO.succeed(ClientListFilter.Type(clientType))
+            result <- ZIO.attempt(ClientListInput.encode(filter))
+          } yield assert(result)(equalTo(respArgs("TYPE", clientType.toString.toUpperCase)))
+        })
       ),
       suite("ClientPauseMode")(
         test("all") {

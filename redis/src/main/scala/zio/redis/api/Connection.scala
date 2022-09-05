@@ -74,6 +74,32 @@ trait Connection {
   }
 
   /**
+   * Returns information about the current connection.
+   *
+   * @return
+   *   the current connection information in property=value fields separated by a space character.
+   */
+  final def clientInfo: ZIO[Redis, RedisError, ClientInfo] = {
+    val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput)
+
+    command.run(())
+  }
+
+  /**
+   * Returns information about the client connections.
+   *
+   * @param filter
+   *   subcomand to filter the clientList by client type or client ids.
+   * @return
+   *   the list of clients information in property=value fields separated by a space character.
+   */
+  final def clientList(filter: ClientListFilter = ClientListFilter.All): ZIO[Redis, RedisError, Chunk[ClientInfo]] = {
+    val command = RedisCommand(ClientList, ClientListInput, ClientListOutput)
+
+    command.run(filter)
+  }
+
+  /**
    * Closes a given client connection with the specified address
    *
    * @param address
@@ -331,6 +357,8 @@ private[redis] object Connection {
   final val Auth               = "AUTH"
   final val ClientCaching      = "CLIENT CACHING"
   final val ClientId           = "CLIENT ID"
+  final val ClientInfo         = "CLIENT INFO"
+  final val ClientList         = "CLIENT LIST"
   final val ClientKill         = "CLIENT KILL"
   final val ClientGetName      = "CLIENT GETNAME"
   final val ClientGetRedir     = "CLIENT GETREDIR"

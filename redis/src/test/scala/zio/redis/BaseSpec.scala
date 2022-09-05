@@ -25,6 +25,13 @@ trait BaseSpec extends ZIOSpecDefault {
   final val genPatternOption: Gen[Any, Option[String]] =
     Gen.option(Gen.constSample(Sample.noShrink("*")))
 
+  final val genClientListType = Gen.elements(
+    ClientListType.Master,
+    ClientListType.PubSub,
+    ClientListType.Replica,
+    ClientListType.Normal
+  )
+
   final val uuid: UIO[String] =
     ZIO.succeed(UUID.randomUUID().toString)
 

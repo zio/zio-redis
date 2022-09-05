@@ -35,6 +35,69 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(id)(isGreaterThan(0L))
         }
       ),
+      suite("clientInfo")(
+        test("encode client info") {
+          val t =
+            "id=25 addr=127.0.0.1:49538 laddr=127.0.0.1:6379 fd=8 name= age=3435 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=26 qbuf-free=20448 argv-mem=10 multi-mem=0 rbs=1024 rbp=0 obl=0 oll=0 omem=0 tot-mem=22298 events=r cmd=client|info user=default redir=-1 resp=2"
+          val r =
+            for {
+              info <- ClientInfo.decode(t)
+              t2    = ClientInfo.encode(info)
+            } yield assert(t2)(equalTo(t))
+
+          assert(r.isRight)(isTrue)
+        },
+        test("parse client info") {
+          val t =
+            "id=25 addr=127.0.0.1:49538 laddr=127.0.0.1:6379 fd=8 name= age=3435 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=26 qbuf-free=20448 argv-mem=10 multi-mem=0 rbs=1024 rbp=0 obl=0 oll=0 omem=0 tot-mem=22298 events=r cmd=client|info user=default redir=-1 resp=2"
+          val r =
+            for {
+              info <- ClientInfo.decode(t)
+            } yield assert(info.id)(equalTo(25L)) &&
+              assert(info.age)(equalTo(Some(java.time.Duration.ofSeconds(3435))))
+
+          assert(r.isRight)(isTrue)
+        },
+        test("parse client info with unknown field") {
+          val t =
+            "id=25 addr=127.0.0.1:49538 new-field=? laddr=127.0.0.1:6379 fd=8 name= age=3435 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=26 qbuf-free=20448 argv-mem=10 multi-mem=0 rbs=1024 rbp=0 obl=0 oll=0 omem=0 tot-mem=22298 events=r cmd=client|info user=default redir=-1 resp=2"
+          val r =
+            for {
+              info <- ClientInfo.decode(t)
+            } yield assert(info.id)(equalTo(25L)) &&
+              assert(info.age)(equalTo(Some(java.time.Duration.ofSeconds(3435))))
+
+          assert(r.isRight)(isTrue)
+        },
+        test("parse client info with unknown clientFlag") {
+          val t =
+            "id=25 addr=127.0.0.1:49538 new-field=? laddr=127.0.0.1:6379 fd=8 name= age=3435 idle=0 flags=Na db=0 sub=0 psub=0 multi=-1 qbuf=26 qbuf-free=20448 argv-mem=10 multi-mem=0 rbs=1024 rbp=0 obl=0 oll=0 omem=0 tot-mem=22298 events=r cmd=client|info user=default redir=-1 resp=2"
+          val r =
+            for {
+              info <- ClientInfo.decode(t)
+            } yield assert(info.id)(equalTo(25L)) &&
+              assert(info.age)(equalTo(Some(java.time.Duration.ofSeconds(3435))))
+
+          assert(r.isRight)(isTrue)
+        },
+        test("get client info") {
+          for {
+            info <- clientInfo
+          } yield assert(info.id)(isGreaterThan(0L))
+        }
+      ),
+      suite("clientList")(
+        test("returns non empty list of clients") {
+          for {
+            clients <- clientList()
+          } yield assert(clients)(isNonEmpty)
+        },
+        test("zero results when id does not exists") {
+          for {
+            res <- clientList(ClientListFilter.Id(zio.prelude.NonEmptyList(1)))
+          } yield assert(res)(isEmpty)
+        }
+      ),
       suite("clientKill")(
         test("error when a connection with the specifed address doesn't exist") {
           for {

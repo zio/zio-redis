@@ -813,4 +813,35 @@ object Output {
         case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
       }
   }
+
+  case object ClientInfoOutput extends Output[ClientInfo] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): ClientInfo = {
+      val decoder = ClientInfoCodec.decode(ClientInfo.schema)
+
+      respValue match {
+        case RespValue.BulkString(data) =>
+          decoder(data).fold(e => throw CodecError(e), identity)
+        case RespValue.SimpleString(data) =>
+          decoder(Chunk.fromArray(data.getBytes)).fold(e => throw CodecError(e), identity)
+        case other => throw ProtocolError(s"$other isn't a bulk string")
+      }
+    }
+  }
+
+  case object ClientListOutput extends Output[Chunk[ClientInfo]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Chunk[ClientInfo] =
+      respValue match {
+        case RespValue.BulkString(data) =>
+          // One client connection per line (separated by LF)
+          val clientIds = data.foldLeft(Chunk(Chunk[Byte]())) { case (acc, b) =>
+            if (b == '\n') Chunk(Chunk[Byte]()) ++ acc
+            else {
+              Chunk(acc.headOption.map(_ :+ b).getOrElse(Chunk[Byte](b))) ++ acc.tail
+            }
+          }
+          clientIds.filter(b => !b.isEmpty).map(bytes => ClientInfoOutput.unsafeDecode(RespValue.BulkString(bytes)))
+
+        case other => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
 }

@@ -125,6 +125,16 @@ object Input {
       Chunk.single(encodeString(data.stringify))
   }
 
+  case object ClientListInput extends Input[ClientListFilter] {
+    def encode(data: ClientListFilter)(implicit codec: Codec): Chunk[RespValue.BulkString] = data match {
+      case ClientListFilter.All => Chunk.empty
+      case ClientListFilter.Id(ids) =>
+        Chunk.single(encodeString(data.stringify)) ++ ids.map(id => encodeString(id.toString))
+      case ClientListFilter.Type(t) =>
+        Chunk(encodeString(data.stringify), encodeString(t.stringify))
+    }
+  }
+
   case object ClientKillInput extends Input[ClientKillFilter] {
     def encode(data: ClientKillFilter)(implicit codec: Codec): Chunk[RespValue.BulkString] = data match {
       case addr: ClientKillFilter.Address       => Chunk(encodeString("ADDR"), encodeString(addr.stringify))
