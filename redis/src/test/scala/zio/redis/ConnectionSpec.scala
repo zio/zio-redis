@@ -94,7 +94,7 @@ trait ConnectionSpec extends BaseSpec {
         },
         test("zero results when id does not exists") {
           for {
-            res <- clientList(ClientListFilter.Id(zio.prelude.NonEmptyList(1)))
+            res <- clientList(ClientListFilter.Id(1))
           } yield assert(res)(isEmpty)
         }
       ),

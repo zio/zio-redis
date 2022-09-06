@@ -261,13 +261,13 @@ object InputSpec extends BaseSpec {
       suite("ClientList")(
         test("filter by id") {
           for {
-            filter <- ZIO.succeed(ClientListFilter.Id(zio.prelude.NonEmptyList(12)))
+            filter <- ZIO.succeed(ClientListFilter.Id(12))
             result <- ZIO.attempt(ClientListInput.encode(filter))
           } yield assert(result)(equalTo(respArgs("ID", "12")))
         },
         test("filter by more than one id") {
           for {
-            filter <- ZIO.succeed(ClientListFilter.Id(zio.prelude.NonEmptyList(12, 13, 14)))
+            filter <- ZIO.succeed(ClientListFilter.Id(12, 13, 14))
             result <- ZIO.attempt(ClientListInput.encode(filter))
           } yield assert(result)(equalTo(respArgs("ID", "12", "13", "14")))
         },

@@ -128,8 +128,8 @@ object Input {
   case object ClientListInput extends Input[ClientListFilter] {
     def encode(data: ClientListFilter)(implicit codec: Codec): Chunk[RespValue.BulkString] = data match {
       case ClientListFilter.All => Chunk.empty
-      case ClientListFilter.Id(ids) =>
-        Chunk.single(encodeString(data.stringify)) ++ ids.map(id => encodeString(id.toString))
+      case ClientListFilter.Id(id, ids @ _*) =>
+        Chunk.single(encodeString(data.stringify)) ++ (id :: ids.toList).map(i => encodeString(i.toString))
       case ClientListFilter.Type(t) =>
         Chunk(encodeString(data.stringify), encodeString(t.stringify))
     }

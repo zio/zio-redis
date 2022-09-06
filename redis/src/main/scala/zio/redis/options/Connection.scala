@@ -16,7 +16,6 @@
 
 package zio.redis.options
 
-import zio.prelude.NonEmptyList
 import zio.schema.ast.SchemaAst
 import zio.schema.{DeriveSchema, DynamicValue, Schema, StandardType, TypeId}
 import zio.stream.ZPipeline
@@ -328,15 +327,14 @@ trait Connection {
       },
       extractField = address => address.map(c => c.ip.getHostAddress + ":" + c.port).getOrElse("")
     )
-    implicit val clientEventsSchema: Schema[ClientEvents] = Schema
-      .CaseClass2(
-        TypeId.fromTypeName("ClientEvents"),
-        field1 = Schema.Field[String]("readable", Schema.primitive[String]),
-        field2 = Schema.Field[String]("writable", Schema.primitive[String]),
-        construct = (readable: String, writable: String) => ClientEvents(readable == "r", writable == "w"),
-        extractField1 = c => if (c.readable) "r" else "",
-        extractField2 = c => if (c.writable) "w" else ""
-      )
+    implicit val clientEventsSchema: Schema[ClientEvents] = Schema.CaseClass2(
+      TypeId.fromTypeName("ClientEvents"),
+      field1 = Schema.Field[String]("readable", Schema.primitive[String]),
+      field2 = Schema.Field[String]("writable", Schema.primitive[String]),
+      construct = (readable: String, writable: String) => ClientEvents(readable == "r", writable == "w"),
+      extractField1 = c => if (c.readable) "r" else "",
+      extractField2 = c => if (c.writable) "w" else ""
+    )
     implicit val clientFlagSchema: Schema[ClientFlag] = Schema
       .Primitive(StandardType.StringType)
       .transform[ClientFlag](
@@ -354,9 +352,8 @@ trait Connection {
     private val decoder = ClientInfoCodec.decode(schema)
     private val encoder = ClientInfoCodec.encode(schema)
 
-    def decode(in: String): Either[String, ClientInfo] =
-      decoder(Chunk.fromArray(in.getBytes))
-    def encode(info: ClientInfo): String = new String(encoder(info).toArray)
+    def decode(in: String): Either[String, ClientInfo] = decoder(Chunk.fromArray(in.getBytes))
+    def encode(info: ClientInfo): String               = new String(encoder(info).toArray)
   }
 
   sealed trait ClientListType { self =>
@@ -389,7 +386,7 @@ trait Connection {
       private[redis] final def stringify: String = s"TYPE"
     }
 
-    sealed case class Id(ids: NonEmptyList[Long]) extends ClientListFilter {
+    sealed case class Id(id: Long, ids: Long*) extends ClientListFilter {
       private[redis] final def stringify: String = "ID"
     }
   }
