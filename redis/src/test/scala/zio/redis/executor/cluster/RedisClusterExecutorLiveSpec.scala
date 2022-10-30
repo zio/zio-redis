@@ -60,7 +60,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
           assertTrue(value1 == value2) && assertTrue(value2 == value3)
         }
       }
-    ).provideCustomLayerShared(ClusterLayer)
+    ).provideLayerShared(ClusterLayer)
 
   private final def getRedisNodeLayer(uri: RedisUri): Layer[Any, Redis] =
     ZLayer.make[Redis](

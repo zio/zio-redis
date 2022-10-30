@@ -4,7 +4,7 @@ import zio.redis.executor.RedisExecutor
 import zio.redis.executor.cluster.{RedisClusterConfig, RedisClusterExecutorLive}
 import zio.test.TestAspect._
 import zio.test._
-import zio.{Chunk, ZLayer}
+import zio.{Chunk, Layer, ZLayer}
 
 object ApiSpec
     extends ConnectionSpec
@@ -22,13 +22,13 @@ object ApiSpec
 
   def spec: Spec[TestEnvironment, Any] =
     suite("Redis commands")(
-      Node.Suite.provideCustomLayerShared(Node.Layer) @@ sequential @@ withLiveEnvironment,
-      Cluster.Suite.provideCustomLayerShared(Cluster.Layer) @@ sequential @@ withLiveEnvironment,
-      Test.Suite.provideCustomLayer(Test.Layer)
+      Node.Suite.provideLayerShared(Node.Layer) @@ sequential @@ withLiveEnvironment,
+      Cluster.Suite.provideLayerShared(Cluster.Layer) @@ sequential @@ withLiveEnvironment,
+      Test.Suite.provideLayer(Test.Layer)
     )
 
   private object Node {
-    val Suite: Spec[Redis with Annotations with Live with Sized with TestConfig, Any] =
+    val Suite: Spec[Redis, Any] =
       suite("Node Executor")(
         connectionSuite,
         keysSuite,
@@ -43,15 +43,11 @@ object ApiSpec
         scriptingSpec
       )
 
-    val Layer = {
-      val executor = RedisExecutor.local.orDie
-      val redis    = executor ++ ZLayer.succeed(codec) >>> RedisLive.layer
-      redis
-    }
+    val Layer: Layer[Any, Redis] = ZLayer.make[Redis](RedisExecutor.local.orDie, ZLayer.succeed(codec), RedisLive.layer)
   }
 
   private object Test {
-    val Suite: Spec[Redis with Annotations with Live with Sized with TestConfig, Any] =
+    val Suite: Spec[Redis, Any] =
       suite("Test Executor")(
         connectionSuite,
         keysSuite,
@@ -64,14 +60,11 @@ object ApiSpec
         stringsSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported)).get
 
-    val Layer = {
-      val redis = RedisExecutor.test ++ ZLayer.succeed(codec) >>> RedisLive.layer
-      redis
-    }
+    val Layer: Layer[Any, Redis] = ZLayer.make[Redis](RedisExecutor.test, ZLayer.succeed(codec), RedisLive.layer)
   }
 
   private object Cluster {
-    val Suite: Spec[Redis with Annotations with Live with Sized with TestConfig, Any] =
+    val Suite: Spec[Redis, Any] =
       suite("Cluster Executor")(
         connectionSuite,
         keysSuite,
@@ -87,13 +80,13 @@ object ApiSpec
         clusterSpec
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.ClusterExecutorUnsupported)).get
 
-    val Layer = {
-      val address       = RedisUri("localhost", 5000)
-      val clusterConfig = ZLayer.succeed(RedisClusterConfig(Chunk(address)))
-      val executor      = clusterConfig >>> RedisClusterExecutorLive.layer
-      val redis         = executor ++ ZLayer.succeed(codec) >>> RedisLive.layer
-      redis
-    }
+    val Layer: Layer[Any, Redis] =
+      ZLayer.make[Redis](
+        ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000)))),
+        RedisClusterExecutorLive.layer,
+        ZLayer.succeed(codec),
+        RedisLive.layer
+      )
   }
 
 }
