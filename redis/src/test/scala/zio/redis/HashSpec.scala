@@ -5,7 +5,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait HashSpec extends BaseSpec {
-  def hashSuite: Spec[TestConfig with RedisEnv, RedisError] =
+  def hashSuite: Spec[TestConfig with Redis, RedisError] =
     suite("hash")(
       suite("hSet, hGet, hGetAll and hDel")(
         test("set followed by get") {

@@ -783,7 +783,7 @@ trait SetsSpec extends BaseSpec {
     key: String,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[RedisEnv, RedisError, Chunk[String]] =
+  ): ZIO[Redis, RedisError, Chunk[String]] =
     ZStream
       .paginateChunkZIO(0L) { cursor =>
         sScan(key, cursor, pattern, count).returning[String].map {

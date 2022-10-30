@@ -4,7 +4,6 @@ import zio.redis._
 import zio.redis.codec.CRC16
 import zio.redis.executor.RedisExecutor
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
-import zio.schema.codec.{Codec, ProtobufCodec}
 import zio.test._
 import zio.{Chunk, Layer, ZIO, ZLayer, durationInt}
 
@@ -63,17 +62,22 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
       }
     ).provideCustomLayerShared(ClusterLayer)
 
-  private final def getRedisNodeLayer(uri: RedisUri): Layer[Any, RedisEnv] = {
-    val executor = ZLayer.succeed(uri) >>> RedisExecutor.layer
-    (executor ++ ZLayer.succeed[Codec](ProtobufCodec) >>> RedisLive.layer).fresh
-  }
+  private final def getRedisNodeLayer(uri: RedisUri): Layer[Any, Redis] =
+    ZLayer.make[Redis](
+      ZLayer.succeed(uri),
+      RedisExecutor.layer,
+      ZLayer.succeed(codec),
+      RedisLive.layer
+    )
 
-  private val ClusterLayer = {
-    val address1      = RedisUri("localhost", 5010)
-    val address2      = RedisUri("localhost", 5000)
-    val clusterConfig = ZLayer.succeed(RedisClusterConfig(Chunk(address1, address2)))
-    val executor      = clusterConfig >>> RedisClusterExecutorLive.layer.orDie
-    val redis         = executor ++ ZLayer.succeed(codec) >>> RedisLive.layer
-    redis
+  private val ClusterLayer: Layer[Any, Redis] = {
+    val address1 = RedisUri("localhost", 5010)
+    val address2 = RedisUri("localhost", 5000)
+    ZLayer.make[Redis](
+      ZLayer.succeed(RedisClusterConfig(Chunk(address1, address2))),
+      RedisClusterExecutorLive.layer.orDie,
+      ZLayer.succeed(codec),
+      RedisLive.layer
+    )
   }
 }

@@ -42,8 +42,7 @@ package object redis
     with options.Scripting
     with options.Cluster {
 
-  type RedisEnv = Redis
-  type Id[+A]   = A
+  type Id[+A] = A
 
   private[redis] def logScopeFinalizer(msg: String): URIO[Scope, Unit] =
     for {

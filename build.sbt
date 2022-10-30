@@ -64,8 +64,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.2.1",
-        "org.redisson"       % "redisson"            % "3.16.8"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.2.1"
       )
     )
 

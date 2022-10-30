@@ -43,7 +43,7 @@ trait Scripting {
     keys: Chunk[K],
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: ZIO[RedisEnv, RedisError, R] = {
+    def returning[R: Output]: ZIO[Redis, RedisError, R] = {
       val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R])
       command.run((script, keys, args))
     }
@@ -68,7 +68,7 @@ trait Scripting {
     keys: Chunk[K],
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: ZIO[RedisEnv, RedisError, R] = {
+    def returning[R: Output]: ZIO[Redis, RedisError, R] = {
       val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R])
       command.run((sha1, keys, args))
     }
@@ -85,7 +85,7 @@ trait Scripting {
    *   for every corresponding SHA1 digest of a script that actually exists in the script cache, an true is returned,
    *   otherwise false is returned.
    */
-  def scriptExists(sha1: String, sha1s: String*): ZIO[RedisEnv, RedisError, Chunk[Boolean]] = {
+  def scriptExists(sha1: String, sha1s: String*): ZIO[Redis, RedisError, Chunk[Boolean]] = {
     val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput))
     command.run((sha1, sha1s.toList))
   }
@@ -99,7 +99,7 @@ trait Scripting {
    * @return
    *   the SHA1 digest of the script added into the script cache.
    */
-  def scriptLoad(script: String): ZIO[RedisEnv, RedisError, String] = {
+  def scriptLoad(script: String): ZIO[Redis, RedisError, String] = {
     val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput)
     command.run(script)
   }

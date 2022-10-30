@@ -7,7 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
-  def sortedSetsSuite: Spec[RedisEnv, RedisError] =
+  def sortedSetsSuite: Spec[Redis, RedisError] =
     suite("sorted sets")(
       suite("bzPopMax")(
         test("non-empty set")(
@@ -1769,7 +1769,7 @@ trait SortedSetsSpec extends BaseSpec {
     key: String,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[RedisEnv, RedisError, Chunk[MemberScore[String]]] =
+  ): ZIO[Redis, RedisError, Chunk[MemberScore[String]]] =
     ZStream
       .paginateChunkZIO(0L) { cursor =>
         zScan(key, cursor, pattern, count).returning[String].map {

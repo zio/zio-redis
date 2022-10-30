@@ -9,7 +9,7 @@ import zio.test._
 import java.util.concurrent.TimeUnit
 
 trait ListSpec extends BaseSpec {
-  def listSuite: Spec[RedisEnv, Any] =
+  def listSuite: Spec[Redis, Any] =
     suite("lists")(
       suite("pop")(
         test("lPop non-empty list") {

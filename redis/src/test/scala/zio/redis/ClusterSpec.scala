@@ -4,7 +4,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait ClusterSpec extends BaseSpec {
-  def clusterSpec: Spec[RedisEnv, RedisError] =
+  def clusterSpec: Spec[Redis, RedisError] =
     suite("cluster")(
       suite("slots")(
         test("get cluster slots") {

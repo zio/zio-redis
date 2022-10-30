@@ -33,18 +33,18 @@ object ResultBuilder {
   final abstract class NeedsReturnType
 
   trait ResultBuilder1[+F[_]] extends ResultBuilder {
-    def returning[R: Schema]: ZIO[RedisEnv, RedisError, F[R]]
+    def returning[R: Schema]: ZIO[Redis, RedisError, F[R]]
   }
 
   trait ResultBuilder2[+F[_, _]] extends ResultBuilder {
-    def returning[R1: Schema, R2: Schema]: ZIO[RedisEnv, RedisError, F[R1, R2]]
+    def returning[R1: Schema, R2: Schema]: ZIO[Redis, RedisError, F[R1, R2]]
   }
 
   trait ResultBuilder3[+F[_, _, _]] extends ResultBuilder {
-    def returning[R1: Schema, R2: Schema, R3: Schema]: ZIO[RedisEnv, RedisError, F[R1, R2, R3]]
+    def returning[R1: Schema, R2: Schema, R3: Schema]: ZIO[Redis, RedisError, F[R1, R2, R3]]
   }
 
   trait ResultOutputBuilder extends ResultBuilder {
-    def returning[R: Output]: ZIO[RedisEnv, RedisError, R]
+    def returning[R: Output]: ZIO[Redis, RedisError, R]
   }
 }
