@@ -10,7 +10,7 @@ import zio.test.TestAspect.{restore => _, _}
 import zio.test._
 
 trait KeysSpec extends BaseSpec {
-  def keysSuite: Spec[Redis with TestEnvironment, RedisError] = {
+  def keysSuite: Spec[Redis, RedisError] = {
     suite("keys")(
       test("set followed by get") {
         for {
