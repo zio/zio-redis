@@ -2,9 +2,9 @@ version: '3.3'
 services:
   redis-cluster:
     image: 'redis:6.2.7-alpine'
-    container_name: redis
+    container_name: redis-cluster
     volumes:
-      - ${GITHUB_WORKSPACE}/testcontainers/redis-cluster.sh:/data/redis-cluster.sh:rw
+      - ./redis-cluster.sh:/data/redis-cluster.sh
     command: ./redis-cluster.sh
     stdin_open: true
     tty: true
