@@ -17,5 +17,5 @@ object ByteStreamSpec extends BaseSpec {
           res    <- stream.read.runHead
         } yield assert(res)(isSome(equalTo('*'.toByte)))
       }
-    ).provideCustomLayer(ByteStream.default)
+    ).provideLayer(ByteStream.default)
 }
