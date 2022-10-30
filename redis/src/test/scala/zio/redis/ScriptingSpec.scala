@@ -179,6 +179,18 @@ trait ScriptingSpec extends BaseSpec {
             sha <- scriptLoad(lua).either
           } yield assert(sha)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         }
+      ),
+      suite("scriptFlush")(
+        test("return true if loaded scripts are flushed from the cache") {
+          val lua1 = """return "1""""
+          val lua2 = """return "2""""
+          for {
+            sha1 <- scriptLoad(lua1)
+            sha2 <- scriptLoad(lua2)
+            _    <- scriptFlush()
+            res  <- scriptExists(sha1, sha2)
+          } yield assertTrue(res == Chunk(false, false))
+        }
       )
     )
 }

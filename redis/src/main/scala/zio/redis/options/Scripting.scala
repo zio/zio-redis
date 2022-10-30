@@ -31,4 +31,17 @@ trait Scripting {
     case object Sync extends DebugMode
     case object No   extends DebugMode
   }
+
+  sealed trait FlushMode { self =>
+    private[redis] final def stringify: String =
+      self match {
+        case FlushMode.Async => "ASYNC"
+        case FlushMode.Sync  => "SYNC"
+      }
+  }
+
+  object FlushMode {
+    case object Sync  extends FlushMode
+    case object Async extends FlushMode
+  }
 }

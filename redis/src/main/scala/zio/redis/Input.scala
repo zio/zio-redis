@@ -596,6 +596,11 @@ object Input {
       Chunk.single(encodeString(data.stringify))
   }
 
+  case object ScriptFlushInput extends Input[FlushMode] {
+    def encode(data: FlushMode)(implicit codec: Codec): Chunk[RespValue.BulkString] =
+      Chunk.single(encodeString(data.stringify))
+  }
+
   case object WithScoresInput extends Input[WithScores] {
     def encode(data: WithScores)(implicit codec: Codec): Chunk[RespValue.BulkString] =
       Chunk.single(encodeString(data.stringify))

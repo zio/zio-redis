@@ -91,6 +91,19 @@ trait Scripting {
   }
 
   /**
+   * Flush the Lua script cache. By default, this command will flush the cache synchronously.
+   *
+   * @param flushMode
+   *   synchronously or asynchronously flush the cache
+   * @return
+   *   unit if successful, error otherwise.
+   */
+  def scriptFlush(flushMode: Option[FlushMode] = None): ZIO[Redis, RedisError, Unit] = {
+    val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput)
+    command.run(flushMode)
+  }
+
+  /**
    * Loads a script into the scripts cache. After the script is loaded into the script cache it could be evaluated using
    * the [[zio.redis.api.Scripting.evalSha]] method.
    *
@@ -109,5 +122,6 @@ private[redis] object Scripting {
   final val Eval         = "EVAL"
   final val EvalSha      = "EVALSHA"
   final val ScriptExists = "SCRIPT EXISTS"
+  final val ScriptFlush  = "SCRIPT FLUSH"
   final val ScriptLoad   = "SCRIPT LOAD"
 }
