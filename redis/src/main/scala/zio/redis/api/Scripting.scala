@@ -104,6 +104,18 @@ trait Scripting {
   }
 
   /**
+   * Kills the currently executing [[zio.redis.api.Scripting.eval]] script, assuming no write operation was yet
+   * performed by the script.
+   *
+   * @return
+   *   unit if successful, error otherwise.
+   */
+  def scriptKill: ZIO[Redis, RedisError, Unit] = {
+    val command = RedisCommand(ScriptKill, NoInput, UnitOutput)
+    command.run(())
+  }
+
+  /**
    * Loads a script into the scripts cache. After the script is loaded into the script cache it could be evaluated using
    * the [[zio.redis.api.Scripting.evalSha]] method.
    *
@@ -123,5 +135,6 @@ private[redis] object Scripting {
   final val EvalSha      = "EVALSHA"
   final val ScriptExists = "SCRIPT EXISTS"
   final val ScriptFlush  = "SCRIPT FLUSH"
+  final val ScriptKill   = "SCRIPT KILL"
   final val ScriptLoad   = "SCRIPT LOAD"
 }

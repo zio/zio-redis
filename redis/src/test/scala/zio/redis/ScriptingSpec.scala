@@ -191,6 +191,16 @@ trait ScriptingSpec extends BaseSpec {
             res  <- scriptExists(sha1, sha2)
           } yield assertTrue(res == Chunk(false, false))
         }
+      ),
+      suite("scriptKill")(
+        test("throw an error when attempting to kill when no script is running") {
+          val lua        = """return true"""
+          val emptyInput = Chunk.empty[String]
+          for {
+            _   <- eval(lua, emptyInput, emptyInput).returning[Boolean]
+            res <- scriptKill.exit
+          } yield assert(res)(failsWithA[RedisError])
+        }
       )
     )
 }
