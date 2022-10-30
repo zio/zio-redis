@@ -41,7 +41,7 @@ lazy val redis =
     .settings(
       libraryDependencies ++= List(
         "dev.zio"                %% "zio-streams"             % "2.0.2",
-        "dev.zio"                %% "zio-logging"             % "2.1.0",
+        "dev.zio"                %% "zio-logging"             % "2.1.1",
         "dev.zio"                %% "zio-schema"              % "0.2.1",
         "dev.zio"                %% "zio-schema-protobuf"     % "0.2.1" % Test,
         "dev.zio"                %% "zio-test"                % "2.0.2" % Test,
