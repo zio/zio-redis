@@ -1,10 +1,10 @@
 version: '3.3'
 services:
   redis-cluster:
-    image: 'redis:6.2.5-alpine'
+    image: 'redis:6.2.7-alpine'
     container_name: redis
     volumes:
-      - /home/alsergeev/workspace/zio/zio-redis/testcontainers/redis-cluster.sh:/data/redis-cluster.sh
+      - ${GITHUB_WORKSPACE}/testcontainers/redis-cluster.sh:/data/redis-cluster.sh:rw
     command: ./redis-cluster.sh
     stdin_open: true
     tty: true

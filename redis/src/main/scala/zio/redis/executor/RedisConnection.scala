@@ -98,7 +98,7 @@ private[redis] object RedisConnectionLive {
       writeBuffer <- makeBuffer
       channel     <- openChannel(address)
       _           <- logScopeFinalizer("Redis connection is closed")
-    } yield new RedisConnectionLive(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
+    } yield new RedisConnectionLive(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError(_))
 
   private final val ResponseBufferSize = 1024
 

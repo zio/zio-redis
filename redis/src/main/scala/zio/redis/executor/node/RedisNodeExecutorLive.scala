@@ -60,7 +60,7 @@ final class RedisNodeExecutorLive(
 
       connection
         .write(bytes)
-        .mapError(RedisError.IOError)
+        .mapError(RedisError.IOError(_))
         .tapBoth(
           e => ZIO.foreachDiscard(reqs)(_.promise.fail(e)),
           _ => ZIO.foreachDiscard(reqs)(req => resQueue.offer(req.promise))
@@ -69,7 +69,7 @@ final class RedisNodeExecutorLive(
 
   private def receive: IO[RedisError, Unit] =
     connection.read
-      .mapError(RedisError.IOError)
+      .mapError(RedisError.IOError(_))
       .via(RespValue.decoder)
       .collectSome
       .foreach(response => resQueue.take.flatMap(_.succeed(response)))
@@ -86,7 +86,7 @@ object RedisNodeExecutorLive {
       } yield executor
     }
 
-  private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
+  final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
   private final val True: Any => Boolean = _ => true
 

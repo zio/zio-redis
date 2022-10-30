@@ -5,8 +5,8 @@ import zio.redis.RedisError.ProtocolError
 import zio.redis.executor.RedisConnectionLive
 import zio.redis.executor.node.RedisNodeExecutorLive
 import zio.schema.codec.{Codec, ProtobufCodec}
-import zio.test.Assertion._
-import zio.test.TestAspect._
+import zio.test.Assertion.{exists => _, _}
+import zio.test.TestAspect.{restore => _, _}
 import zio.test._
 
 trait KeysSpec extends BaseSpec {

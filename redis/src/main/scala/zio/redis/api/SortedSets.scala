@@ -927,7 +927,7 @@ trait SortedSets {
           Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput)
         )
-        command.run((key, cursor, pattern.map(Pattern), count))
+        command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }
 
