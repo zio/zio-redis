@@ -17,9 +17,8 @@
 package zio.redis.executor
 
 import zio._
-import zio.logging._
-import zio.redis.{RedisError, RedisUri}
-import zio.stream.Stream
+import zio.redis.{RedisError, RedisUri, logScopeFinalizer}
+import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
@@ -28,7 +27,7 @@ import java.nio.channels.{AsynchronousSocketChannel, Channel, CompletionHandler}
 
 private[redis] trait RedisConnection {
   def read: Stream[IOException, Byte]
-  def write(chunk: Chunk[Byte]): IO[IOException, Unit]
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
 }
 
 private[redis] final class RedisConnectionLive(
@@ -39,12 +38,12 @@ private[redis] final class RedisConnectionLive(
   import RedisConnectionLive._
 
   val read: Stream[IOException, Byte] =
-    Stream.repeatEffectChunkOption {
+    ZStream.repeatZIOChunkOption {
       val receive =
         for {
-          _ <- IO.effectTotal(readBuffer.clear())
+          _ <- ZIO.succeed(readBuffer.clear())
           _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
-          chunk <- IO.effectTotal {
+          chunk <- ZIO.succeed {
                      readBuffer.flip()
                      val count = readBuffer.remaining()
                      val array = Array.ofDim[Byte](count)
@@ -59,9 +58,9 @@ private[redis] final class RedisConnectionLive(
       }
     }
 
-  def write(chunk: Chunk[Byte]): IO[IOException, Unit] =
-    IO.when(chunk.nonEmpty) {
-      IO.effectSuspendTotal {
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
+    ZIO.when(chunk.nonEmpty) {
+      ZIO.suspendSucceed {
         writeBuffer.clear()
         val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
         writeBuffer.put(c.toArray)
@@ -70,60 +69,67 @@ private[redis] final class RedisConnectionLive(
         closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
           .repeatWhile(_ => writeBuffer.hasRemaining)
           .zipRight(write(remainder))
+          .map(_.getOrElse(()))
       }
     }
 }
 
 private[redis] object RedisConnectionLive {
 
-  lazy val layer: ZLayer[Logging with Has[RedisUri], RedisError.IOError, Has[RedisConnection]] =
-    ZLayer.fromServiceManaged[RedisUri, Logging, RedisError.IOError, RedisConnection] { uri =>
-      connect(new InetSocketAddress(uri.host, uri.port))
+  lazy val layer: ZLayer[RedisUri, RedisError.IOError, RedisConnection] =
+    ZLayer.scoped {
+      for {
+        config  <- ZIO.service[RedisUri]
+        service <- create(config)
+      } yield service
     }
 
-  lazy val default: ZLayer[Logging, RedisError.IOError, Has[RedisConnection]] =
-    ZLayer.succeed(RedisUri.Default) ++ ZLayer.identity[Logging] >>> layer
+  lazy val default: ZLayer[Any, RedisError.IOError, RedisConnection] =
+    ZLayer.succeed(RedisUri.Default) >>> layer
 
-  private[redis] def connect(address: => SocketAddress): ZManaged[Logging, RedisError.IOError, RedisConnection] =
+  private[redis] def create(uri: RedisUri): ZIO[Scope, RedisError.IOError, RedisConnection] =
+    connect(new InetSocketAddress(uri.host, uri.port))
+
+  private[redis] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, RedisConnection] =
     (for {
-      address     <- UIO(address).toManaged_
-      makeBuffer   = IO.effectTotal(ByteBuffer.allocateDirect(ResponseBufferSize))
-      readBuffer  <- makeBuffer.toManaged_
-      writeBuffer <- makeBuffer.toManaged_
+      address     <- ZIO.succeed(address)
+      makeBuffer   = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
+      readBuffer  <- makeBuffer
+      writeBuffer <- makeBuffer
       channel     <- openChannel(address)
+      _           <- logScopeFinalizer("Redis connection is closed")
     } yield new RedisConnectionLive(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError)
 
   private final val ResponseBufferSize = 1024
 
   private def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
-      def completed(result: A, u: Any): Unit = k(IO.succeedNow(result))
+      def completed(result: A, u: Any): Unit = k(ZIO.succeedNow(result))
 
       def failed(t: Throwable, u: Any): Unit =
         t match {
-          case e: IOException => k(IO.fail(e))
-          case _              => k(IO.die(t))
+          case e: IOException => k(ZIO.fail(e))
+          case _              => k(ZIO.die(t))
         }
     }
 
   private def closeWith[A](channel: Channel)(op: CompletionHandler[A, Any] => Any): IO[IOException, A] =
-    IO.effectAsyncInterrupt { k =>
+    ZIO.asyncInterrupt { k =>
       op(completionHandler(k))
-      Left(IO.effect(channel.close()).ignore)
+      Left(ZIO.attempt(channel.close()).ignore)
     }
 
-  private def openChannel(address: SocketAddress): ZManaged[Logging, IOException, AsynchronousSocketChannel] =
-    Managed.fromAutoCloseable {
+  private def openChannel(address: SocketAddress): ZIO[Scope, IOException, AsynchronousSocketChannel] =
+    ZIO.fromAutoCloseable {
       for {
-        logger <- ZIO.service[Logger[String]]
-        channel <- IO.effect {
+        channel <- ZIO.attempt {
                      val channel = AsynchronousSocketChannel.open()
                      channel.setOption(StandardSocketOptions.SO_KEEPALIVE, Boolean.box(true))
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }
         _ <- closeWith[Void](channel)(channel.connect(address, null, _))
-        _ <- logger.info(s"Connected to the redis server with address $address.")
+        _ <- ZIO.logInfo(s"Connected to the redis server with address $address.")
       } yield channel
     }.refineToOrDie[IOException]
 }

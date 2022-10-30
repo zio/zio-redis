@@ -18,18 +18,21 @@ package zio.redis
 
 import zio._
 import zio.redis.Input.{StringInput, Varargs}
+import zio.schema.codec.Codec
 
 final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out]) {
-  private[redis] def run(in: In): ZIO[Redis, RedisError, Out] =
-    ZIO
-      .serviceWithZIO[Redis] { redis =>
-        val command = Varargs(StringInput).encode(name.split(" "))(redis.codec) ++ input.encode(in)(redis.codec)
+  private[redis] def run(in: In): ZIO[RedisEnv, RedisError, Out] = {
+    val zio =
+      for {
+        redis <- ZIO.service[Redis]
+        out   <- redis.executor.execute(resp(in, redis.codec))
+        res   <- ZIO.attempt(output.unsafeDecode(out)(redis.codec))
+      } yield res
+    zio.refineToOrDie[RedisError]
+  }
 
-        redis.executor
-          .execute(command)
-          .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(redis.codec)))
-      }
-      .refineToOrDie[RedisError]
+  private[redis] def resp(in: In, codec: Codec): Chunk[RespValue.BulkString] =
+    Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
 }
 
 object RedisCommand {

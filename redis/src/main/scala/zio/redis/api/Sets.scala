@@ -16,12 +16,12 @@
 
 package zio.redis.api
 
-import zio._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
+import zio.{Chunk, ZIO}
 
 trait Sets {
   import Sets._
@@ -39,7 +39,7 @@ trait Sets {
    *   Returns the number of elements that were added to the set, not including all the elements already present into
    *   the set.
    */
-  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[Redis, RedisError, Long] = {
+  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[RedisEnv, RedisError, Long] = {
     val command = RedisCommand(SAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)
     command.run((key, (member, members.toList)))
   }
@@ -52,7 +52,7 @@ trait Sets {
    * @return
    *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
-  final def sCard[K: Schema](key: K): ZIO[Redis, RedisError, Long] = {
+  final def sCard[K: Schema](key: K): ZIO[RedisEnv, RedisError, Long] = {
     val command = RedisCommand(SCard, ArbitraryInput[K](), LongOutput)
     command.run(key)
   }
@@ -69,7 +69,7 @@ trait Sets {
    */
   final def sDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Chunk[R]] =
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, Chunk[R]] =
         RedisCommand(SDiff, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
           .run((key, keys.toList))
     }
@@ -86,7 +86,7 @@ trait Sets {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): ZIO[Redis, RedisError, Long] = {
+  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): ZIO[RedisEnv, RedisError, Long] = {
     val command = RedisCommand(SDiffStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
     command.run((destination, (key, keys.toList)))
   }
@@ -103,7 +103,7 @@ trait Sets {
    */
   final def sInter[K: Schema](destination: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Chunk[R]] =
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, Chunk[R]] =
         RedisCommand(SInter, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
           .run((destination, keys.toList))
     }
@@ -124,7 +124,7 @@ trait Sets {
     destination: D,
     key: K,
     keys: K*
-  ): ZIO[Redis, RedisError, Long] = {
+  ): ZIO[RedisEnv, RedisError, Long] = {
     val command = RedisCommand(SInterStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
     command.run((destination, (key, keys.toList)))
   }
@@ -140,7 +140,7 @@ trait Sets {
    *   Returns 1 if the element is a member of the set. 0 if the element is not a member of the set, or if key does not
    *   exist.
    */
-  final def sIsMember[K: Schema, M: Schema](key: K, member: M): ZIO[Redis, RedisError, Boolean] = {
+  final def sIsMember[K: Schema, M: Schema](key: K, member: M): ZIO[RedisEnv, RedisError, Boolean] = {
     val command = RedisCommand(SIsMember, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), BoolOutput)
     command.run((key, member))
   }
@@ -155,7 +155,7 @@ trait Sets {
    */
   final def sMembers[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Chunk[R]] =
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, Chunk[R]] =
         RedisCommand(SMembers, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[R]())).run(key)
     }
 
@@ -175,7 +175,7 @@ trait Sets {
     source: S,
     destination: D,
     member: M
-  ): ZIO[Redis, RedisError, Boolean] = {
+  ): ZIO[RedisEnv, RedisError, Boolean] = {
     val command = RedisCommand(SMove, Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), ArbitraryInput[M]()), BoolOutput)
     command.run((source, destination, member))
   }
@@ -192,7 +192,7 @@ trait Sets {
    */
   final def sPop[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Chunk[R]] = {
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, Chunk[R]] = {
         val command = RedisCommand(
           SPop,
           Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
@@ -214,7 +214,7 @@ trait Sets {
    */
   final def sRandMember[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Chunk[R]] = {
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, Chunk[R]] = {
         val command = RedisCommand(
           SRandMember,
           Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
@@ -236,7 +236,7 @@ trait Sets {
    * @return
    *   Returns the number of members that were removed from the set, not including non existing members.
    */
-  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[Redis, RedisError, Long] = {
+  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[RedisEnv, RedisError, Long] = {
     val command = RedisCommand(SRem, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)
     command.run((key, (member, members.toList)))
   }
@@ -265,13 +265,13 @@ trait Sets {
     count: Option[Count] = None
   ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
     new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, (Long, Chunk[R])] = {
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, (Long, Chunk[R])] = {
         val command = RedisCommand(
           SScan,
           Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(MultiStringOutput.map(_.toLong), ChunkOutput(ArbitraryOutput[R]()))
         )
-        command.run((key, cursor, pattern.map(Pattern(_)), count))
+        command.run((key, cursor, pattern.map(Pattern), count))
       }
     }
 
@@ -287,7 +287,7 @@ trait Sets {
    */
   final def sUnion[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Chunk[R]] =
+      def returning[R: Schema]: ZIO[RedisEnv, RedisError, Chunk[R]] =
         RedisCommand(SUnion, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
           .run((key, keys.toList))
     }
@@ -308,7 +308,7 @@ trait Sets {
     destination: D,
     key: K,
     keys: K*
-  ): ZIO[Redis, RedisError, Long] = {
+  ): ZIO[RedisEnv, RedisError, Long] = {
     val command = RedisCommand(SUnionStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
     command.run((destination, (key, keys.toList)))
   }

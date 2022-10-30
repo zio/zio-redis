@@ -8,7 +8,7 @@ import zio.test._
 import java.nio.charset.StandardCharsets
 
 object CRC16Spec extends BaseSpec {
-  override def spec: ZSpec[Environment, Failure] =
+  override def spec: Spec[Environment, Any] =
     suite("CRC16")(
       test("crc16") {
         val value = "123456789"

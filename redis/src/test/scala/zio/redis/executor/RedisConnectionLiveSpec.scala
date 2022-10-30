@@ -1,16 +1,15 @@
 package zio.redis.executor
 
-import zio.logging.Logging
 import zio.redis.BaseSpec
 import zio.test.Assertion.{equalTo, isSome}
-import zio.test.{ZSpec, assert}
+import zio.test.{Spec, assert}
 import zio.{Chunk, ZIO}
 
 import java.nio.charset.StandardCharsets
 
 object RedisConnectionLiveSpec extends BaseSpec {
-  override def spec: ZSpec[Environment, Failure] =
-    suite("Byte stream")(
+  override def spec: Spec[Environment, Any] =
+    suite("Redis Connection Byte stream")(
       test("can write and read") {
         for {
           stream <- ZIO.service[RedisConnection]
@@ -19,5 +18,5 @@ object RedisConnectionLiveSpec extends BaseSpec {
           res    <- stream.read.runHead
         } yield assert(res)(isSome(equalTo('*'.toByte)))
       }
-    ).provideCustomLayer(Logging.ignore >>> RedisConnectionLive.default.orDie)
+    ).provideCustomLayer(RedisConnectionLive.default.orDie)
 }

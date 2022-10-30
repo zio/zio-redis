@@ -17,7 +17,6 @@
 package zio.redis.executor.node
 
 import zio._
-import zio.logging._
 import zio.redis._
 import zio.redis.executor.node.RedisNodeExecutorLive._
 import zio.redis.executor.{RedisConnection, RedisExecutor}
@@ -25,10 +24,10 @@ import zio.redis.executor.{RedisConnection, RedisExecutor}
 final class RedisNodeExecutorLive(
   reqQueue: Queue[Request],
   resQueue: Queue[Promise[RedisError, RespValue]],
-  connection: RedisConnection,
-  logger: Logger[String]
+  connection: RedisConnection
 ) extends RedisExecutor {
 
+  // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     Promise
       .make[RedisError, RespValue]
@@ -38,15 +37,16 @@ final class RedisNodeExecutorLive(
    * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a
    * new connection. Only exits by interruption or defect.
    */
-  val run: IO[RedisError, Unit] =
-    (send.forever race receive)
-      .tapError(e => logger.warn(s"Reconnecting due to error: $e") *> drainWith(e))
-      .retryWhile(True)
-      .tapError(e => logger.error(s"Executor exiting: $e"))
+  val run: IO[RedisError, AnyVal] =
+    ZIO.logTrace(s"$this Executable sender and reader has been started") *>
+      (send.repeat(Schedule.forever) race receive)
+        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e))
+        .retryWhile(True)
+        .tapError(e => ZIO.logError(s"Executor exiting: $e"))
 
-  private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(IO.foreach_(_)(_.fail(e)))
+  private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
-  private def send: IO[RedisError, Unit] =
+  private def send: IO[RedisError.IOError, Option[Unit]] =
     reqQueue.takeBetween(1, RequestQueueSize).flatMap { reqs =>
       val buffer = ChunkBuilder.make[Byte]()
       val it     = reqs.iterator
@@ -62,28 +62,29 @@ final class RedisNodeExecutorLive(
         .write(bytes)
         .mapError(RedisError.IOError)
         .tapBoth(
-          e => IO.foreach_(reqs)(_.promise.fail(e)),
-          _ => IO.foreach_(reqs)(req => resQueue.offer(req.promise))
+          e => ZIO.foreachDiscard(reqs)(_.promise.fail(e)),
+          _ => ZIO.foreachDiscard(reqs)(req => resQueue.offer(req.promise))
         )
     }
 
   private def receive: IO[RedisError, Unit] =
     connection.read
       .mapError(RedisError.IOError)
-      .transduce(RespValue.Decoder)
+      .via(RespValue.decoder)
+      .collectSome
       .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 
 }
 
 object RedisNodeExecutorLive {
 
-  final val layer
-    : ZLayer[Any with Has[RedisConnection] with Has[Logger[String]], RedisError.IOError, Has[RedisExecutor]] =
-    ZLayer
-      .fromServicesManaged[RedisConnection, Logger[String], Any, RedisError.IOError, RedisExecutor] {
-        (connection, logger) =>
-          create(connection, logger)
-      }
+  lazy val layer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
+    ZLayer.scoped {
+      for {
+        connection <- ZIO.service[RedisConnection]
+        executor   <- create(connection)
+      } yield executor
+    }
 
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
@@ -91,14 +92,13 @@ object RedisNodeExecutorLive {
 
   private final val RequestQueueSize = 16
 
-  private[redis] def create(
-    connection: RedisConnection,
-    logger: Logger[String]
-  ): ZManaged[Any, Nothing, RedisNodeExecutorLive] =
+  private[redis] def create(connection: RedisConnection): URIO[Scope, RedisNodeExecutorLive] =
     for {
-      reqQueue <- Queue.bounded[Request](RequestQueueSize).toManaged_
-      resQueue <- Queue.unbounded[Promise[RedisError, RespValue]].toManaged_
-      live      = new RedisNodeExecutorLive(reqQueue, resQueue, connection, logger)
-      _        <- live.run.forkManaged
-    } yield live
+      reqQueue <- Queue.bounded[Request](RequestQueueSize)
+      resQueue <- Queue.unbounded[Promise[RedisError, RespValue]]
+      executor  = new RedisNodeExecutorLive(reqQueue, resQueue, connection)
+      _        <- executor.run.forkScoped
+      _        <- logScopeFinalizer(s"$executor Node Executor is closed")
+    } yield executor
+
 }

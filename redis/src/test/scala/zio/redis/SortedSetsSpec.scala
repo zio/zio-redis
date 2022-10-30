@@ -7,7 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait SortedSetsSpec extends BaseSpec {
-  def sortedSetsSuite: Spec[Redis, RedisError] =
+  def sortedSetsSuite: Spec[RedisEnv, RedisError] =
     suite("sorted sets")(
       suite("bzPopMax")(
         test("non-empty set")(
@@ -34,7 +34,7 @@ trait SortedSetsSpec extends BaseSpec {
             result  <- bzPopMax(duration, key).returning[String]
           } yield assert(result)(isNone)
         )
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("bzPopMin")(
         test("non-empty set")(
           for {
@@ -57,7 +57,7 @@ trait SortedSetsSpec extends BaseSpec {
             result  <- bzPopMin(duration, key).returning[String]
           } yield assert(result)(isNone)
         )
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zAdd")(
         test("to empty set") {
           for {
@@ -231,7 +231,7 @@ trait SortedSetsSpec extends BaseSpec {
             diff <- zDiff(2, key1, key2).returning[String]
           } yield assert(diff)(hasSameElements(Chunk("c")))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zDiffWithScores")(
         test("empty sets") {
           for {
@@ -258,7 +258,7 @@ trait SortedSetsSpec extends BaseSpec {
             diff <- zDiffWithScores(2, key1, key2).returning[String]
           } yield assert(diff)(hasSameElements(Chunk(MemberScore(3d, "c"))))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zDiffStore")(
         test("empty sets") {
           for {
@@ -295,7 +295,7 @@ trait SortedSetsSpec extends BaseSpec {
             card <- zDiffStore(dest, 2, key1, key2)
           } yield assert(card)(equalTo(1L))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zIncrBy")(
         test("non-empty set") {
           for {
@@ -430,7 +430,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zInter(2, first, second)(Some(Aggregate.Min)).returning[String]
           } yield assert(members)(equalTo(Chunk("O", "N")))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zInterWithScores")(
         test("two non-empty sets") {
           for {
@@ -544,7 +544,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zInterWithScores(2, first, second)(Some(Aggregate.Min)).returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(2d, "O"), MemberScore(3d, "N"))))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zInterStore")(
         test("two non-empty sets") {
           for {
@@ -666,7 +666,7 @@ trait SortedSetsSpec extends BaseSpec {
             card   <- zInterStore(dest, 2, first, second)(Some(Aggregate.Min))
           } yield assert(card)(equalTo(2L))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zLexCount")(
         test("non-empty set") {
           for {
@@ -1425,7 +1425,7 @@ trait SortedSetsSpec extends BaseSpec {
             members <- zUnion(2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
           } yield assert(members)(equalTo(Chunk("M", "N", "P", "O")))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zUnionWithScores")(
         test("two non-empty sets") {
           for {
@@ -1591,7 +1591,7 @@ trait SortedSetsSpec extends BaseSpec {
             )
           )
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zUnionStore")(
         test("two non-empty sets") {
           for {
@@ -1713,7 +1713,7 @@ trait SortedSetsSpec extends BaseSpec {
             card   <- zUnionStore(dest, 2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("zRandMember")(
         test("key does not exist") {
           for {
@@ -1769,7 +1769,7 @@ trait SortedSetsSpec extends BaseSpec {
     key: String,
     pattern: Option[String] = None,
     count: Option[Count] = None
-  ): ZIO[Redis, RedisError, Chunk[MemberScore[String]]] =
+  ): ZIO[RedisEnv, RedisError, Chunk[MemberScore[String]]] =
     ZStream
       .paginateChunkZIO(0L) { cursor =>
         zScan(key, cursor, pattern, count).returning[String].map {

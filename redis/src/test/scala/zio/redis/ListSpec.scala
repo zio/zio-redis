@@ -9,7 +9,7 @@ import zio.test._
 import java.util.concurrent.TimeUnit
 
 trait ListSpec extends BaseSpec {
-  def listSuite: Spec[Redis, Any] =
+  def listSuite: Spec[RedisEnv, Any] =
     suite("lists")(
       suite("pop")(
         test("lPop non-empty list") {
@@ -173,7 +173,7 @@ trait ListSpec extends BaseSpec {
             rpp   <- rPopLPush(key, dest).returning[String].either
           } yield assert(rpp)(isLeft)
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("blocking poppush")(
         test("brPopLPush") {
           for {
@@ -209,7 +209,7 @@ trait ListSpec extends BaseSpec {
             bpp   <- brPopLPush(key, dest, 1.seconds).returning[String].either
           } yield assert(bpp)(isLeft)
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("remove")(
         test("lRem 2 elements moving from head") {
           for {
@@ -453,7 +453,7 @@ trait ListSpec extends BaseSpec {
             popped <- blPop(key)(1.second).returning[String].either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("brPop")(
         test("from single list") {
           for {
@@ -507,7 +507,7 @@ trait ListSpec extends BaseSpec {
             popped <- brPop(key)(1.second).returning[String].either
           } yield assert(popped)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("lInsert")(
         test("before pivot into non-empty list") {
           for {
@@ -660,7 +660,7 @@ trait ListSpec extends BaseSpec {
             moved       <- lMove(source, destination, Side.Left, Side.Right).returning[String]
           } yield assert(moved)(isNone)
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("blMove")(
         test("move from source to destination left right") {
           for {
@@ -758,7 +758,7 @@ trait ListSpec extends BaseSpec {
             endTime     <- currentTime(TimeUnit.SECONDS)
           } yield assert(moved)(isNone) && assert(endTime - startTime)(isGreaterThanEqualTo(1L))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("lPos")(
         test("find index of element") {
           for {

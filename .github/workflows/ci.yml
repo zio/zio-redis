@@ -81,7 +81,9 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Run test containers
-        run: docker-compose up -d
+        run: docker-compose -f testcontainers/redis-compose.yml up -d
+      - name: Run cluster test containers
+        run: docker-compose -f testcontainers/redis-cluster-compose.yml up -d
       - name: Run tests
         run: ./sbt ++${{ matrix.scala }}! redis/test
 

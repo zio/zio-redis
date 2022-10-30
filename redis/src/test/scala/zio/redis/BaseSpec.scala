@@ -30,8 +30,18 @@ trait BaseSpec extends ZIOSpecDefault {
 
   final val testExecutorUnsupported: TestAspectPoly =
     tag(BaseSpec.TestExecutorUnsupported)
+
+  /* TODO
+   *  We can try to support the most unsupported commands for cluster with:
+   *  - default connection for commands without a key and for multiple key commands with
+   *    the limitation that all keys have to be in the same slot
+   *  - fork/join approach for commands that operate on keys with different slots
+   */
+  final val clusterExecutorUnsupported: TestAspectPoly =
+    tag(BaseSpec.ClusterExecutorUnsupported)
 }
 
 object BaseSpec {
-  final val TestExecutorUnsupported = "test executor unsupported"
+  final val TestExecutorUnsupported    = "test executor unsupported"
+  final val ClusterExecutorUnsupported = "cluster executor unsupported"
 }

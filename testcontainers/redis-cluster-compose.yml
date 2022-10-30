@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  redis-cluster:
+    image: 'redis:6.2.5-alpine'
+    container_name: redis
+    volumes:
+      - /home/alsergeev/workspace/zio/zio-redis/testcontainers/redis-cluster.sh:/data/redis-cluster.sh
+    command: ./redis-cluster.sh
+    stdin_open: true
+    tty: true
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+      - "5002:5002"
+      - "5003:5003"
+      - "5004:5004"
+      - "5005:5005"

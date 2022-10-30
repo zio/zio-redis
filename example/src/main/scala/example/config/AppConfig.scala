@@ -27,7 +27,7 @@ import zio.redis.RedisUri
 final case class AppConfig(redis: RedisUri, server: ServerConfig)
 
 object AppConfig {
-  type Env = AppConfig with RedisConfig
+  type Env = AppConfig with RedisUri
 
   private[this] final val Config     = ZIO.attempt(ConfigFactory.load.resolve.getConfig("example"))
   private[this] final val Descriptor = descriptor[AppConfig]

@@ -3942,7 +3942,7 @@ private[redis] object RedisTestExecutorLive {
         clientTInfo =
           ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
         clientTrackingInfo <- TRef.make(clientTInfo).commit
-      } yield new TestExecutor(
+      } yield new RedisTestExecutorLive(
         clientInfo,
         clientTrackingInfo,
         keys,

@@ -8,7 +8,7 @@ import zio.test._
 import java.net.InetAddress
 
 trait ConnectionSpec extends BaseSpec {
-  def connectionSuite: Spec[Redis, RedisError] =
+  def connectionSuite: Spec[RedisEnv, RedisError] =
     suite("connection")(
       suite("clientCaching")(
         test("track keys") {
@@ -84,7 +84,7 @@ trait ConnectionSpec extends BaseSpec {
           _    <- clientSetName("foo")
           name <- clientGetName
         } yield assert(name.getOrElse(""))(equalTo("foo"))
-      },
+      } @@ clusterExecutorUnsupported,
       suite("clientTracking")(
         test("enable tracking in broadcast mode and with prefixes") {
           for {
@@ -154,7 +154,7 @@ trait ConnectionSpec extends BaseSpec {
       suite("ping")(
         test("PING with no input") {
           ping(None).map(assert(_)(equalTo("PONG")))
-        },
+        } @@ clusterExecutorUnsupported,
         test("PING with input") {
           ping(Some("Hello")).map(assert(_)(equalTo("Hello")))
         },
@@ -170,6 +170,6 @@ trait ConnectionSpec extends BaseSpec {
         for {
           unit <- reset
         } yield assert(unit)(isUnit)
-      }
+      } @@ clusterExecutorUnsupported
     ) @@ sequential
 }

@@ -4,7 +4,7 @@ import zio.test.Assertion._
 import zio.test._
 
 trait HyperLogLogSpec extends BaseSpec {
-  def hyperLogLogSuite: Spec[Redis, RedisError] =
+  def hyperLogLogSuite: Spec[RedisEnv, RedisError] =
     suite("hyperloglog")(
       suite("add elements")(
         test("pfAdd elements to key") {
@@ -50,7 +50,7 @@ trait HyperLogLogSpec extends BaseSpec {
             add2  <- pfAdd(key2, "four", "five", "six")
             count <- pfCount(key, key2)
           } yield assert(add)(equalTo(true)) && assert(add2)(equalTo(true)) && assert(count)(equalTo(6L))
-        },
+        } @@ clusterExecutorUnsupported,
         test("error when not hyperloglog") {
           for {
             key   <- uuid
@@ -95,6 +95,6 @@ trait HyperLogLogSpec extends BaseSpec {
             merge <- pfMerge(key3, key2, key).either
           } yield assert(merge)(isLeft)
         }
-      )
+      ) @@ clusterExecutorUnsupported
     )
 }
