@@ -1,8 +1,5 @@
-package zio.redis.executor
+package zio.redis
 
-import zio.redis.executor.node.RedisNodeExecutorLive
-import zio.redis.executor.test.RedisTestExecutorLive
-import zio.redis.{RedisConfig, RedisError, RespValue}
 import zio.{Chunk, IO, ULayer, ZLayer}
 
 trait RedisExecutor {

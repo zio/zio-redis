@@ -18,7 +18,6 @@ package zio.redis
 
 import zio._
 import zio.redis.codec.CRC16
-import zio.redis.executor.cluster.RedisUri
 import zio.redis.options.Cluster.Slot
 import zio.stream._
 

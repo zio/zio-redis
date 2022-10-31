@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package zio.redis.executor.cluster
+package zio.redis
 
-import zio.redis._
+import zio.redis.RedisClusterExecutorLive._
 import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
-import zio.redis.executor.cluster.RedisClusterExecutorLive._
-import zio.redis.executor.node.RedisNodeExecutorLive
-import zio.redis.executor.{RedisConnectionLive, RedisExecutor}
 import zio.redis.options.Cluster._
 import zio.schema.codec.Codec
 import zio.{Chunk, Exit, IO, Ref, Schedule, Scope, UIO, ZIO, ZLayer, durationInt}

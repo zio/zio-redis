@@ -1,6 +1,5 @@
-package zio.redis.executor
+package zio.redis
 
-import zio.redis.BaseSpec
 import zio.test.Assertion.{equalTo, isSome}
 import zio.test.{Spec, assert}
 import zio.{Chunk, ZIO}

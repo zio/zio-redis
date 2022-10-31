@@ -16,7 +16,6 @@
 
 package zio.redis
 
-import zio.redis.executor.cluster.RedisUri
 import zio.redis.options.Cluster.Slot
 
 import java.io.IOException

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package zio.redis.executor
+package zio.redis
 
 import zio._
-import zio.redis.{RedisConfig, RedisError, logScopeFinalizer}
 import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}

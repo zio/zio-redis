@@ -1,4 +1,4 @@
-package zio.redis.executor.cluster
+package zio.redis
 
 import zio.Chunk
 

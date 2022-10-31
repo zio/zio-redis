@@ -21,8 +21,7 @@ import example.config.AppConfig
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zhttp.service.Server
 import zio._
-import zio.redis.RedisLive
-import zio.redis.executor.RedisExecutor
+import zio.redis.{RedisExecutor, RedisLive}
 import zio.schema.codec.{Codec, ProtobufCodec}
 
 object Main extends ZIOAppDefault {

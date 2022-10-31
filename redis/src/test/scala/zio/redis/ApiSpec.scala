@@ -1,7 +1,5 @@
 package zio.redis
 
-import zio.redis.executor.RedisExecutor
-import zio.redis.executor.cluster.{RedisClusterConfig, RedisClusterExecutorLive, RedisUri}
 import zio.test.TestAspect._
 import zio.test._
 import zio.{Chunk, Layer, ZLayer}

@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package zio.redis.executor.test
+package zio.redis
 
 import zio._
 import zio.redis.RedisError.ProtocolError
+import zio.redis.RedisTestExecutorLive._
 import zio.redis.RespValue.{BulkString, bulkString}
-import zio.redis.executor.RedisExecutor
-import zio.redis.executor.test.RedisTestExecutorLive._
-import zio.redis.{ClientTrackingMode, _}
 import zio.stm._
 
 import java.nio.file.{FileSystems, Paths}

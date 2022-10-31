@@ -15,8 +15,7 @@
  */
 package zio.redis.options
 
-import zio.redis.executor.RedisExecutor
-import zio.redis.executor.cluster.RedisUri
+import zio.redis.{RedisExecutor, RedisUri}
 import zio.{Chunk, Scope}
 
 trait Cluster {}

@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package zio.redis.executor.node
+package zio.redis
 
 import zio._
-import zio.redis._
-import zio.redis.executor.node.RedisNodeExecutorLive._
-import zio.redis.executor.{RedisConnection, RedisExecutor}
+import zio.redis.RedisNodeExecutorLive._
 
 final class RedisNodeExecutorLive(
   reqQueue: Queue[Request],

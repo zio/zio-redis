@@ -17,7 +17,6 @@
 package zio.redis
 
 import zio._
-import zio.redis.executor.RedisExecutor
 import zio.schema.codec.Codec
 
 trait Redis {

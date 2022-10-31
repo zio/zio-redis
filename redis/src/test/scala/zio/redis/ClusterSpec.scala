@@ -1,6 +1,5 @@
 package zio.redis
 
-import zio.redis.executor.cluster.RedisUri
 import zio.test.Assertion._
 import zio.test._
 
