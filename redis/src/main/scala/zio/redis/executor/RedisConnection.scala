@@ -17,7 +17,7 @@
 package zio.redis.executor
 
 import zio._
-import zio.redis.{RedisError, RedisUri, logScopeFinalizer}
+import zio.redis.{RedisConfig, RedisError, logScopeFinalizer}
 import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}
@@ -76,18 +76,18 @@ private[redis] final class RedisConnectionLive(
 
 private[redis] object RedisConnectionLive {
 
-  lazy val layer: ZLayer[RedisUri, RedisError.IOError, RedisConnection] =
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisConnection] =
     ZLayer.scoped {
       for {
-        config  <- ZIO.service[RedisUri]
+        config  <- ZIO.service[RedisConfig]
         service <- create(config)
       } yield service
     }
 
   lazy val default: ZLayer[Any, RedisError.IOError, RedisConnection] =
-    ZLayer.succeed(RedisUri.Default) >>> layer
+    ZLayer.succeed(RedisConfig.Default) >>> layer
 
-  private[redis] def create(uri: RedisUri): ZIO[Scope, RedisError.IOError, RedisConnection] =
+  private[redis] def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
     connect(new InetSocketAddress(uri.host, uri.port))
 
   private[redis] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, RedisConnection] =

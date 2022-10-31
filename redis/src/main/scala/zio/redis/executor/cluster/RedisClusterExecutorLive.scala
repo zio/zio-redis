@@ -27,7 +27,6 @@ import zio.schema.codec.Codec
 import zio.{Chunk, Exit, IO, Ref, Schedule, Scope, UIO, ZIO, ZLayer, durationInt}
 
 import java.io.IOException
-import scala.util.Try
 
 private[redis] final case class RedisClusterExecutorLive(
   clusterConnectionRef: Ref.Synchronized[ClusterConnection],
@@ -140,16 +139,19 @@ object RedisClusterExecutorLive {
   private def connectToNode(address: RedisUri) =
     for {
       closableScope <- Scope.make
-      connection    <- closableScope.extend(RedisConnectionLive.create(address))
+      connection    <- closableScope.extend(RedisConnectionLive.create(RedisConfig(address.host, address.port)))
       executor      <- closableScope.extend(RedisNodeExecutorLive.create(connection))
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(e => closableScope.close(e))
     } yield ExecutorScope(executor, closableScope)
 
   private def getRedis(address: RedisUri) = {
-    val codec    = ZLayer.succeed[Codec](StringUtf8Codec)
-    val executor = ZLayer.succeed(address) >>> RedisExecutor.layer
-    val redis    = executor ++ codec >>> RedisLive.layer
+    val redis = ZLayer.make[Redis](
+      ZLayer.succeed(RedisConfig(address.host, address.port)),
+      RedisExecutor.layer,
+      ZLayer.succeed[Codec](StringUtf8Codec),
+      RedisLive.layer
+    )
     for {
       closableScope <- Scope.make
       layer         <- closableScope.extend(redis.memoize)

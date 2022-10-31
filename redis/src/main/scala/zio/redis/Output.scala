@@ -17,6 +17,7 @@
 package zio.redis
 
 import zio._
+import zio.redis.executor.cluster.RedisUri
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
 import zio.schema.codec.Codec

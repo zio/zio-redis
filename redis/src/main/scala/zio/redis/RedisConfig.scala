@@ -16,17 +16,8 @@
 
 package zio.redis
 
-final case class RedisUri(host: String, port: Int) {
-  override def toString: String = s"$host:$port"
-}
+final case class RedisConfig(host: String, port: Int)
 
-object RedisUri {
-  lazy val Default: RedisUri = RedisUri("localhost", 6379)
-
-  def apply(hostAndPort: String): RedisUri = {
-    val splitting = hostAndPort.split(':')
-    val host      = splitting(0)
-    val port      = splitting(1).toInt
-    RedisUri(host, port)
-  }
+object RedisConfig {
+  lazy val Default: RedisConfig = RedisConfig("localhost", 6379)
 }

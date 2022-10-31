@@ -2,7 +2,7 @@ package zio.redis.executor
 
 import zio.redis.executor.node.RedisNodeExecutorLive
 import zio.redis.executor.test.RedisTestExecutorLive
-import zio.redis.{RedisError, RedisUri, RespValue}
+import zio.redis.{RedisConfig, RedisError, RespValue}
 import zio.{Chunk, IO, ULayer, ZLayer}
 
 trait RedisExecutor {
@@ -10,7 +10,7 @@ trait RedisExecutor {
 }
 
 object RedisExecutor {
-  lazy val layer: ZLayer[RedisUri, RedisError.IOError, RedisExecutor] =
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
     RedisConnectionLive.layer >>> RedisNodeExecutorLive.layer
 
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =

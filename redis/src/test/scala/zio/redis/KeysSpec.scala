@@ -419,7 +419,7 @@ object KeysSpec {
   final val SecondExecutor: Layer[RedisError.IOError, Redis] =
     ZLayer
       .make[Redis](
-        ZLayer.succeed(RedisUri("localhost", 6380)),
+        ZLayer.succeed(RedisConfig("localhost", 6380)),
         RedisConnectionLive.layer,
         RedisNodeExecutorLive.layer,
         ZLayer.succeed[Codec](ProtobufCodec),

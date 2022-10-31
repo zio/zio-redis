@@ -64,7 +64,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
 
   private final def getRedisNodeLayer(uri: RedisUri): Layer[Any, Redis] =
     ZLayer.make[Redis](
-      ZLayer.succeed(uri),
+      ZLayer.succeed(RedisConfig(uri.host, uri.port)),
       RedisExecutor.layer,
       ZLayer.succeed(codec),
       RedisLive.layer

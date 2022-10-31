@@ -22,12 +22,12 @@ import zio.config.ReadError
 import zio.config.magnolia.descriptor
 import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
-import zio.redis.RedisUri
+import zio.redis.RedisConfig
 
-final case class AppConfig(redis: RedisUri, server: ServerConfig)
+final case class AppConfig(redis: RedisConfig, server: ServerConfig)
 
 object AppConfig {
-  type Env = AppConfig with RedisUri
+  type Env = AppConfig with RedisConfig
 
   private[this] final val Config     = ZIO.attempt(ConfigFactory.load.resolve.getConfig("example"))
   private[this] final val Descriptor = descriptor[AppConfig]
