@@ -129,7 +129,7 @@ object RedisClusterExecutorLive {
     for {
       temporaryRedis    <- getRedis(address)
       (trLayer, trScope) = temporaryRedis
-      partitions        <- slots().provideLayer(trLayer)
+      partitions        <- slots.provideLayer(trLayer)
       _                 <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
       uniqueAddresses    = partitions.map(_.master.address).distinct
       uriExecScope      <- ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address).map(es => address -> es))

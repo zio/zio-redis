@@ -12,7 +12,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
     suite("cluster executor")(
       test("check cluster responsiveness when ASK redirect happens") {
         for {
-          initSlots       <- slots()
+          initSlots       <- slots
           key             <- uuid
           value1          <- get(key).returning[String]
           keySlot          = Slot(CRC16.get(Chunk.fromArray(key.getBytes)).toLong % SlotsAmount)
@@ -35,7 +35,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
       },
       test("check client responsiveness when Moved redirect happened") {
         for {
-          initSlots       <- slots()
+          initSlots       <- slots
           key             <- uuid
           _               <- set(key, "value")
           value1          <- get(key).returning[String]

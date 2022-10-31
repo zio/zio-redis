@@ -26,10 +26,10 @@ import zio.{Chunk, ZIO}
 
 trait Cluster {
 
-  def asking(): ZIO[Redis, RedisError, Unit] =
+  def asking: ZIO[Redis, RedisError, Unit] =
     AskingCommand.run(())
 
-  def slots(): ZIO[Redis, RedisError, Chunk[Partition]] = {
+  def slots: ZIO[Redis, RedisError, Chunk[Partition]] = {
     val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))
     command.run(())
   }
