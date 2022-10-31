@@ -1,8 +1,8 @@
 package zio.redis
 
 import zio._
-import zio.test.TestAnnotation
 import zio.test.TestAspect._
+import zio.test._
 
 object ApiSpec
     extends ConnectionSpec
@@ -31,7 +31,7 @@ object ApiSpec
         hashSuite,
         streamsSuite,
         scriptingSpec
-      ).provideCustomLayerShared(LiveLayer) @@ sequential @@ withLiveEnvironment,
+      ).provideLayerShared(LiveLayer) @@ sequential @@ withLiveEnvironment,
       suite("Test Executor")(
         connectionSuite,
         keysSuite,
@@ -44,7 +44,7 @@ object ApiSpec
         stringsSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported))
         .get
-        .provideCustomLayer(TestLayer)
+        .provideLayer(TestLayer)
     )
 
   private val LiveLayer =
