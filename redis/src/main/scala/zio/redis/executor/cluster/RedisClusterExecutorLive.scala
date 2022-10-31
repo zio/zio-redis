@@ -55,7 +55,7 @@ private[redis] final case class RedisClusterExecutorLive(
     }
 
     for {
-      key    <- Try(command(1)).fold(_ => ZIO.fail(CusterKeyError), bs => ZIO.succeedNow(bs))
+      key    <- ZIO.attempt(command(1)).orElseFail(CusterKeyError)
       keySlot = Slot((key.asCRC16 % SlotsAmount).toLong)
       result <- executeSafe(keySlot)
     } yield result
