@@ -75,6 +75,23 @@ trait Scripting {
   }
 
   /**
+   * Set the debug mode for subsequent scripts executed with [[zio.redis.api.Scripting.eval]].
+   *
+   * @param debugMode
+   *   - [[zio.redis.options.DebugMode.Yes]]: Enable non-blocking asynchronous debugging of Lua scripts (changes are
+   *     discarded).
+   *   - [[zio.redis.options.DebugMode.Sync]]: Enable blocking synchronous debugging of Lua scripts (saves changes to
+   *     data).
+   *   - [[zio.redis.options.DebugMode.No]]: Disables scripts debug mode.
+   * @return
+   *   unit if successful, error otherwise.
+   */
+  def scriptDebug(debugMode: DebugMode): ZIO[Redis, RedisError, Unit] = {
+    val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput)
+    command.run(debugMode)
+  }
+
+  /**
    * Checks existence of the scripts in the script cache.
    *
    * @param sha1
@@ -133,6 +150,7 @@ trait Scripting {
 private[redis] object Scripting {
   final val Eval         = "EVAL"
   final val EvalSha      = "EVALSHA"
+  final val ScriptDebug  = "SCRIPT DEBUG"
   final val ScriptExists = "SCRIPT EXISTS"
   final val ScriptFlush  = "SCRIPT FLUSH"
   final val ScriptKill   = "SCRIPT KILL"

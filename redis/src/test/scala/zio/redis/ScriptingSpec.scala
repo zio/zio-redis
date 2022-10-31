@@ -147,6 +147,15 @@ trait ScriptingSpec extends BaseSpec {
           } yield assert(res)(isLeft(isSubtype[NoScript](hasField("message", _.message, equalTo(error)))))
         }
       ),
+      suite("scriptDebug")(
+        test("return true if all debug command options are executed successfully") {
+          for {
+            res1 <- scriptDebug(DebugMode.Yes)
+            res2 <- scriptDebug(DebugMode.Sync)
+            res3 <- scriptDebug(DebugMode.No)
+          } yield assert(res1)(isUnit) && assert(res2)(isUnit) && assert(res3)(isUnit)
+        }
+      ),
       suite("scriptExists")(
         test("return true if scripts are found in the cache") {
           val lua1 = """return "1""""
