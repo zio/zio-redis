@@ -21,7 +21,7 @@ import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
 import zio.redis.options.Cluster._
 import zio.schema.codec.Codec
-import zio.{Chunk, Exit, IO, Ref, Schedule, Scope, UIO, ZIO, ZLayer, durationInt}
+import zio._
 
 import java.io.IOException
 
@@ -143,15 +143,12 @@ object RedisClusterExecutorLive {
     } yield ExecutorScope(executor, closableScope)
 
   private def getRedis(address: RedisUri) = {
-    val redis = ZLayer.make[Redis](
-      ZLayer.succeed(RedisConfig(address.host, address.port)),
-      RedisExecutor.layer,
-      ZLayer.succeed[Codec](StringUtf8Codec),
-      RedisLive.layer
-    )
+    val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
+    val codecLayer    = ZLayer.succeed[Codec](StringUtf8Codec)
+    val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
     for {
       closableScope <- Scope.make
-      layer         <- closableScope.extend(redis.memoize)
+      layer         <- closableScope.extend(redisLayer.memoize)
       _             <- logScopeFinalizer("Temporary redis connection is closed")
     } yield (layer, closableScope)
   }
