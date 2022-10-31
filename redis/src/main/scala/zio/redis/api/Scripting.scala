@@ -78,11 +78,11 @@ trait Scripting {
    * Set the debug mode for subsequent scripts executed with [[zio.redis.api.Scripting.eval]].
    *
    * @param debugMode
-   *   - [[zio.redis.options.DebugMode.Yes]]: Enable non-blocking asynchronous debugging of Lua scripts (changes are
+   *   - [[zio.redis.DebugMode.Yes]]: Enable non-blocking asynchronous debugging of Lua scripts (changes are
    *     discarded).
-   *   - [[zio.redis.options.DebugMode.Sync]]: Enable blocking synchronous debugging of Lua scripts (saves changes to
+   *   - [[zio.redis.DebugMode.Sync]]: Enable blocking synchronous debugging of Lua scripts (saves changes to
    *     data).
-   *   - [[zio.redis.options.DebugMode.No]]: Disables scripts debug mode.
+   *   - [[zio.redis.DebugMode.No]]: Disables scripts debug mode.
    * @return
    *   unit if successful, error otherwise.
    */
