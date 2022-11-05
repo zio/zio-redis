@@ -1,6 +1,6 @@
 package zio.redis
 
-import zio.{durationInt, Chunk, Duration}
+import zio.{Chunk, Duration, durationInt}
 
 final case class RedisClusterConfig(addresses: Chunk[RedisUri], retry: RetryClusterConfig = RetryClusterConfig.Default)
 
