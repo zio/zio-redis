@@ -27,6 +27,7 @@ import java.io.IOException
 
 final case class ClusterExecutor(
   clusterConnectionRef: Ref.Synchronized[ClusterConnection],
+  config: RedisClusterConfig,
   scope: Scope.Closeable
 ) extends RedisExecutor {
 
@@ -63,8 +64,8 @@ final case class ClusterExecutor(
     } yield result
   }
 
-  private def executor(slot: Slot): UIO[RedisExecutor] =
-    clusterConnectionRef.get.map(_.executor(slot))
+  private def executor(slot: Slot): IO[RedisError.IOError, RedisExecutor] =
+    clusterConnectionRef.get.map(_.executor(slot)).flatMap(ZIO.fromOption(_).orElseFail(CusterKeyExecutorError))
 
   // TODO introduce max connection amount
   private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor] =
@@ -83,13 +84,13 @@ final case class ClusterExecutor(
       } yield cluster
     }
 
-  // TODO configurable
   private val RetryPolicy: Schedule[Any, Throwable, (zio.Duration, Long, Throwable)] =
-    Schedule.exponential(100.millis, 1.5) && Schedule.recurs(5) && Schedule.recurWhile[Throwable] {
-      case _: RedisError.IOError | _: RedisError.ClusterRedisError => true
-      case _                                                       => false
-    }
-
+    Schedule.exponential(config.retry.base, config.retry.factor) &&
+      Schedule.recurs(config.retry.maxRecurs) &&
+      Schedule.recurWhile[Throwable] {
+        case _: RedisError.IOError | _: RedisError.ClusterRedisError => true
+        case _                                                       => false
+      }
 }
 
 object ClusterExecutor {
@@ -112,7 +113,7 @@ object ClusterExecutor {
     for {
       clusterConnection    <- initConnectToCluster(config.addresses)
       clusterConnectionRef <- Ref.Synchronized.make(clusterConnection)
-      clusterExec           = ClusterExecutor(clusterConnectionRef, scope)
+      clusterExec           = ClusterExecutor(clusterConnectionRef, config, scope)
       _                    <- logScopeFinalizer("Cluster executor is closed")
     } yield clusterExec
 
@@ -165,6 +166,10 @@ object ClusterExecutor {
 
   private final val CusterKeyError =
     RedisError.ProtocolError("Key doesn't found. No way to dispatch this command to Redis Cluster")
+  private final val CusterKeyExecutorError =
+    RedisError.IOError(
+      new IOException("Executor for key doesn't found. No way to dispatch this command to Redis Cluster")
+    )
   private final val CusterConnectionError =
     RedisError.IOError(new IOException("The connection to cluster has been failed. Can't reach a single startup node."))
 }

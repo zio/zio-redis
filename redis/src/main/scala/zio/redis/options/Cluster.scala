@@ -29,7 +29,7 @@ object Cluster {
     executors: Map[RedisUri, ExecutorScope],
     slots: Map[Slot, RedisUri]
   ) {
-    def executor(slot: Slot): RedisExecutor = executors(slots(slot)).executor
+    def executor(slot: Slot): Option[RedisExecutor] = executors.get(slots(slot)).map(_.executor)
 
     def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
       copy(executors = executors + (uri -> es))
