@@ -8,11 +8,11 @@ trait RedisExecutor {
 
 object RedisExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.layer >>> RedisNodeExecutorLive.layer
+    RedisConnectionLive.layer >>> SingleNodeExecutor.layer
 
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.default >>> RedisNodeExecutorLive.layer
+    RedisConnectionLive.default >>> SingleNodeExecutor.layer
 
   lazy val test: ULayer[RedisExecutor] =
-    RedisTestExecutorLive.layer
+    TestExecutor.layer
 }

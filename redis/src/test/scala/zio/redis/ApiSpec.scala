@@ -81,7 +81,7 @@ object ApiSpec
     val Layer: Layer[Any, Redis] =
       ZLayer.make[Redis](
         ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000)))),
-        RedisClusterExecutorLive.layer,
+        ClusterExecutor.layer,
         ZLayer.succeed(codec),
         RedisLive.layer
       )

@@ -5,7 +5,7 @@ import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test._
 import zio.{Chunk, Layer, ZIO, ZLayer, durationInt}
 
-object RedisClusterExecutorLiveSpec extends BaseSpec {
+object ClusterExecutorSpec extends BaseSpec {
   def spec: Spec[TestEnvironment, Any] =
     suite("cluster executor")(
       test("check cluster responsiveness when ASK redirect happens") {
@@ -14,7 +14,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
           key             <- uuid
           value1          <- get(key).returning[String]
           keySlot          = Slot(CRC16.get(Chunk.fromArray(key.getBytes)).toLong % SlotsAmount)
-          (sourcePart, id) = initSlots.zipWithIndex.find { case (p, _) => p.slotRange.isContain(keySlot) }.get
+          (sourcePart, id) = initSlots.zipWithIndex.find { case (p, _) => p.slotRange.contains(keySlot) }.get
           sourceMaster     = sourcePart.master
           destPart         = initSlots((id + 1) % initSlots.size)
           destMaster       = destPart.master
@@ -38,7 +38,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
           _               <- set(key, "value")
           value1          <- get(key).returning[String]
           keySlot          = Slot(CRC16.get(Chunk.fromArray(key.getBytes)).toLong % SlotsAmount)
-          (sourcePart, id) = initSlots.zipWithIndex.find { case (p, _) => p.slotRange.isContain(keySlot) }.get
+          (sourcePart, id) = initSlots.zipWithIndex.find { case (p, _) => p.slotRange.contains(keySlot) }.get
           sourceMaster     = sourcePart.master
           destPart         = initSlots((id + 1) % initSlots.size)
           destMaster       = destPart.master
@@ -73,7 +73,7 @@ object RedisClusterExecutorLiveSpec extends BaseSpec {
     val address2 = RedisUri("localhost", 5000)
     ZLayer.make[Redis](
       ZLayer.succeed(RedisClusterConfig(Chunk(address1, address2))),
-      RedisClusterExecutorLive.layer.orDie,
+      ClusterExecutor.layer.orDie,
       ZLayer.succeed(codec),
       RedisLive.layer
     )

@@ -17,9 +17,9 @@
 package zio.redis
 
 import zio._
-import zio.redis.RedisNodeExecutorLive._
+import zio.redis.SingleNodeExecutor._
 
-final class RedisNodeExecutorLive(
+final class SingleNodeExecutor(
   reqQueue: Queue[Request],
   resQueue: Queue[Promise[RedisError, RespValue]],
   connection: RedisConnection
@@ -74,7 +74,7 @@ final class RedisNodeExecutorLive(
 
 }
 
-object RedisNodeExecutorLive {
+object SingleNodeExecutor {
 
   lazy val layer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
     ZLayer.scoped {
@@ -90,11 +90,11 @@ object RedisNodeExecutorLive {
 
   private final val RequestQueueSize = 16
 
-  private[redis] def create(connection: RedisConnection): URIO[Scope, RedisNodeExecutorLive] =
+  private[redis] def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
     for {
       reqQueue <- Queue.bounded[Request](RequestQueueSize)
       resQueue <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor  = new RedisNodeExecutorLive(reqQueue, resQueue, connection)
+      executor  = new SingleNodeExecutor(reqQueue, resQueue, connection)
       _        <- executor.run.forkScoped
       _        <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor

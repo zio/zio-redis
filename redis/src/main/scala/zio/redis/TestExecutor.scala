@@ -18,8 +18,8 @@ package zio.redis
 
 import zio._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.RedisTestExecutorLive._
 import zio.redis.RespValue.{BulkString, bulkString}
+import zio.redis.TestExecutor._
 import zio.stm._
 
 import java.nio.file.{FileSystems, Paths}
@@ -28,7 +28,7 @@ import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
 
-private[redis] final class RedisTestExecutorLive private (
+final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
   clientTrackingInfo: TRef[ClientTrackingInfo],
   keys: TMap[String, KeyInfo],
@@ -3894,11 +3894,11 @@ private[redis] final class RedisTestExecutorLive private (
 
 }
 
-private[redis] object RedisTestExecutorLive {
+object TestExecutor {
 
-  sealed trait KeyType extends Product with Serializable
+  private sealed trait KeyType extends Product with Serializable
 
-  object KeyType {
+  private object KeyType {
     case object Strings    extends KeyType
     case object HyperLogs  extends KeyType
     case object Sets       extends KeyType
@@ -3918,7 +3918,7 @@ private[redis] object RedisTestExecutorLive {
     }
   }
 
-  final case class KeyInfo(`type`: KeyType, expireAt: Option[Instant]) {
+  private final case class KeyInfo(`type`: KeyType, expireAt: Option[Instant]) {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
@@ -3940,7 +3940,7 @@ private[redis] object RedisTestExecutorLive {
         clientTInfo =
           ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
         clientTrackingInfo <- TRef.make(clientTInfo).commit
-      } yield new RedisTestExecutorLive(
+      } yield new TestExecutor(
         clientInfo,
         clientTrackingInfo,
         keys,

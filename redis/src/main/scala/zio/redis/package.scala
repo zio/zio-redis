@@ -16,8 +16,6 @@
 
 package zio
 
-import zio.Exit.{Failure, Success}
-
 package object redis
     extends api.Connection
     with api.Geo
@@ -39,8 +37,7 @@ package object redis
     with options.Strings
     with options.Lists
     with options.Streams
-    with options.Scripting
-    with options.Cluster {
+    with options.Scripting {
 
   type Id[+A] = A
 
@@ -48,8 +45,8 @@ package object redis
     for {
       scope <- ZIO.scope
       _ <- scope.addFinalizerExit {
-             case Success(_)  => ZIO.logTrace(s"$msg with success")
-             case Failure(th) => ZIO.logTraceCause(s"$msg with failure", th)
+             case Exit.Success(_)  => ZIO.logTrace(s"$msg with success")
+             case Exit.Failure(th) => ZIO.logTraceCause(s"$msg with failure", th)
            }
     } yield ()
 }

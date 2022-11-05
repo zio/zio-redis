@@ -759,7 +759,7 @@ trait Streams {
   }
 }
 
-private[redis] object Streams {
+private object Streams {
   final val XAck           = "XACK"
   final val XAdd           = "XADD"
   final val XClaim         = "XCLAIM"

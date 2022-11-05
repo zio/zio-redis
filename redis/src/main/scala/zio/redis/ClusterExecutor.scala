@@ -17,7 +17,7 @@
 package zio.redis
 
 import zio._
-import zio.redis.RedisClusterExecutorLive._
+import zio.redis.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
 import zio.redis.options.Cluster._
@@ -25,29 +25,35 @@ import zio.schema.codec.Codec
 
 import java.io.IOException
 
-private[redis] final case class RedisClusterExecutorLive(
+final case class ClusterExecutor(
   clusterConnectionRef: Ref.Synchronized[ClusterConnection],
   scope: Scope.Closeable
 ) extends RedisExecutor {
 
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] = {
 
-    def executeAsk(executorZIO: IO[RedisError.IOError, RedisExecutor], asking: Boolean = false) =
+    def execute(keySlot: Slot) =
       for {
-        executor <- executorZIO
-        _        <- ZIO.when(asking)(executor.execute(AskingCommand.resp((), StringUtf8Codec)))
+        executor <- executor(keySlot)
+        res      <- executor.execute(command)
+      } yield res
+
+    def executeAsk(address: RedisUri) =
+      for {
+        executor <- executor(address)
+        _        <- executor.execute(AskingCommand.resp((), StringUtf8Codec))
         res      <- executor.execute(command)
       } yield res
 
     def executeSafe(keySlot: Slot) = {
-      val recover = executeAsk(getExecutor(keySlot)).flatMap {
+      val recover = execute(keySlot).flatMap {
         case e: RespValue.Error => ZIO.fail(e.toRedisError)
         case success            => ZIO.succeed(success)
       }.catchSome {
-        case e: RedisError.Ask   => executeAsk(getExecutor(e.address), asking = true)
-        case _: RedisError.Moved => refreshConnect() *> executeAsk(getExecutor(keySlot))
+        case e: RedisError.Ask   => executeAsk(e.address)
+        case _: RedisError.Moved => refreshConnect *> execute(keySlot)
       }
-      recover.retry(Scheduler)
+      recover.retry(RetryPolicy)
     }
 
     for {
@@ -57,18 +63,18 @@ private[redis] final case class RedisClusterExecutorLive(
     } yield result
   }
 
-  private def getExecutor(slot: Slot): UIO[RedisExecutor] =
-    clusterConnectionRef.get.map(cc => cc.executor(slot))
+  private def executor(slot: Slot): UIO[RedisExecutor] =
+    clusterConnectionRef.get.map(_.executor(slot))
 
   // TODO introduce max connection amount
-  private def getExecutor(address: RedisUri) =
+  private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor] =
     clusterConnectionRef.modifyZIO { cc =>
       val executorOpt       = cc.executors.get(address).map(es => (es.executor, cc))
       val enrichedClusterIO = scope.extend(connectToNode(address)).map(es => (es.executor, cc.addExecutor(address, es)))
       ZIO.fromOption(executorOpt).catchAll(_ => enrichedClusterIO)
     }
 
-  private def refreshConnect(): ZIO[Any, RedisError, Unit] =
+  private def refreshConnect: IO[RedisError, Unit] =
     clusterConnectionRef.updateZIO { connection =>
       val addresses = connection.partitions.flatMap(_.addresses)
       for {
@@ -78,7 +84,7 @@ private[redis] final case class RedisClusterExecutorLive(
     }
 
   // TODO configurable
-  private val Scheduler: Schedule[Any, Throwable, (zio.Duration, Long, Throwable)] =
+  private val RetryPolicy: Schedule[Any, Throwable, (zio.Duration, Long, Throwable)] =
     Schedule.exponential(100.millis, 1.5) && Schedule.recurs(5) && Schedule.recurWhile[Throwable] {
       case _: RedisError.IOError | _: RedisError.ClusterRedisError => true
       case _                                                       => false
@@ -86,50 +92,49 @@ private[redis] final case class RedisClusterExecutorLive(
 
 }
 
-object RedisClusterExecutorLive {
+object ClusterExecutor {
 
-  lazy val layer: ZLayer[RedisClusterConfig, RedisError, RedisExecutor] = ZLayer.scoped {
-    for {
-      config       <- ZIO.service[RedisClusterConfig]
-      layerScope   <- ZIO.scope
-      clusterScope <- Scope.make
-      executor     <- clusterScope.extend(create(config, clusterScope))
-      _            <- layerScope.addFinalizerExit(e => clusterScope.close(e))
-    } yield executor
-  }
+  lazy val layer: ZLayer[RedisClusterConfig, RedisError, RedisExecutor] =
+    ZLayer.scoped {
+      for {
+        config       <- ZIO.service[RedisClusterConfig]
+        layerScope   <- ZIO.scope
+        clusterScope <- Scope.make
+        executor     <- clusterScope.extend(create(config, clusterScope))
+        _            <- layerScope.addFinalizerExit(e => clusterScope.close(e))
+      } yield executor
+    }
 
   private[redis] def create(
     config: RedisClusterConfig,
     scope: Scope.Closeable
-  ): ZIO[Scope, RedisError, RedisClusterExecutorLive] =
+  ): ZIO[Scope, RedisError, ClusterExecutor] =
     for {
       clusterConnection    <- initConnectToCluster(config.addresses)
       clusterConnectionRef <- Ref.Synchronized.make(clusterConnection)
-      clusterExec           = RedisClusterExecutorLive(clusterConnectionRef, scope)
+      clusterExec           = ClusterExecutor(clusterConnectionRef, scope)
       _                    <- logScopeFinalizer("Cluster executor is closed")
     } yield clusterExec
 
-  private def initConnectToCluster(
-    addresses: Chunk[RedisUri]
-  ): ZIO[Scope, RedisError, ClusterConnection] =
+  private def initConnectToCluster(addresses: Chunk[RedisUri]): ZIO[Scope, RedisError, ClusterConnection] =
     ZIO
       .collectFirst(addresses) { address =>
         connectToCluster(address).foldZIO(
-          error => ZIO.logError(s"The connection to cluster has been failed, $error") *> ZIO.succeedNow(None),
-          cc => ZIO.logInfo("The connection to cluster has been established") *> ZIO.succeedNow(Some(cc))
+          error => ZIO.logError(s"The connection to cluster has been failed, $error").as(None),
+          cc => ZIO.logInfo("The connection to cluster has been established").as(Some(cc))
         )
       }
       .flatMap(cc => ZIO.getOrFailWith(CusterConnectionError)(cc))
 
   private def connectToCluster(address: RedisUri) =
     for {
-      temporaryRedis    <- getRedis(address)
+      temporaryRedis    <- redis(address)
       (trLayer, trScope) = temporaryRedis
       partitions        <- slots.provideLayer(trLayer)
       _                 <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
       uniqueAddresses    = partitions.map(_.master.address).distinct
       uriExecScope      <- ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address).map(es => address -> es))
-      slots              = getSlotAddress(partitions)
+      slots              = slotAddress(partitions)
       _                 <- trScope.close(Exit.unit)
     } yield ClusterConnection(partitions, uriExecScope.toMap, slots)
 
@@ -137,12 +142,12 @@ object RedisClusterExecutorLive {
     for {
       closableScope <- Scope.make
       connection    <- closableScope.extend(RedisConnectionLive.create(RedisConfig(address.host, address.port)))
-      executor      <- closableScope.extend(RedisNodeExecutorLive.create(connection))
+      executor      <- closableScope.extend(SingleNodeExecutor.create(connection))
       layerScope    <- ZIO.scope
-      _             <- layerScope.addFinalizerExit(e => closableScope.close(e))
+      _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
 
-  private def getRedis(address: RedisUri) = {
+  private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
     val codecLayer    = ZLayer.succeed[Codec](StringUtf8Codec)
     val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
@@ -153,13 +158,13 @@ object RedisClusterExecutorLive {
     } yield (layer, closableScope)
   }
 
-  private def getSlotAddress(partitions: Chunk[Partition]) =
+  private def slotAddress(partitions: Chunk[Partition]) =
     partitions.flatMap { p =>
       for (i <- p.slotRange.start to p.slotRange.end) yield Slot(i) -> p.master.address
     }.toMap
 
-  private val CusterKeyError =
+  private final val CusterKeyError =
     RedisError.ProtocolError("Key doesn't found. No way to dispatch this command to Redis Cluster")
-  private val CusterConnectionError =
+  private final val CusterConnectionError =
     RedisError.IOError(new IOException("The connection to cluster has been failed. Can't reach a single startup node."))
 }

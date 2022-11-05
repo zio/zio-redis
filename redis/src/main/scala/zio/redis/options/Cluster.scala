@@ -18,15 +18,13 @@ package zio.redis.options
 import zio.redis.{RedisExecutor, RedisUri}
 import zio.{Chunk, Scope}
 
-trait Cluster {}
-
-object Cluster extends Cluster {
+object Cluster {
 
   private[redis] final val SlotsAmount = 16384
 
-  case class ExecutorScope(executor: RedisExecutor, scope: Scope.Closeable)
+  final case class ExecutorScope(executor: RedisExecutor, scope: Scope.Closeable)
 
-  case class ClusterConnection(
+  final case class ClusterConnection(
     partitions: Chunk[Partition],
     executors: Map[RedisUri, ExecutorScope],
     slots: Map[Slot, RedisUri]
@@ -34,18 +32,18 @@ object Cluster extends Cluster {
     def executor(slot: Slot): RedisExecutor = executors(slots(slot)).executor
 
     def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
-      this.copy(executors = executors + (uri -> es))
+      copy(executors = executors + (uri -> es))
   }
 
-  case class Slot(val number: Long) extends AnyVal
+  final case class Slot(val number: Long) extends AnyVal
 
-  case class Node(id: String, address: RedisUri)
+  final case class Node(id: String, address: RedisUri)
 
-  case class SlotRange(start: Long, end: Long) {
-    def isContain(slot: Slot): Boolean = start <= slot.number && slot.number <= end
+  final case class SlotRange(start: Long, end: Long) {
+    def contains(slot: Slot): Boolean = start <= slot.number && slot.number <= end
   }
 
-  case class Partition(slotRange: SlotRange, master: Node, slaves: Chunk[Node]) {
+  final case class Partition(slotRange: SlotRange, master: Node, slaves: Chunk[Node]) {
     lazy val nodes: Chunk[Node]         = master +: slaves
     lazy val addresses: Chunk[RedisUri] = nodes.map(_.address)
   }
