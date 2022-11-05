@@ -108,16 +108,11 @@ jobs:
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
-      - name: Setup Java
-        uses: actions/setup-java@v3.6.0
         with:
-          distribution: temurin
-          java-version: 17
-          check-latest: true
-      - name: Cache scala dependencies
-        uses: coursier/cache-action@v6
-      - name: Check Website Generation
-        run: ./sbt docs/docusaurusCreateSite
+          fetch-depth: 0
+      - uses: olafurpg/setup-scala@v13
+      - name: Check Docs Compilation
+        run: ./sbt compileDocs
 
   ci:
     runs-on: ubuntu-20.04
