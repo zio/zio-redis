@@ -1,0 +1,5 @@
+{
+  "name": "@zio.dev/zio-redis",
+  "description": "ZIO Redis Documentation",
+  "license": "Apache-2.0"
+}
