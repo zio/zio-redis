@@ -1,6 +1,6 @@
 ---
 id: index
-title: "Introduction to ZIO SBT"
+title: "Introduction to ZIO Redis"
 sidebar_label: "Introduction"
 ---
 
