@@ -7,7 +7,7 @@ env:
 on:
   pull_request:
   push:
-    branches: ['master']
+    branches: [ 'master' ]
   release:
     types:
       - published
@@ -38,8 +38,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ['17']
-        scala: ['2.12.16', '2.13.8', '3.2.0']
+        java: [ '17' ]
+        scala: [ '2.12.16', '2.13.8', '3.2.0' ]
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
@@ -65,8 +65,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ['8', '11', '17']
-        scala: ['2.12.16', '2.13.8', '3.2.0']
+        java: [ '8', '11', '17' ]
+        scala: [ '2.12.16', '2.13.8', '3.2.0' ]
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
@@ -110,13 +110,18 @@ jobs:
         uses: actions/checkout@v3.1.0
         with:
           fetch-depth: 0
-      - uses: olafurpg/setup-scala@v13
+      - name: Setup Java
+        uses: actions/setup-java@v3.6.0
+        with:
+          distribution: temurin
+          java-version: 17
+          check-latest: true
       - name: Check Docs Compilation
         run: ./sbt compileDocs
 
   ci:
     runs-on: ubuntu-20.04
-    needs: [lint, compile, test, publishLocal, website]
+    needs: [ lint, compile, test, publishLocal, website ]
     steps:
       - name: Aggregate outcomes
         run: echo "build succeeded"
@@ -124,7 +129,7 @@ jobs:
   publish:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
-    needs: [ci]
+    needs: [ ci ]
     if: github.event_name != 'pull_request'
     steps:
       - name: Checkout current branch
