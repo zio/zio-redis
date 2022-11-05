@@ -1,6 +1,7 @@
 ---
-id: overview_index
-title: "Summary"
+id: index
+title: "Introduction to ZIO SBT"
+sidebar_label: "Introduction"
 ---
 
 ZIO Redis is a type-safe, performant, ZIO native Redis client.
