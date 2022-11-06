@@ -30,6 +30,7 @@ lazy val root =
     .in(file("."))
     .settings(publish / skip := true)
     .aggregate(redis, benchmarks, example)
+    .enablePlugins(WebsitePlugin)
 
 lazy val redis =
   project
@@ -41,7 +42,7 @@ lazy val redis =
     .settings(
       libraryDependencies ++= List(
         "dev.zio"                %% "zio-streams"             % "2.0.2",
-        "dev.zio"                %% "zio-logging"             % "2.1.1",
+        "dev.zio"                %% "zio-logging"             % "2.1.3",
         "dev.zio"                %% "zio-schema"              % "0.2.1",
         "dev.zio"                %% "zio-schema-protobuf"     % "0.2.1" % Test,
         "dev.zio"                %% "zio-test"                % "2.0.2" % Test,
@@ -86,20 +87,3 @@ lazy val example =
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC11"
       )
     )
-
-lazy val docs = project
-  .in(file("zio-redis-docs"))
-  .enablePlugins(MdocPlugin, DocusaurusPlugin, ScalaUnidocPlugin)
-  .dependsOn(redis)
-  .settings(
-    publish / skip := true,
-    moduleName     := "zio-redis-docs",
-    scalacOptions -= "-Yno-imports",
-    scalacOptions -= "-Xfatal-warnings",
-    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
-    ScalaUnidoc / unidoc / target              := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
-    cleanFiles += (ScalaUnidoc / unidoc / target).value,
-    docusaurusCreateSite     := docusaurusCreateSite.dependsOn(Compile / unidoc).value,
-    docusaurusPublishGhpages := docusaurusPublishGhpages.dependsOn(Compile / unidoc).value
-  )
-  .settings(macroDefinitionSettings)
