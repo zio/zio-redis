@@ -8,7 +8,7 @@ inThisBuild(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
-    homepage         := Some(url("https://github.com/zio/zio-redis/")),
+    homepage         := Some(url("https://zio.dev/zio-redis/")),
     licenses         := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     organization     := "dev.zio",
     organizationName := "John A. De Goes and the ZIO contributors",
