@@ -10,15 +10,7 @@ ZIO Redis is a type-safe, performant, ZIO native Redis client.
 
 # Documentation
 
-Learn more on the [ZIO Redis Microsite](https://zio.github.io/zio-redis/)!
-
-# Contributing
-
-[Documentation for contributors](https://zio.github.io/zio-redis/docs/about/about_contributing)
-
-## Code of Conduct
-
-See the [Code of Conduct](https://zio.github.io/zio-redis/docs/about/about_coc)
+Learn more on the [ZIO Redis Homepage](https://zio.dev/zio-redis/)!
 
 ## Support
 
