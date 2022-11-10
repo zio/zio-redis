@@ -26,37 +26,91 @@ import zio.{Chunk, ZIO}
 
 trait Cluster {
 
+  /**
+   * When a cluster client receives an -ASK redirect, the ASKING command is sent to the target node followed by the
+   * command which was redirected.
+   *
+   * @return
+   *   the Unit value.
+   */
   def asking: ZIO[Redis, RedisError, Unit] =
     AskingCommand.run(())
 
+  /**
+   * Returns details about which cluster slots map to which Redis instances.
+   *
+   * @return
+   *   details about which cluster
+   */
   def slots: ZIO[Redis, RedisError, Chunk[Partition]] = {
     val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))
     command.run(())
   }
 
+  /**
+   * Clear any importing / migrating state from hash slot.
+   *
+   * @param slot
+   *   hash slot that will be cleared
+   * @return
+   *   the Unit value.
+   */
   def setSlotStable(slot: Slot): ZIO[Redis, RedisError, Unit] = {
     val command = RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput)
     command.run((slot.number, Stable.stringify))
   }
 
-  def setSlotMigrating(slot: Slot, destinationNodeId: String): ZIO[Redis, RedisError, Unit] = {
+  /**
+   * Set a hash slot in migrating state. Command should be executed on the node from which hash slot will be imported
+   * (source node)
+   *
+   * @param slot
+   *   hash slot that will be set in migrating state
+   * @param nodeId
+   *   the destination node Id where slot will be migrated
+   * @return
+   *   the Unit value.
+   */
+  def setSlotMigrating(slot: Slot, nodeId: String): ZIO[Redis, RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
       UnitOutput
     )
-    command.run((slot.number, Migrating.stringify, destinationNodeId))
+    command.run((slot.number, Migrating.stringify, nodeId))
   }
 
-  def setSlotImporting(slot: Slot, sourceNodeId: String): ZIO[Redis, RedisError, Unit] = {
+  /**
+   * Set a hash slot in importing state. Command should be executed on the node where hash slot will be migrated
+   * (destination node)
+   *
+   * @param slot
+   *   hash slot that will be set in importing state
+   * @param nodeId
+   *   the source node Id from which hash slot will be imported
+   * @return
+   *   the Unit value.
+   */
+  def setSlotImporting(slot: Slot, nodeId: String): ZIO[Redis, RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
       UnitOutput
     )
-    command.run((slot.number, Importing.stringify, sourceNodeId))
+    command.run((slot.number, Importing.stringify, nodeId))
   }
 
+  /**
+   * Bind the hash slot to a different node. It associates the hash slot with the specified node, however the command
+   * works only in specific situations and has different side effects depending on the slot state.
+   *
+   * @param slot
+   *   hash slot that will be bind
+   * @param nodeId
+   *   the destination node Id where slot have been migrated
+   * @return
+   *   the Unit value.
+   */
   def setSlotNode(slot: Slot, nodeId: String): ZIO[Redis, RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,

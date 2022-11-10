@@ -35,7 +35,7 @@ object Cluster {
       copy(executors = executors + (uri -> es))
   }
 
-  final case class Slot(val number: Long) extends AnyVal
+  final case class Slot(number: Long) extends AnyVal
 
   final case class Node(id: String, address: RedisUri)
 

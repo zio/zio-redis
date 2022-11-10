@@ -2,7 +2,7 @@ package zio.redis.codec
 
 import zio.Chunk
 
-/**
+/*
  * This is the CRC16 algorithm used by Redis Cluster to hash keys. Implementation according to CCITT standards.
  *
  * This is actually the XMODEM CRC 16 algorithm, using the following parameters:
