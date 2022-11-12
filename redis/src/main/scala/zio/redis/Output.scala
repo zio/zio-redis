@@ -17,6 +17,7 @@
 package zio.redis
 
 import zio._
+import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
 import zio.schema.codec.Codec
 
@@ -25,22 +26,8 @@ sealed trait Output[+A] {
 
   private[redis] final def unsafeDecode(respValue: RespValue)(implicit codec: Codec): A =
     respValue match {
-      case RespValue.Error(msg) if msg.startsWith("ERR") =>
-        throw RedisError.ProtocolError(msg.drop(3).trim)
-      case RespValue.Error(msg) if msg.startsWith("WRONGTYPE") =>
-        throw RedisError.WrongType(msg.drop(9).trim)
-      case RespValue.Error(msg) if msg.startsWith("BUSYGROUP") =>
-        throw RedisError.BusyGroup(msg.drop(9).trim)
-      case RespValue.Error(msg) if msg.startsWith("NOGROUP") =>
-        throw RedisError.NoGroup(msg.drop(7).trim)
-      case RespValue.Error(msg) if msg.startsWith("NOSCRIPT") =>
-        throw RedisError.NoScript(msg.drop(8).trim)
-      case RespValue.Error(msg) if msg.startsWith("NOTBUSY") =>
-        throw RedisError.NotBusy(msg.drop(7).trim)
-      case RespValue.Error(msg) =>
-        throw RedisError.ProtocolError(msg.trim)
-      case success =>
-        tryDecode(success)
+      case error: RespValue.Error => throw error.toRedisError
+      case success                => tryDecode(success)
     }
 
   protected def tryDecode(respValue: RespValue)(implicit codec: Codec): A
@@ -811,6 +798,33 @@ object Output {
         case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
         case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
         case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
+      }
+  }
+
+  case object ClusterPartitionOutput extends Output[Partition] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Partition =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val start  = LongOutput.unsafeDecode(values(0))
+          val end    = LongOutput.unsafeDecode(values(1))
+          val master = ClusterPartitionNodeOutput.unsafeDecode(values(2))
+          val slaves = values.drop(3).map(ClusterPartitionNodeOutput.unsafeDecode)
+          Partition(SlotRange(start, end), master, slaves)
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object ClusterPartitionNodeOutput extends Output[Node] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: Codec): Node =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val host   = MultiStringOutput.unsafeDecode(values(0))
+          val port   = LongOutput.unsafeDecode(values(1))
+          val nodeId = MultiStringOutput.unsafeDecode(values(2))
+          Node(nodeId, RedisUri(host, port.toInt))
+        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 }

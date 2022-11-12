@@ -57,7 +57,7 @@ trait KeysSpec extends BaseSpec {
           _        <- set(key2, value)
           response <- keys("*custom*").returning[String]
         } yield assert(response)(hasSameElements(Chunk(key1, key2)))
-      },
+      } @@ clusterExecutorUnsupported,
       test("unlink existing key") {
         for {
           key     <- uuid
@@ -76,7 +76,7 @@ trait KeysSpec extends BaseSpec {
           _       <- set(key2, value2)
           touched <- touch(key1, key2)
         } yield assert(touched)(equalTo(2L))
-      },
+      } @@ clusterExecutorUnsupported,
       test("scan entries with match, count and type options")(
         check(genPatternOption, genCountOption, genStringRedisTypeOption) { (pattern, count, redisType) =>
           for {
@@ -162,7 +162,7 @@ trait KeysSpec extends BaseSpec {
               migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
-      ) @@ testExecutorUnsupported,
+      ) @@ testExecutorUnsupported @@ clusterExecutorUnsupported,
       suite("ttl")(
         test("check ttl for existing key") {
           for {
@@ -277,7 +277,7 @@ trait KeysSpec extends BaseSpec {
             renamed <- renameNx(key, newKey).either
           } yield assert(renamed)(isLeft)
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("types")(
         test("string type") {
           for {
@@ -370,7 +370,7 @@ trait KeysSpec extends BaseSpec {
             _      <- set(s"${prefix}_$b", "B")
             sorted <- sort(key, by = Some(s"${prefix}_*"), alpha = Some(Alpha)).returning[String]
           } yield assert(sorted)(equalTo(Chunk(a, b)))
-        },
+        } @@ clusterExecutorUnsupported,
         test("getting the value referenced by a key-value pair") {
           for {
             key    <- uuid
@@ -380,7 +380,7 @@ trait KeysSpec extends BaseSpec {
             _      <- set(s"${prefix}_$value", "A")
             sorted <- sort(key, get = Some(s"${prefix}_*" -> List.empty), alpha = Some(Alpha)).returning[String]
           } yield assert(sorted)(equalTo(Chunk("A")))
-        },
+        } @@ clusterExecutorUnsupported,
         test("getting multiple values referenced by a key-value pair") {
           for {
             key     <- uuid
@@ -396,7 +396,7 @@ trait KeysSpec extends BaseSpec {
             sorted <- sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
                         .returning[String]
           } yield assert(sorted)(equalTo(Chunk("A1", "B1", "A2", "B2")))
-        } @@ flaky,
+        } @@ flaky @@ clusterExecutorUnsupported,
         test("sort and store result") {
           for {
             key       <- uuid
@@ -405,7 +405,7 @@ trait KeysSpec extends BaseSpec {
             count     <- sortStore(key, Store(resultKey))
             sorted    <- lRange(resultKey, 0 to 2).returning[String]
           } yield assert(sorted)(equalTo(Chunk("0", "1", "2"))) && assert(count)(equalTo(3L))
-        }
+        } @@ clusterExecutorUnsupported
       )
     )
   }
@@ -418,7 +418,8 @@ object KeysSpec {
     ZLayer
       .make[Redis](
         ZLayer.succeed(RedisConfig("localhost", 6380)),
-        RedisExecutor.layer,
+        RedisConnectionLive.layer,
+        SingleNodeExecutor.layer,
         ZLayer.succeed[Codec](ProtobufCodec),
         RedisLive.layer
       )

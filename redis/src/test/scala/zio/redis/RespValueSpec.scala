@@ -16,30 +16,46 @@ object RespValueSpec extends BaseSpec {
           assert(v.serialize)(equalTo(expected))
         }
       ),
-      test("deserialization") {
-        val values = Chunk(
-          RespValue.SimpleString("OK"),
-          RespValue.bulkString("test1"),
-          RespValue.array(
+      suite("deserialization")(
+        test("array") {
+          val values = Chunk(
+            RespValue.SimpleString("OK"),
             RespValue.bulkString("test1"),
-            RespValue.Integer(42L),
-            RespValue.NullBulkString,
-            RespValue.array(RespValue.SimpleString("a"), RespValue.Integer(0L)),
-            RespValue.bulkString("in array"),
-            RespValue.SimpleString("test2")
-          ),
-          RespValue.NullBulkString
-        )
+            RespValue.array(
+              RespValue.bulkString("test1"),
+              RespValue.Integer(42L),
+              RespValue.NullBulkString,
+              RespValue.array(RespValue.SimpleString("a"), RespValue.Integer(0L)),
+              RespValue.bulkString("in array"),
+              RespValue.SimpleString("test2")
+            ),
+            RespValue.NullBulkString
+          )
 
-        zio.stream.ZStream
-          .fromChunk(values)
-          .mapConcat(_.serialize)
-          .via(RespValue.decoder)
-          .collect { case Some(value) =>
-            value
-          }
-          .runCollect
-          .map(assert(_)(equalTo(values)))
-      }
+          zio.stream.ZStream
+            .fromChunk(values)
+            .mapConcat(_.serialize)
+            .via(RespValue.decoder)
+            .collect { case Some(value) =>
+              value
+            }
+            .runCollect
+            .map(assert(_)(equalTo(values)))
+        }
+      ),
+      suite("BulkString.asCRC16")(
+        test("key without braces") {
+          val str = RespValue.bulkString("hello world")
+          assertTrue(15332 == str.asCRC16)
+        },
+        test("key between braces") {
+          val str = RespValue.bulkString("hello{key1}wor}ld")
+          assertTrue(41957 == str.asCRC16)
+        },
+        test("empty key between braces") {
+          val str = RespValue.bulkString("hello{}world")
+          assertTrue(40253 == str.asCRC16)
+        }
+      )
     )
 }

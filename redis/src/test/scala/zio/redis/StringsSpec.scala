@@ -487,7 +487,7 @@ trait StringsSpec extends BaseSpec {
             )
           }
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("bitOp")(
         test("AND over multiple non-empty strings") {
           for {
@@ -704,7 +704,7 @@ trait StringsSpec extends BaseSpec {
             result <- bitOp(BitOperation.NOT, dest, key).either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("bitPos")(
         test("of 1 when non-empty string") {
           for {
@@ -1223,7 +1223,7 @@ trait StringsSpec extends BaseSpec {
             result <- mGet(key).returning[String]
           } yield assert(result)(equalTo(Chunk(None)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("mSet")(
         test("one new value") {
           for {
@@ -1272,7 +1272,7 @@ trait StringsSpec extends BaseSpec {
             result <- mSet((key, value)).either
           } yield assert(result)(isRight)
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("mSetNx")(
         test("one new value") {
           for {
@@ -1317,7 +1317,7 @@ trait StringsSpec extends BaseSpec {
             set   <- mSetNx((key, value))
           } yield assert(set)(isFalse)
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("pSetEx")(
         test("new value with 1000 milliseconds") {
           for {
