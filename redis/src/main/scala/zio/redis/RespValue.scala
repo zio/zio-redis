@@ -17,6 +17,8 @@
 package zio.redis
 
 import zio._
+import zio.redis.codec.CRC16
+import zio.redis.options.Cluster.Slot
 import zio.stream._
 
 import java.nio.charset.StandardCharsets
@@ -48,7 +50,24 @@ sealed trait RespValue extends Product with Serializable { self =>
 object RespValue {
   final case class SimpleString(value: String) extends RespValue
 
-  final case class Error(value: String) extends RespValue
+  final case class Error(value: String) extends RespValue {
+    def toRedisError: RedisError =
+      if (value.startsWith("ERR")) RedisError.ProtocolError(value.drop(3).trim)
+      else if (value.startsWith("WRONGTYPE")) RedisError.WrongType(value.drop(9).trim)
+      else if (value.startsWith("BUSYGROUP")) RedisError.BusyGroup(value.drop(9).trim)
+      else if (value.startsWith("NOGROUP")) RedisError.NoGroup(value.drop(7).trim)
+      else if (value.startsWith("NOSCRIPT")) RedisError.NoScript(value.drop(8).trim)
+      else if (value.startsWith("NOTBUSY")) RedisError.NotBusy(value.drop(7).trim)
+      else if (value.startsWith("CROSSSLOT")) RedisError.CrossSlot(value.drop(9).trim)
+      else if (value.startsWith("ASK")) RedisError.Ask(parseRedirectError(value))
+      else if (value.startsWith("MOVED")) RedisError.Moved(parseRedirectError(value))
+      else RedisError.ProtocolError(value.trim)
+
+    private def parseRedirectError(value: String) = {
+      val splittingError = value.split(' ')
+      (Slot(splittingError(1).toLong), RedisUri(splittingError(2)))
+    }
+  }
 
   final case class Integer(value: Long) extends RespValue
 
@@ -56,6 +75,12 @@ object RespValue {
     private[redis] def asString: String = decode(value)
 
     private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
+
+    private[redis] def asCRC16: Int = {
+      val betweenBraces = value.dropWhile(b => b != '{').drop(1).takeWhile(b => b != '}')
+      val key           = if (betweenBraces.isEmpty) value else betweenBraces
+      CRC16.get(key)
+    }
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue

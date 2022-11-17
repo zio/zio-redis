@@ -81,7 +81,9 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Run test containers
-        run: docker-compose up -d
+        run: docker-compose -f testcontainers/redis-compose.yml up -d
+      - name: Run cluster test containers
+        run: docker-compose -f testcontainers/redis-cluster-compose.yml up -d
       - name: Run tests
         run: ./sbt ++${{ matrix.scala }}! redis/test
 
@@ -108,16 +110,16 @@ jobs:
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
+        with:
+          fetch-depth: 0
       - name: Setup Java
         uses: actions/setup-java@v3.6.0
         with:
           distribution: temurin
           java-version: 17
           check-latest: true
-      - name: Cache scala dependencies
-        uses: coursier/cache-action@v6
-      - name: Check Website Generation
-        run: ./sbt docs/docusaurusCreateSite
+      - name: Check Docs Compilation
+        run: ./sbt compileDocs
 
   ci:
     runs-on: ubuntu-20.04

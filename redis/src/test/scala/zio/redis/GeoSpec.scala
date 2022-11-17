@@ -51,7 +51,7 @@ trait GeoSpec extends BaseSpec {
             _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             numStored <- geoRadiusStore(key, member1LongLat, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
-        },
+        } @@ clusterExecutorUnsupported,
         test("with coordinates") {
           import GeoSpec.Sicily._
           for {
@@ -184,7 +184,7 @@ trait GeoSpec extends BaseSpec {
             _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             numStored <- geoRadiusByMemberStore(key, member1, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
-        },
+        } @@ clusterExecutorUnsupported,
         test("with coordinates") {
           import GeoSpec.Sicily._
           for {

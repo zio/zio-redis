@@ -16,13 +16,12 @@
 
 package zio.redis
 
-import cats.effect.{IO => CIO}
-import dev.profunktor.redis4cats.RedisCommands
-import io.chrisdavenport.rediculous
-import laserdisc.fs2.RedisClient
+import zio._
+import zio.stream.Stream
 
-package object benchmarks {
-  type Redis4CatsClient[A] = RedisCommands[CIO, String, A]
-  type LaserDiscClient     = RedisClient[CIO]
-  type RediculousClient    = rediculous.RedisConnection[CIO]
+import java.io.IOException
+
+private[redis] trait RedisConnection {
+  def read: Stream[IOException, Byte]
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
 }

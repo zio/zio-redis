@@ -130,7 +130,7 @@ trait SetsSpec extends BaseSpec {
             diff   <- sDiff(first, second).returning[String].either
           } yield assert(diff)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sDiffStore")(
         test("two non-empty sets") {
           for {
@@ -200,7 +200,7 @@ trait SetsSpec extends BaseSpec {
             card   <- sDiffStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sInter")(
         test("two non-empty sets") {
           for {
@@ -265,7 +265,7 @@ trait SetsSpec extends BaseSpec {
             inter  <- sInter(first, second).returning[String].either
           } yield assert(inter)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sInterStore")(
         test("two non-empty sets") {
           for {
@@ -337,7 +337,7 @@ trait SetsSpec extends BaseSpec {
             card   <- sInterStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sIsMember")(
         test("actual element of the non-empty set") {
           for {
@@ -464,7 +464,7 @@ trait SetsSpec extends BaseSpec {
             moved <- sMove(src, dest, "a").either
           } yield assert(moved)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sPop")(
         test("one element from non-empty set") {
           for {
@@ -672,7 +672,7 @@ trait SetsSpec extends BaseSpec {
             union  <- sUnion(first, second).returning[String].either
           } yield assert(union)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sUnionStore")(
         test("two non-empty sets") {
           for {
@@ -734,7 +734,7 @@ trait SetsSpec extends BaseSpec {
             card   <- sUnionStore(dest, first, second).either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("sScan")(
         test("non-empty set") {
           val testData = NonEmptyChunk("a", "b", "c")

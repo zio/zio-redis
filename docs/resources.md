@@ -1,5 +1,5 @@
 ---
-id: resources_index
+id: resources
 title: "Resources"
 ---
 
