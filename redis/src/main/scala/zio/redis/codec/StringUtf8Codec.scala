@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package zio.redis.codec
 
 import zio.redis.RedisError.CodecError
