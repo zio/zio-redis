@@ -22,7 +22,7 @@ import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zhttp.service.Server
 import zio._
 import zio.redis.{RedisExecutor, RedisLive}
-import zio.schema.codec.{Codec, ProtobufCodec}
+import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
 object Main extends ZIOAppDefault {
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
@@ -34,7 +34,7 @@ object Main extends ZIOAppDefault {
         ContributorsCacheLive.layer,
         RedisExecutor.layer,
         RedisLive.layer,
-        ZLayer.succeed[Codec](ProtobufCodec)
+        ZLayer.succeed[BinaryCodec](ProtobufCodec)
       )
       .exitCode
 }
