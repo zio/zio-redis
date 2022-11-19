@@ -8,7 +8,7 @@ addSbtPlugin("de.heikoseeberger"                 % "sbt-header"       % "5.9.0")
 addSbtPlugin("org.scalameta"                     % "sbt-mdoc"         % "2.3.6")
 addSbtPlugin("org.scalameta"                     % "sbt-scalafmt"     % "2.5.0")
 addSbtPlugin("pl.project13.scala"                % "sbt-jmh"          % "0.4.3")
-addSbtPlugin("dev.zio"                           % "zio-sbt-website"  % "0.0.0+80-e5b408eb-SNAPSHOT")
+addSbtPlugin("dev.zio"                           % "zio-sbt-website"  % "0.0.0+84-6fd7d64e-SNAPSHOT")
 
 libraryDependencies += "org.snakeyaml" % "snakeyaml-engine" % "2.4"
 

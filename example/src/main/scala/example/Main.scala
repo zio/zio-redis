@@ -24,7 +24,10 @@ import zio._
 import zio.redis.{RedisExecutor, RedisLive}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
+import scala.annotation.nowarn
+
 object Main extends ZIOAppDefault {
+  @nowarn("deprecated")
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
       .start(9000, Api.routes)
