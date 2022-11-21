@@ -22,9 +22,12 @@ import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import zhttp.service.Server
 import zio._
 import zio.redis.{RedisExecutor, RedisLive}
-import zio.schema.codec.{Codec, ProtobufCodec}
+import zio.schema.codec.{BinaryCodec, ProtobufCodec}
+
+import scala.annotation.nowarn
 
 object Main extends ZIOAppDefault {
+  @nowarn("cat=deprecation")
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
       .start(9000, Api.routes)
@@ -34,7 +37,7 @@ object Main extends ZIOAppDefault {
         ContributorsCacheLive.layer,
         RedisExecutor.layer,
         RedisLive.layer,
-        ZLayer.succeed[Codec](ProtobufCodec)
+        ZLayer.succeed[BinaryCodec](ProtobufCodec)
       )
       .exitCode
 }

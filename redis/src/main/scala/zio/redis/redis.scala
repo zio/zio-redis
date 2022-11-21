@@ -17,16 +17,16 @@
 package zio.redis
 
 import zio._
-import zio.schema.codec.Codec
+import zio.schema.codec.BinaryCodec
 
 trait Redis {
-  def codec: Codec
+  def codec: BinaryCodec
   def executor: RedisExecutor
 }
 
-final case class RedisLive(codec: Codec, executor: RedisExecutor) extends Redis
+final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
 
 object RedisLive {
-  lazy val layer: URLayer[RedisExecutor with Codec, Redis] =
+  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
     ZLayer.fromFunction(RedisLive.apply _)
 }
