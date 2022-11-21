@@ -22,7 +22,6 @@ import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
 import zio.redis.options.Cluster._
 import zio.schema.codec.BinaryCodec
-
 import java.io.IOException
 
 final case class ClusterExecutor(
@@ -85,7 +84,7 @@ final case class ClusterExecutor(
       } yield cluster
     }
 
-  private val RetryPolicy: Schedule[Any, Throwable, (zio.Duration, Long, Throwable)] =
+  private val RetryPolicy: Schedule[Any, Throwable, (Duration, Long, Throwable)] =
     Schedule.exponential(config.retry.base, config.retry.factor) &&
       Schedule.recurs(config.retry.maxRecurs) &&
       Schedule.recurWhile[Throwable] {
