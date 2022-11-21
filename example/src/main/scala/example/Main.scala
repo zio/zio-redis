@@ -27,7 +27,7 @@ import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import scala.annotation.nowarn
 
 object Main extends ZIOAppDefault {
-  @nowarn("deprecated")
+  @nowarn("cat=deprecation")
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
       .start(9000, Api.routes)

@@ -16,6 +16,10 @@ inThisBuild(
   )
 )
 
+ThisBuild / libraryDependencySchemes ++= Seq(
+  "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
+)
+
 addCommandAlias("compileBenchmarks", "benchmarks/Jmh/compile")
 addCommandAlias("compileSources", "example/Test/compile; redis/Test/compile")
 addCommandAlias("check", "fixCheck; fmtCheck")

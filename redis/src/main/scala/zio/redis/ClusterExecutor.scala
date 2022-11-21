@@ -24,7 +24,6 @@ import zio.redis.options.Cluster._
 import zio.schema.codec.BinaryCodec
 
 import java.io.IOException
-import scala.annotation.nowarn
 
 final case class ClusterExecutor(
   clusterConnectionRef: Ref.Synchronized[ClusterConnection],
@@ -86,7 +85,6 @@ final case class ClusterExecutor(
       } yield cluster
     }
 
-  @nowarn("any")
   private val RetryPolicy: Schedule[Any, Throwable, (zio.Duration, Long, Throwable)] =
     Schedule.exponential(config.retry.base, config.retry.factor) &&
       Schedule.recurs(config.retry.maxRecurs) &&
