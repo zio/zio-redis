@@ -22,6 +22,7 @@ import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
 import zio.redis.options.Cluster._
 import zio.schema.codec.BinaryCodec
+
 import java.io.IOException
 
 final case class ClusterExecutor(
