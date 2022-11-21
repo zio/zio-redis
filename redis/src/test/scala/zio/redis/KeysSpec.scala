@@ -2,7 +2,7 @@ package zio.redis
 
 import zio._
 import zio.redis.RedisError.ProtocolError
-import zio.schema.codec.{Codec, ProtobufCodec}
+import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{restore => _, _}
 import zio.test._
@@ -420,7 +420,7 @@ object KeysSpec {
         ZLayer.succeed(RedisConfig("localhost", 6380)),
         RedisConnectionLive.layer,
         SingleNodeExecutor.layer,
-        ZLayer.succeed[Codec](ProtobufCodec),
+        ZLayer.succeed[BinaryCodec](ProtobufCodec),
         RedisLive.layer
       )
       .fresh

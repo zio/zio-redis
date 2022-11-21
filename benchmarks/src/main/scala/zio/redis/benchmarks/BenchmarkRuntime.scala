@@ -19,7 +19,7 @@ package zio.redis.benchmarks
 import cats.effect.{IO => CIO}
 import zio._
 import zio.redis._
-import zio.schema.codec.{Codec, ProtobufCodec}
+import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
 trait BenchmarkRuntime {
   final def execute(query: ZIO[Redis, RedisError, Unit]): Unit =
@@ -35,7 +35,7 @@ object BenchmarkRuntime {
   private final val Layer =
     ZLayer.make[Redis](
       RedisExecutor.local,
-      ZLayer.succeed[Codec](ProtobufCodec),
+      ZLayer.succeed[BinaryCodec](ProtobufCodec),
       RedisLive.layer
     )
 }

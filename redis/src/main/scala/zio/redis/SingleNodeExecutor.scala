@@ -37,7 +37,7 @@ final class SingleNodeExecutor(
    */
   val run: IO[RedisError, AnyVal] =
     ZIO.logTrace(s"$this Executable sender and reader has been started") *>
-      (send.repeat(Schedule.forever) race receive)
+      (send.repeat[Any, Long](Schedule.forever) race receive)
         .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e))
         .retryWhile(True)
         .tapError(e => ZIO.logError(s"Executor exiting: $e"))

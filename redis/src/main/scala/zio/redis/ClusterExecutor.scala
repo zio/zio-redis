@@ -21,7 +21,7 @@ import zio.redis.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
 import zio.redis.options.Cluster._
-import zio.schema.codec.Codec
+import zio.schema.codec.BinaryCodec
 
 import java.io.IOException
 
@@ -70,8 +70,9 @@ final case class ClusterExecutor(
   // TODO introduce max connection amount
   private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor] =
     clusterConnectionRef.modifyZIO { cc =>
-      val executorOpt       = cc.executors.get(address).map(es => (es.executor, cc))
-      val enrichedClusterIO = scope.extend(connectToNode(address)).map(es => (es.executor, cc.addExecutor(address, es)))
+      val executorOpt = cc.executors.get(address).map(es => (es.executor, cc))
+      val enrichedClusterIO =
+        scope.extend[Any](connectToNode(address)).map(es => (es.executor, cc.addExecutor(address, es)))
       ZIO.fromOption(executorOpt).catchAll(_ => enrichedClusterIO)
     }
 
@@ -79,12 +80,12 @@ final case class ClusterExecutor(
     clusterConnectionRef.updateZIO { connection =>
       val addresses = connection.partitions.flatMap(_.addresses)
       for {
-        cluster <- scope.extend(initConnectToCluster(addresses))
+        cluster <- scope.extend[Any](initConnectToCluster(addresses))
         _       <- ZIO.foreachParDiscard(connection.executors) { case (_, es) => es.scope.close(Exit.unit) }
       } yield cluster
     }
 
-  private val RetryPolicy: Schedule[Any, Throwable, (zio.Duration, Long, Throwable)] =
+  private val RetryPolicy: Schedule[Any, Throwable, (Duration, Long, Throwable)] =
     Schedule.exponential(config.retry.base, config.retry.factor) &&
       Schedule.recurs(config.retry.maxRecurs) &&
       Schedule.recurWhile[Throwable] {
@@ -101,7 +102,7 @@ object ClusterExecutor {
         config       <- ZIO.service[RedisClusterConfig]
         layerScope   <- ZIO.scope
         clusterScope <- Scope.make
-        executor     <- clusterScope.extend(create(config, clusterScope))
+        executor     <- clusterScope.extend[Any](create(config, clusterScope))
         _            <- layerScope.addFinalizerExit(e => clusterScope.close(e))
       } yield executor
     }
@@ -142,19 +143,19 @@ object ClusterExecutor {
   private def connectToNode(address: RedisUri) =
     for {
       closableScope <- Scope.make
-      connection    <- closableScope.extend(RedisConnectionLive.create(RedisConfig(address.host, address.port)))
-      executor      <- closableScope.extend(SingleNodeExecutor.create(connection))
+      connection    <- closableScope.extend[Any](RedisConnectionLive.create(RedisConfig(address.host, address.port)))
+      executor      <- closableScope.extend[Any](SingleNodeExecutor.create(connection))
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
 
   private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
-    val codecLayer    = ZLayer.succeed[Codec](StringUtf8Codec)
+    val codecLayer    = ZLayer.succeed[BinaryCodec](StringUtf8Codec)
     val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
     for {
       closableScope <- Scope.make
-      layer         <- closableScope.extend(redisLayer.memoize)
+      layer         <- closableScope.extend[Any](redisLayer.memoize)
       _             <- logScopeFinalizer("Temporary redis connection is closed")
     } yield (layer, closableScope)
   }
