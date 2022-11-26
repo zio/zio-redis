@@ -68,7 +68,7 @@ lazy val benchmarks =
       libraryDependencies ++= List(
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
-        "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
+        "io.laserdisc"      %% "laserdisc-fs2"       % "0.6.0",
         "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
       )
     )
