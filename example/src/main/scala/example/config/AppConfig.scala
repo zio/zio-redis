@@ -24,7 +24,7 @@ import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
 import zio.redis.RedisConfig
 
-final case class AppConfig(redis: RedisConfig)
+final case class AppConfig(redis: RedisConfig, server: ServerConfig)
 
 object AppConfig {
   type Env = AppConfig with RedisConfig

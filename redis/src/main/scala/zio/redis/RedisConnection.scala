@@ -17,16 +17,11 @@
 package zio.redis
 
 import zio._
-import zio.schema.codec.BinaryCodec
+import zio.stream.Stream
 
-trait Redis {
-  def codec: BinaryCodec
-  def executor: RedisExecutor
-}
+import java.io.IOException
 
-final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
-
-object RedisLive {
-  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromFunction(RedisLive.apply _)
+private[redis] trait RedisConnection {
+  def read: Stream[IOException, Byte]
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
 }

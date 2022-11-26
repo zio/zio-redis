@@ -8,12 +8,16 @@ inThisBuild(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
-    homepage         := Some(url("https://github.com/zio/zio-redis/")),
+    homepage         := Some(url("https://zio.dev/zio-redis/")),
     licenses         := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     organization     := "dev.zio",
     organizationName := "John A. De Goes and the ZIO contributors",
     startYear        := Some(2021)
   )
+)
+
+ThisBuild / libraryDependencySchemes ++= Seq(
+  "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 )
 
 addCommandAlias("compileBenchmarks", "benchmarks/Jmh/compile")
@@ -30,6 +34,7 @@ lazy val root =
     .in(file("."))
     .settings(publish / skip := true)
     .aggregate(redis, benchmarks, example)
+    .enablePlugins(WebsitePlugin)
 
 lazy val redis =
   project
@@ -40,12 +45,12 @@ lazy val redis =
     .settings(stdSettings("zio-redis"))
     .settings(
       libraryDependencies ++= List(
-        "dev.zio"                %% "zio-streams"             % "2.0.2",
-        "dev.zio"                %% "zio-logging"             % "2.1.1",
-        "dev.zio"                %% "zio-schema"              % "0.2.1",
-        "dev.zio"                %% "zio-schema-protobuf"     % "0.2.1" % Test,
-        "dev.zio"                %% "zio-test"                % "2.0.2" % Test,
-        "dev.zio"                %% "zio-test-sbt"            % "2.0.2" % Test,
+        "dev.zio"                %% "zio-streams"             % "2.0.4",
+        "dev.zio"                %% "zio-logging"             % "2.1.4",
+        "dev.zio"                %% "zio-schema"              % "0.3.0",
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.3.0" % Test,
+        "dev.zio"                %% "zio-test"                % "2.0.4" % Test,
+        "dev.zio"                %% "zio-test-sbt"            % "2.0.4" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1"
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
@@ -64,7 +69,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.2.1"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
       )
     )
 
@@ -76,30 +81,13 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= List(
-        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.8.0",
-        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.8.0",
-        "dev.zio"                       %% "zio-streams"                   % "2.0.2",
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.8.3",
+        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.8.3",
+        "dev.zio"                       %% "zio-streams"                   % "2.0.3",
         "dev.zio"                       %% "zio-config-magnolia"           % "3.0.2",
         "dev.zio"                       %% "zio-config-typesafe"           % "3.0.2",
-        "dev.zio"                       %% "zio-schema-protobuf"           % "0.2.1",
-        "dev.zio"                       %% "zio-json"                      % "0.3.0-RC11",
+        "dev.zio"                       %% "zio-schema-protobuf"           % "0.3.1",
+        "dev.zio"                       %% "zio-json"                      % "0.3.0",
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC11"
       )
     )
-
-lazy val docs = project
-  .in(file("zio-redis-docs"))
-  .enablePlugins(MdocPlugin, DocusaurusPlugin, ScalaUnidocPlugin)
-  .dependsOn(redis)
-  .settings(
-    publish / skip := true,
-    moduleName     := "zio-redis-docs",
-    scalacOptions -= "-Yno-imports",
-    scalacOptions -= "-Xfatal-warnings",
-    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
-    ScalaUnidoc / unidoc / target              := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
-    cleanFiles += (ScalaUnidoc / unidoc / target).value,
-    docusaurusCreateSite     := docusaurusCreateSite.dependsOn(Compile / unidoc).value,
-    docusaurusPublishGhpages := docusaurusPublishGhpages.dependsOn(Compile / unidoc).value
-  )
-  .settings(macroDefinitionSettings)

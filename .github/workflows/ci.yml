@@ -39,7 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         java: ['17']
-        scala: ['2.12.16', '2.13.8', '3.2.0']
+        scala: ['2.12.17', '2.13.8', '3.2.1']
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
@@ -66,7 +66,7 @@ jobs:
       fail-fast: false
       matrix:
         java: ['8', '11', '17']
-        scala: ['2.12.16', '2.13.8', '3.2.0']
+        scala: ['2.12.17', '2.13.8', '3.2.1']
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
@@ -81,7 +81,9 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Run test containers
-        run: docker-compose up -d
+        run: docker-compose -f testcontainers/redis-compose.yml up -d
+      - name: Run cluster test containers
+        run: docker-compose -f testcontainers/redis-cluster-compose.yml up -d
       - name: Run tests
         run: ./sbt ++${{ matrix.scala }}! redis/test
 
@@ -108,16 +110,16 @@ jobs:
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.1.0
+        with:
+          fetch-depth: 0
       - name: Setup Java
         uses: actions/setup-java@v3.6.0
         with:
           distribution: temurin
           java-version: 17
           check-latest: true
-      - name: Cache scala dependencies
-        uses: coursier/cache-action@v6
-      - name: Check Website Generation
-        run: ./sbt docs/docusaurusCreateSite
+      - name: Check Docs Compilation
+        run: ./sbt compileDocs
 
   ci:
     runs-on: ubuntu-20.04

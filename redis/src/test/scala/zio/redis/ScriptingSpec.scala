@@ -28,23 +28,25 @@ trait ScriptingSpec extends BaseSpec {
         },
         test("take strings return strings") {
           for {
-            key1 <- uuid
-            key2 <- uuid
-            arg1 <- uuid
-            arg2 <- uuid
-            lua   = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
-            res  <- eval(lua, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
+            keyHash <- uuid
+            key1    <- uuid.map(_ + s"{$keyHash}")
+            key2    <- uuid.map(_ + s"{$keyHash}")
+            arg1    <- uuid
+            arg2    <- uuid
+            lua      = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
+            res     <- eval(lua, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
           } yield assertTrue(res == Chunk(key1, key2, arg1, arg2))
         },
         test("put custom input value return custom input value") {
           for {
-            key1 <- uuid
-            key2 <- uuid
-            arg1 <- uuid
-            arg2 <- ZIO.succeedNow(Random.nextLong())
-            arg   = CustomInputValue(arg1, arg2)
-            lua   = """return {ARGV[1],ARGV[2]}"""
-            res  <- eval(lua, Chunk(key1, key2), Chunk(arg)).returning[Map[String, String]]
+            keyHash <- uuid
+            key1    <- uuid.map(_ + s"{$keyHash}")
+            key2    <- uuid.map(_ + s"{$keyHash}")
+            arg1    <- uuid
+            arg2    <- ZIO.succeedNow(Random.nextLong())
+            arg      = CustomInputValue(arg1, arg2)
+            lua      = """return {ARGV[1],ARGV[2]}"""
+            res     <- eval(lua, Chunk(key1, key2), Chunk(arg)).returning[Map[String, String]]
           } yield assertTrue(res == Map(arg1 -> arg2.toString))
         },
         test("return custom data type") {
@@ -100,13 +102,14 @@ trait ScriptingSpec extends BaseSpec {
         },
         test("take strings return strings") {
           for {
-            key1 <- uuid
-            key2 <- uuid
-            arg1 <- uuid
-            arg2 <- uuid
-            lua   = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
-            sha  <- scriptLoad(lua)
-            res  <- evalSha(sha, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
+            keyHash <- uuid
+            key1    <- uuid.map(_ + s"{$keyHash}")
+            key2    <- uuid.map(_ + s"{$keyHash}")
+            arg1    <- uuid
+            arg2    <- uuid
+            lua      = """return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}"""
+            sha     <- scriptLoad(lua)
+            res     <- evalSha(sha, Chunk(key1, key2), Chunk(arg1, arg2)).returning[Chunk[String]]
           } yield assertTrue(res == Chunk(key1, key2, arg1, arg2))
         },
         test("return custom data type") {
