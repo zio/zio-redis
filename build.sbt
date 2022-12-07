@@ -45,12 +45,12 @@ lazy val redis =
     .settings(stdSettings("zio-redis"))
     .settings(
       libraryDependencies ++= List(
-        "dev.zio"                %% "zio-streams"             % "2.0.4",
+        "dev.zio"                %% "zio-streams"             % "2.0.5",
         "dev.zio"                %% "zio-logging"             % "2.1.5",
         "dev.zio"                %% "zio-schema"              % "0.3.0",
         "dev.zio"                %% "zio-schema-protobuf"     % "0.3.0" % Test,
-        "dev.zio"                %% "zio-test"                % "2.0.4" % Test,
-        "dev.zio"                %% "zio-test-sbt"            % "2.0.4" % Test,
+        "dev.zio"                %% "zio-test"                % "2.0.5" % Test,
+        "dev.zio"                %% "zio-test-sbt"            % "2.0.5" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1"
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
