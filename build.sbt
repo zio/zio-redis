@@ -51,7 +51,7 @@ lazy val redis =
         "dev.zio"                %% "zio-schema-protobuf"     % "0.3.0" % Test,
         "dev.zio"                %% "zio-test"                % "2.0.4" % Test,
         "dev.zio"                %% "zio-test-sbt"            % "2.0.4" % Test,
-        "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1"
+        "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0"
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
