@@ -69,7 +69,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.2.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.5.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.4.1"
       )
     )
 
@@ -86,7 +86,7 @@ lazy val example =
         "dev.zio"                       %% "zio-streams"                   % "2.0.3",
         "dev.zio"                       %% "zio-config-magnolia"           % "3.0.2",
         "dev.zio"                       %% "zio-config-typesafe"           % "3.0.2",
-        "dev.zio"                       %% "zio-schema-protobuf"           % "0.3.1",
+        "dev.zio"                       %% "zio-schema-protobuf"           % "0.4.1",
         "dev.zio"                       %% "zio-json"                      % "0.3.0",
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC11"
       )
