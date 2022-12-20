@@ -34,7 +34,6 @@ lazy val root =
     .in(file("."))
     .settings(publish / skip := true)
     .aggregate(redis, benchmarks, example)
-    .enablePlugins(WebsitePlugin)
 
 lazy val redis =
   project
@@ -91,3 +90,25 @@ lazy val example =
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC11"
       )
     )
+
+lazy val docs = project
+  .in(file("zio-redis-docs"))
+  .settings(
+    publish / skip := true,
+    moduleName     := "zio-redis-docs",
+    scalacOptions -= "-Yno-imports",
+    scalacOptions -= "-Xfatal-warnings",
+    projectName := "ZIO Redis",
+    badgeInfo := Some(
+      BadgeInfo(
+        artifact = "zio-redis_2.12",
+        projectStage = ProjectStage.Experimental
+      )
+    ),
+    docsPublishBranch := "master",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
+    )
+  )
+  .dependsOn(redis)
+  .enablePlugins(WebsitePlugin)
