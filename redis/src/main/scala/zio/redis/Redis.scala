@@ -34,11 +34,18 @@ trait Redis
     with api.Cluster {
   def codec: BinaryCodec
   def executor: RedisExecutor
+  def pubSub: RedisPubSub
 }
 
-final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
+final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor, pubSub: RedisPubSub) extends Redis
 
 object RedisLive {
-  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromFunction(RedisLive.apply _)
+  lazy val layer: URLayer[RedisPubSub with RedisExecutor with BinaryCodec, Redis] =
+    ZLayer.fromZIO(
+      for {
+        codec    <- ZIO.service[BinaryCodec]
+        executor <- ZIO.service[RedisExecutor]
+        pubSub   <- ZIO.service[RedisPubSub]
+      } yield RedisLive(codec, executor, pubSub)
+    )
 }

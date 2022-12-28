@@ -19,6 +19,7 @@ package zio.redis
 import zio.IO
 import zio.redis.ResultBuilder.NeedsReturnType
 import zio.schema.Schema
+import zio.stream.ZStream
 
 sealed trait ResultBuilder {
   final def map(f: Nothing => Any)(implicit nrt: NeedsReturnType): IO[Nothing, Nothing] = ???
@@ -45,5 +46,9 @@ object ResultBuilder {
 
   trait ResultOutputBuilder extends ResultBuilder {
     def returning[R: Output]: IO[RedisError, R]
+  }
+
+  trait ResultOutputStreamBuilder {
+    def returning[R: Schema]: ZStream[Redis, RedisError, R]
   }
 }

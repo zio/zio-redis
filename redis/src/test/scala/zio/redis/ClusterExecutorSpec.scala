@@ -69,6 +69,7 @@ object ClusterExecutorSpec extends BaseSpec {
     ZLayer.make[Redis](
       ZLayer.succeed(RedisConfig(uri.host, uri.port)),
       RedisExecutor.layer,
+      RedisPubSub.layer,
       ZLayer.succeed(codec),
       RedisLive.layer
     )

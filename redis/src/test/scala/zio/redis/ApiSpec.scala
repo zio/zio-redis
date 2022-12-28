@@ -16,7 +16,8 @@ object ApiSpec
     with HashSpec
     with StreamsSpec
     with ScriptingSpec
-    with ClusterSpec {
+    with ClusterSpec
+    with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
     suite("Redis commands")(
@@ -38,10 +39,12 @@ object ApiSpec
         hyperLogLogSuite,
         hashSuite,
         streamsSuite,
-        scriptingSpec
+        scriptingSpec,
+        pubSubSuite
       )
 
-    val Layer: Layer[Any, Redis] = ZLayer.make[Redis](RedisExecutor.local.orDie, ZLayer.succeed(codec), RedisLive.layer)
+    val Layer: Layer[Any, Redis] =
+      ZLayer.make[Redis](RedisExecutor.local.orDie, RedisPubSub.local.orDie, ZLayer.succeed(codec), RedisLive.layer)
   }
 
   private object Test {
@@ -55,10 +58,12 @@ object ApiSpec
         hashSuite,
         sortedSetsSuite,
         geoSuite,
-        stringsSuite
+        stringsSuite,
+        pubSubSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported)).get
 
-    val Layer: Layer[Any, Redis] = ZLayer.make[Redis](RedisExecutor.test, ZLayer.succeed(codec), RedisLive.layer)
+    val Layer: Layer[Any, Redis] =
+      ZLayer.make[Redis](RedisExecutor.test, RedisPubSub.test, ZLayer.succeed(codec), RedisLive.layer)
   }
 
   private object Cluster {
@@ -75,7 +80,8 @@ object ApiSpec
         geoSuite,
         streamsSuite @@ clusterExecutorUnsupported,
         scriptingSpec @@ clusterExecutorUnsupported,
-        clusterSpec
+        clusterSpec,
+        pubSubSuite
       ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.ClusterExecutorUnsupported)).get
 
     val Layer: Layer[Any, Redis] =

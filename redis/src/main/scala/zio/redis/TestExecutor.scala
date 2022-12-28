@@ -17,10 +17,15 @@
 package zio.redis
 
 import zio._
+import zio.redis.Input.StringInput
+import zio.redis.Output.PushProtocolOutput
 import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.TestExecutor._
+import zio.redis.api.PubSub
+import zio.schema.codec.BinaryCodec
 import zio.stm._
+import zio.stream.ZStream
 
 import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
@@ -38,8 +43,75 @@ final class TestExecutor private (
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
-  sortedSets: TMap[String, Map[String, Double]]
-) extends RedisExecutor {
+  sortedSets: TMap[String, Map[String, Double]],
+  pubSubs: TMap[SubscriptionKey, THub[RespValue]]
+) extends RedisExecutor
+    with RedisPubSub {
+
+  def execute(command: RedisPubSubCommand): ZStream[BinaryCodec, RedisError, PushProtocol] =
+    command match {
+      case RedisPubSubCommand.Subscribe(channel, channels)  => subscribe(channel, channels)
+      case RedisPubSubCommand.PSubscribe(pattern, patterns) => pSubscribe(pattern, patterns)
+      case RedisPubSubCommand.Unsubscribe(channels)         => unsubscribe(channels)
+      case RedisPubSubCommand.PUnsubscribe(patterns)        => pUnsubscribe(patterns)
+    }
+
+  private def subscribe(channel: String, channels: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
+    pubSubStream(PubSub.Subscribe, (channel :: channels).map(SubscriptionKey.Channel(_)), false)
+
+  private def unsubscribe(channels: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
+    ZStream
+      .unwrap(
+        (for {
+          keys <- if (channels.isEmpty) pubSubs.keys.map(_.collect { case t: SubscriptionKey.Channel => t })
+                  else ZSTM.succeed(channels.map(SubscriptionKey.Channel(_)))
+          stream = pubSubStream(PubSub.Unsubscribe, keys, true)
+        } yield stream).commit
+      )
+
+  private def pSubscribe(pattern: String, patterns: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
+    pubSubStream(PubSub.PSubscribe, (pattern :: patterns).map(SubscriptionKey.Pattern(_)), false)
+
+  private def pUnsubscribe(patterns: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
+    ZStream
+      .unwrap(
+        (for {
+          keys <- if (patterns.isEmpty) pubSubs.keys.map(_.collect { case t: SubscriptionKey.Pattern => t })
+                  else ZSTM.succeed(patterns.map(SubscriptionKey.Pattern(_)))
+          stream = pubSubStream(PubSub.PUnsubscribe, keys, true)
+        } yield stream).commit
+      )
+  private def pubSubStream(cmd: String, keys: List[SubscriptionKey], isUnSubs: Boolean) =
+    ZStream
+      .unwrap[BinaryCodec, RedisError, PushProtocol](
+        ZIO
+          .clockWith(_.instant)
+          .flatMap(now =>
+            ZSTM
+              .serviceWithSTM[BinaryCodec] { implicit codec =>
+                for {
+                  streams <-
+                    ZSTM.foreach(keys) { key =>
+                      for {
+                        resp  <- runCommand(cmd, StringInput.encode(key.value), now)
+                        hub   <- getPubSubHub(key)
+                        queue <- hub.subscribe
+                        _ <- resp match {
+                               case RespValue.ArrayValues(value) =>
+                                 hub.offer(value)
+                               case other =>
+                                 ZSTM.fail(RedisError.ProtocolError(s"Invalid pubsub command response $other"))
+                             }
+                        _ <- pubSubs.delete(key).when(isUnSubs)
+                      } yield ZStream
+                        .fromTQueue(queue)
+                        .mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)).refineToOrDie[RedisError])
+                    }
+                } yield streams.fold(ZStream.empty)(_ merge _)
+              }
+              .commit
+          )
+      )
 
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
@@ -71,7 +143,7 @@ final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
-                  case "CLIENT" | "STRALGO" =>
+                  case "CLIENT" | "STRALGO" | "PUBSUB" =>
                     val command1 = command.tail
                     val name1    = command1.head
                     runCommand(name.asString + " " + name1.asString, command1.tail, now).commit
@@ -104,6 +176,123 @@ final class TestExecutor private (
 
   private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString], now: Instant): USTM[RespValue] = {
     name match {
+      case api.PubSub.Publish =>
+        for {
+          (channels, patterns) <- pubSubs.keys.map(_.partition(_.isChannelKey))
+          keyString             = input(0).asString
+          msg                   = input(1)
+          targetChannels        = channels.filter(_.value == keyString)
+          messages =
+            targetChannels.map { ch =>
+              (
+                ch,
+                RespValue.array(RespValue.bulkString("message"), RespValue.bulkString(ch.value), msg)
+              )
+            }
+          targetPatterns = patterns.filter { pattern =>
+                             val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern.value)
+                             matcher.matches(Paths.get(keyString))
+                           }
+          pMessages =
+            targetPatterns.map { pattern =>
+              (
+                pattern,
+                RespValue
+                  .array(RespValue.bulkString("pmessage"), RespValue.bulkString(pattern.value), input(0), msg)
+              )
+            }
+          _ <- ZSTM.foreachDiscard(messages ++ pMessages) { case (key, message) =>
+                 getPubSubHub(key).flatMap(_.offer(message))
+               }
+        } yield RespValue.Integer(targetChannels.size + targetPatterns.size.toLong)
+
+      case api.PubSub.PubSubChannels =>
+        for {
+          channels <- pubSubs.keys.map(_.collect { case t: SubscriptionKey.Channel => t.value })
+          pattern   = input(0).asString
+          matcher   = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
+          matchedChannels = channels
+                              .filter(ch => matcher.matches(Paths.get(ch)))
+                              .map(channel => RespValue.bulkString(channel))
+        } yield RespValue.Array(Chunk.fromIterable(matchedChannels))
+
+      case api.PubSub.PubSubNumSub =>
+        for {
+          channels <- pubSubs.keys.map(_.collect { case t: SubscriptionKey.Channel => t.value })
+          keys      = input.map(_.asString)
+          targets = keys.map(key =>
+                      RespValue.bulkString(key) -> RespValue.Integer(
+                        if (channels contains key) 1L
+                        else 0L
+                      )
+                    )
+        } yield RespValue.Array(targets.foldLeft(Chunk.empty[RespValue]) { case (acc, (bulk, num)) =>
+          acc.appended(bulk).appended(num)
+        })
+
+      case api.PubSub.PubSubNumPat =>
+        pubSubs.keys
+          .map(_.collect { case t: SubscriptionKey.Pattern => t.value })
+          .map(patterns => RespValue.Integer(patterns.size.toLong))
+
+      case api.PubSub.Unsubscribe =>
+        for {
+          channels <- pubSubs.keys.map(_.collect { case t: SubscriptionKey.Channel => t })
+          keys      = input.map(_.asString)
+          subsCount = channels.size.toLong - 1
+          messages = keys.zipWithIndex.map { case (key, idx) =>
+                       RespValue.array(
+                         RespValue.bulkString("unsubscribe"),
+                         RespValue.bulkString(key),
+                         RespValue.Integer((subsCount - idx) max 0L)
+                       )
+                     }
+        } yield RespValue.Array(messages)
+
+      case api.PubSub.PUnsubscribe =>
+        for {
+          patterns <- pubSubs.keys.map(_.collect { case t: SubscriptionKey.Pattern => t })
+          keys      = input.map(_.asString)
+          subsCount = patterns.size.toLong - 1
+          messages = keys.zipWithIndex.map { case (key, idx) =>
+                       RespValue.array(
+                         RespValue.bulkString("punsubscribe"),
+                         RespValue.bulkString(key),
+                         RespValue.Integer((subsCount - idx) max 0L)
+                       )
+                     }
+        } yield RespValue.Array(messages)
+
+      case api.PubSub.Subscribe =>
+        for {
+          subsCount <- pubSubs.keys.map(_.size + 1L)
+          keys       = input.map(_.asString)
+          messages =
+            keys.zipWithIndex.map { case (key, idx) =>
+              RespValue.array(
+                RespValue.bulkString("subscribe"),
+                RespValue.bulkString(key),
+                RespValue.Integer(subsCount + idx)
+              )
+            }
+          _ <- ZSTM.foreachDiscard(keys.map(SubscriptionKey.Channel(_)))(getPubSubHub(_))
+        } yield RespValue.Array(messages)
+
+      case api.PubSub.PSubscribe =>
+        for {
+          subsCount <- pubSubs.keys.map(_.size + 1L)
+          keys       = input.map(_.asString)
+          subsMessages =
+            keys.zipWithIndex.map { case (key, idx) =>
+              RespValue.array(
+                RespValue.bulkString("psubscribe"),
+                RespValue.bulkString(key),
+                RespValue.Integer(subsCount + idx)
+              )
+            }
+          _ <- ZSTM.foreachDiscard(keys.map(SubscriptionKey.Pattern(_)))(getPubSubHub(_))
+        } yield RespValue.Array(subsMessages)
+
       case api.Connection.Auth =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
@@ -3582,6 +3771,13 @@ final class TestExecutor private (
     }
   }
 
+  private def getPubSubHub(key: SubscriptionKey) =
+    for {
+      hubOpt <- pubSubs.get(key)
+      hub    <- ZSTM.fromOption(hubOpt).orElse(THub.unbounded[RespValue])
+      _      <- pubSubs.putIfAbsent(key, hub)
+    } yield hub
+
   private[this] def orWrongType(predicate: USTM[Boolean])(
     program: => USTM[RespValue]
   ): USTM[RespValue] =
@@ -3922,7 +4118,7 @@ object TestExecutor {
     lazy val redisType: RedisType = KeyType.toRedisType(`type`)
   }
 
-  lazy val layer: ULayer[RedisExecutor] =
+  lazy val layer: ULayer[RedisExecutor with RedisPubSub] =
     ZLayer {
       for {
         seed         <- ZIO.randomWith(_.nextInt)
@@ -3940,6 +4136,7 @@ object TestExecutor {
         clientTInfo =
           ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
         clientTrackingInfo <- TRef.make(clientTInfo).commit
+        pubSubs            <- TMap.empty[SubscriptionKey, THub[RespValue]].commit
       } yield new TestExecutor(
         clientInfo,
         clientTrackingInfo,
@@ -3950,8 +4147,8 @@ object TestExecutor {
         randomPick,
         hyperLogLogs,
         hashes,
-        sortedSets
+        sortedSets,
+        pubSubs
       )
     }
-
 }

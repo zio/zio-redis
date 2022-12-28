@@ -15,14 +15,14 @@
  */
 package zio.redis.options
 
-import zio.redis.{RedisExecutor, RedisUri}
+import zio.redis.{RedisExecutor, RedisPubSub, RedisUri}
 import zio.{Chunk, Scope}
 
 object Cluster {
 
   private[redis] final val SlotsAmount = 16384
 
-  final case class ExecutorScope(executor: RedisExecutor, scope: Scope.Closeable)
+  final case class ExecutorScope(executor: RedisExecutor, pubSub: RedisPubSub, scope: Scope.Closeable)
 
   final case class ClusterConnection(
     partitions: Chunk[Partition],
@@ -30,6 +30,8 @@ object Cluster {
     slots: Map[Slot, RedisUri]
   ) {
     def executor(slot: Slot): Option[RedisExecutor] = executors.get(slots(slot)).map(_.executor)
+
+    def pubSub(slot: Slot): Option[RedisPubSub] = executors.get(slots(slot)).map(_.pubSub)
 
     def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
       copy(executors = executors + (uri -> es))

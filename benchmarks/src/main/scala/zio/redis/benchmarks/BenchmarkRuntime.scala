@@ -35,6 +35,7 @@ object BenchmarkRuntime {
   private final val Layer =
     ZLayer.make[Redis](
       RedisExecutor.local,
+      RedisPubSub.local,
       ZLayer.succeed[BinaryCodec](ProtobufCodec),
       RedisLive.layer
     )

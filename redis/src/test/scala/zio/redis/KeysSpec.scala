@@ -464,6 +464,7 @@ object KeysSpec {
         ZLayer.succeed(RedisConfig("localhost", 6380)),
         RedisConnectionLive.layer,
         SingleNodeExecutor.layer,
+        RedisPubSub.layer,
         ZLayer.succeed[BinaryCodec](ProtobufCodec),
         RedisLive.layer
       )
