@@ -22,11 +22,18 @@ import zio.schema.codec.BinaryCodec
 trait Redis {
   def codec: BinaryCodec
   def executor: RedisExecutor
+  def pubSub: PubSubChannel
 }
 
-final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
+final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor, pubSub: PubSubChannel) extends Redis
 
 object RedisLive {
-  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromFunction(RedisLive.apply _)
+  lazy val layer: URLayer[RedisExecutor with PubSubChannel with BinaryCodec, Redis] =
+    ZLayer.fromZIO(
+      for {
+        codec    <- ZIO.service[BinaryCodec]
+        executor <- ZIO.service[RedisExecutor]
+        pubsub   <- ZIO.service[PubSubChannel]
+      } yield RedisLive(codec, executor, pubsub)
+    )
 }

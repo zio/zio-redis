@@ -827,4 +827,37 @@ object Output {
         case other => throw ProtocolError(s"$other isn't an array")
       }
   }
+
+  case object ServerPushedOutput extends Output[ServerPushed] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): ServerPushed =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val name = MultiStringOutput.unsafeDecode(values(0))
+          val key  = MultiStringOutput.unsafeDecode(values(1))
+          name match {
+            case "subscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              ServerPushed.Subscribe(key, num)
+            case "psubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              ServerPushed.PSubscribe(key, num)
+            case "unsubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              ServerPushed.Unsubscribe(key, num)
+            case "punsubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              ServerPushed.PUnsubscribe(key, num)
+            case "message" =>
+              val message = BulkStringOutput.unsafeDecode(values(2))
+              ServerPushed.Message(key, message)
+            case "pmessage" =>
+              val channel = MultiStringOutput.unsafeDecode(values(2))
+              val message = BulkStringOutput.unsafeDecode(values(3))
+              ServerPushed.PMessage(key, channel, message)
+            case other => throw ProtocolError(s"$other isn't a pushed message")
+          }
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
 }
