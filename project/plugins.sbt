@@ -12,4 +12,4 @@ addSbtPlugin("dev.zio"                           % "zio-sbt-website"  % "0.1.5+2
 
 libraryDependencies += "org.snakeyaml" % "snakeyaml-engine" % "2.5"
 
-resolvers += Resolver.sonatypeRepo("public")
+resolvers ++= Resolver.sonatypeOssRepos("public")
