@@ -26,7 +26,7 @@ ZIO Redis is in the experimental phase of development, but its goals are:
 Since the ZIO Redis is in the experimental phase, it is not released yet, but we can use snapshots:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "0.0.0+458-03138349-SNAPSHOT"
+libraryDependencies += "dev.zio" %% "zio-redis" % "0.0.0+459-b98157bc-SNAPSHOT"
 ```
 
 ## Example
@@ -41,7 +41,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "0.0.0+458-03138349-SNAPSHOT",
+  "dev.zio" %% "zio-redis" % "0.0.0+459-b98157bc-SNAPSHOT",
   "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
 )
 ```
