@@ -54,7 +54,7 @@ final case class ClusterExecutor(
         case e: RedisError.Ask   => executeAsk(e.address)
         case _: RedisError.Moved => refreshConnect *> execute(keySlot)
       }
-      recover.retry(RetryPolicy)
+      recover.retry(retryPolicy)
     }
 
     for {
@@ -85,7 +85,7 @@ final case class ClusterExecutor(
       } yield cluster
     }
 
-  private val RetryPolicy: Schedule[Any, Throwable, (Duration, Long, Throwable)] =
+  private val retryPolicy: Schedule[Any, Throwable, (Duration, Long, Throwable)] =
     Schedule.exponential(config.retry.base, config.retry.factor) &&
       Schedule.recurs(config.retry.maxRecurs) &&
       Schedule.recurWhile[Throwable] {

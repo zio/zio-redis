@@ -1,4 +1,4 @@
-addSbtPlugin("ch.epfl.scala"                     % "sbt-bloop"        % "1.5.4")
+addSbtPlugin("ch.epfl.scala"                     % "sbt-bloop"        % "1.5.6")
 addSbtPlugin("ch.epfl.scala"                     % "sbt-scalafix"     % "0.10.4")
 addSbtPlugin("com.eed3si9n"                      % "sbt-buildinfo"    % "0.11.0")
 addSbtPlugin("com.github.sbt"                    % "sbt-ci-release"   % "1.5.11")
@@ -12,4 +12,4 @@ addSbtPlugin("dev.zio"                           % "zio-sbt-website"  % "0.1.5+2
 
 libraryDependencies += "org.snakeyaml" % "snakeyaml-engine" % "2.5"
 
-resolvers += Resolver.sonatypeRepo("public")
+resolvers ++= Resolver.sonatypeOssRepos("public")
