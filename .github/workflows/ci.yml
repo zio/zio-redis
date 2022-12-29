@@ -119,7 +119,7 @@ jobs:
           java-version: 17
           check-latest: true
       - name: Check Docs Compilation
-        run: ./sbt compileDocs
+        run: ./sbt docs/compileDocs
 
   ci:
     runs-on: ubuntu-20.04
