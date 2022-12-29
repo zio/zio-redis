@@ -85,7 +85,6 @@ final case class ClusterExecutor(
       } yield cluster
     }
 
-  @annotation.nowarn("msg=a type was inferred to be `Any`")
   private val retryPolicy: Schedule[Any, Throwable, (Duration, Long, Throwable)] =
     Schedule.exponential(config.retry.base, config.retry.factor) &&
       Schedule.recurs(config.retry.maxRecurs) &&
