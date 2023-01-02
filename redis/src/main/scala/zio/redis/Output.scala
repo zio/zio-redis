@@ -828,8 +828,8 @@ object Output {
       }
   }
 
-  case object ServerPushedOutput extends Output[ServerPushed] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): ServerPushed =
+  case object PushProtocolOutput extends Output[PushProtocol] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): PushProtocol =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
@@ -838,24 +838,37 @@ object Output {
           name match {
             case "subscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              ServerPushed.Subscribe(key, num)
+              PushProtocol.Subscribe(key, num)
             case "psubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              ServerPushed.PSubscribe(key, num)
+              PushProtocol.PSubscribe(key, num)
             case "unsubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              ServerPushed.Unsubscribe(key, num)
+              PushProtocol.Unsubscribe(key, num)
             case "punsubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              ServerPushed.PUnsubscribe(key, num)
+              PushProtocol.PUnsubscribe(key, num)
             case "message" =>
               val message = BulkStringOutput.unsafeDecode(values(2))
-              ServerPushed.Message(key, message)
+              PushProtocol.Message(key, message)
             case "pmessage" =>
               val channel = MultiStringOutput.unsafeDecode(values(2))
               val message = BulkStringOutput.unsafeDecode(values(3))
-              ServerPushed.PMessage(key, channel, message)
+              PushProtocol.PMessage(key, channel, message)
             case other => throw ProtocolError(s"$other isn't a pushed message")
+          }
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object NumSubResponseOutput extends Output[Chunk[NumSubResponse]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[NumSubResponse] =
+      respValue match {
+        case RespValue.Array(values) =>
+          values.split(2).map { chunk =>
+            val channel           = StringOutput.unsafeDecode(chunk(0))
+            val numOfSubscription = LongOutput.unsafeDecode(chunk(1))
+            NumSubResponse(channel, numOfSubscription)
           }
         case other => throw ProtocolError(s"$other isn't an array")
       }

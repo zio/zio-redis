@@ -22,6 +22,7 @@ import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codec.StringUtf8Codec
 import zio.redis.options.Cluster._
 import zio.schema.codec.BinaryCodec
+import zio.stream.{Stream, ZStream}
 
 import java.io.IOException
 
@@ -58,11 +59,16 @@ final case class ClusterExecutor(
     }
 
     for {
-      key    <- ZIO.attempt(command(1)).orElseFail(CusterKeyError)
-      keySlot = Slot((key.asCRC16 % SlotsAmount).toLong)
-      result <- executeSafe(keySlot)
+      keySlot <- extractKeySlot(command)
+      result  <- executeSafe(keySlot)
     } yield result
   }
+
+  private def extractKeySlot(command: Chunk[RespValue.BulkString]) =
+    for {
+      key    <- ZIO.attempt(command(1)).orElseFail(CusterKeyError)
+      keySlot = Slot((key.asCRC16 % SlotsAmount).toLong)
+    } yield keySlot
 
   private def executor(slot: Slot): IO[RedisError.IOError, RedisExecutor] =
     clusterConnectionRef.get.map(_.executor(slot)).flatMap(ZIO.fromOption(_).orElseFail(CusterKeyExecutorError))
@@ -92,6 +98,15 @@ final case class ClusterExecutor(
         case _: RedisError.IOError | _: RedisError.ClusterRedisError => true
         case _                                                       => false
       }
+
+  def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
+    ZStream.fromZIO {
+      for {
+        keySlot  <- extractKeySlot(command)
+        executor <- executor(keySlot)
+        stream    = executor.executePubSub(command)
+      } yield stream
+    }.flatten
 }
 
 object ClusterExecutor {
@@ -143,8 +158,9 @@ object ClusterExecutor {
   private def connectToNode(address: RedisUri) =
     for {
       closableScope <- Scope.make
-      connection    <- closableScope.extend[Any](RedisConnectionLive.create(RedisConfig(address.host, address.port)))
-      executor      <- closableScope.extend[Any](SingleNodeExecutor.create(connection))
+      reqRepConn    <- closableScope.extend[Any](RedisConnectionLive.create(RedisConfig(address.host, address.port)))
+      pubSubConn    <- closableScope.extend[Any](RedisConnectionLive.create(RedisConfig(address.host, address.port)))
+      executor      <- closableScope.extend[Any](SingleNodeExecutor.create(reqRepConn, pubSubConn))
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
@@ -152,8 +168,7 @@ object ClusterExecutor {
   private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
     val codecLayer    = ZLayer.succeed[BinaryCodec](StringUtf8Codec)
-    val pubSubLayer   = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> PubSubChannel.layer
-    val redisLayer    = executorLayer ++ codecLayer ++ pubSubLayer >>> RedisLive.layer
+    val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
     for {
       closableScope <- Scope.make
       layer         <- closableScope.extend[Any](redisLayer.memoize)

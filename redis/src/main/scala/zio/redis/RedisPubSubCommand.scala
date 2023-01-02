@@ -1,18 +1,20 @@
 package zio.redis
 
-import zio.ZEnvironment
+import zio.redis.Input.StringInput
+import zio.redis.Output.PushProtocolOutput
+import zio.schema.codec.BinaryCodec
 import zio.stream._
+import zio.{Chunk, ZIO}
 
-sealed abstract class RedisPubSubCommand(val name: String) {
-  private[redis] def run: ZStream[Redis, RedisError, ServerPushed] =
+case class RedisPubSubCommand[-In](name: String, input: Input[In]) {
+  private[redis] def run(in: In): ZStream[Redis, RedisError, PushProtocol] =
     ZStream.serviceWithStream[Redis] { redis =>
-      redis.pubSub.execute(this).provideEnvironment(ZEnvironment(redis.codec))
+      redis.executor
+        .executePubSub(resp(in)(redis.codec))
+        .mapZIO(out => ZIO.attempt(PushProtocolOutput.unsafeDecode(out)(redis.codec)))
+        .refineToOrDie[RedisError]
     }
-}
 
-object RedisPubSubCommand {
-  case class Subscribe(in: (String, List[String]))  extends RedisPubSubCommand("SUBSCRIBE")
-  case class Unsubscribe(in: List[String])          extends RedisPubSubCommand("UNSUBSCRIBE")
-  case class PSubscribe(in: (String, List[String])) extends RedisPubSubCommand("PSUBSCRIBE")
-  case class PUnsubscribe(in: List[String])         extends RedisPubSubCommand("PUNSUBSCRIBE")
+  private def resp(in: In)(implicit codec: BinaryCodec): Chunk[RespValue.BulkString] =
+    StringInput.encode(name) ++ input.encode(in)
 }

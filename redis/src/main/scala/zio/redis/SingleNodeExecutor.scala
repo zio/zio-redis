@@ -18,11 +18,14 @@ package zio.redis
 
 import zio._
 import zio.redis.SingleNodeExecutor._
+import zio.stream.{Stream, ZStream}
 
 final class SingleNodeExecutor(
   reqQueue: Queue[Request],
   resQueue: Queue[Promise[RedisError, RespValue]],
-  connection: RedisConnection
+  pubSubHub: Hub[RespValue],
+  connection: RedisConnection,
+  pubSubConnection: RedisConnection
 ) extends RedisExecutor {
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
@@ -30,6 +33,14 @@ final class SingleNodeExecutor(
     Promise
       .make[RedisError, RespValue]
       .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
+
+  def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
+    ZStream.fromZIO {
+      val bytes = RespValue.Array(command).serialize
+      pubSubConnection
+        .write(bytes)
+        .mapBoth(RedisError.IOError(_), _ => ZStream.fromHub(pubSubHub))
+    }.flatten
 
   /**
    * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a
@@ -66,37 +77,46 @@ final class SingleNodeExecutor(
     }
 
   private def receive: IO[RedisError, Unit] =
+    receiveResponse &> receivePubSub
+
+  private def receiveResponse: IO[RedisError, Unit] =
     connection.read
       .mapError(RedisError.IOError(_))
       .via(RespValue.decoder)
       .collectSome
       .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 
+  private def receivePubSub: IO[RedisError, Unit] =
+    pubSubConnection.read
+      .mapError(RedisError.IOError(_))
+      .via(RespValue.decoder)
+      .collectSome
+      .foreach(pubSubHub.offer(_))
 }
 
 object SingleNodeExecutor {
-
-  lazy val layer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
-    ZLayer.scoped {
-      for {
-        connection <- ZIO.service[RedisConnection]
-        executor   <- create(connection)
-      } yield executor
-    }
-
   final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
   private final val True: Any => Boolean = _ => true
 
   private final val RequestQueueSize = 16
 
-  private[redis] def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
-    for {
-      reqQueue <- Queue.bounded[Request](RequestQueueSize)
-      resQueue <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor  = new SingleNodeExecutor(reqQueue, resQueue, connection)
-      _        <- executor.run.forkScoped
-      _        <- logScopeFinalizer(s"$executor Node Executor is closed")
-    } yield executor
+  lazy val layer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
+    ZLayer.scoped {
+      for {
+        connection1 <- ZIO.service[RedisConnection]
+        connection2 <- ZIO.service[RedisConnection]
+        executor    <- create(connection1, connection2)
+      } yield executor
+    }
 
+  private[redis] def create(conn: RedisConnection, pubSubConn: RedisConnection): URIO[Scope, SingleNodeExecutor] =
+    for {
+      reqQueue  <- Queue.bounded[Request](RequestQueueSize)
+      resQueue  <- Queue.unbounded[Promise[RedisError, RespValue]]
+      pubSubHub <- Hub.unbounded[RespValue]
+      executor   = new SingleNodeExecutor(reqQueue, resQueue, pubSubHub, conn, pubSubConn)
+      _         <- executor.run.forkScoped
+      _         <- logScopeFinalizer(s"$executor Node Executor is closed")
+    } yield executor
 }
