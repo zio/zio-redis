@@ -26,8 +26,8 @@ trait PubSub {
     RedisPubSubCommand(PUnsubscribe, Varargs(PatternInput)).run(patterns.toList.map(Pattern(_)))
 
   final def publish[A: Schema](channel: String, message: A): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryInput[A]), LongOutput)
-    command.run(channel, message)
+    val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryInput[A]()), LongOutput)
+    command.run((channel, message))
   }
 
   final def pubSubChannels(pattern: String): ZIO[Redis, RedisError, Chunk[String]] = {
@@ -37,12 +37,12 @@ trait PubSub {
 
   final def pubSubNumPat: ZIO[Redis, RedisError, Chunk[String]] = {
     val command = RedisCommand(PubSubNumPat, NoInput, ChunkOutput(StringOutput))
-    command.run()
+    command.run(())
   }
 
   final def pubSubNumSub(channel: String, channels: String*): ZIO[Redis, RedisError, Chunk[NumSubResponse]] = {
     val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput)
-    command.run(channel, channels.toList)
+    command.run((channel, channels.toList))
   }
 }
 

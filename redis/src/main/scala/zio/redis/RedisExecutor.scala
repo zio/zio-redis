@@ -1,7 +1,7 @@
 package zio.redis
 
-import zio.{Chunk, IO, Ref, ULayer, ZLayer}
 import zio.stream._
+import zio.{Chunk, IO, ULayer, ZLayer}
 
 trait RedisExecutor {
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]

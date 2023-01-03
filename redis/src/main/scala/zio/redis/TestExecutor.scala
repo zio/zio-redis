@@ -21,12 +21,14 @@ import zio.redis.RedisError.ProtocolError
 import zio.redis.RespValue.{BulkString, bulkString}
 import zio.redis.TestExecutor._
 import zio.stm._
+import zio.stream._
 
 import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
+import scala.util.matching.Regex
 
 final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
@@ -38,8 +40,16 @@ final class TestExecutor private (
   randomPick: Int => USTM[Int],
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
-  sortedSets: TMap[String, Map[String, Double]]
+  sortedSets: TMap[String, Map[String, Double]],
+  pubSubs: TRef[(Set[String], Set[Regex], THub[RespValue])]
 ) extends RedisExecutor {
+  override def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
+    ZStream.fromZIO {
+      for {
+        queue <- pubSubs.get.flatMap(_._3.subscribe).commit
+        _     <- execute(command)
+      } yield ZStream.fromTQueue(queue)
+    }.flatten
 
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {
@@ -104,6 +114,36 @@ final class TestExecutor private (
 
   private[this] def runCommand(name: String, input: Chunk[RespValue.BulkString], now: Instant): USTM[RespValue] = {
     name match {
+      case api.PubSub.Publish =>
+        for {
+          (channels, patterns, hub) <- pubSubs.get
+          keyString                  = input(0).asString
+          msg                        = input(1).value
+          messages =
+            channels
+              .filter(_ == keyString)
+              .map(ch => RespValue.array(RespValue.bulkString("message"), RespValue.bulkString(ch), input(1)))
+          pMessages =
+            patterns
+              .filter(_.matches(keyString))
+              .map(r =>
+                RespValue
+                  .array(RespValue.bulkString("pmessage"), RespValue.bulkString(r.toString()), input(0), input(1))
+              )
+          _ <- hub.publishAll(messages ++ pMessages)
+        } yield RespValue.Integer((messages.size + pMessages.size).toLong)
+
+      case api.PubSub.Subscribe =>
+        for {
+          (channels, patterns, hub) <- pubSubs.get
+          keys                       = input.map(_.asString)
+          subsMessages =
+            keys.map(key =>
+              RespValue.array(RespValue.bulkString("subscribe"), RespValue.bulkString(key), RespValue.Integer(1))
+            )
+          _ <- pubSubs.set((channels ++ keys, patterns, hub))
+        } yield RespValue.Array(subsMessages)
+
       case api.Connection.Auth =>
         onConnection(name, input)(RespValue.bulkString("OK"))
 
@@ -3940,6 +3980,8 @@ object TestExecutor {
         clientTInfo =
           ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
         clientTrackingInfo <- TRef.make(clientTInfo).commit
+        pubSubHub          <- THub.unbounded[RespValue].commit
+        pubSubs            <- TRef.make((Set.empty[String], Set.empty[Regex], pubSubHub)).commit
       } yield new TestExecutor(
         clientInfo,
         clientTrackingInfo,
@@ -3950,7 +3992,8 @@ object TestExecutor {
         randomPick,
         hyperLogLogs,
         hashes,
-        sortedSets
+        sortedSets,
+        pubSubs
       )
     }
 

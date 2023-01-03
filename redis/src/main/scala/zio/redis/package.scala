@@ -29,6 +29,7 @@ package object redis
     with api.Streams
     with api.Scripting
     with api.Cluster
+    with api.PubSub
     with options.Connection
     with options.Geo
     with options.Keys
