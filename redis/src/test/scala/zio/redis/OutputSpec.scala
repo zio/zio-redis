@@ -1047,7 +1047,9 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(numOfSubscription)
             )
           val expected = PushProtocol.Subscribe(channel, numOfSubscription)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(equalTo(expected))
+          assertZIO(ZIO.attempt(PushProtocolOutput[Chunk[Byte]](BulkStringOutput).unsafeDecode(input)))(
+            equalTo(expected)
+          )
         },
         test("psubscribe") {
           val pattern           = "f*"
@@ -1059,7 +1061,9 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(numOfSubscription)
             )
           val expected = PushProtocol.PSubscribe(pattern, numOfSubscription)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(equalTo(expected))
+          assertZIO(ZIO.attempt(PushProtocolOutput[Chunk[Byte]](BulkStringOutput).unsafeDecode(input)))(
+            equalTo(expected)
+          )
         },
         test("unsubscribe") {
           val channel           = "foo"
@@ -1071,7 +1075,9 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(numOfSubscription)
             )
           val expected = PushProtocol.Unsubscribe(channel, numOfSubscription)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(equalTo(expected))
+          assertZIO(ZIO.attempt(PushProtocolOutput[Chunk[Byte]](BulkStringOutput).unsafeDecode(input)))(
+            equalTo(expected)
+          )
         },
         test("punsubscribe") {
           val pattern           = "f*"
@@ -1083,33 +1089,39 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(numOfSubscription)
             )
           val expected = PushProtocol.PUnsubscribe(pattern, numOfSubscription)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(equalTo(expected))
+          assertZIO(ZIO.attempt(PushProtocolOutput[Chunk[Byte]](BulkStringOutput).unsafeDecode(input)))(
+            equalTo(expected)
+          )
         },
         test("message") {
           val channel = "foo"
-          val message = RespValue.bulkString("bar")
+          val message = "bar"
           val input =
             RespValue.array(
               RespValue.bulkString("message"),
               RespValue.bulkString(channel),
-              message
+              RespValue.bulkString(message)
             )
-          val expected = PushProtocol.Message(channel, message.value)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(equalTo(expected))
+          val expected = PushProtocol.Message(channel, message)
+          assertZIO(ZIO.attempt(PushProtocolOutput[String](ArbitraryOutput[String]()).unsafeDecode(input)))(
+            equalTo(expected)
+          )
         },
         test("pmessage") {
           val pattern = "f*"
           val channel = "foo"
-          val message = RespValue.bulkString("bar")
+          val message = "bar"
           val input =
             RespValue.array(
               RespValue.bulkString("pmessage"),
               RespValue.bulkString(pattern),
               RespValue.bulkString(channel),
-              message
+              RespValue.bulkString(message)
             )
-          val expected = PushProtocol.PMessage(pattern, channel, message.value)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(equalTo(expected))
+          val expected = PushProtocol.PMessage(pattern, channel, message)
+          assertZIO(ZIO.attempt(PushProtocolOutput[String](ArbitraryOutput[String]()).unsafeDecode(input)))(
+            equalTo(expected)
+          )
         }
       )
     )
