@@ -865,11 +865,11 @@ object Output {
     protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[NumSubResponse] =
       respValue match {
         case RespValue.Array(values) =>
-          values.split(2).map { chunk =>
-            val channel           = StringOutput.unsafeDecode(chunk(0))
+          Chunk.fromIterator(values.grouped(2).map { chunk =>
+            val channel           = MultiStringOutput.unsafeDecode(chunk(0))
             val numOfSubscription = LongOutput.unsafeDecode(chunk(1))
             NumSubResponse(channel, numOfSubscription)
-          }
+          })
         case other => throw ProtocolError(s"$other isn't an array")
       }
   }

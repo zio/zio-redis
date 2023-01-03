@@ -41,13 +41,18 @@ final class TestExecutor private (
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
   sortedSets: TMap[String, Map[String, Double]],
-  pubSubs: TRef[(Set[String], Set[Regex], THub[RespValue])]
+  pubSubStates: TRef[(Set[String], Set[Regex])],
+  pubSubChannel: THub[RespValue]
 ) extends RedisExecutor {
   override def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
     ZStream.fromZIO {
       for {
-        queue <- pubSubs.get.flatMap(_._3.subscribe).commit
-        _     <- execute(command)
+        queue <- pubSubChannel.subscribe.commit
+        resp  <- execute(command)
+        _ <- (resp match {
+               case RespValue.Array(values) => ZSTM.foreach(values)(pubSubChannel.publish(_))
+               case other                   => pubSubChannel.publish(other)
+             }).commit
       } yield ZStream.fromTQueue(queue)
     }.flatten
 
@@ -116,41 +121,106 @@ final class TestExecutor private (
     name match {
       case api.PubSub.Publish =>
         for {
-          (channels, patterns, hub) <- pubSubs.get
-          keyString                  = input(0).asString
-          msg                        = input(1).value
+          (channels, patterns) <- pubSubStates.get
+          keyString             = input(0).asString
+          msg                   = input(1).value
+          targetChannels        = channels.filter(_ == keyString)
           messages =
-            channels
-              .filter(_ == keyString)
-              .map(ch => RespValue.array(RespValue.bulkString("message"), RespValue.bulkString(ch), input(1)))
+            targetChannels.map { ch =>
+              RespValue.array(RespValue.bulkString("message"), RespValue.bulkString(ch), input(1))
+            }
+          targetPatterns = patterns.filter(_.matches(keyString))
           pMessages =
-            patterns
-              .filter(_.matches(keyString))
-              .map(r =>
-                RespValue
-                  .array(RespValue.bulkString("pmessage"), RespValue.bulkString(r.toString()), input(0), input(1))
-              )
-          _ <- hub.publishAll(messages ++ pMessages)
-        } yield RespValue.Integer((messages.size + pMessages.size).toLong)
+            targetPatterns.map { pattern =>
+              RespValue
+                .array(RespValue.bulkString("pmessage"), RespValue.bulkString(pattern.toString()), input(0), input(1))
+            }
+          _ <- pubSubChannel.publishAll(messages ++ pMessages)
+        } yield RespValue.Integer(targetChannels.size + targetPatterns.size.toLong)
 
       case api.PubSub.PubSubChannels =>
         for {
-          (channels, _, _) <- pubSubs.get
-          pattern           = input(0).asString.r
+          (channels, _) <- pubSubStates.get
+          pattern        = input(0).asString.r
           matchedChannels = channels
-                              .filter(pattern.matches(_))
+                              .filter(ch => pattern.matches(ch))
                               .map(channel => RespValue.bulkString(channel))
         } yield RespValue.Array(Chunk.fromIterable(matchedChannels))
 
+      case api.PubSub.PubSubNumSub =>
+        for {
+          (channels, _) <- pubSubStates.get
+          keys           = input.map(_.asString)
+          targets        = keys.map(key => RespValue.bulkString(key) -> RespValue.Integer(1L))
+        } yield RespValue.Array(targets.foldLeft(Chunk.empty[RespValue]) { case (acc, (bulk, num)) =>
+          acc.appended(bulk).appended(num)
+        })
+
+      case api.PubSub.PubSubNumPat =>
+        for {
+          (_, patterns) <- pubSubStates.get
+        } yield RespValue.bulkString(patterns.size.toString)
+
+      case api.PubSub.Unsubscribe =>
+        for {
+          (channels, patterns) <- pubSubStates.get
+          keys                  = if (input.isEmpty) Chunk.fromIterable(channels) else input.map(_.asString)
+          subsCount             = channels.size.toLong - 1
+          messages = keys.zipWithIndex.map { case (key, idx) =>
+                       RespValue.array(
+                         RespValue.bulkString("unsubscribe"),
+                         RespValue.bulkString(key),
+                         RespValue.Integer(subsCount - idx)
+                       )
+                     }
+          _ <- pubSubStates.set(
+                 (
+                   channels -- keys,
+                   patterns
+                 )
+               )
+        } yield RespValue.Array(messages)
+
       case api.PubSub.Subscribe =>
         for {
-          (channels, patterns, hub) <- pubSubs.get
-          keys                       = input.map(_.asString)
+          (channels, patterns) <- pubSubStates.get
+          keys                  = input.map(_.asString)
+          subsCount             = channels.size.toLong + 1
+          messages =
+            keys.zipWithIndex.map { case (key, idx) =>
+              RespValue.array(
+                RespValue.bulkString("subscribe"),
+                RespValue.bulkString(key),
+                RespValue.Integer(subsCount + idx)
+              )
+            }
+          _ <- pubSubStates.set(
+                 (
+                   channels ++ keys,
+                   patterns
+                 )
+               )
+        } yield RespValue.Array(messages)
+
+      case api.PubSub.PSubscribe =>
+        for {
+          (channels, patterns) <- pubSubStates.get
+          keys                  = input.map(_.asString)
+          subsCount             = channels.size.toLong + 1
           subsMessages =
-            keys.map(key =>
-              RespValue.array(RespValue.bulkString("subscribe"), RespValue.bulkString(key), RespValue.Integer(1))
-            )
-          _ <- pubSubs.set((channels ++ keys, patterns, hub))
+            keys.zipWithIndex.map { case (key, idx) =>
+              RespValue.array(
+                RespValue.bulkString("psubscribe"),
+                RespValue.bulkString(key),
+                RespValue.Integer(subsCount + idx)
+              )
+            }
+          _ <- pubSubStates.set(
+                 (
+                   channels,
+                   patterns ++ keys.map(_.r)
+                 )
+               )
         } yield RespValue.Array(subsMessages)
 
       case api.Connection.Auth =>
@@ -3989,8 +4059,8 @@ object TestExecutor {
         clientTInfo =
           ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
         clientTrackingInfo <- TRef.make(clientTInfo).commit
-        pubSubHub          <- THub.unbounded[RespValue].commit
-        pubSubs            <- TRef.make((Set.empty[String], Set.empty[Regex], pubSubHub)).commit
+        pubSubChannel      <- THub.unbounded[RespValue].commit
+        pubSubs            <- TRef.make((Set.empty[String], Set.empty[Regex])).commit
       } yield new TestExecutor(
         clientInfo,
         clientTrackingInfo,
@@ -4002,8 +4072,8 @@ object TestExecutor {
         hyperLogLogs,
         hashes,
         sortedSets,
-        pubSubs
+        pubSubs,
+        pubSubChannel
       )
     }
-
 }
