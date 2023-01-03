@@ -2,6 +2,7 @@ package zio.redis.api
 
 import zio.redis.Input._
 import zio.redis.Output._
+import zio.redis.ResultBuilder.ResultOutputStreamBuilder
 import zio.redis._
 import zio.redis.api.PubSub._
 import zio.schema.Schema
@@ -9,21 +10,25 @@ import zio.stream.ZStream
 import zio.{Chunk, ZIO}
 
 trait PubSub {
-  final def subscribe(channel: String, channels: String*): ZStream[Redis, RedisError, PushProtocol] = {
-    val in = (channel, channels.toList)
-    RedisPubSubCommand(Subscribe, NonEmptyList(StringInput)).run(in)
+  final def subscribe(channel: String, channels: String*): ResultOutputStreamBuilder = new ResultOutputStreamBuilder {
+    override def returning[R: Schema]: ZStream[Redis, RedisError, PushProtocol[R]] = {
+      val in = (channel, channels.toList)
+      RedisPubSubCommand(Subscribe, NonEmptyList(StringInput), ArbitraryOutput[R]()).run(in)
+    }
   }
 
-  final def unsubscribe(channels: String*): ZStream[Redis, RedisError, PushProtocol] =
-    RedisPubSubCommand(Unsubscribe, Varargs(StringInput)).run(channels.toList)
+  final def unsubscribe(channels: String*): ZStream[Redis, RedisError, PushProtocol[Chunk[Byte]]] =
+    RedisPubSubCommand(Unsubscribe, Varargs(StringInput), BulkStringOutput).run(channels.toList)
 
-  final def pSubscribe(pattern: String, patterns: String*): ZStream[Redis, RedisError, PushProtocol] = {
-    val in = (Pattern(pattern), patterns.toList.map(Pattern(_)))
-    RedisPubSubCommand(PSubscribe, NonEmptyList(PatternInput)).run(in)
+  final def pSubscribe(pattern: String, patterns: String*): ResultOutputStreamBuilder = new ResultOutputStreamBuilder {
+    override def returning[R: Schema]: ZStream[Redis, RedisError, PushProtocol[R]] = {
+      val in = (pattern, patterns.toList)
+      RedisPubSubCommand(PSubscribe, NonEmptyList(StringInput), ArbitraryOutput[R]()).run(in)
+    }
   }
 
-  final def pUnsubscribe(patterns: String*): ZStream[Redis, RedisError, PushProtocol] =
-    RedisPubSubCommand(PUnsubscribe, Varargs(PatternInput)).run(patterns.toList.map(Pattern(_)))
+  final def pUnsubscribe(patterns: String*): ZStream[Redis, RedisError, PushProtocol[Chunk[Byte]]] =
+    RedisPubSubCommand(PUnsubscribe, Varargs(StringInput), BulkStringOutput).run(patterns.toList)
 
   final def publish[A: Schema](channel: String, message: A): ZIO[Redis, RedisError, Long] = {
     val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryInput[A]()), LongOutput)
@@ -31,12 +36,12 @@ trait PubSub {
   }
 
   final def pubSubChannels(pattern: String): ZIO[Redis, RedisError, Chunk[String]] = {
-    val command = RedisCommand(PubSubChannels, PatternInput, ChunkOutput(StringOutput))
-    command.run(Pattern(pattern))
+    val command = RedisCommand(PubSubChannels, StringInput, ChunkOutput(MultiStringOutput))
+    command.run(pattern)
   }
 
   final def pubSubNumPat: ZIO[Redis, RedisError, Chunk[String]] = {
-    val command = RedisCommand(PubSubNumPat, NoInput, ChunkOutput(StringOutput))
+    val command = RedisCommand(PubSubNumPat, NoInput, ChunkOutput(MultiStringOutput))
     command.run(())
   }
 

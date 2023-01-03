@@ -828,8 +828,8 @@ object Output {
       }
   }
 
-  case object PushProtocolOutput extends Output[PushProtocol] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): PushProtocol =
+  case class PushProtocolOutput[A](messageOutput: Output[A]) extends Output[PushProtocol[A]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): PushProtocol[A] =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
@@ -849,11 +849,11 @@ object Output {
               val num = LongOutput.unsafeDecode(values(2))
               PushProtocol.PUnsubscribe(key, num)
             case "message" =>
-              val message = BulkStringOutput.unsafeDecode(values(2))
+              val message = messageOutput.unsafeDecode(values(2))
               PushProtocol.Message(key, message)
             case "pmessage" =>
               val channel = MultiStringOutput.unsafeDecode(values(2))
-              val message = BulkStringOutput.unsafeDecode(values(3))
+              val message = messageOutput.unsafeDecode(values(3))
               PushProtocol.PMessage(key, channel, message)
             case other => throw ProtocolError(s"$other isn't a pushed message")
           }

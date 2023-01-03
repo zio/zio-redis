@@ -6,12 +6,12 @@ import zio.schema.codec.BinaryCodec
 import zio.stream._
 import zio.{Chunk, ZIO}
 
-case class RedisPubSubCommand[-In](name: String, input: Input[In]) {
-  private[redis] def run(in: In): ZStream[Redis, RedisError, PushProtocol] =
+case class RedisPubSubCommand[-In, +Out](name: String, input: Input[In], output: Output[Out]) {
+  private[redis] def run(in: In): ZStream[Redis, RedisError, PushProtocol[Out]] =
     ZStream.serviceWithStream[Redis] { redis =>
       redis.executor
         .executePubSub(resp(in)(redis.codec))
-        .mapZIO(out => ZIO.attempt(PushProtocolOutput.unsafeDecode(out)(redis.codec)))
+        .mapZIO(out => ZIO.attempt(PushProtocolOutput(output).unsafeDecode(out)(redis.codec)))
         .refineToOrDie[RedisError]
     }
 

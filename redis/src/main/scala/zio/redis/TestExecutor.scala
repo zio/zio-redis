@@ -81,7 +81,7 @@ final class TestExecutor private (
                     val timeout = command.tail.last.asString.toInt
                     runBlockingCommand(name.asString, command.tail, timeout, RespValue.NullBulkString, now)
 
-                  case "CLIENT" | "STRALGO" =>
+                  case "CLIENT" | "STRALGO" | "PUBSUB" =>
                     val command1 = command.tail
                     val name1    = command1.head
                     runCommand(name.asString + " " + name1.asString, command1.tail, now).commit
@@ -132,6 +132,15 @@ final class TestExecutor private (
               )
           _ <- hub.publishAll(messages ++ pMessages)
         } yield RespValue.Integer((messages.size + pMessages.size).toLong)
+
+      case api.PubSub.PubSubChannels =>
+        for {
+          (channels, _, _) <- pubSubs.get
+          pattern           = input(0).asString.r
+          matchedChannels = channels
+                              .filter(pattern.matches(_))
+                              .map(channel => RespValue.bulkString(channel))
+        } yield RespValue.Array(Chunk.fromIterable(matchedChannels))
 
       case api.PubSub.Subscribe =>
         for {
