@@ -28,7 +28,6 @@ import java.time.Instant
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.LazyList
 import scala.util.Try
-import scala.util.matching.Regex
 
 final class TestExecutor private (
   clientInfo: TRef[ClientInfo],
@@ -41,7 +40,7 @@ final class TestExecutor private (
   hyperLogLogs: TMap[String, Set[String]],
   hashes: TMap[String, Map[String, String]],
   sortedSets: TMap[String, Map[String, Double]],
-  pubSubStates: TRef[(Set[String], Set[Regex])],
+  pubSubStates: TRef[(Set[String], Set[String])],
   pubSubChannel: THub[RespValue]
 ) extends RedisExecutor {
   override def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
@@ -129,11 +128,14 @@ final class TestExecutor private (
             targetChannels.map { ch =>
               RespValue.array(RespValue.bulkString("message"), RespValue.bulkString(ch), input(1))
             }
-          targetPatterns = patterns.filter(_.matches(keyString))
+          targetPatterns = patterns.filter { pattern =>
+                             val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
+                             matcher.matches(Paths.get(keyString))
+                           }
           pMessages =
             targetPatterns.map { pattern =>
               RespValue
-                .array(RespValue.bulkString("pmessage"), RespValue.bulkString(pattern.toString()), input(0), input(1))
+                .array(RespValue.bulkString("pmessage"), RespValue.bulkString(pattern), input(0), input(1))
             }
           _ <- pubSubChannel.publishAll(messages ++ pMessages)
         } yield RespValue.Integer(targetChannels.size + targetPatterns.size.toLong)
@@ -159,7 +161,7 @@ final class TestExecutor private (
       case api.PubSub.PubSubNumPat =>
         for {
           (_, patterns) <- pubSubStates.get
-        } yield RespValue.bulkString(patterns.size.toString)
+        } yield RespValue.Integer(patterns.size.toLong)
 
       case api.PubSub.Unsubscribe =>
         for {
@@ -170,7 +172,7 @@ final class TestExecutor private (
                        RespValue.array(
                          RespValue.bulkString("unsubscribe"),
                          RespValue.bulkString(key),
-                         RespValue.Integer(subsCount - idx)
+                         RespValue.Integer((subsCount - idx) max 0L)
                        )
                      }
           _ <- pubSubStates.set(
@@ -218,7 +220,7 @@ final class TestExecutor private (
           _ <- pubSubStates.set(
                  (
                    channels,
-                   patterns ++ keys.map(_.r)
+                   patterns ++ keys
                  )
                )
         } yield RespValue.Array(subsMessages)
@@ -4060,7 +4062,7 @@ object TestExecutor {
           ClientTrackingInfo(ClientTrackingFlags(clientSideCaching = false), ClientTrackingRedirect.NotEnabled)
         clientTrackingInfo <- TRef.make(clientTInfo).commit
         pubSubChannel      <- THub.unbounded[RespValue].commit
-        pubSubs            <- TRef.make((Set.empty[String], Set.empty[Regex])).commit
+        pubSubs            <- TRef.make((Set.empty[String], Set.empty[String])).commit
       } yield new TestExecutor(
         clientInfo,
         clientTrackingInfo,
