@@ -143,9 +143,10 @@ final class TestExecutor private (
       case api.PubSub.PubSubChannels =>
         for {
           (channels, _) <- pubSubStates.get
-          pattern        = input(0).asString.r
+          pattern        = input(0).asString
+          matcher        = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
           matchedChannels = channels
-                              .filter(ch => pattern.matches(ch))
+                              .filter(ch => matcher.matches(Paths.get(ch)))
                               .map(channel => RespValue.bulkString(channel))
         } yield RespValue.Array(Chunk.fromIterable(matchedChannels))
 
@@ -153,7 +154,12 @@ final class TestExecutor private (
         for {
           (channels, _) <- pubSubStates.get
           keys           = input.map(_.asString)
-          targets        = keys.map(key => RespValue.bulkString(key) -> RespValue.Integer(1L))
+          targets = keys.map(key =>
+                      RespValue.bulkString(key) -> RespValue.Integer(
+                        if (channels contains key) 1L
+                        else 0L
+                      )
+                    )
         } yield RespValue.Array(targets.foldLeft(Chunk.empty[RespValue]) { case (acc, (bulk, num)) =>
           acc.appended(bulk).appended(num)
         })
@@ -179,6 +185,26 @@ final class TestExecutor private (
                  (
                    channels -- keys,
                    patterns
+                 )
+               )
+        } yield RespValue.Array(messages)
+
+      case api.PubSub.PUnsubscribe =>
+        for {
+          (channels, patterns) <- pubSubStates.get
+          keys                  = if (input.isEmpty) Chunk.fromIterable(channels) else input.map(_.asString)
+          subsCount             = channels.size.toLong - 1
+          messages = keys.zipWithIndex.map { case (key, idx) =>
+                       RespValue.array(
+                         RespValue.bulkString("punsubscribe"),
+                         RespValue.bulkString(key),
+                         RespValue.Integer((subsCount - idx) max 0L)
+                       )
+                     }
+          _ <- pubSubStates.set(
+                 (
+                   channels,
+                   patterns -- keys
                  )
                )
         } yield RespValue.Array(messages)

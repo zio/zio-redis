@@ -2,7 +2,7 @@ package zio.redis.options
 
 trait PubSub {
 
-  case class NumSubResponse(channel: String, numOfSubscribers: Long)
+  case class NumSubResponse(channel: String, subscriberCount: Long)
 
   sealed trait PushProtocol[+A] {
     def key: String
