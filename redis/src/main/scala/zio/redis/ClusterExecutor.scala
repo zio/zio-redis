@@ -64,6 +64,15 @@ final case class ClusterExecutor(
     } yield result
   }
 
+  def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
+    ZStream.fromZIO {
+      for {
+        keySlot <- extractKeySlot(command)
+        executor <- executor(keySlot)
+        stream = executor.executePubSub(command)
+      } yield stream
+    }.flatten
+
   private def extractKeySlot(command: Chunk[RespValue.BulkString]) =
     for {
       key    <- ZIO.attempt(command(1)).orElseFail(CusterKeyError)
@@ -98,15 +107,6 @@ final case class ClusterExecutor(
         case _: RedisError.IOError | _: RedisError.ClusterRedisError => true
         case _                                                       => false
       }
-
-  def executePubSub(command: Chunk[RespValue.BulkString]): Stream[RedisError, RespValue] =
-    ZStream.fromZIO {
-      for {
-        keySlot  <- extractKeySlot(command)
-        executor <- executor(keySlot)
-        stream    = executor.executePubSub(command)
-      } yield stream
-    }.flatten
 }
 
 object ClusterExecutor {
