@@ -98,12 +98,12 @@ lazy val docs = project
     moduleName     := "zio-redis-docs",
     scalacOptions -= "-Yno-imports",
     scalacOptions -= "-Xfatal-warnings",
-    projectName                      := "ZIO Redis",
-    mainModuleName                   := (redis / moduleName).value,
-    projectStage                     := ProjectStage.Experimental,
+    projectName                                := "ZIO Redis",
+    mainModuleName                             := (redis / moduleName).value,
+    projectStage                               := ProjectStage.Experimental,
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
-    docsPublishBranch                := "master",
-    libraryDependencies += "dev.zio" %% "zio-schema-protobuf" % "0.3.1"
+    docsPublishBranch                          := "master",
+    libraryDependencies += "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
   )
   .dependsOn(redis)
   .enablePlugins(WebsitePlugin)
