@@ -33,7 +33,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(publish / skip := true)
-    .aggregate(redis, benchmarks, example)
+    .aggregate(redis, benchmarks, example, docs)
 
 lazy val redis =
   project
@@ -98,13 +98,10 @@ lazy val docs = project
     moduleName     := "zio-redis-docs",
     scalacOptions -= "-Yno-imports",
     scalacOptions -= "-Xfatal-warnings",
-    projectName := "ZIO Redis",
-    badgeInfo := Some(
-      BadgeInfo(
-        artifact = "zio-redis_2.12",
-        projectStage = ProjectStage.Experimental
-      )
-    ),
+    projectName                      := "ZIO Redis",
+    mainModuleName                   := (redis / moduleName).value,
+    projectStage                     := ProjectStage.Experimental,
+    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
     docsPublishBranch                := "master",
     libraryDependencies += "dev.zio" %% "zio-schema-protobuf" % "0.3.1"
   )
