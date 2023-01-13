@@ -19,7 +19,7 @@ package zio.redis
 import zio._
 import zio.redis.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
-import zio.redis.codec.StringUtf8Codec
+import zio.redis.codecs.StringUtf8Codec
 import zio.redis.options.Cluster._
 import zio.schema.codec.BinaryCodec
 

@@ -1,4 +1,4 @@
-package zio.redis.codec
+package zio.redis.codecs
 
 import zio.Chunk
 

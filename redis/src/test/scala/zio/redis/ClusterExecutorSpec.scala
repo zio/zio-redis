@@ -1,6 +1,6 @@
 package zio.redis
 
-import zio.redis.codec.CRC16
+import zio.redis.codecs.CRC16
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test._
 import zio.{Chunk, Layer, ZIO, ZLayer, durationInt}
