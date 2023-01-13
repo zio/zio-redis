@@ -45,8 +45,8 @@ class SInterStoreBenchmarks extends BenchmarkRuntime {
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
     otherItems = (0 to count).toList.map(_.toString)
-    execute(sAdd(key, items.head, items.tail: _*).unit)
-    execute(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(key, items.head, items.tail: _*).unit))
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit))
 
   }
 
@@ -81,5 +81,7 @@ class SInterStoreBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sInterStore(destinationKey, key, otherKey)))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(_ => ZIO.serviceWithZIO[Redis](_.sInterStore(destinationKey, key, otherKey)))
+  )
 }

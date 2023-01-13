@@ -44,8 +44,8 @@ class SDiffBenchmarks extends BenchmarkRuntime {
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
     otherItems = (0 to count).toList.map(_.toString)
-    execute(sAdd(key, items.head, items.tail: _*).unit)
-    execute(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(key, items.head, items.tail: _*).unit))
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit))
 
   }
 
@@ -76,5 +76,5 @@ class SDiffBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sDiff(key, otherKey).returning[String]))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => ZIO.serviceWithZIO[Redis](_.sDiff(key, otherKey).returning[String])))
 }

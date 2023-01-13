@@ -67,5 +67,5 @@ class HSetNxBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hSetNx(key, it._1, it._2)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hSetNx(key, it._1, it._2))))
 }

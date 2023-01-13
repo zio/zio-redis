@@ -21,7 +21,7 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
 
-trait Connection {
+trait Connection extends CommandExecutor {
   import Connection._
 
   /**
@@ -36,7 +36,7 @@ trait Connection {
    *   if the password provided via AUTH matches the password in the configuration file, the Unit value is returned and
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
-  final def auth(password: String): ZIO[Redis, RedisError, Unit] = {
+  final def auth(password: String): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(Auth, StringInput, UnitOutput)
 
     command.run(password)
@@ -51,7 +51,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def clientCaching(track: Boolean): ZIO[Redis, RedisError, Unit] = {
+  final def clientCaching(track: Boolean): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClientCaching, YesNoInput, UnitOutput)
 
     command.run(track)
@@ -67,7 +67,7 @@ trait Connection {
    * @return
    *   the ID of the current connection.
    */
-  final def clientId: ZIO[Redis, RedisError, Long] = {
+  final def clientId: ZIO[Any, RedisError, Long] = {
     val command = RedisCommand(ClientId, NoInput, LongOutput)
 
     command.run(())
@@ -81,7 +81,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def clientKill(address: Address): ZIO[Redis, RedisError, Unit] = {
+  final def clientKill(address: Address): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClientKill, AddressInput, UnitOutput)
 
     command.run(address)
@@ -107,7 +107,7 @@ trait Connection {
    * @return
    *   the number of clients killed.
    */
-  final def clientKill(filters: ClientKillFilter*): ZIO[Redis, RedisError, Long] = {
+  final def clientKill(filters: ClientKillFilter*): ZIO[Any, RedisError, Long] = {
     val command = RedisCommand(ClientKill, Varargs(ClientKillInput), LongOutput)
 
     command.run(filters)
@@ -119,7 +119,7 @@ trait Connection {
    * @return
    *   the connection name, or None if a name wasn't set.
    */
-  final def clientGetName: ZIO[Redis, RedisError, Option[String]] = {
+  final def clientGetName: ZIO[Any, RedisError, Option[String]] = {
     val command = RedisCommand(ClientGetName, NoInput, OptionalOutput(MultiStringOutput))
 
     command.run(())
@@ -131,7 +131,7 @@ trait Connection {
    * @return
    *   the client ID if the tracking is enabled and the notifications are being redirected
    */
-  final def clientGetRedir: ZIO[Redis, RedisError, ClientTrackingRedirect] = {
+  final def clientGetRedir: ZIO[Any, RedisError, ClientTrackingRedirect] = {
     val command = RedisCommand(ClientGetRedir, NoInput, ClientTrackingRedirectOutput)
 
     command.run(())
@@ -142,7 +142,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def clientUnpause: ZIO[Redis, RedisError, Unit] = {
+  final def clientUnpause: ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClientUnpause, NoInput, UnitOutput)
 
     command.run(())
@@ -164,7 +164,7 @@ trait Connection {
   final def clientPause(
     timeout: Duration,
     mode: Option[ClientPauseMode] = None
-  ): ZIO[Redis, RedisError, Unit] = {
+  ): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(
       ClientPause,
       Tuple2(DurationMillisecondsInput, OptionalInput(ClientPauseModeInput)),
@@ -182,7 +182,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def clientSetName(name: String): ZIO[Redis, RedisError, Unit] = {
+  final def clientSetName(name: String): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClientSetName, StringInput, UnitOutput)
 
     command.run(name)
@@ -208,7 +208,7 @@ trait Connection {
     trackingMode: Option[ClientTrackingMode] = None,
     noLoop: Boolean = false,
     prefixes: Set[String] = Set.empty
-  ): ZIO[Redis, RedisError, Unit] = {
+  ): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput)
     command.run(Some((redirect, trackingMode, noLoop, Chunk.fromIterable(prefixes))))
   }
@@ -219,7 +219,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def clientTrackingOff: ZIO[Redis, RedisError, Unit] = {
+  final def clientTrackingOff: ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput)
     command.run(None)
   }
@@ -230,7 +230,7 @@ trait Connection {
    * @return
    *   tracking information.
    */
-  final def clientTrackingInfo: ZIO[Redis, RedisError, ClientTrackingInfo] = {
+  final def clientTrackingInfo: ZIO[Any, RedisError, ClientTrackingInfo] = {
     val command = RedisCommand(ClientTrackingInfo, NoInput, ClientTrackingInfoOutput)
 
     command.run(())
@@ -249,7 +249,7 @@ trait Connection {
   final def clientUnblock(
     clientId: Long,
     error: Option[UnblockBehavior] = None
-  ): ZIO[Redis, RedisError, Boolean] = {
+  ): ZIO[Any, RedisError, Boolean] = {
     val command = RedisCommand(ClientUnblock, Tuple2(LongInput, OptionalInput(UnblockBehaviorInput)), BoolOutput)
 
     command.run((clientId, error))
@@ -263,7 +263,7 @@ trait Connection {
    * @return
    *   the message.
    */
-  final def echo(message: String): ZIO[Redis, RedisError, String] = {
+  final def echo(message: String): ZIO[Any, RedisError, String] = {
     val command = RedisCommand(Echo, StringInput, MultiStringOutput)
 
     command.run(message)
@@ -278,7 +278,7 @@ trait Connection {
    *   PONG if no argument is provided, otherwise return a copy of the argument as a bulk. This command is often used to
    *   test if a connection is still alive, or to measure latency.
    */
-  final def ping(message: Option[String] = None): ZIO[Redis, RedisError, String] = {
+  final def ping(message: Option[String] = None): ZIO[Any, RedisError, String] = {
     val command = RedisCommand(Ping, OptionalInput(StringInput), SingleOrMultiStringOutput)
 
     command.run(message)
@@ -291,7 +291,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def quit: ZIO[Redis, RedisError, Unit] = {
+  final def quit: ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(Quit, NoInput, UnitOutput)
 
     command.run(())
@@ -304,7 +304,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def reset: ZIO[Redis, RedisError, Unit] = {
+  final def reset: ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(Reset, NoInput, ResetOutput)
 
     command.run(())
@@ -320,7 +320,7 @@ trait Connection {
    * @return
    *   the Unit value.
    */
-  final def select(index: Long): ZIO[Redis, RedisError, Unit] = {
+  final def select(index: Long): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(Select, LongInput, UnitOutput)
 
     command.run(index)

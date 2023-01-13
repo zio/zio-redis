@@ -39,7 +39,7 @@ class HStrLenBenchmarks extends BenchmarkRuntime {
 
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    execute(hSet(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.hSet(key, items.head, items.tail: _*).unit))
   }
   @Benchmark
   def laserdisc(): Unit = {
@@ -66,5 +66,5 @@ class HStrLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hStrLen(key, it._1)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hStrLen(key, it._1))))
 }

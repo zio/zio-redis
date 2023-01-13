@@ -24,7 +24,8 @@ import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
 import zio.{Chunk, ZIO}
 
-trait Cluster {
+trait Cluster extends CommandExecutor {
+
 
   /**
    * When a cluster client receives an -ASK redirect, the ASKING command is sent to the target node followed by the
@@ -33,7 +34,7 @@ trait Cluster {
    * @return
    *   the Unit value.
    */
-  def asking: ZIO[Redis, RedisError, Unit] =
+  def asking: ZIO[Any, RedisError, Unit] =
     AskingCommand.run(())
 
   /**
@@ -42,7 +43,7 @@ trait Cluster {
    * @return
    *   details about which cluster
    */
-  def slots: ZIO[Redis, RedisError, Chunk[Partition]] = {
+  def slots: ZIO[Any, RedisError, Chunk[Partition]] = {
     val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))
     command.run(())
   }
@@ -55,7 +56,7 @@ trait Cluster {
    * @return
    *   the Unit value.
    */
-  def setSlotStable(slot: Slot): ZIO[Redis, RedisError, Unit] = {
+  def setSlotStable(slot: Slot): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput)
     command.run((slot.number, Stable.stringify))
   }
@@ -71,7 +72,7 @@ trait Cluster {
    * @return
    *   the Unit value.
    */
-  def setSlotMigrating(slot: Slot, nodeId: String): ZIO[Redis, RedisError, Unit] = {
+  def setSlotMigrating(slot: Slot, nodeId: String): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -91,7 +92,7 @@ trait Cluster {
    * @return
    *   the Unit value.
    */
-  def setSlotImporting(slot: Slot, nodeId: String): ZIO[Redis, RedisError, Unit] = {
+  def setSlotImporting(slot: Slot, nodeId: String): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -111,7 +112,7 @@ trait Cluster {
    * @return
    *   the Unit value.
    */
-  def setSlotNode(slot: Slot, nodeId: String): ZIO[Redis, RedisError, Unit] = {
+  def setSlotNode(slot: Slot, nodeId: String): ZIO[Any, RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),

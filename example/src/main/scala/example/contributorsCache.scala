@@ -36,12 +36,15 @@ final case class ContributorsCacheLive(r: Redis, s: Sttp) extends ContributorsCa
     ZIO
       .fromOption(NonEmptyChunk.fromChunk(contributors))
       .map(Contributors(_).toJson)
-      .flatMap(data => set(repository.key, data, Some(1.minute)).orDie)
+      .flatMap(data => ZIO.serviceWithZIO[Redis](_.set(repository.key, data, Some(1.minute))).orDie)
       .ignore
 
   private def read(repository: Repository): ZIO[Redis, ApiError, Contributors] =
-    get(repository.key)
-      .returning[String]
+    ZIO
+      .serviceWithZIO[Redis](
+        _.get(repository.key)
+          .returning[String]
+      )
       .someOrFail(ApiError.CacheMiss(repository.key))
       .map(_.fromJson[Contributors])
       .foldZIO(_ => ZIO.fail(ApiError.CorruptedData), s => ZIO.succeed(s.getOrElse(Contributors(Chunk.empty))))

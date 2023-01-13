@@ -30,6 +30,12 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
       }
       .refineToOrDie[RedisError]
 
+  private[redis] def run(in: In)(implicit executor: RedisExecutor, codec: BinaryCodec): ZIO[Any, RedisError, Out] =
+    executor
+      .execute(resp(in, codec))
+      .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(codec)))
+      .refineToOrDie[RedisError]
+
   private[redis] def resp(in: In, codec: BinaryCodec): Chunk[RespValue.BulkString] =
     Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
 }
