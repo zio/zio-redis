@@ -47,7 +47,7 @@ lazy val redis =
         "dev.zio"                %% "zio-streams"             % "2.0.5",
         "dev.zio"                %% "zio-logging"             % "2.1.7",
         "dev.zio"                %% "zio-schema"              % "0.3.0",
-        "dev.zio"                %% "zio-schema-protobuf"     % "0.4.2" % Test,
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.3.1" % Test,
         "dev.zio"                %% "zio-test"                % "2.0.5" % Test,
         "dev.zio"                %% "zio-test-sbt"            % "2.0.5" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0"
@@ -68,7 +68,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.3.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.6.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.4.2"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
       )
     )
 
@@ -85,7 +85,7 @@ lazy val example =
         "dev.zio"                       %% "zio-streams"                   % "2.0.5",
         "dev.zio"                       %% "zio-config-magnolia"           % "3.0.6",
         "dev.zio"                       %% "zio-config-typesafe"           % "3.0.6",
-        "dev.zio"                       %% "zio-schema-protobuf"           % "0.4.2",
+        "dev.zio"                       %% "zio-schema-protobuf"           % "0.3.1",
         "dev.zio"                       %% "zio-json"                      % "0.4.2",
         "io.d11"                        %% "zhttp"                         % "2.0.0-RC11"
       )
@@ -106,7 +106,7 @@ lazy val docs = project
       )
     ),
     docsPublishBranch                := "master",
-    libraryDependencies += "dev.zio" %% "zio-schema-protobuf" % "0.4.2"
+    libraryDependencies += "dev.zio" %% "zio-schema-protobuf" % "0.3.1"
   )
   .dependsOn(redis)
   .enablePlugins(WebsitePlugin)
