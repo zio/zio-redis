@@ -6,5 +6,4 @@ trait CommandExecutor {
   implicit def codec: BinaryCodec
 
   implicit def executor: RedisExecutor
-
 }
