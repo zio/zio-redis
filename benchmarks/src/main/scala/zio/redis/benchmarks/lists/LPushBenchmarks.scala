@@ -43,7 +43,7 @@ class LPushBenchmarks extends BenchmarkRuntime {
 
   @TearDown(Level.Invocation)
   def tearDown(): Unit =
-    execute(del(key).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.del(key).unit))
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -72,5 +72,5 @@ class LPushBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lPush[String, String](key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.lPush[String, String](key, i))))
 }

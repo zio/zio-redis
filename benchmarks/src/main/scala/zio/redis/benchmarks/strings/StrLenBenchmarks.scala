@@ -39,7 +39,7 @@ class StrLenBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(ZIO.foreachDiscard(items)(i => set(i, i)))
+    execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.set(i, i))))
   }
 
   @Benchmark
@@ -66,5 +66,5 @@ class StrLenBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(strLen[String]))
+  def zio(): Unit = execute(ZIO.serviceWithZIO[Redis](redis => ZIO.foreachDiscard(items)(redis.strLen[String])))
 }

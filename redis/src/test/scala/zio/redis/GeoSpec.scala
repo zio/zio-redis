@@ -1,6 +1,6 @@
 package zio.redis
 
-import zio.Chunk
+import zio.{Chunk, ZIO}
 import zio.test.Assertion._
 import zio.test._
 
@@ -11,8 +11,9 @@ trait GeoSpec extends BaseSpec {
         import GeoSpec.Serbia._
         val nonExistentMember = "Tokyo"
         for {
-          _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-          locations <- geoPos(key, member1, nonExistentMember, member2)
+          redis     <- ZIO.service[Redis]
+          _         <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+          locations <- redis.geoPos(key, member1, nonExistentMember, member2)
         } yield assert(locations)(hasSameElements(Chunk(Some(member1LongLat), None, Some(member2LongLat))))
       },
       test("calculate distance between geospatial items") {
@@ -21,25 +22,28 @@ trait GeoSpec extends BaseSpec {
         val member2 = "point2"
         val longLat = LongLat(100d, 50d)
         for {
-          _        <- geoAdd(key, longLat -> member1, longLat -> member2)
-          distance <- geoDist(key, member1, member2, None)
+          redis    <- ZIO.service[Redis]
+          _        <- redis.geoAdd(key, longLat -> member1, longLat -> member2)
+          distance <- redis.geoDist(key, member1, member2, None)
         } yield assert(distance)(isSome(equalTo(0d)))
       },
       test("get geoHash") {
         import GeoSpec.Sicily._
         val nonExistentMember = "Tokyo"
         for {
-          _      <- geoAdd(key, member1LongLat -> member1)
-          _      <- geoAdd(key, member2LongLat -> member2)
-          result <- geoHash(key, member1, nonExistentMember, member2)
+          redis  <- ZIO.service[Redis]
+          _      <- redis.geoAdd(key, member1LongLat -> member1)
+          _      <- redis.geoAdd(key, member2LongLat -> member2)
+          result <- redis.geoHash(key, member1, nonExistentMember, member2)
         } yield assert(result)(hasSameElements(Chunk(Some(member1GeoHash), None, Some(member2GeoHash))))
       },
       suite("geoRadius")(
         test("without details") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers)
           } yield assert(response)(
             hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
           )
@@ -47,16 +51,19 @@ trait GeoSpec extends BaseSpec {
         test("storing the result") {
           import GeoSpec.Sicily._
           for {
-            dest      <- uuid
-            _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            numStored <- geoRadiusStore(key, member1LongLat, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
+            redis <- ZIO.service[Redis]
+            dest  <- uuid
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            numStored <-
+              redis.geoRadiusStore(key, member1LongLat, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
         } @@ clusterExecutorUnsupported,
         test("with coordinates") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord))
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -69,8 +76,10 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates and distance") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), Some(WithDist))
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <-
+              redis.geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), Some(WithDist))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -83,8 +92,9 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates, distance and hash") {
           import GeoSpec.Sicily._
           for {
-            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadius(
                           key,
                           LongLat(15d, 37d),
                           200d,
@@ -105,8 +115,9 @@ trait GeoSpec extends BaseSpec {
         test("with hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, withHash = Some(WithHash))
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, withHash = Some(WithHash))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -119,8 +130,9 @@ trait GeoSpec extends BaseSpec {
         test("with distance and hash") {
           import GeoSpec.Sicily._
           for {
-            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadius(
                           key,
                           LongLat(15d, 37d),
                           200d,
@@ -140,8 +152,9 @@ trait GeoSpec extends BaseSpec {
         test("with distance") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, withDist = Some(WithDist))
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, withDist = Some(WithDist))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -154,9 +167,17 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
-              geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), withHash = Some(WithHash))
+              redis.geoRadius(
+                key,
+                LongLat(15d, 37d),
+                200d,
+                RadiusUnit.Kilometers,
+                Some(WithCoord),
+                withHash = Some(WithHash)
+              )
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -171,8 +192,9 @@ trait GeoSpec extends BaseSpec {
         test("without details") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers)
           } yield assert(response)(
             hasSameElements(Chunk(GeoView(member1, None, None, None), GeoView(member2, None, None, None)))
           )
@@ -180,16 +202,19 @@ trait GeoSpec extends BaseSpec {
         test("storing the result") {
           import GeoSpec.Sicily._
           for {
-            dest      <- uuid
-            _         <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            numStored <- geoRadiusByMemberStore(key, member1, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
+            redis <- ZIO.service[Redis]
+            dest  <- uuid
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            numStored <-
+              redis.geoRadiusByMemberStore(key, member1, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
         } @@ clusterExecutorUnsupported,
         test("with coordinates") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord))
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -204,8 +229,10 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), Some(WithDist))
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <-
+              redis.geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), Some(WithDist))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -220,8 +247,9 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(
                           key,
                           member1,
                           200d,
@@ -242,8 +270,9 @@ trait GeoSpec extends BaseSpec {
         test("with hash") {
           import GeoSpec.Sicily._
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, withHash = Some(WithHash))
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, withHash = Some(WithHash))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -258,8 +287,9 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(
                           key,
                           member1,
                           200d,
@@ -281,8 +311,9 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, withDist = Some(WithDist))
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, withDist = Some(WithDist))
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -295,9 +326,17 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            _ <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis <- ZIO.service[Redis]
+            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
-              geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), withHash = Some(WithHash))
+              redis.geoRadiusByMember(
+                key,
+                member1,
+                200d,
+                RadiusUnit.Kilometers,
+                Some(WithCoord),
+                withHash = Some(WithHash)
+              )
           } yield assert(response)(
             hasSameElements(
               Chunk(
@@ -311,8 +350,9 @@ trait GeoSpec extends BaseSpec {
           import GeoSpec.Sicily._
           val nonExistentMember = "Tokyo"
           for {
-            _        <- geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
-            response <- geoRadiusByMember(key, nonExistentMember, 200d, RadiusUnit.Kilometers).either
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            response <- redis.geoRadiusByMember(key, nonExistentMember, 200d, RadiusUnit.Kilometers).either
           } yield assert(response)(isLeft)
         }
       )

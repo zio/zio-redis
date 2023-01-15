@@ -40,13 +40,13 @@ class LPosBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(rPush(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.rPush(key, items.head, items.tail: _*).unit))
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    execute(del(key).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.del(key).unit))
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lPos[String, String](key, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.lPos[String, String](key, i))))
 }
