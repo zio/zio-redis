@@ -22,16 +22,16 @@ trait KeysSpec extends BaseSpec {
       test("get non-existing key") {
         for {
           redis <- ZIO.service[Redis]
-          key <- uuid
-          v   <- redis.get(key).returning[String]
+          key   <- uuid
+          v     <- redis.get(key).returning[String]
         } yield assert(v)(isNone)
       },
       test("handles wrong types") {
         for {
           redis <- ZIO.service[Redis]
-          key <- uuid
-          _   <- redis.sAdd(key, "1", "2", "3")
-          v   <- redis.get(key).returning[String].either
+          key   <- uuid
+          _     <- redis.sAdd(key, "1", "2", "3")
+          v     <- redis.get(key).returning[String].either
         } yield assert(v)(isLeft)
       },
       test("check whether or not key exists") {
@@ -46,7 +46,7 @@ trait KeysSpec extends BaseSpec {
       },
       test("delete existing key") {
         for {
-          redis <- ZIO.service[Redis]
+          redis   <- ZIO.service[Redis]
           key     <- uuid
           value   <- uuid
           _       <- redis.set(key, value)
@@ -55,7 +55,7 @@ trait KeysSpec extends BaseSpec {
       },
       test("find all keys matching pattern") {
         for {
-          redis <- ZIO.service[Redis]
+          redis    <- ZIO.service[Redis]
           value    <- uuid
           key1      = "custom_key_1"
           key2      = "custom_key_2"
@@ -66,7 +66,7 @@ trait KeysSpec extends BaseSpec {
       } @@ clusterExecutorUnsupported,
       test("unlink existing key") {
         for {
-          redis <- ZIO.service[Redis]
+          redis   <- ZIO.service[Redis]
           key     <- uuid
           value   <- uuid
           _       <- redis.set(key, value)
@@ -75,7 +75,7 @@ trait KeysSpec extends BaseSpec {
       },
       test("touch two existing keys") {
         for {
-          redis <- ZIO.service[Redis]
+          redis   <- ZIO.service[Redis]
           key1    <- uuid
           value1  <- uuid
           _       <- redis.set(key1, value1)
@@ -88,7 +88,7 @@ trait KeysSpec extends BaseSpec {
       test("scan entries with match, count and type options")(
         check(genPatternOption, genCountOption, genStringRedisTypeOption) { (pattern, count, redisType) =>
           for {
-            redis <- ZIO.service[Redis]
+            redis           <- ZIO.service[Redis]
             key             <- uuid
             value           <- uuid
             _               <- redis.set(key, value)
@@ -99,7 +99,7 @@ trait KeysSpec extends BaseSpec {
       ) @@ flaky,
       test("fetch random key") {
         for {
-          redis <- ZIO.service[Redis]
+          redis     <- ZIO.service[Redis]
           key       <- uuid
           value     <- uuid
           _         <- redis.set(key, value)
@@ -109,7 +109,7 @@ trait KeysSpec extends BaseSpec {
       } @@ ignore,
       test("dump followed by restore") {
         for {
-          redis <- ZIO.service[Redis]
+          redis    <- ZIO.service[Redis]
           key      <- uuid
           value    <- uuid
           _        <- redis.set(key, value)
@@ -144,22 +144,22 @@ trait KeysSpec extends BaseSpec {
         },
         test("migrate key to another redis server (move and replace)") {
           for {
-            redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
+            redis <- ZIO.service[Redis]
             _     <- redis.set(key, value)
             response <- redis.migrate(
-                "redis2",
-                6379,
-                key,
-                0L,
-                KeysSpec.MigrateTimeout,
-                copy = None,
-                replace = Option(Replace),
-                keys = None
-              )
+                          "redis2",
+                          6379,
+                          key,
+                          0L,
+                          KeysSpec.MigrateTimeout,
+                          copy = None,
+                          replace = Option(Replace),
+                          keys = None
+                        )
             originGet <- redis.get(key).returning[String]
-            destGet   <- redis.get(key).returning[String].provideLayer(KeysSpec.SecondExecutor)
+            destGet   <- ZIO.serviceWithZIO[Redis](_.get(key).returning[String]).provideLayer(KeysSpec.SecondExecutor)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isNone) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -170,8 +170,13 @@ trait KeysSpec extends BaseSpec {
             key   <- uuid
             value <- uuid
             _     <- redis.set(key, value)
-            _     <- redis.set(key, value).provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
-            response <- redis.migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None).either
+            _ <- ZIO
+                   .serviceWithZIO[Redis](_.set(key, value))
+                   .provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
+            response <-
+              redis
+                .migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None)
+                .either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ) @@ testExecutorUnsupported @@ clusterExecutorUnsupported,
@@ -188,8 +193,8 @@ trait KeysSpec extends BaseSpec {
         test("check ttl for non-existing key") {
           for {
             redis <- ZIO.service[Redis]
-            key <- uuid
-            ttl <- redis.ttl(key).either
+            key   <- uuid
+            ttl   <- redis.ttl(key).either
           } yield assert(ttl)(isLeft)
         },
         test("check pTtl for existing key") {
@@ -204,15 +209,15 @@ trait KeysSpec extends BaseSpec {
         test("check pTtl for non-existing key") {
           for {
             redis <- ZIO.service[Redis]
-            key  <- uuid
-            pTtl <- redis.pTtl(key).either
+            key   <- uuid
+            pTtl  <- redis.pTtl(key).either
           } yield assert(pTtl)(isLeft)
         }
       ),
       suite("expiration")(
         test("set key expiration with pExpire command") {
           for {
-            redis <- ZIO.service[Redis]
+            redis     <- ZIO.service[Redis]
             key       <- uuid
             value     <- uuid
             _         <- redis.set(key, value)
@@ -225,7 +230,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("set key expiration with pExpireAt command") {
           for {
-            redis <- ZIO.service[Redis]
+            redis     <- ZIO.service[Redis]
             key       <- uuid
             value     <- uuid
             expiresAt <- Clock.instant.map(_.plusMillis(2000.millis.toMillis))
@@ -239,7 +244,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("expire followed by persist") {
           for {
-            redis <- ZIO.service[Redis]
+            redis     <- ZIO.service[Redis]
             key       <- uuid
             value     <- uuid
             _         <- redis.set(key, value)
@@ -249,7 +254,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("set key expiration with expireAt command") {
           for {
-            redis <- ZIO.service[Redis]
+            redis     <- ZIO.service[Redis]
             key       <- uuid
             value     <- uuid
             expiresAt <- Clock.instant.map(_.plusMillis(2000.millis.toMillis))
@@ -265,7 +270,7 @@ trait KeysSpec extends BaseSpec {
       suite("renaming")(
         test("rename existing key") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             key     <- uuid
             newKey  <- uuid
             value   <- uuid
@@ -276,7 +281,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("try to rename non-existing key") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             key     <- uuid
             newKey  <- uuid
             renamed <- redis.rename(key, newKey).either
@@ -284,7 +289,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("rename key to newkey if newkey does not yet exist") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             key     <- uuid
             newKey  <- uuid
             value   <- uuid
@@ -295,7 +300,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("try to rename non-existing key with renameNx command") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             key     <- uuid
             newKey  <- uuid
             renamed <- redis.renameNx(key, newKey).either
@@ -305,7 +310,7 @@ trait KeysSpec extends BaseSpec {
       suite("types")(
         test("string type") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             value  <- uuid
             _      <- redis.set(key, value)
@@ -351,7 +356,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("stream type") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             field  <- uuid
             value  <- uuid
@@ -363,7 +368,7 @@ trait KeysSpec extends BaseSpec {
       suite("sort")(
         test("list of numbers") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.lPush(key, "1", "0", "2")
             sorted <- redis.sort(key).returning[String]
@@ -371,7 +376,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("list of strings") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.lPush(key, "z", "a", "c")
             sorted <- redis.sort(key, alpha = Some(Alpha)).returning[String]
@@ -379,7 +384,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("list of numbers, limited") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.lPush(key, "1", "0", "2")
             sorted <- redis.sort(key, limit = Some(Limit(1, 1))).returning[String]
@@ -387,7 +392,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("descending sort") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.lPush(key, "1", "0", "2")
             sorted <- redis.sort(key, order = Order.Descending).returning[String]
@@ -395,7 +400,7 @@ trait KeysSpec extends BaseSpec {
         },
         test("by the value referenced by a key-value pair") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             a      <- uuid
             b      <- uuid
@@ -408,7 +413,7 @@ trait KeysSpec extends BaseSpec {
         } @@ clusterExecutorUnsupported,
         test("getting the value referenced by a key-value pair") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             value  <- uuid
             _      <- redis.lPush(key, value)
@@ -419,7 +424,7 @@ trait KeysSpec extends BaseSpec {
         } @@ clusterExecutorUnsupported,
         test("getting multiple values referenced by a key-value pair") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             key     <- uuid
             value1  <- uuid
             value2  <- uuid
@@ -430,13 +435,14 @@ trait KeysSpec extends BaseSpec {
             prefix2 <- uuid
             _       <- redis.set(s"${prefix2}_$value1", "B1")
             _       <- redis.set(s"${prefix2}_$value2", "B2")
-            sorted <- redis.sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
+            sorted <- redis
+                        .sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
                         .returning[String]
           } yield assert(sorted)(equalTo(Chunk("A1", "B1", "A2", "B2")))
         } @@ flaky @@ clusterExecutorUnsupported,
         test("sort and store result") {
           for {
-            redis <- ZIO.service[Redis]
+            redis     <- ZIO.service[Redis]
             key       <- uuid
             resultKey <- uuid
             _         <- redis.lPush(key, "1", "0", "2")
