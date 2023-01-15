@@ -1,8 +1,8 @@
 package zio.redis
 
-import zio.{Chunk, ZIO}
 import zio.test.Assertion._
 import zio.test._
+import zio.{Chunk, ZIO}
 
 trait GeoSpec extends BaseSpec {
   def geoSuite: Spec[Redis, RedisError] =

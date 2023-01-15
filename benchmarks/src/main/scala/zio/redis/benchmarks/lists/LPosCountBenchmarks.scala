@@ -48,5 +48,7 @@ class LPosCountBenchmarks extends BenchmarkRuntime {
     execute(ZIO.serviceWithZIO[Redis](_.del(key).unit))
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.lPosCount[String, String](key, i, Count(0L)))))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.lPosCount[String, String](key, i, Count(0L))))
+  )
 }

@@ -73,5 +73,7 @@ class HIncrbyBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hIncrBy(key, it._1, increment))))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hIncrBy(key, it._1, increment)))
+  )
 }

@@ -26,7 +26,6 @@ import zio.{Chunk, ZIO}
 
 trait Cluster extends CommandExecutor {
 
-
   /**
    * When a cluster client receives an -ASK redirect, the ASKING command is sent to the target node followed by the
    * command which was redirected.

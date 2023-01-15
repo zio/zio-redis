@@ -29,7 +29,7 @@ trait ScriptingSpec extends BaseSpec {
         },
         test("take strings return strings") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             keyHash <- uuid
             key1    <- uuid.map(_ + s"{$keyHash}")
             key2    <- uuid.map(_ + s"{$keyHash}")
@@ -41,7 +41,7 @@ trait ScriptingSpec extends BaseSpec {
         },
         test("put custom input value return custom input value") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             keyHash <- uuid
             key1    <- uuid.map(_ + s"{$keyHash}")
             key2    <- uuid.map(_ + s"{$keyHash}")
@@ -58,17 +58,17 @@ trait ScriptingSpec extends BaseSpec {
           val emptyInput: Chunk[Long] = Chunk.empty
           for {
             redis <- ZIO.service[Redis]
-            res <- redis.eval(lua, emptyInput, emptyInput).returning[CustomData]
+            res   <- redis.eval(lua, emptyInput, emptyInput).returning[CustomData]
           } yield assertTrue(res == expected)
         },
         test("throw an error when incorrect script's sent") {
           for {
             redis <- ZIO.service[Redis]
-            key  <- uuid
-            arg  <- uuid
-            lua   = ";"
-            error = "Error compiling script (new function): user_script:1: unexpected symbol near ';'"
-            res  <- redis.eval(lua, Chunk(key), Chunk(arg)).returning[String].either
+            key   <- uuid
+            arg   <- uuid
+            lua    = ";"
+            error  = "Error compiling script (new function): user_script:1: unexpected symbol near ';'"
+            res   <- redis.eval(lua, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         },
         test("throw an error if couldn't decode resp value") {
@@ -76,15 +76,15 @@ trait ScriptingSpec extends BaseSpec {
           implicit val decoder: Output[String] = errorOutput(customError)
           for {
             redis <- ZIO.service[Redis]
-            key <- uuid
-            arg <- uuid
-            lua  = ""
-            res <- redis.eval(lua, Chunk(key), Chunk(arg)).returning[String](decoder).either
+            key   <- uuid
+            arg   <- uuid
+            lua    = ""
+            res   <- redis.eval(lua, Chunk(key), Chunk(arg)).returning[String](decoder).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         test("throw custom error from script") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             arg    <- uuid
             myError = "My Error"
@@ -97,8 +97,8 @@ trait ScriptingSpec extends BaseSpec {
         test("put boolean and return existence of key") {
           for {
             redis <- ZIO.service[Redis]
-            key <- uuid
-            arg  = true
+            key   <- uuid
+            arg    = true
             lua =
               """
                 |redis.call('set',KEYS[1],ARGV[1])
@@ -110,7 +110,7 @@ trait ScriptingSpec extends BaseSpec {
         },
         test("take strings return strings") {
           for {
-            redis <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             keyHash <- uuid
             key1    <- uuid.map(_ + s"{$keyHash}")
             key2    <- uuid.map(_ + s"{$keyHash}")
@@ -127,7 +127,7 @@ trait ScriptingSpec extends BaseSpec {
           val emptyInput: Chunk[String] = Chunk.empty
           for {
             redis <- ZIO.service[Redis]
-            res <- redis.eval(lua, emptyInput, emptyInput).returning[CustomData]
+            res   <- redis.eval(lua, emptyInput, emptyInput).returning[CustomData]
           } yield assertTrue(res == expected)
         },
         test("throw an error if couldn't decode resp value") {
@@ -135,16 +135,16 @@ trait ScriptingSpec extends BaseSpec {
           implicit val decoder: Output[String] = errorOutput(customError)
           for {
             redis <- ZIO.service[Redis]
-            key <- uuid
-            arg <- uuid
-            lua  = ""
-            sha <- redis.scriptLoad(lua)
-            res <- redis.evalSha(sha, Chunk(key), Chunk(arg)).returning[String](decoder).either
+            key   <- uuid
+            arg   <- uuid
+            lua    = ""
+            sha   <- redis.scriptLoad(lua)
+            res   <- redis.evalSha(sha, Chunk(key), Chunk(arg)).returning[String](decoder).either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         test("throw custom error from script") {
           for {
-            redis <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             key    <- uuid
             arg    <- uuid
             myError = "My Error"
@@ -159,7 +159,7 @@ trait ScriptingSpec extends BaseSpec {
           val emptyInput: Chunk[String] = Chunk.empty
           for {
             redis <- ZIO.service[Redis]
-            res <- redis.evalSha(lua, emptyInput, emptyInput).returning[String].either
+            res   <- redis.evalSha(lua, emptyInput, emptyInput).returning[String].either
           } yield assert(res)(isLeft(isSubtype[NoScript](hasField("message", _.message, equalTo(error)))))
         }
       ),
@@ -169,9 +169,9 @@ trait ScriptingSpec extends BaseSpec {
           val lua2 = """return "2""""
           for {
             redis <- ZIO.service[Redis]
-            sha1 <- redis.scriptLoad(lua1)
-            sha2 <- redis.scriptLoad(lua2)
-            res  <- redis.scriptExists(sha1, sha2)
+            sha1  <- redis.scriptLoad(lua1)
+            sha2  <- redis.scriptLoad(lua2)
+            res   <- redis.scriptExists(sha1, sha2)
           } yield assertTrue(res == Chunk(true, true))
         },
         test("return false if scripts aren't found in the cache") {
@@ -179,7 +179,7 @@ trait ScriptingSpec extends BaseSpec {
           val lua2 = """return "2""""
           for {
             redis <- ZIO.service[Redis]
-            res <- redis.scriptExists(lua1, lua2)
+            res   <- redis.scriptExists(lua1, lua2)
           } yield assertTrue(res == Chunk(false, false))
         }
       ),
@@ -188,7 +188,7 @@ trait ScriptingSpec extends BaseSpec {
           val lua = """return "1""""
           for {
             redis <- ZIO.service[Redis]
-            sha <- redis.scriptLoad(lua)
+            sha   <- redis.scriptLoad(lua)
           } yield assert(sha)(isSubtype[String](anything))
         },
         test("throw an error when incorrect script was sent") {
@@ -196,7 +196,7 @@ trait ScriptingSpec extends BaseSpec {
           val error = "Error compiling script (new function): user_script:1: unexpected symbol near ';'"
           for {
             redis <- ZIO.service[Redis]
-            sha <- redis.scriptLoad(lua).either
+            sha   <- redis.scriptLoad(lua).either
           } yield assert(sha)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         }
       )

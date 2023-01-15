@@ -353,10 +353,11 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zInter")(
         test("two non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
             members <- redis.zInter(2, first, second)().returning[String]
           } yield assert(members)(equalTo(Chunk("a", "c")))
@@ -380,11 +381,12 @@ trait SortedSetsSpec extends BaseSpec {
         },
         test("non-empty set with multiple non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            third   <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
             members <- redis.zInter(3, first, second, third)().returning[String]
@@ -477,10 +479,11 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zInterWithScores")(
         test("two non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
             members <- redis.zInterWithScores(2, first, second)().returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(2d, "a"), MemberScore(6d, "c"))))
@@ -504,11 +507,12 @@ trait SortedSetsSpec extends BaseSpec {
         },
         test("non-empty set with multiple non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            third   <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
             members <- redis.zInterWithScores(3, first, second, third)().returning[String]
@@ -574,7 +578,8 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInterWithScores(2, first, second)(weights = Some(::(2.0, List(3.0, 5.0))))
+            members <- redis
+                         .zInterWithScores(2, first, second)(weights = Some(::(2.0, List(3.0, 5.0))))
                          .returning[String]
                          .either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
@@ -607,9 +612,10 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            _      <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            _      <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            card   <- redis.zInterStore(s"out_$dest", 2, first, second)()
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _    <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
+            card <- redis.zInterStore(s"out_$dest", 2, first, second)()
           } yield assert(card)(equalTo(2L))
         },
         test("empty when one of the sets is empty") {
@@ -638,10 +644,11 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             third  <- uuid
-            _      <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            _      <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
-            _      <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
-            card   <- redis.zInterStore(dest, 3, first, second, third)()
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _    <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
+            _    <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
+            card <- redis.zInterStore(dest, 3, first, second, third)()
           } yield assert(card)(equalTo(1L))
         },
         test("error when first parameter is not set") {
@@ -882,10 +889,12 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(5d, "NewYork"),
                    MemberScore(6d, "Seoul")
                  )
-            result <- redis.zRangeByLex(
-                        key,
-                        LexRange(min = LexMinimum.Open("London"), max = LexMaximum.Closed("Seoul"))
-                      ).returning[String]
+            result <- redis
+                        .zRangeByLex(
+                          key,
+                          LexRange(min = LexMinimum.Open("London"), max = LexMaximum.Closed("Seoul"))
+                        )
+                        .returning[String]
           } yield assert(result.toList)(equalTo(List("Paris")))
         },
         test("non-empty set with limit") {
@@ -900,18 +909,21 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(5d, "NewYork"),
                    MemberScore(6d, "Seoul")
                  )
-            result <- redis.zRangeByLex(
-                        key,
-                        LexRange(min = LexMinimum.Unbounded, max = LexMaximum.Unbounded),
-                        Some(Limit(2, 3))
-                      ).returning[String]
+            result <- redis
+                        .zRangeByLex(
+                          key,
+                          LexRange(min = LexMinimum.Unbounded, max = LexMaximum.Unbounded),
+                          Some(Limit(2, 3))
+                        )
+                        .returning[String]
           } yield assert(result.toList)(equalTo(List("Paris", "Tokyo", "NewYork")))
         },
         test("empty set") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            result <- redis.zRangeByLex(key, LexRange(min = LexMinimum.Open("A"), max = LexMaximum.Closed("Z")))
+            result <- redis
+                        .zRangeByLex(key, LexRange(min = LexMinimum.Open("A"), max = LexMaximum.Closed("Z")))
                         .returning[String]
           } yield assert(result.toList)(isEmpty)
         }
@@ -929,7 +941,8 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(1800d, "MicroSoft"),
                    MemberScore(2500d, "LG")
                  )
-            result <- redis.zRangeByScore(key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
+            result <- redis
+                        .zRangeByScore(key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
                         .returning[String]
           } yield assert(result.toList)(equalTo(List("Samsung", "MicroSoft", "Micromax")))
         },
@@ -953,7 +966,8 @@ trait SortedSetsSpec extends BaseSpec {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            result <- redis.zRangeByScore(key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
+            result <- redis
+                        .zRangeByScore(key, ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)))
                         .returning[String]
           } yield assert(result.toList)(isEmpty)
         }
@@ -986,7 +1000,8 @@ trait SortedSetsSpec extends BaseSpec {
             lg         = MemberScore(2500d, "LG")
             _         <- redis.zAdd(key)(samsung, nokia, micromax, sunsui, microSoft, lg)
             scoreRange = ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(2500))
-            result    <- redis.zRangeByScoreWithScores(key, scoreRange, Some(Limit(offset = 1, count = 3))).returning[String]
+            result <-
+              redis.zRangeByScoreWithScores(key, scoreRange, Some(Limit(offset = 1, count = 3))).returning[String]
           } yield assert(result.toList)(equalTo(List(microSoft, micromax, nokia)))
         },
         test("empty set") {
@@ -1069,8 +1084,10 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(0d, "Kolkata"),
                    MemberScore(0d, "Chennai")
                  )
-            remResult <- redis.zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
-            rangeResult <- redis.zRangeByLex(key, LexRange(min = LexMinimum.Unbounded, max = LexMaximum.Unbounded))
+            remResult <-
+              redis.zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
+            rangeResult <- redis
+                             .zRangeByLex(key, LexRange(min = LexMinimum.Unbounded, max = LexMaximum.Unbounded))
                              .returning[String]
           } yield assert(rangeResult.toList)(equalTo(List("Chennai", "Delhi", "Hyderabad"))) &&
             assert(remResult)(equalTo(2L))
@@ -1079,7 +1096,8 @@ trait SortedSetsSpec extends BaseSpec {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            remResult <- redis.zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
+            remResult <-
+              redis.zRemRangeByLex(key, LexRange(min = LexMinimum.Open("Hyderabad"), max = LexMaximum.Closed("Mumbai")))
           } yield assert(remResult)(equalTo(0L))
         }
       ),
@@ -1120,16 +1138,19 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(50d, "Kolkata"),
                    MemberScore(65d, "Chennai")
                  )
-            remResult <- redis.zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
-            rangeResult <- redis.zRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Infinity))
+            remResult <-
+              redis.zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
+            rangeResult <- redis
+                             .zRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Infinity))
                              .returning[String]
           } yield assert(rangeResult.toList)(equalTo(List("Hyderabad", "Delhi"))) && assert(remResult)(equalTo(3L))
         },
         test("empty set") {
           for {
-            redis     <- ZIO.service[Redis]
-            key       <- uuid
-            remResult <- redis.zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            remResult <-
+              redis.zRemRangeByScore(key, ScoreRange(min = ScoreMinimum.Infinity, max = ScoreMaximum.Open(70)))
           } yield assert(remResult)(equalTo(0L))
         }
       ),
@@ -1443,10 +1464,11 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zUnion")(
         test("two non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
             members <- redis.zUnion(2, first, second)().returning[String]
           } yield assert(members)(equalTo(Chunk("a", "b", "d", "e", "c")))
@@ -1470,11 +1492,12 @@ trait SortedSetsSpec extends BaseSpec {
         },
         test("non-empty set with multiple non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            third   <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
             members <- redis.zUnion(3, first, second, third)().returning[String]
@@ -1565,10 +1588,11 @@ trait SortedSetsSpec extends BaseSpec {
       suite("zUnionWithScores")(
         test("two non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
             members <- redis.zUnionWithScores(2, first, second)().returning[String]
           } yield assert(members)(
@@ -1602,11 +1626,12 @@ trait SortedSetsSpec extends BaseSpec {
         },
         test("non-empty set with multiple non-empty sets") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            third   <- uuid
-            _       <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            third  <- uuid
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
             members <- redis.zUnionWithScores(3, first, second, third)().returning[String]
@@ -1722,12 +1747,13 @@ trait SortedSetsSpec extends BaseSpec {
         },
         test("parameter weights provided along with aggregate") {
           for {
-            redis   <- ZIO.service[Redis]
-            first   <- uuid
-            second  <- uuid
-            _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
-            _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnionWithScores(2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
+            redis  <- ZIO.service[Redis]
+            first  <- uuid
+            second <- uuid
+            _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
+            _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
+            members <-
+              redis.zUnionWithScores(2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1747,9 +1773,10 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            _      <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            _      <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            card   <- redis.zUnionStore(dest, 2, first, second)()
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _    <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
+            card <- redis.zUnionStore(dest, 2, first, second)()
           } yield assert(card)(equalTo(5L))
         },
         test("equal to the non-empty set when the other one is empty") {
@@ -1778,10 +1805,11 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             third  <- uuid
             dest   <- uuid
-            _      <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            _      <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
-            _      <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            card   <- redis.zUnionStore(dest, 3, first, second, third)()
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            _    <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
+            _    <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
+            card <- redis.zUnionStore(dest, 3, first, second, third)()
           } yield assert(card)(equalTo(5L))
         },
         test("error when the first parameter is not set") {
@@ -1880,8 +1908,9 @@ trait SortedSetsSpec extends BaseSpec {
             redis     <- ZIO.service[Redis]
             first     <- uuid
             notExists <- uuid
-            _         <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            ret       <- redis.zRandMember(notExists).returning[String]
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret <- redis.zRandMember(notExists).returning[String]
           } yield assert(ret)(isNone)
         },
         test("key does not exist with count") {
@@ -1889,24 +1918,27 @@ trait SortedSetsSpec extends BaseSpec {
             redis     <- ZIO.service[Redis]
             first     <- uuid
             notExists <- uuid
-            _         <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            ret       <- redis.zRandMember(notExists, 1).returning[String]
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret <- redis.zRandMember(notExists, 1).returning[String]
           } yield assert(ret)(isEmpty)
         },
         test("get an element") {
           for {
             redis <- ZIO.service[Redis]
             first <- uuid
-            _     <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            ret   <- redis.zRandMember(first).returning[String]
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret <- redis.zRandMember(first).returning[String]
           } yield assert(ret)(isSome)
         },
         test("get elements with count") {
           for {
             redis <- ZIO.service[Redis]
             first <- uuid
-            _     <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            ret   <- redis.zRandMember(first, 2).returning[String]
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret <- redis.zRandMember(first, 2).returning[String]
           } yield assert(ret)(hasSize(equalTo(2)))
         }
       ),
@@ -1916,16 +1948,18 @@ trait SortedSetsSpec extends BaseSpec {
             redis     <- ZIO.service[Redis]
             first     <- uuid
             notExists <- uuid
-            _         <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            ret       <- redis.zRandMemberWithScores(notExists, 1).returning[String]
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret <- redis.zRandMemberWithScores(notExists, 1).returning[String]
           } yield assert(ret)(isEmpty)
         },
         test("get elements with count") {
           for {
             redis <- ZIO.service[Redis]
             first <- uuid
-            _     <- redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
-            ret   <- redis.zRandMemberWithScores(first, 2).returning[String]
+            _ <-
+              redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
+            ret <- redis.zRandMemberWithScores(first, 2).returning[String]
           } yield assert(ret)(hasSize(equalTo(2)))
         }
       )

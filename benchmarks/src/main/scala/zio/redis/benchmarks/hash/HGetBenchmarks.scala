@@ -68,5 +68,7 @@ class HGetBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hGet(key, it._1).returning[String])))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hGet(key, it._1).returning[String]))
+  )
 }

@@ -1,8 +1,8 @@
 package zio.redis
 
-import zio.{Chunk, ZIO}
 import zio.test.Assertion._
 import zio.test._
+import zio.{Chunk, ZIO}
 
 trait HashSpec extends BaseSpec {
   def hashSuite: Spec[Redis, RedisError] =
@@ -10,7 +10,7 @@ trait HashSpec extends BaseSpec {
       suite("hSet, hGet, hGetAll and hDel")(
         test("set followed by get") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -20,7 +20,7 @@ trait HashSpec extends BaseSpec {
         },
         test("set multiple fields for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             field2 <- uuid
@@ -30,7 +30,7 @@ trait HashSpec extends BaseSpec {
         },
         test("get all fields for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             field2 <- uuid
@@ -41,7 +41,7 @@ trait HashSpec extends BaseSpec {
         },
         test("delete field for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             hash    <- uuid
             field   <- uuid
             value   <- uuid
@@ -52,7 +52,7 @@ trait HashSpec extends BaseSpec {
         },
         test("delete multiple fields for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             hash    <- uuid
             field1  <- uuid
             field2  <- uuid
@@ -65,7 +65,7 @@ trait HashSpec extends BaseSpec {
       suite("hmSet and hmGet")(
         test("set followed by get") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -75,7 +75,7 @@ trait HashSpec extends BaseSpec {
         },
         test("set multiple fields for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             hash    <- uuid
             field1  <- uuid
             field2  <- uuid
@@ -88,7 +88,7 @@ trait HashSpec extends BaseSpec {
         },
         test("get multiple fields for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             field2 <- uuid
@@ -100,7 +100,7 @@ trait HashSpec extends BaseSpec {
         },
         test("delete field for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             hash    <- uuid
             field   <- uuid
             value   <- uuid
@@ -111,7 +111,7 @@ trait HashSpec extends BaseSpec {
         },
         test("delete multiple fields for hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             hash    <- uuid
             field1  <- uuid
             field2  <- uuid
@@ -127,7 +127,7 @@ trait HashSpec extends BaseSpec {
       suite("hExists")(
         test("field should exist") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -137,7 +137,7 @@ trait HashSpec extends BaseSpec {
         },
         test("field shouldn't exist") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             result <- redis.hExists(hash, field)
@@ -147,7 +147,7 @@ trait HashSpec extends BaseSpec {
       suite("hIncrBy and hIncrByFloat")(
         test("existing field should be incremented by 1") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             _      <- redis.hSet(hash, field -> "1")
@@ -156,7 +156,7 @@ trait HashSpec extends BaseSpec {
         },
         test("incrementing value of non-existing hash and filed should create them") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             result <- redis.hIncrBy(hash, field, 1L)
@@ -164,7 +164,7 @@ trait HashSpec extends BaseSpec {
         },
         test("existing field should be incremented by 1.5") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             _      <- redis.hSet(hash, field -> "1")
@@ -173,7 +173,7 @@ trait HashSpec extends BaseSpec {
         },
         test("incrementing value of float for non-existing hash and field should create them") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             result <- redis.hIncrByFloat(hash, field, 1.5)
@@ -181,7 +181,7 @@ trait HashSpec extends BaseSpec {
         },
         test("incrementing value of float for non-existing hash and field with negative value") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             result <- redis.hIncrByFloat(hash, field, -1.5)
@@ -191,7 +191,7 @@ trait HashSpec extends BaseSpec {
       suite("hKeys and hLen")(
         test("get field names for existing hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -201,14 +201,14 @@ trait HashSpec extends BaseSpec {
         },
         test("get field names for non-existing hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             result <- redis.hKeys(hash).returning[String]
           } yield assert(result)(isEmpty)
         },
         test("get field count for existing hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -218,7 +218,7 @@ trait HashSpec extends BaseSpec {
         },
         test("get field count for non-existing hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             result <- redis.hLen(hash)
           } yield assert(result)(equalTo(0L))
@@ -227,7 +227,7 @@ trait HashSpec extends BaseSpec {
       suite("hSetNx")(
         test("set value for non-existing field") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -236,7 +236,7 @@ trait HashSpec extends BaseSpec {
         },
         test("set value for existing field") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -248,7 +248,7 @@ trait HashSpec extends BaseSpec {
       suite("hStrLen")(
         test("get value length for existing field") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -258,7 +258,7 @@ trait HashSpec extends BaseSpec {
         },
         test("get value length for non-existing field") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             result <- redis.hStrLen(hash, field)
@@ -268,7 +268,7 @@ trait HashSpec extends BaseSpec {
       suite("hVals")(
         test("get all values from existing hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -278,7 +278,7 @@ trait HashSpec extends BaseSpec {
         },
         test("get all values from non-existing hash") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             result <- redis.hVals(hash).returning[String]
           } yield assert(result)(isEmpty)
@@ -287,7 +287,7 @@ trait HashSpec extends BaseSpec {
       suite("hScan")(
         test("hScan entries with match and count options")(check(genPatternOption, genCountOption) { (pattern, count) =>
           for {
-            redis         <- ZIO.service[Redis]
+            redis           <- ZIO.service[Redis]
             hash            <- uuid
             field           <- uuid
             value           <- uuid
@@ -300,7 +300,7 @@ trait HashSpec extends BaseSpec {
       suite("hRandField")(
         test("randomly select one field") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             value1 <- uuid
@@ -312,7 +312,7 @@ trait HashSpec extends BaseSpec {
         },
         test("returns None if key does not exists") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis   <- ZIO.service[Redis]
             hash    <- uuid
             field   <- uuid
             value   <- uuid
@@ -323,7 +323,7 @@ trait HashSpec extends BaseSpec {
         },
         test("returns n different fields if count is provided") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             value1 <- uuid
@@ -335,7 +335,7 @@ trait HashSpec extends BaseSpec {
         },
         test("returns all hash fields if count is provided and is greater or equal than hash size") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             value1 <- uuid
@@ -347,7 +347,7 @@ trait HashSpec extends BaseSpec {
         },
         test("returns repeated fields if count is negative") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
@@ -357,7 +357,7 @@ trait HashSpec extends BaseSpec {
         },
         test("returns n different fields and values with 'withvalues' option") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis  <- ZIO.service[Redis]
             hash   <- uuid
             field1 <- uuid
             value1 <- uuid

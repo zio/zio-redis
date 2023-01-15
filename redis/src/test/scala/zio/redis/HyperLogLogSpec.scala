@@ -10,22 +10,22 @@ trait HyperLogLogSpec extends BaseSpec {
       suite("add elements")(
         test("pfAdd elements to key") {
           for {
-            redis         <- ZIO.service[Redis]
-            key <- uuid
-            add <- redis.pfAdd(key, "one", "two", "three")
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            add   <- redis.pfAdd(key, "one", "two", "three")
           } yield assert(add)(equalTo(true))
         },
         test("pfAdd nothing to key when new elements not unique") {
           for {
-            redis         <- ZIO.service[Redis]
-            key  <- uuid
-            add1 <- redis.pfAdd(key, "one", "two", "three")
-            add2 <- redis.pfAdd(key, "one", "two", "three")
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            add1  <- redis.pfAdd(key, "one", "two", "three")
+            add2  <- redis.pfAdd(key, "one", "two", "three")
           } yield assert(add1)(equalTo(true)) && assert(add2)(equalTo(false))
         },
         test("pfAdd error when not hyperloglog") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
             _     <- redis.set(key, value, None, None, None)
@@ -36,13 +36,13 @@ trait HyperLogLogSpec extends BaseSpec {
       suite("count elements")(
         test("pfCount zero at undefined key") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             count <- redis.pfCount("noKey")
           } yield assert(count)(equalTo(0L))
         },
         test("pfCount values at key") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             add   <- redis.pfAdd(key, "one", "two", "three")
             count <- redis.pfCount(key)
@@ -50,7 +50,7 @@ trait HyperLogLogSpec extends BaseSpec {
         },
         test("pfCount union key with key2") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             key2  <- uuid
             add   <- redis.pfAdd(key, "one", "two", "three")
@@ -60,7 +60,7 @@ trait HyperLogLogSpec extends BaseSpec {
         } @@ clusterExecutorUnsupported,
         test("error when not hyperloglog") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
             _     <- redis.set(key, value, None, None, None)
@@ -71,7 +71,7 @@ trait HyperLogLogSpec extends BaseSpec {
       suite("merge")(
         test("pfMerge two hyperloglogs and create destination") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             key2  <- uuid
             key3  <- uuid
@@ -83,7 +83,7 @@ trait HyperLogLogSpec extends BaseSpec {
         },
         test("pfMerge two hyperloglogs with already existing destination values") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             key2  <- uuid
             key3  <- uuid
@@ -96,7 +96,7 @@ trait HyperLogLogSpec extends BaseSpec {
         },
         test("pfMerge error when source not hyperloglog") {
           for {
-            redis         <- ZIO.service[Redis]
+            redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
             key2  <- uuid

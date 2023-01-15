@@ -49,6 +49,8 @@ class LMoveBenchmarks extends BenchmarkRuntime {
 
   @Benchmark
   def zio(): Unit = execute(
-    ZIO.foreachDiscard(items)(_ => ZIO.serviceWithZIO[Redis](_.lMove(key, key, Side.Left, Side.Right).returning[String]))
+    ZIO.foreachDiscard(items)(_ =>
+      ZIO.serviceWithZIO[Redis](_.lMove(key, key, Side.Left, Side.Right).returning[String])
+    )
   )
 }
