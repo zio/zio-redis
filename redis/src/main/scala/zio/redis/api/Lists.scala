@@ -17,11 +17,10 @@
 package zio.redis.api
 
 import zio._
-import zio.redis.CommandExecutor
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder._
-import zio.redis._
+import zio.redis.{CommandExecutor, _}
 import zio.schema.Schema
 
 trait Lists extends CommandExecutor {
