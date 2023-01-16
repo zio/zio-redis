@@ -42,7 +42,7 @@ final case class ClusterExecutor(
     def executeAsk(address: RedisUri) =
       for {
         executor <- executor(address)
-        _        <- executor.execute(AskingCommand.resp((), StringUtf8Codec))
+        _        <- executor.execute(AskingCommand(this, StringUtf8Codec).resp(()))
         res      <- executor.execute(command)
       } yield res
 

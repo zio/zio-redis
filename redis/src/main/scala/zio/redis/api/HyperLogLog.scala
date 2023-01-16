@@ -16,13 +16,13 @@
 
 package zio.redis.api
 
-import zio.ZIO
+import zio.IO
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
 import zio.schema.Schema
 
-trait HyperLogLog extends CommandExecutor {
+trait HyperLogLog extends RedisEnvironment {
   import HyperLogLog._
 
   /**
@@ -37,8 +37,9 @@ trait HyperLogLog extends CommandExecutor {
    * @return
    *   boolean indicating if at least 1 HyperLogLog register was altered.
    */
-  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[Any, RedisError, Boolean] = {
-    val command = RedisCommand(PfAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), BoolOutput)
+  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Boolean] = {
+    val command =
+      RedisCommand(PfAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), BoolOutput)(executor, codec)
     command.run((key, (element, elements.toList)))
   }
 
@@ -52,8 +53,8 @@ trait HyperLogLog extends CommandExecutor {
    * @return
    *   approximate number of unique elements observed via PFADD.
    */
-  final def pfCount[K: Schema](key: K, keys: K*): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryInput[K]()), LongOutput)
+  final def pfCount[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
+    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryInput[K]()), LongOutput)(executor, codec)
     command.run((key, keys.toList))
   }
 
@@ -67,8 +68,9 @@ trait HyperLogLog extends CommandExecutor {
    * @param sourceKeys
    *   additional keys to merge
    */
-  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): ZIO[Any, RedisError, Unit] = {
-    val command = RedisCommand(PfMerge, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[K]())), UnitOutput)
+  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): IO[RedisError, Unit] = {
+    val command =
+      RedisCommand(PfMerge, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[K]())), UnitOutput)(executor, codec)
     command.run((destKey, (sourceKey, sourceKeys.toList)))
   }
 }

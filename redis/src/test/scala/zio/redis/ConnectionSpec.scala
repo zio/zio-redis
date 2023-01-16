@@ -12,26 +12,22 @@ trait ConnectionSpec extends BaseSpec {
     suite("connection")(
       suite("clientCaching")(
         test("track keys") {
-          ZIO.serviceWithZIO[Redis] { redis =>
-            import redis._
-            for {
-              _            <- clientTrackingOff
-              _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-              _            <- clientCaching(true)
-              trackingInfo <- clientTrackingInfo
-            } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
-          }
+          for {
+            redis        <- ZIO.service[Redis]
+            _            <- redis.clientTrackingOff
+            _            <- redis.clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
+            _            <- redis.clientCaching(true)
+            trackingInfo <- redis.clientTrackingInfo
+          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
         },
         test("don't track keys") {
-          ZIO.serviceWithZIO[Redis] { redis =>
-            import redis._
-            for {
-              _            <- clientTrackingOff
-              _            <- clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-              _            <- clientCaching(false)
-              trackingInfo <- clientTrackingInfo
-            } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
-          }
+          for {
+            redis        <- ZIO.service[Redis]
+            _            <- redis.clientTrackingOff
+            _            <- redis.clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
+            _            <- redis.clientCaching(false)
+            trackingInfo <- redis.clientTrackingInfo
+          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
         }
       ),
       suite("clientId")(

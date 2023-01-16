@@ -22,7 +22,7 @@ import zio.redis.Output._
 import zio.redis._
 import zio.schema.Schema
 
-trait Geo extends CommandExecutor {
+trait Geo extends RedisEnvironment {
   import Geo._
 
   /**
@@ -41,12 +41,12 @@ trait Geo extends CommandExecutor {
     key: K,
     item: (LongLat, M),
     items: (LongLat, M)*
-  ): ZIO[Any, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command = RedisCommand(
       GeoAdd,
       Tuple2(ArbitraryInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryInput[M]()))),
       LongOutput
-    )
+    )(executor, codec)
     command.run((key, (item, items.toList)))
   }
 
@@ -69,12 +69,12 @@ trait Geo extends CommandExecutor {
     member1: M,
     member2: M,
     radiusUnit: Option[RadiusUnit] = None
-  ): ZIO[Any, RedisError, Option[Double]] = {
+  ): IO[RedisError, Option[Double]] = {
     val command = RedisCommand(
       GeoDist,
       Tuple4(ArbitraryInput[K](), ArbitraryInput[M](), ArbitraryInput[M](), OptionalInput(RadiusUnitInput)),
       OptionalOutput(DoubleOutput)
-    )
+    )(executor, codec)
     command.run((key, member1, member2, radiusUnit))
   }
 
@@ -95,12 +95,12 @@ trait Geo extends CommandExecutor {
     key: K,
     member: M,
     members: M*
-  ): ZIO[Any, RedisError, Chunk[Option[String]]] = {
+  ): IO[RedisError, Chunk[Option[String]]] = {
     val command = RedisCommand(
       GeoHash,
       Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())),
       ChunkOutput(OptionalOutput(MultiStringOutput))
-    )
+    )(executor, codec)
     command.run((key, (member, members.toList)))
   }
 
@@ -121,8 +121,9 @@ trait Geo extends CommandExecutor {
     key: K,
     member: M,
     members: M*
-  ): ZIO[Any, RedisError, Chunk[Option[LongLat]]] = {
-    val command = RedisCommand(GeoPos, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), GeoOutput)
+  ): IO[RedisError, Chunk[Option[LongLat]]] = {
+    val command =
+      RedisCommand(GeoPos, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), GeoOutput)(executor, codec)
     command.run((key, (member, members.toList)))
   }
 
@@ -161,7 +162,7 @@ trait Geo extends CommandExecutor {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[Any, RedisError, Chunk[GeoView]] = {
+  ): IO[RedisError, Chunk[GeoView]] = {
     val command = RedisCommand(
       GeoRadius,
       Tuple9(
@@ -176,7 +177,7 @@ trait Geo extends CommandExecutor {
         OptionalInput(OrderInput)
       ),
       GeoRadiusOutput
-    )
+    )(executor, codec)
     command.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
   }
 
@@ -222,7 +223,7 @@ trait Geo extends CommandExecutor {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[Any, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command = RedisCommand(
       GeoRadius,
       Tuple11(
@@ -239,7 +240,7 @@ trait Geo extends CommandExecutor {
         OptionalInput(StoreDistInput)
       ),
       LongOutput
-    )
+    )(executor, codec)
     command.run(
       (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
@@ -280,7 +281,7 @@ trait Geo extends CommandExecutor {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[Any, RedisError, Chunk[GeoView]] = {
+  ): IO[RedisError, Chunk[GeoView]] = {
     val command = RedisCommand(
       GeoRadiusByMember,
       Tuple9(
@@ -295,7 +296,7 @@ trait Geo extends CommandExecutor {
         OptionalInput(OrderInput)
       ),
       GeoRadiusOutput
-    )
+    )(executor, codec)
     command.run((key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
   }
 
@@ -341,7 +342,7 @@ trait Geo extends CommandExecutor {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): ZIO[Any, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command = RedisCommand(
       GeoRadiusByMember,
       Tuple11(
@@ -358,7 +359,7 @@ trait Geo extends CommandExecutor {
         OptionalInput(StoreDistInput)
       ),
       LongOutput
-    )
+    )(executor, codec)
     command.run(
       (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )

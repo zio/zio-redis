@@ -22,7 +22,7 @@ import zio.redis.Output._
 import zio.redis.ResultBuilder.ResultOutputBuilder
 import zio.redis._
 
-trait Scripting extends CommandExecutor {
+trait Scripting extends RedisEnvironment {
   import Scripting._
 
   /**
@@ -43,8 +43,8 @@ trait Scripting extends CommandExecutor {
     keys: Chunk[K],
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: ZIO[Any, RedisError, R] = {
-      val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R])
+    def returning[R: Output]: IO[RedisError, R] = {
+      val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R])(executor, codec)
       command.run((script, keys, args))
     }
   }
@@ -68,8 +68,8 @@ trait Scripting extends CommandExecutor {
     keys: Chunk[K],
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: ZIO[Any, RedisError, R] = {
-      val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R])
+    def returning[R: Output]: IO[RedisError, R] = {
+      val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R])(executor, codec)
       command.run((sha1, keys, args))
     }
   }
@@ -85,8 +85,8 @@ trait Scripting extends CommandExecutor {
    *   for every corresponding SHA1 digest of a script that actually exists in the script cache, an true is returned,
    *   otherwise false is returned.
    */
-  def scriptExists(sha1: String, sha1s: String*): ZIO[Any, RedisError, Chunk[Boolean]] = {
-    val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput))
+  def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
+    val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput))(executor, codec)
     command.run((sha1, sha1s.toList))
   }
 
@@ -99,8 +99,8 @@ trait Scripting extends CommandExecutor {
    * @return
    *   the SHA1 digest of the script added into the script cache.
    */
-  def scriptLoad(script: String): ZIO[Any, RedisError, String] = {
-    val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput)
+  def scriptLoad(script: String): IO[RedisError, String] = {
+    val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput)(executor, codec)
     command.run(script)
   }
 }

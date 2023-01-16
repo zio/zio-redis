@@ -23,7 +23,7 @@ import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
 
-trait Hashes extends CommandExecutor {
+trait Hashes extends RedisEnvironment {
   import Hashes._
 
   /**
@@ -38,8 +38,9 @@ trait Hashes extends CommandExecutor {
    * @return
    *   number of fields removed from the hash.
    */
-  final def hDel[K: Schema, F: Schema](key: K, field: F, fields: F*): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(HDel, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[F]())), LongOutput)
+  final def hDel[K: Schema, F: Schema](key: K, field: F, fields: F*): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(HDel, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[F]())), LongOutput)(executor, codec)
     command.run((key, (field, fields.toList)))
   }
 
@@ -53,8 +54,8 @@ trait Hashes extends CommandExecutor {
    * @return
    *   true if the field exists, otherwise false.
    */
-  final def hExists[K: Schema, F: Schema](key: K, field: F): ZIO[Any, RedisError, Boolean] = {
-    val command = RedisCommand(HExists, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), BoolOutput)
+  final def hExists[K: Schema, F: Schema](key: K, field: F): IO[RedisError, Boolean] = {
+    val command = RedisCommand(HExists, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), BoolOutput)(executor, codec)
     command.run((key, field))
   }
 
@@ -70,8 +71,11 @@ trait Hashes extends CommandExecutor {
    */
   final def hGet[K: Schema, F: Schema](key: K, field: F): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: ZIO[Any, RedisError, Option[V]] =
-        RedisCommand(HGet, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), OptionalOutput(ArbitraryOutput[V]()))
+      def returning[V: Schema]: IO[RedisError, Option[V]] =
+        RedisCommand(HGet, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), OptionalOutput(ArbitraryOutput[V]()))(
+          executor,
+          codec
+        )
           .run((key, field))
     }
 
@@ -84,9 +88,12 @@ trait Hashes extends CommandExecutor {
    *   map of `field -> value` pairs under the key.
    */
   final def hGetAll[K: Schema](key: K): ResultBuilder2[Map] = new ResultBuilder2[Map] {
-    def returning[F: Schema, V: Schema]: ZIO[Any, RedisError, Map[F, V]] = {
+    def returning[F: Schema, V: Schema]: IO[RedisError, Map[F, V]] = {
       val command =
-        RedisCommand(HGetAll, ArbitraryInput[K](), KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]()))
+        RedisCommand(HGetAll, ArbitraryInput[K](), KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]()))(
+          executor,
+          codec
+        )
       command.run(key)
     }
   }
@@ -104,8 +111,9 @@ trait Hashes extends CommandExecutor {
    * @return
    *   integer value after incrementing, or error if the field is not an integer.
    */
-  final def hIncrBy[K: Schema, F: Schema](key: K, field: F, increment: Long): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(HIncrBy, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), LongInput), LongOutput)
+  final def hIncrBy[K: Schema, F: Schema](key: K, field: F, increment: Long): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(HIncrBy, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), LongInput), LongOutput)(executor, codec)
     command.run((key, field, increment))
   }
 
@@ -126,9 +134,12 @@ trait Hashes extends CommandExecutor {
     key: K,
     field: F,
     increment: Double
-  ): ZIO[Any, RedisError, Double] = {
+  ): IO[RedisError, Double] = {
     val command =
-      RedisCommand(HIncrByFloat, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), DoubleInput), DoubleOutput)
+      RedisCommand(HIncrByFloat, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), DoubleInput), DoubleOutput)(
+        executor,
+        codec
+      )
     command.run((key, field, increment))
   }
 
@@ -142,8 +153,8 @@ trait Hashes extends CommandExecutor {
    */
   final def hKeys[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[F: Schema]: ZIO[Any, RedisError, Chunk[F]] =
-        RedisCommand(HKeys, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[F]())).run(key)
+      def returning[F: Schema]: IO[RedisError, Chunk[F]] =
+        RedisCommand(HKeys, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[F]()))(executor, codec).run(key)
     }
 
   /**
@@ -154,8 +165,8 @@ trait Hashes extends CommandExecutor {
    * @return
    *   number of fields.
    */
-  final def hLen[K: Schema](key: K): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(HLen, ArbitraryInput[K](), LongOutput)
+  final def hLen[K: Schema](key: K): IO[RedisError, Long] = {
+    val command = RedisCommand(HLen, ArbitraryInput[K](), LongOutput)(executor, codec)
     command.run(key)
   }
 
@@ -177,12 +188,12 @@ trait Hashes extends CommandExecutor {
     fields: F*
   ): ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] =
     new ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] {
-      def returning[V: Schema]: ZIO[Any, RedisError, Chunk[Option[V]]] = {
+      def returning[V: Schema]: IO[RedisError, Chunk[Option[V]]] = {
         val command = RedisCommand(
           HmGet,
           Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[F]())),
           ChunkOutput(OptionalOutput(ArbitraryOutput[V]()))
-        )
+        )(executor, codec)
         command.run((key, (field, fields.toList)))
       }
     }
@@ -204,12 +215,12 @@ trait Hashes extends CommandExecutor {
     key: K,
     pair: (F, V),
     pairs: (F, V)*
-  ): ZIO[Any, RedisError, Unit] = {
+  ): IO[RedisError, Unit] = {
     val command = RedisCommand(
       HmSet,
       Tuple2(ArbitraryInput[K](), NonEmptyList(Tuple2(ArbitraryInput[F](), ArbitraryInput[V]()))),
       UnitOutput
-    )
+    )(executor, codec)
     command.run((key, (pair, pairs.toList)))
   }
 
@@ -234,12 +245,12 @@ trait Hashes extends CommandExecutor {
     count: Option[Count] = None
   ): ResultBuilder2[({ type lambda[x, y] = (Long, Chunk[(x, y)]) })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = (Long, Chunk[(x, y)]) })#lambda] {
-      def returning[F: Schema, V: Schema]: ZIO[Any, RedisError, (Long, Chunk[(F, V)])] = {
+      def returning[F: Schema, V: Schema]: IO[RedisError, (Long, Chunk[(F, V)])] = {
         val command = RedisCommand(
           HScan,
           Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
-        )
+        )(executor, codec)
         command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }
@@ -260,12 +271,12 @@ trait Hashes extends CommandExecutor {
     key: K,
     pair: (F, V),
     pairs: (F, V)*
-  ): ZIO[Any, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command = RedisCommand(
       HSet,
       Tuple2(ArbitraryInput[K](), NonEmptyList(Tuple2(ArbitraryInput[F](), ArbitraryInput[V]()))),
       LongOutput
-    )
+    )(executor, codec)
     command.run((key, (pair, pairs.toList)))
   }
 
@@ -285,9 +296,12 @@ trait Hashes extends CommandExecutor {
     key: K,
     field: F,
     value: V
-  ): ZIO[Any, RedisError, Boolean] = {
+  ): IO[RedisError, Boolean] = {
     val command =
-      RedisCommand(HSetNx, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), ArbitraryInput[V]()), BoolOutput)
+      RedisCommand(HSetNx, Tuple3(ArbitraryInput[K](), ArbitraryInput[F](), ArbitraryInput[V]()), BoolOutput)(
+        executor,
+        codec
+      )
     command.run((key, field, value))
   }
 
@@ -301,8 +315,8 @@ trait Hashes extends CommandExecutor {
    * @return
    *   string length of the value in field, or zero if either field or key do not exist.
    */
-  final def hStrLen[K: Schema, F: Schema](key: K, field: F): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(HStrLen, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), LongOutput)
+  final def hStrLen[K: Schema, F: Schema](key: K, field: F): IO[RedisError, Long] = {
+    val command = RedisCommand(HStrLen, Tuple2(ArbitraryInput[K](), ArbitraryInput[F]()), LongOutput)(executor, codec)
     command.run((key, field))
   }
 
@@ -316,8 +330,8 @@ trait Hashes extends CommandExecutor {
    */
   final def hVals[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[V: Schema]: ZIO[Any, RedisError, Chunk[V]] =
-        RedisCommand(HVals, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[V]())).run(key)
+      def returning[V: Schema]: IO[RedisError, Chunk[V]] =
+        RedisCommand(HVals, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[V]()))(executor, codec).run(key)
     }
 
   /**
@@ -330,8 +344,8 @@ trait Hashes extends CommandExecutor {
    */
   final def hRandField[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: ZIO[Any, RedisError, Option[V]] =
-        RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
+      def returning[V: Schema]: IO[RedisError, Option[V]] =
+        RedisCommand(HRandField, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()))(executor, codec).run(key)
     }
 
   /**
@@ -350,12 +364,12 @@ trait Hashes extends CommandExecutor {
    */
   final def hRandField[K: Schema](key: K, count: Long, withValues: Boolean = false): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[V: Schema]: ZIO[Any, RedisError, Chunk[V]] = {
+      def returning[V: Schema]: IO[RedisError, Chunk[V]] = {
         val command = RedisCommand(
           HRandField,
           Tuple3(ArbitraryInput[K](), LongInput, OptionalInput(StringInput)),
           ChunkOutput(ArbitraryOutput[V]())
-        )
+        )(executor, codec)
         command.run((key, count, if (withValues) Some("WITHVALUES") else None))
       }
     }

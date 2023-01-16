@@ -23,7 +23,7 @@ import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
 
-trait Sets extends CommandExecutor {
+trait Sets extends RedisEnvironment {
   import Sets._
 
   /**
@@ -39,8 +39,9 @@ trait Sets extends CommandExecutor {
    *   Returns the number of elements that were added to the set, not including all the elements already present into
    *   the set.
    */
-  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(SAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)
+  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(SAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)(executor, codec)
     command.run((key, (member, members.toList)))
   }
 
@@ -52,8 +53,8 @@ trait Sets extends CommandExecutor {
    * @return
    *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
-  final def sCard[K: Schema](key: K): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(SCard, ArbitraryInput[K](), LongOutput)
+  final def sCard[K: Schema](key: K): IO[RedisError, Long] = {
+    val command = RedisCommand(SCard, ArbitraryInput[K](), LongOutput)(executor, codec)
     command.run(key)
   }
 
@@ -69,8 +70,8 @@ trait Sets extends CommandExecutor {
    */
   final def sDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] =
-        RedisCommand(SDiff, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
+        RedisCommand(SDiff, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))(executor, codec)
           .run((key, keys.toList))
     }
 
@@ -86,8 +87,11 @@ trait Sets extends CommandExecutor {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(SDiffStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
+  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] = {
+    val command = RedisCommand(SDiffStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)(
+      executor,
+      codec
+    )
     command.run((destination, (key, keys.toList)))
   }
 
@@ -103,8 +107,8 @@ trait Sets extends CommandExecutor {
    */
   final def sInter[K: Schema](destination: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] =
-        RedisCommand(SInter, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
+        RedisCommand(SInter, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))(executor, codec)
           .run((destination, keys.toList))
     }
 
@@ -124,8 +128,11 @@ trait Sets extends CommandExecutor {
     destination: D,
     key: K,
     keys: K*
-  ): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(SInterStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
+  ): IO[RedisError, Long] = {
+    val command = RedisCommand(SInterStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)(
+      executor,
+      codec
+    )
     command.run((destination, (key, keys.toList)))
   }
 
@@ -140,8 +147,8 @@ trait Sets extends CommandExecutor {
    *   Returns 1 if the element is a member of the set. 0 if the element is not a member of the set, or if key does not
    *   exist.
    */
-  final def sIsMember[K: Schema, M: Schema](key: K, member: M): ZIO[Any, RedisError, Boolean] = {
-    val command = RedisCommand(SIsMember, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), BoolOutput)
+  final def sIsMember[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Boolean] = {
+    val command = RedisCommand(SIsMember, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), BoolOutput)(executor, codec)
     command.run((key, member))
   }
 
@@ -155,8 +162,8 @@ trait Sets extends CommandExecutor {
    */
   final def sMembers[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] =
-        RedisCommand(SMembers, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[R]())).run(key)
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
+        RedisCommand(SMembers, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[R]()))(executor, codec).run(key)
     }
 
   /**
@@ -175,8 +182,12 @@ trait Sets extends CommandExecutor {
     source: S,
     destination: D,
     member: M
-  ): ZIO[Any, RedisError, Boolean] = {
-    val command = RedisCommand(SMove, Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), ArbitraryInput[M]()), BoolOutput)
+  ): IO[RedisError, Boolean] = {
+    val command = RedisCommand(
+      SMove,
+      Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), ArbitraryInput[M]()),
+      BoolOutput
+    )(executor, codec)
     command.run((source, destination, member))
   }
 
@@ -192,12 +203,12 @@ trait Sets extends CommandExecutor {
    */
   final def sPop[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] = {
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
         val command = RedisCommand(
           SPop,
           Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
           MultiStringChunkOutput(ArbitraryOutput[R]())
-        )
+        )(executor, codec)
         command.run((key, count))
       }
     }
@@ -214,12 +225,12 @@ trait Sets extends CommandExecutor {
    */
   final def sRandMember[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] = {
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
         val command = RedisCommand(
           SRandMember,
           Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
           MultiStringChunkOutput(ArbitraryOutput[R]())
-        )
+        )(executor, codec)
         command.run((key, count))
       }
     }
@@ -236,8 +247,9 @@ trait Sets extends CommandExecutor {
    * @return
    *   Returns the number of members that were removed from the set, not including non existing members.
    */
-  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(SRem, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)
+  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(SRem, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput)(executor, codec)
     command.run((key, (member, members.toList)))
   }
 
@@ -265,12 +277,12 @@ trait Sets extends CommandExecutor {
     count: Option[Count] = None
   ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
     new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
-      def returning[R: Schema]: ZIO[Any, RedisError, (Long, Chunk[R])] = {
+      def returning[R: Schema]: IO[RedisError, (Long, Chunk[R])] = {
         val command = RedisCommand(
           SScan,
           Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(MultiStringOutput.map(_.toLong), ChunkOutput(ArbitraryOutput[R]()))
-        )
+        )(executor, codec)
         command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }
@@ -287,8 +299,8 @@ trait Sets extends CommandExecutor {
    */
   final def sUnion[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] =
-        RedisCommand(SUnion, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
+        RedisCommand(SUnion, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()))(executor, codec)
           .run((key, keys.toList))
     }
 
@@ -308,8 +320,11 @@ trait Sets extends CommandExecutor {
     destination: D,
     key: K,
     keys: K*
-  ): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(SUnionStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)
+  ): IO[RedisError, Long] = {
+    val command = RedisCommand(SUnionStore, Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())), LongOutput)(
+      executor,
+      codec
+    )
     command.run((destination, (key, keys.toList)))
   }
 }

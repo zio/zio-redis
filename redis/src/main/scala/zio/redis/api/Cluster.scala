@@ -22,9 +22,10 @@ import zio.redis._
 import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
-import zio.{Chunk, ZIO}
+import zio.schema.codec.BinaryCodec
+import zio.{Chunk, IO}
 
-trait Cluster extends CommandExecutor {
+trait Cluster extends RedisEnvironment {
 
   /**
    * When a cluster client receives an -ASK redirect, the ASKING command is sent to the target node followed by the
@@ -33,8 +34,8 @@ trait Cluster extends CommandExecutor {
    * @return
    *   the Unit value.
    */
-  def asking: ZIO[Any, RedisError, Unit] =
-    AskingCommand.run(())
+  def asking: IO[RedisError, Unit] =
+    AskingCommand(executor, codec).run(())
 
   /**
    * Returns details about which cluster slots map to which Redis instances.
@@ -42,8 +43,8 @@ trait Cluster extends CommandExecutor {
    * @return
    *   details about which cluster
    */
-  def slots: ZIO[Any, RedisError, Chunk[Partition]] = {
-    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))
+  def slots: IO[RedisError, Chunk[Partition]] = {
+    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))(executor, codec)
     command.run(())
   }
 
@@ -55,8 +56,9 @@ trait Cluster extends CommandExecutor {
    * @return
    *   the Unit value.
    */
-  def setSlotStable(slot: Slot): ZIO[Any, RedisError, Unit] = {
-    val command = RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput)
+  def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
+    val command =
+      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput)(executor, codec)
     command.run((slot.number, Stable.stringify))
   }
 
@@ -71,12 +73,12 @@ trait Cluster extends CommandExecutor {
    * @return
    *   the Unit value.
    */
-  def setSlotMigrating(slot: Slot, nodeId: String): ZIO[Any, RedisError, Unit] = {
+  def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
       UnitOutput
-    )
+    )(executor, codec)
     command.run((slot.number, Migrating.stringify, nodeId))
   }
 
@@ -91,12 +93,12 @@ trait Cluster extends CommandExecutor {
    * @return
    *   the Unit value.
    */
-  def setSlotImporting(slot: Slot, nodeId: String): ZIO[Any, RedisError, Unit] = {
+  def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
       UnitOutput
-    )
+    )(executor, codec)
     command.run((slot.number, Importing.stringify, nodeId))
   }
 
@@ -111,12 +113,12 @@ trait Cluster extends CommandExecutor {
    * @return
    *   the Unit value.
    */
-  def setSlotNode(slot: Slot, nodeId: String): ZIO[Any, RedisError, Unit] = {
+  def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
       UnitOutput
-    )
+    )(executor, codec)
     command.run((slot.number, Node.stringify, nodeId))
   }
 }
@@ -126,5 +128,6 @@ private[redis] object Cluster {
   final val ClusterSlots    = "CLUSTER SLOTS"
   final val ClusterSetSlots = "CLUSTER SETSLOT"
 
-  final val AskingCommand: RedisCommand[Unit, Unit] = RedisCommand(Asking, NoInput, UnitOutput)
+  final val AskingCommand: (RedisExecutor, BinaryCodec) => RedisCommand[Unit, Unit] =
+    RedisCommand(Asking, NoInput, UnitOutput)(_, _)
 }

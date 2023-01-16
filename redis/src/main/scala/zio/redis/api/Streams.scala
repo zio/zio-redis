@@ -23,7 +23,7 @@ import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
 
-trait Streams extends CommandExecutor {
+trait Streams extends RedisEnvironment {
   import StreamInfoWithFull._
   import Streams._
   import XGroupCommand._
@@ -47,12 +47,12 @@ trait Streams extends CommandExecutor {
     group: G,
     id: I,
     ids: I*
-  ): ZIO[Any, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command = RedisCommand(
       XAck,
       Tuple3(ArbitraryInput[SK](), ArbitraryInput[G](), NonEmptyList(ArbitraryInput[I]())),
       LongOutput
-    )
+    )(executor, codec)
     command.run((key, group, (id, ids.toList)))
   }
 
@@ -77,7 +77,7 @@ trait Streams extends CommandExecutor {
     pairs: (K, V)*
   ): ResultBuilder1[Id] =
     new ResultBuilder1[Id] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Id[R]] = {
+      def returning[R: Schema]: IO[RedisError, Id[R]] = {
         val command = RedisCommand(
           XAdd,
           Tuple4(
@@ -87,7 +87,7 @@ trait Streams extends CommandExecutor {
             NonEmptyList(Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()))
           ),
           ArbitraryOutput[R]()
-        )
+        )(executor, codec)
         command.run((key, None, id, (pair, pairs.toList)))
       }
     }
@@ -103,8 +103,8 @@ trait Streams extends CommandExecutor {
   final def xInfoStream[SK: Schema](
     key: SK
   ): ResultBuilder3[StreamInfo] = new ResultBuilder3[StreamInfo] {
-    def returning[RI: Schema, RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamInfo[RI, RK, RV]] = {
-      val command = RedisCommand(XInfoStream, ArbitraryInput[SK](), StreamInfoOutput[RI, RK, RV]())
+    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, StreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(XInfoStream, ArbitraryInput[SK](), StreamInfoOutput[RI, RK, RV]())(executor, codec)
       command.run(key)
     }
   }
@@ -120,12 +120,12 @@ trait Streams extends CommandExecutor {
   final def xInfoStreamFull[SK: Schema](
     key: SK
   ): ResultBuilder3[FullStreamInfo] = new ResultBuilder3[FullStreamInfo] {
-    def returning[RI: Schema, RK: Schema, RV: Schema]: ZIO[Any, RedisError, FullStreamInfo[RI, RK, RV]] = {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, FullStreamInfo[RI, RK, RV]] = {
       val command = RedisCommand(
         XInfoStream,
         Tuple2(ArbitraryInput[SK](), ArbitraryInput[String]()),
         StreamInfoFullOutput[RI, RK, RV]()
-      )
+      )(executor, codec)
       command.run((key, "FULL"))
     }
   }
@@ -144,12 +144,12 @@ trait Streams extends CommandExecutor {
     key: SK,
     count: Long
   ): ResultBuilder3[FullStreamInfo] = new ResultBuilder3[FullStreamInfo] {
-    def returning[RI: Schema, RK: Schema, RV: Schema]: ZIO[Any, RedisError, FullStreamInfo[RI, RK, RV]] = {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, FullStreamInfo[RI, RK, RV]] = {
       val command = RedisCommand(
         XInfoStream,
         Tuple3(ArbitraryInput[SK](), ArbitraryInput[String](), CountInput),
         StreamInfoFullOutput[RI, RK, RV]()
-      )
+      )(executor, codec)
       command.run((key, "FULL", Count(count)))
     }
   }
@@ -162,8 +162,8 @@ trait Streams extends CommandExecutor {
    * @return
    *   List of consumer groups associated with the stream stored at the specified key.
    */
-  final def xInfoGroups[SK: Schema](key: SK): ZIO[Any, RedisError, Chunk[StreamGroupsInfo]] = {
-    val command = RedisCommand(XInfoGroups, ArbitraryInput[SK](), StreamGroupsInfoOutput)
+  final def xInfoGroups[SK: Schema](key: SK): IO[RedisError, Chunk[StreamGroupsInfo]] = {
+    val command = RedisCommand(XInfoGroups, ArbitraryInput[SK](), StreamGroupsInfoOutput)(executor, codec)
     command.run(key)
   }
 
@@ -180,9 +180,12 @@ trait Streams extends CommandExecutor {
   final def xInfoConsumers[SK: Schema, SG: Schema](
     key: SK,
     group: SG
-  ): ZIO[Any, RedisError, Chunk[StreamConsumersInfo]] = {
+  ): IO[RedisError, Chunk[StreamConsumersInfo]] = {
     val command =
-      RedisCommand(XInfoConsumers, Tuple2(ArbitraryInput[SK](), ArbitraryInput[SG]()), StreamConsumersInfoOutput)
+      RedisCommand(XInfoConsumers, Tuple2(ArbitraryInput[SK](), ArbitraryInput[SG]()), StreamConsumersInfoOutput)(
+        executor,
+        codec
+      )
     command.run((key, group))
   }
 
@@ -214,7 +217,7 @@ trait Streams extends CommandExecutor {
     pairs: (K, V)*
   ): ResultBuilder1[Id] =
     new ResultBuilder1[Id] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Id[R]] = {
+      def returning[R: Schema]: IO[RedisError, Id[R]] = {
         val command = RedisCommand(
           XAdd,
           Tuple4(
@@ -224,7 +227,7 @@ trait Streams extends CommandExecutor {
             NonEmptyList(Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()))
           ),
           ArbitraryOutput[R]()
-        )
+        )(executor, codec)
         command.run((key, Some(StreamMaxLen(approximate, count)), id, (pair, pairs.toList)))
       }
     }
@@ -267,7 +270,7 @@ trait Streams extends CommandExecutor {
     force: Boolean = false
   )(id: I, ids: I*): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamEntries[I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
         val command = RedisCommand(
           XClaim,
           Tuple9(
@@ -282,7 +285,7 @@ trait Streams extends CommandExecutor {
             OptionalInput(WithForceInput)
           ),
           StreamEntriesOutput[I, RK, RV]()
-        )
+        )(executor, codec)
         val forceOpt = if (force) Some(WithForce) else None
         command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt))
       }
@@ -326,7 +329,7 @@ trait Streams extends CommandExecutor {
     force: Boolean = false
   )(id: I, ids: I*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: ZIO[Any, RedisError, Chunk[R]] = {
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
         val command = RedisCommand(
           XClaim,
           Tuple10(
@@ -342,7 +345,7 @@ trait Streams extends CommandExecutor {
             WithJustIdInput
           ),
           ChunkOutput(ArbitraryOutput[R]())
-        )
+        )(executor, codec)
         val forceOpt = if (force) Some(WithForce) else None
         command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt, WithJustId))
       }
@@ -360,8 +363,9 @@ trait Streams extends CommandExecutor {
    * @return
    *   the number of entries deleted.
    */
-  final def xDel[SK: Schema, I: Schema](key: SK, id: I, ids: I*): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(XDel, Tuple2(ArbitraryInput[SK](), NonEmptyList(ArbitraryInput[I]())), LongOutput)
+  final def xDel[SK: Schema, I: Schema](key: SK, id: I, ids: I*): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(XDel, Tuple2(ArbitraryInput[SK](), NonEmptyList(ArbitraryInput[I]())), LongOutput)(executor, codec)
     command.run((key, (id, ids.toList)))
   }
 
@@ -382,8 +386,8 @@ trait Streams extends CommandExecutor {
     group: SG,
     id: I,
     mkStream: Boolean = false
-  ): ZIO[Any, RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupCreateInput[SK, SG, I](), UnitOutput)
+  ): IO[RedisError, Unit] = {
+    val command = RedisCommand(XGroup, XGroupCreateInput[SK, SG, I](), UnitOutput)(executor, codec)
     command.run(Create(key, group, id, mkStream))
   }
 
@@ -401,8 +405,8 @@ trait Streams extends CommandExecutor {
     key: SK,
     group: SG,
     id: I
-  ): ZIO[Any, RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput)
+  ): IO[RedisError, Unit] = {
+    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput)(executor, codec)
     command.run(SetId(key, group, id))
   }
 
@@ -416,8 +420,8 @@ trait Streams extends CommandExecutor {
    * @return
    *   flag that indicates if the deletion was successful.
    */
-  final def xGroupDestroy[SK: Schema, SG: Schema](key: SK, group: SG): ZIO[Any, RedisError, Boolean] =
-    RedisCommand(XGroup, XGroupDestroyInput[SK, SG](), BoolOutput).run(Destroy(key, group))
+  final def xGroupDestroy[SK: Schema, SG: Schema](key: SK, group: SG): IO[RedisError, Boolean] =
+    RedisCommand(XGroup, XGroupDestroyInput[SK, SG](), BoolOutput)(executor, codec).run(Destroy(key, group))
 
   /**
    * Create a new consumer associated with a consumer group.
@@ -435,8 +439,8 @@ trait Streams extends CommandExecutor {
     key: SK,
     group: SG,
     consumer: SC
-  ): ZIO[Any, RedisError, Boolean] = {
-    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), BoolOutput)
+  ): IO[RedisError, Boolean] = {
+    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), BoolOutput)(executor, codec)
     command.run(CreateConsumer(key, group, consumer))
   }
 
@@ -456,8 +460,8 @@ trait Streams extends CommandExecutor {
     key: SK,
     group: SG,
     consumer: SC
-  ): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(XGroup, XGroupDelConsumerInput[SK, SG, SC](), LongOutput)
+  ): IO[RedisError, Long] = {
+    val command = RedisCommand(XGroup, XGroupDelConsumerInput[SK, SG, SC](), LongOutput)(executor, codec)
     command.run(DelConsumer(key, group, consumer))
   }
 
@@ -469,8 +473,8 @@ trait Streams extends CommandExecutor {
    * @return
    *   the number of entries inside a stream.
    */
-  final def xLen[SK: Schema](key: SK): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(XLen, ArbitraryInput[SK](), LongOutput)
+  final def xLen[SK: Schema](key: SK): IO[RedisError, Long] = {
+    val command = RedisCommand(XLen, ArbitraryInput[SK](), LongOutput)(executor, codec)
     command.run(key)
   }
 
@@ -484,12 +488,12 @@ trait Streams extends CommandExecutor {
    * @return
    *   summary about the pending messages in a given consumer group.
    */
-  final def xPending[SK: Schema, SG: Schema](key: SK, group: SG): ZIO[Any, RedisError, PendingInfo] = {
+  final def xPending[SK: Schema, SG: Schema](key: SK, group: SG): IO[RedisError, PendingInfo] = {
     val command = RedisCommand(
       XPending,
       Tuple3(ArbitraryInput[SK](), ArbitraryInput[SG](), OptionalInput(IdleInput)),
       XPendingOutput
-    )
+    )(executor, codec)
     command.run((key, group, None))
   }
 
@@ -521,7 +525,7 @@ trait Streams extends CommandExecutor {
     count: Long,
     consumer: Option[SC] = None,
     idle: Option[Duration] = None
-  ): ZIO[Any, RedisError, Chunk[PendingMessage]] = {
+  ): IO[RedisError, Chunk[PendingMessage]] = {
     val command = RedisCommand(
       XPending,
       Tuple7(
@@ -534,7 +538,7 @@ trait Streams extends CommandExecutor {
         OptionalInput(ArbitraryInput[SC]())
       ),
       PendingMessagesOutput
-    )
+    )(executor, codec)
     command.run((key, group, idle, start, end, count, consumer))
   }
 
@@ -556,12 +560,12 @@ trait Streams extends CommandExecutor {
     end: I
   ): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamEntries[I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
         val command = RedisCommand(
           XRange,
           Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
           StreamEntriesOutput[I, RK, RV]()
-        )
+        )(executor, codec)
         command.run((key, start, end, None))
       }
     }
@@ -587,12 +591,12 @@ trait Streams extends CommandExecutor {
     count: Long
   ): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamEntries[I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
         val command = RedisCommand(
           XRange,
           Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
           StreamEntriesOutput[I, RK, RV]()
-        )
+        )(executor, codec)
         command.run((key, start, end, Some(Count(count))))
       }
     }
@@ -619,12 +623,12 @@ trait Streams extends CommandExecutor {
     streams: (SK, I)*
   ): ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamChunks[SK, I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamChunks[SK, I, RK, RV]] = {
         val command = RedisCommand(
           XRead,
           Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput[SK, I]()),
           ChunkOutput(StreamOutput[SK, I, RK, RV]())
-        )
+        )(executor, codec)
         command.run((count.map(Count(_)), block, (stream, Chunk.fromIterable(streams))))
       }
     }
@@ -660,7 +664,7 @@ trait Streams extends CommandExecutor {
     streams: (SK, I)*
   ): ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamChunks[SK, I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamChunks[SK, I, RK, RV]] = {
         val command = RedisCommand(
           XReadGroup,
           Tuple6(
@@ -672,7 +676,7 @@ trait Streams extends CommandExecutor {
             StreamsInput[SK, I]()
           ),
           ChunkOutput(StreamOutput[SK, I, RK, RV]())
-        )
+        )(executor, codec)
         val noAckOpt = if (noAck) Some(NoAck) else None
         command.run((group, consumer, count.map(Count(_)), block, noAckOpt, (stream, Chunk.fromIterable(streams))))
       }
@@ -696,12 +700,12 @@ trait Streams extends CommandExecutor {
     start: I
   ): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamEntries[I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
         val command = RedisCommand(
           XRevRange,
           Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
           StreamEntriesOutput[I, RK, RV]()
-        )
+        )(executor, codec)
         command.run((key, end, start, None))
       }
     }
@@ -727,12 +731,12 @@ trait Streams extends CommandExecutor {
     count: Long
   ): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: ZIO[Any, RedisError, StreamEntries[I, RK, RV]] = {
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
         val command = RedisCommand(
           XRevRange,
           Tuple4(ArbitraryInput[SK](), ArbitraryInput[I](), ArbitraryInput[I](), OptionalInput(CountInput)),
           StreamEntriesOutput[I, RK, RV]()
-        )
+        )(executor, codec)
         command.run((key, end, start, Some(Count(count))))
       }
     }
@@ -753,8 +757,8 @@ trait Streams extends CommandExecutor {
     key: SK,
     count: Long,
     approximate: Boolean = false
-  ): ZIO[Any, RedisError, Long] = {
-    val command = RedisCommand(XTrim, Tuple2(ArbitraryInput[SK](), StreamMaxLenInput), LongOutput)
+  ): IO[RedisError, Long] = {
+    val command = RedisCommand(XTrim, Tuple2(ArbitraryInput[SK](), StreamMaxLenInput), LongOutput)(executor, codec)
     command.run((key, StreamMaxLen(approximate, count)))
   }
 }
