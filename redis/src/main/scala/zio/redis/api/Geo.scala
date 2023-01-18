@@ -45,8 +45,10 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoAdd,
       Tuple2(ArbitraryInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryInput[M]()))),
-      LongOutput
-    )(executor, codec)
+      LongOutput,
+      codec,
+      executor
+    )
     command.run((key, (item, items.toList)))
   }
 
@@ -73,8 +75,10 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoDist,
       Tuple4(ArbitraryInput[K](), ArbitraryInput[M](), ArbitraryInput[M](), OptionalInput(RadiusUnitInput)),
-      OptionalOutput(DoubleOutput)
-    )(executor, codec)
+      OptionalOutput(DoubleOutput),
+      codec,
+      executor
+    )
     command.run((key, member1, member2, radiusUnit))
   }
 
@@ -99,8 +103,10 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoHash,
       Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())),
-      ChunkOutput(OptionalOutput(MultiStringOutput))
-    )(executor, codec)
+      ChunkOutput(OptionalOutput(MultiStringOutput)),
+      codec,
+      executor
+    )
     command.run((key, (member, members.toList)))
   }
 
@@ -123,7 +129,7 @@ trait Geo extends RedisEnvironment {
     members: M*
   ): IO[RedisError, Chunk[Option[LongLat]]] = {
     val command =
-      RedisCommand(GeoPos, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), GeoOutput)(executor, codec)
+      RedisCommand(GeoPos, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), GeoOutput, codec, executor)
     command.run((key, (member, members.toList)))
   }
 
@@ -176,8 +182,10 @@ trait Geo extends RedisEnvironment {
         OptionalInput(CountInput),
         OptionalInput(OrderInput)
       ),
-      GeoRadiusOutput
-    )(executor, codec)
+      GeoRadiusOutput,
+      codec,
+      executor
+    )
     command.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
   }
 
@@ -239,8 +247,10 @@ trait Geo extends RedisEnvironment {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      LongOutput
-    )(executor, codec)
+      LongOutput,
+      codec,
+      executor
+    )
     command.run(
       (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
@@ -295,8 +305,10 @@ trait Geo extends RedisEnvironment {
         OptionalInput(CountInput),
         OptionalInput(OrderInput)
       ),
-      GeoRadiusOutput
-    )(executor, codec)
+      GeoRadiusOutput,
+      codec,
+      executor
+    )
     command.run((key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
   }
 
@@ -358,8 +370,10 @@ trait Geo extends RedisEnvironment {
         OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
-      LongOutput
-    )(executor, codec)
+      LongOutput,
+      codec,
+      executor
+    )
     command.run(
       (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )

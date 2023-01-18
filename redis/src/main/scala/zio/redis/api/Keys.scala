@@ -42,7 +42,7 @@ trait Keys extends RedisEnvironment {
    *   [[unlink]]
    */
   final def del[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(Del, NonEmptyList(ArbitraryInput[K]()), LongOutput)(executor, codec)
+    val command = RedisCommand(Del, NonEmptyList(ArbitraryInput[K]()), LongOutput, codec, executor)
     command.run((key, keys.toList))
   }
 
@@ -55,7 +55,7 @@ trait Keys extends RedisEnvironment {
    *   bytes for value stored at key.
    */
   final def dump[K: Schema](key: K): IO[RedisError, Chunk[Byte]] = {
-    val command = RedisCommand(Dump, ArbitraryInput[K](), BulkStringOutput)(executor, codec)
+    val command = RedisCommand(Dump, ArbitraryInput[K](), BulkStringOutput, codec, executor)
     command.run(key)
   }
 
@@ -71,7 +71,7 @@ trait Keys extends RedisEnvironment {
    *   The number of keys existing.
    */
   final def exists[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(Exists, NonEmptyList(ArbitraryInput[K]()), LongOutput)(executor, codec)
+    val command = RedisCommand(Exists, NonEmptyList(ArbitraryInput[K]()), LongOutput, codec, executor)
     command.run((key, keys.toList))
   }
 
@@ -89,7 +89,7 @@ trait Keys extends RedisEnvironment {
    *   [[expireAt]]
    */
   final def expire[K: Schema](key: K, timeout: Duration): IO[RedisError, Boolean] = {
-    val command = RedisCommand(Expire, Tuple2(ArbitraryInput[K](), DurationSecondsInput), BoolOutput)(executor, codec)
+    val command = RedisCommand(Expire, Tuple2(ArbitraryInput[K](), DurationSecondsInput), BoolOutput, codec, executor)
     command.run((key, timeout))
   }
 
@@ -107,7 +107,7 @@ trait Keys extends RedisEnvironment {
    *   [[expire]]
    */
   final def expireAt[K: Schema](key: K, timestamp: Instant): IO[RedisError, Boolean] = {
-    val command = RedisCommand(ExpireAt, Tuple2(ArbitraryInput[K](), TimeSecondsInput), BoolOutput)(executor, codec)
+    val command = RedisCommand(ExpireAt, Tuple2(ArbitraryInput[K](), TimeSecondsInput), BoolOutput, codec, executor)
     command.run((key, timestamp))
   }
 
@@ -122,7 +122,7 @@ trait Keys extends RedisEnvironment {
   final def keys(pattern: String): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[V: Schema]: IO[RedisError, Chunk[V]] =
-        RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]()))(executor, codec).run(pattern)
+        RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]()), codec, executor).run(pattern)
     }
 
   /**
@@ -174,8 +174,10 @@ trait Keys extends RedisEnvironment {
         OptionalInput(AuthInput),
         OptionalInput(NonEmptyList(ArbitraryInput[K]()))
       ),
-      StringOutput
-    )(executor, codec)
+      StringOutput,
+      codec,
+      executor
+    )
     command.run((host, port, key, destinationDb, timeout.toMillis, copy, replace, auth, keys))
   }
 
@@ -191,7 +193,7 @@ trait Keys extends RedisEnvironment {
    *   true if the key was moved.
    */
   final def move[K: Schema](key: K, destinationDb: Long): IO[RedisError, Boolean] = {
-    val command = RedisCommand(Move, Tuple2(ArbitraryInput[K](), LongInput), BoolOutput)(executor, codec)
+    val command = RedisCommand(Move, Tuple2(ArbitraryInput[K](), LongInput), BoolOutput, codec, executor)
     command.run((key, destinationDb))
   }
 
@@ -204,7 +206,7 @@ trait Keys extends RedisEnvironment {
    *   true if timeout was removed, false if key does not exist or does not have an associated timeout.
    */
   final def persist[K: Schema](key: K): IO[RedisError, Boolean] = {
-    val command = RedisCommand(Persist, ArbitraryInput[K](), BoolOutput)(executor, codec)
+    val command = RedisCommand(Persist, ArbitraryInput[K](), BoolOutput, codec, executor)
     command.run(key)
   }
 
@@ -223,7 +225,7 @@ trait Keys extends RedisEnvironment {
    */
   final def pExpire[K: Schema](key: K, timeout: Duration): IO[RedisError, Boolean] = {
     val command =
-      RedisCommand(PExpire, Tuple2(ArbitraryInput[K](), DurationMillisecondsInput), BoolOutput)(executor, codec)
+      RedisCommand(PExpire, Tuple2(ArbitraryInput[K](), DurationMillisecondsInput), BoolOutput, codec, executor)
     command.run((key, timeout))
   }
 
@@ -242,7 +244,7 @@ trait Keys extends RedisEnvironment {
    */
   final def pExpireAt[K: Schema](key: K, timestamp: Instant): IO[RedisError, Boolean] = {
     val command =
-      RedisCommand(PExpireAt, Tuple2(ArbitraryInput[K](), TimeMillisecondsInput), BoolOutput)(executor, codec)
+      RedisCommand(PExpireAt, Tuple2(ArbitraryInput[K](), TimeMillisecondsInput), BoolOutput, codec, executor)
     command.run((key, timestamp))
   }
 
@@ -255,7 +257,7 @@ trait Keys extends RedisEnvironment {
    *   remaining time to live of a key that has a timeout, error otherwise.
    */
   final def pTtl[K: Schema](key: K): IO[RedisError, Duration] = {
-    val command = RedisCommand(PTtl, ArbitraryInput[K](), DurationMillisecondsOutput)(executor, codec)
+    val command = RedisCommand(PTtl, ArbitraryInput[K](), DurationMillisecondsOutput, codec, executor)
     command.run(key)
   }
 
@@ -268,7 +270,7 @@ trait Keys extends RedisEnvironment {
   final def randomKey: ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
       def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]()))(executor, codec).run(())
+        RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]()), codec, executor).run(())
     }
 
   /**
@@ -282,7 +284,7 @@ trait Keys extends RedisEnvironment {
    *   unit if successful, error otherwise.
    */
   final def rename[K: Schema](key: K, newKey: K): IO[RedisError, Unit] = {
-    val command = RedisCommand(Rename, Tuple2(ArbitraryInput[K](), ArbitraryInput[K]()), UnitOutput)(executor, codec)
+    val command = RedisCommand(Rename, Tuple2(ArbitraryInput[K](), ArbitraryInput[K]()), UnitOutput, codec, executor)
     command.run((key, newKey))
   }
 
@@ -297,7 +299,7 @@ trait Keys extends RedisEnvironment {
    *   true if key was renamed to newKey, false if newKey already exists.
    */
   final def renameNx[K: Schema](key: K, newKey: K): IO[RedisError, Boolean] = {
-    val command = RedisCommand(RenameNx, Tuple2(ArbitraryInput[K](), ArbitraryInput[K]()), BoolOutput)(executor, codec)
+    val command = RedisCommand(RenameNx, Tuple2(ArbitraryInput[K](), ArbitraryInput[K]()), BoolOutput, codec, executor)
     command.run((key, newKey))
   }
 
@@ -343,8 +345,10 @@ trait Keys extends RedisEnvironment {
         OptionalInput(IdleTimeInput),
         OptionalInput(FreqInput)
       ),
-      UnitOutput
-    )(executor, codec)
+      UnitOutput,
+      codec,
+      executor
+    )
     command.run((key, ttl, value, replace, absTtl, idleTime, freq))
   }
 
@@ -375,8 +379,10 @@ trait Keys extends RedisEnvironment {
         val command = RedisCommand(
           Scan,
           Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
-          Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
-        )(executor, codec)
+          Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]())),
+          codec,
+          executor
+        )
         command.run((cursor, pattern.map(Pattern(_)), count, `type`))
       }
     }
@@ -419,8 +425,10 @@ trait Keys extends RedisEnvironment {
             OrderInput,
             OptionalInput(AlphaInput)
           ),
-          ChunkOutput(ArbitraryOutput[V]())
-        )(executor, codec)
+          ChunkOutput(ArbitraryOutput[V]()),
+          codec,
+          executor
+        )
         command.run((key, by, limit, get, order, alpha))
       }
     }
@@ -469,8 +477,10 @@ trait Keys extends RedisEnvironment {
         OptionalInput(AlphaInput),
         StoreInput
       ),
-      LongOutput
-    )(executor, codec)
+      LongOutput,
+      codec,
+      executor
+    )
     command.run((key, by, limit, get, order, alpha, storeAt))
   }
 
@@ -485,7 +495,7 @@ trait Keys extends RedisEnvironment {
    *   The number of keys that were touched.
    */
   final def touch[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(Touch, NonEmptyList(ArbitraryInput[K]()), LongOutput)(executor, codec)
+    val command = RedisCommand(Touch, NonEmptyList(ArbitraryInput[K]()), LongOutput, codec, executor)
     command.run((key, keys.toList))
   }
 
@@ -498,7 +508,7 @@ trait Keys extends RedisEnvironment {
    *   remaining time to live of a key that has a timeout, error otherwise.
    */
   final def ttl[K: Schema](key: K): IO[RedisError, Duration] = {
-    val command = RedisCommand(Ttl, ArbitraryInput[K](), DurationSecondsOutput)(executor, codec)
+    val command = RedisCommand(Ttl, ArbitraryInput[K](), DurationSecondsOutput, codec, executor)
     command.run(key)
   }
 
@@ -511,7 +521,7 @@ trait Keys extends RedisEnvironment {
    *   type of the value stored at key.
    */
   final def typeOf[K: Schema](key: K): IO[RedisError, RedisType] = {
-    val command = RedisCommand(TypeOf, ArbitraryInput[K](), TypeOutput)(executor, codec)
+    val command = RedisCommand(TypeOf, ArbitraryInput[K](), TypeOutput, codec, executor)
     command.run(key)
   }
 
@@ -530,7 +540,7 @@ trait Keys extends RedisEnvironment {
    *   [[del]]
    */
   final def unlink[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(Unlink, NonEmptyList(ArbitraryInput[K]()), LongOutput)(executor, codec)
+    val command = RedisCommand(Unlink, NonEmptyList(ArbitraryInput[K]()), LongOutput, codec, executor)
     command.run((key, keys.toList))
   }
 
@@ -546,7 +556,7 @@ trait Keys extends RedisEnvironment {
    *   the number of replicas reached both in case of failure and success.
    */
   final def wait_(replicas: Long, timeout: Duration): IO[RedisError, Long] = {
-    val command = RedisCommand(Wait, Tuple2(LongInput, LongInput), LongOutput)(executor, codec)
+    val command = RedisCommand(Wait, Tuple2(LongInput, LongInput), LongOutput, codec, executor)
     command.run((replicas, timeout.toMillis))
   }
 }

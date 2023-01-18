@@ -35,7 +35,7 @@ trait Cluster extends RedisEnvironment {
    *   the Unit value.
    */
   def asking: IO[RedisError, Unit] =
-    AskingCommand(executor, codec).run(())
+    AskingCommand(codec, executor).run(())
 
   /**
    * Returns details about which cluster slots map to which Redis instances.
@@ -44,7 +44,7 @@ trait Cluster extends RedisEnvironment {
    *   details about which cluster
    */
   def slots: IO[RedisError, Chunk[Partition]] = {
-    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))(executor, codec)
+    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), codec, executor)
     command.run(())
   }
 
@@ -58,7 +58,7 @@ trait Cluster extends RedisEnvironment {
    */
   def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
     val command =
-      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput)(executor, codec)
+      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput, codec, executor)
     command.run((slot.number, Stable.stringify))
   }
 
@@ -77,8 +77,10 @@ trait Cluster extends RedisEnvironment {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
-      UnitOutput
-    )(executor, codec)
+      UnitOutput,
+      codec,
+      executor
+    )
     command.run((slot.number, Migrating.stringify, nodeId))
   }
 
@@ -97,8 +99,10 @@ trait Cluster extends RedisEnvironment {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
-      UnitOutput
-    )(executor, codec)
+      UnitOutput,
+      codec,
+      executor
+    )
     command.run((slot.number, Importing.stringify, nodeId))
   }
 
@@ -117,8 +121,10 @@ trait Cluster extends RedisEnvironment {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
-      UnitOutput
-    )(executor, codec)
+      UnitOutput,
+      codec,
+      executor
+    )
     command.run((slot.number, Node.stringify, nodeId))
   }
 }
@@ -128,6 +134,6 @@ private[redis] object Cluster {
   final val ClusterSlots    = "CLUSTER SLOTS"
   final val ClusterSetSlots = "CLUSTER SETSLOT"
 
-  final val AskingCommand: (RedisExecutor, BinaryCodec) => RedisCommand[Unit, Unit] =
-    RedisCommand(Asking, NoInput, UnitOutput)(_, _)
+  final val AskingCommand: (BinaryCodec, RedisExecutor) => RedisCommand[Unit, Unit] =
+    RedisCommand(Asking, NoInput, UnitOutput, _, _)
 }

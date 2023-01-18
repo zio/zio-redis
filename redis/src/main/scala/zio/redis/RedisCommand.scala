@@ -20,9 +20,12 @@ import zio._
 import zio.redis.Input.{StringInput, Varargs}
 import zio.schema.codec.BinaryCodec
 
-final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out])(
-  val executor: RedisExecutor,
-  val codec: BinaryCodec
+final class RedisCommand[-In, +Out] private (
+  val name: String,
+  val input: Input[In],
+  val output: Output[Out],
+  val codec: BinaryCodec,
+  val executor: RedisExecutor
 ) {
 
   private[redis] def run(in: In): IO[RedisError, Out] =
@@ -36,9 +39,12 @@ final class RedisCommand[-In, +Out] private (val name: String, val input: Input[
 }
 
 object RedisCommand {
-  private[redis] def apply[In, Out](name: String, input: Input[In], output: Output[Out])(
-    executor: RedisExecutor,
-    codec: BinaryCodec
+  private[redis] def apply[In, Out](
+    name: String,
+    input: Input[In],
+    output: Output[Out],
+    codec: BinaryCodec,
+    executor: RedisExecutor
   ): RedisCommand[In, Out] =
-    new RedisCommand(name, input, output)(executor, codec)
+    new RedisCommand(name, input, output, codec, executor)
 }
