@@ -40,7 +40,7 @@ class LTrimBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (count to 0 by -1).toList
-    execute(rPush(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.rPush(key, items.head, items.tail: _*).unit))
   }
 
   @Benchmark
@@ -72,5 +72,5 @@ class LTrimBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lTrim[String](key, 1 to i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.lTrim[String](key, 1 to i))))
 }

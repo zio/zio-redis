@@ -42,7 +42,7 @@ class DecrBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(ZIO.foreachDiscard(items)(i => set(i, i)))
+    execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.set(i, i))))
   }
 
   @Benchmark
@@ -61,5 +61,5 @@ class DecrBenchmarks extends BenchmarkRuntime {
     execute[Redis4CatsClient[Long]](c => items.traverse_(i => c.decr(i)))
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => decr(i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.decr(i))))
 }

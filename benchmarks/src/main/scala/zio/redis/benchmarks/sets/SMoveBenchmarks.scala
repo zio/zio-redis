@@ -42,7 +42,7 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(sAdd(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(key, items.head, items.tail: _*).unit))
   }
 
   @Benchmark
@@ -72,5 +72,5 @@ class SMoveBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => sMove(key, destinationKey, i)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.sMove(key, destinationKey, i))))
 }

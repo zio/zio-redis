@@ -51,12 +51,13 @@ import zio.schema.codec._
 
 object ZIORedisExample extends ZIOAppDefault {
   val myApp: ZIO[Redis, RedisError, Unit] = for {
-    _ <- set("myKey", 8L, Some(1.minutes))
-    v <- get("myKey").returning[Long]
-    _ <- Console.printLine(s"Value of myKey: $v").orDie
-    _ <- hSet("myHash", ("k1", 6), ("k2", 2))
-    _ <- rPush("myList", 1, 2, 3, 4)
-    _ <- sAdd("mySet", "a", "b", "a", "c")
+    redis <- ZIO.service[Redis]
+    _     <- redis.set("myKey", 8L, Some(1.minutes))
+    v     <- redis.get("myKey").returning[Long]
+    _     <- Console.printLine(s"Value of myKey: $v").orDie
+    _     <- redis.hSet("myHash", ("k1", 6), ("k2", 2))
+    _     <- redis.rPush("myList", 1, 2, 3, 4)
+    _     <- redis.sAdd("mySet", "a", "b", "a", "c")
   } yield ()
 
   override def run = myApp.provide(
