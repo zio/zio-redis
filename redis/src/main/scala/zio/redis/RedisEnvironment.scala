@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.schema.codec.BinaryCodec
 
-trait RedisEnvironment {
+private[redis] trait RedisEnvironment {
   def codec: BinaryCodec
   def executor: RedisExecutor
 }
