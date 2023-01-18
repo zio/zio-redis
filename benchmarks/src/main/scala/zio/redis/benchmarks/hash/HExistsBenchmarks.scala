@@ -40,7 +40,7 @@ class HExistsBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    execute(hSet(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.hSet(key, items.head, items.tail: _*).unit))
   }
 
   @Benchmark
@@ -69,5 +69,5 @@ class HExistsBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hExists(key, it._1)))
+  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hExists(key, it._1))))
 }

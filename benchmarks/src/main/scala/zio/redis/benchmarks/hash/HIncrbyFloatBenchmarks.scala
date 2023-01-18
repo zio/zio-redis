@@ -43,7 +43,7 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    execute(hSet(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.hSet(key, items.head, items.tail: _*).unit))
   }
 
   @Benchmark
@@ -75,5 +75,7 @@ class HIncrbyFloatBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hIncrByFloat(key, it._1, increment)))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hIncrByFloat(key, it._1, increment)))
+  )
 }

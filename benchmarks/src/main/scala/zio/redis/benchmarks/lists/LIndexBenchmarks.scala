@@ -40,12 +40,12 @@ class LIndexBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList
-    execute(rPush(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.rPush(key, items.head, items.tail: _*).unit))
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    execute(del(key).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.del(key).unit))
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -76,5 +76,7 @@ class LIndexBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(i => lIndex(key, i.toLong).returning[String]))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(i => ZIO.serviceWithZIO[Redis](_.lIndex(key, i.toLong).returning[String]))
+  )
 }

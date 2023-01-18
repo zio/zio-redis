@@ -19,7 +19,19 @@ package zio.redis
 import zio._
 import zio.schema.codec.BinaryCodec
 
-trait Redis {
+trait Redis
+    extends api.Connection
+    with api.Geo
+    with api.Hashes
+    with api.HyperLogLog
+    with api.Keys
+    with api.Lists
+    with api.Sets
+    with api.Strings
+    with api.SortedSets
+    with api.Streams
+    with api.Scripting
+    with api.Cluster {
   def codec: BinaryCodec
   def executor: RedisExecutor
 }
