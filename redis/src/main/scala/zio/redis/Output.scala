@@ -827,4 +827,90 @@ object Output {
         case other => throw ProtocolError(s"$other isn't an array")
       }
   }
+
+  case object QueuedOutput extends Output[Unit] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Unit =
+      respValue match {
+        case RespValue.SimpleString("QUEUED") => ()
+        case other                            => throw ProtocolError(s"$other isn't queued")
+      }
+  }
+
+  sealed trait TransactionOutput[+A, +B, +Out] extends Output[Out] {
+    val left: Output[A]
+    val right: Output[B]
+
+    def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Out =
+      respValue match {
+        case RespValue.Array(values) =>
+          this match {
+            case _: Zip[_, _] =>
+              (left, right) match {
+                case (l: TransactionOutput[_, _, _], r: TransactionOutput[_, _, _]) =>
+                  (
+                    l.tryDecode(RespValue.Array(values.take(l.count))),
+                    r.tryDecode(RespValue.Array(values.drop(l.count).take(r.count)))
+                  ).asInstanceOf[Out]
+                case (_, r: TransactionOutput[_, _, _]) =>
+                  (
+                    left.tryDecode(values.head),
+                    r.tryDecode(RespValue.Array(values.tail))
+                  ).asInstanceOf[Out]
+                case (l: TransactionOutput[_, _, _], _) =>
+                  (
+                    l.tryDecode(RespValue.Array(values.init)),
+                    right.tryDecode(values.last)
+                  ).asInstanceOf[Out]
+                case _ =>
+                  (
+                    left.tryDecode(values.head),
+                    right.tryDecode(values.last)
+                  ).asInstanceOf[Out]
+              }
+            case ZipLeft(l: TransactionOutput[_, _, _], _) =>
+              l.tryDecode(RespValue.Array(values.take(l.count))).asInstanceOf[Out]
+            case ZipLeft(l, _) =>
+              l.tryDecode(values.head).asInstanceOf[Out]
+            case ZipRight(l, r: TransactionOutput[_, _, _]) =>
+              val leftCount =
+                l match {
+                  case value: TransactionOutput[_, _, _] => value.count
+                  case _                                 => 1
+                }
+              r.tryDecode(RespValue.Array(values.drop(leftCount))).asInstanceOf[Out]
+            case ZipRight(_, r) =>
+              r.tryDecode(values.last).asInstanceOf[Out]
+          }
+        case other => throw ProtocolError(s"$other is not an array")
+      }
+
+    val count: Int = {
+      val lcount = left match {
+        case value: TransactionOutput[_, _, _] => value.count
+        case _                                 => 1
+      }
+
+      val rcount = right match {
+        case value: TransactionOutput[_, _, _] => value.count
+        case _                                 => 1
+      }
+
+      lcount + rcount
+    }
+  }
+
+  final case class Zip[+A, +B](
+    left: Output[A],
+    right: Output[B]
+  ) extends TransactionOutput[A, B, (A, B)]
+
+  final case class ZipLeft[+A, +B](
+    left: Output[A],
+    right: Output[B]
+  ) extends TransactionOutput[A, B, A]
+
+  final case class ZipRight[+A, +B](
+    left: Output[A],
+    right: Output[B]
+  ) extends TransactionOutput[A, B, B]
 }

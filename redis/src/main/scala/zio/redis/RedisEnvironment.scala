@@ -19,6 +19,6 @@ package zio.redis
 import zio.schema.codec.BinaryCodec
 
 private[redis] trait RedisEnvironment {
-  protected def codec: BinaryCodec
-  protected def executor: RedisExecutor
+  def codec: BinaryCodec
+  def executor: RedisExecutor
 }
