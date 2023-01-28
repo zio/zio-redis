@@ -130,14 +130,14 @@ object ClusterExecutor {
 
   private def connectToCluster(address: RedisUri) =
     for {
-      temporaryRedis    <- redis(address)
-      (trLayer, trScope) = temporaryRedis
-      partitions        <- ZIO.serviceWithZIO[Redis](_.slots).provideLayer(trLayer)
-      _                 <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
-      uniqueAddresses    = partitions.map(_.master.address).distinct
-      uriExecScope      <- ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address).map(es => address -> es))
-      slots              = slotAddress(partitions)
-      _                 <- trScope.close(Exit.unit)
+      temporaryRedis                      <- redis(address)
+      (trLayer, teLayer, tcLayer, trScope) = temporaryRedis
+      partitions                          <- ZIO.serviceWithZIO[Redis](_.slots.execute).provide(trLayer, teLayer, tcLayer)
+      _                                   <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
+      uniqueAddresses                      = partitions.map(_.master.address).distinct
+      uriExecScope                        <- ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address).map(es => address -> es))
+      slots                                = slotAddress(partitions)
+      _                                   <- trScope.close(Exit.unit)
     } yield ClusterConnection(partitions, uriExecScope.toMap, slots)
 
   private def connectToNode(address: RedisUri) =
@@ -155,9 +155,11 @@ object ClusterExecutor {
     val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
     for {
       closableScope <- Scope.make
-      layer         <- closableScope.extend[Any](redisLayer.memoize)
+      rLayer        <- closableScope.extend[Any](redisLayer.memoize)
+      eLayer        <- closableScope.extend[Any](executorLayer.memoize)
+      cLayer        <- closableScope.extend[Any](codecLayer.memoize)
       _             <- logScopeFinalizer("Temporary redis connection is closed")
-    } yield (layer, closableScope)
+    } yield (rLayer, eLayer, cLayer, closableScope)
   }
 
   private def slotAddress(partitions: Chunk[Partition]) =

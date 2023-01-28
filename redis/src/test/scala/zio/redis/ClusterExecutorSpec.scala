@@ -11,7 +11,7 @@ object ClusterExecutorSpec extends BaseSpec {
       test("check cluster responsiveness when ASK redirect happens") {
         for {
           redis           <- ZIO.service[Redis]
-          initSlots       <- redis.slots
+          initSlots       <- redis.slots.execute
           key             <- uuid
           value1          <- redis.get(key).returning[String]
           keySlot          = Slot(CRC16.get(Chunk.fromArray(key.getBytes)).toLong % SlotsAmount)
@@ -21,13 +21,15 @@ object ClusterExecutorSpec extends BaseSpec {
           destMaster       = destPart.master
           destMasterConn   = getRedisNodeLayer(destMaster.address)
           _                = ZIO.logDebug(s"$key _____ Importing $keySlot to ${destMaster.id} - ${destMaster.address}")
-          _               <- ZIO.serviceWithZIO[Redis](_.setSlotImporting(keySlot, sourceMaster.id)).provideLayer(destMasterConn)
+          _ <-
+            ZIO.serviceWithZIO[Redis](_.setSlotImporting(keySlot, sourceMaster.id).execute).provideLayer(destMasterConn)
           _                = ZIO.logDebug(s"$key _____ Migrating $keySlot from ${sourceMaster.id}- ${sourceMaster.address}")
           sourceMasterConn = getRedisNodeLayer(sourceMaster.address)
-          _               <- ZIO.serviceWithZIO[Redis](_.setSlotMigrating(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
-          value2          <- redis.get(key).returning[String] // have to redirect without error ASK
-          value3          <- redis.get(key).returning[String] // have to redirect without creating new connection
-          _               <- ZIO.serviceWithZIO[Redis](_.setSlotStable(keySlot)).provideLayer(destMasterConn)
+          _ <-
+            ZIO.serviceWithZIO[Redis](_.setSlotMigrating(keySlot, destMaster.id).execute).provideLayer(sourceMasterConn)
+          value2 <- redis.get(key).returning[String] // have to redirect without error ASK
+          value3 <- redis.get(key).returning[String] // have to redirect without creating new connection
+          _      <- ZIO.serviceWithZIO[Redis](_.setSlotStable(keySlot).execute).provideLayer(destMasterConn)
         } yield {
           assertTrue(value1 == value2) && assertTrue(value2 == value3)
         }
@@ -35,7 +37,7 @@ object ClusterExecutorSpec extends BaseSpec {
       test("check client responsiveness when Moved redirect happened") {
         for {
           redis           <- ZIO.service[Redis]
-          initSlots       <- redis.slots
+          initSlots       <- redis.slots.execute
           key             <- uuid
           _               <- redis.set(key, "value")
           value1          <- redis.get(key).returning[String]
@@ -46,17 +48,19 @@ object ClusterExecutorSpec extends BaseSpec {
           destMaster       = destPart.master
           destMasterConn   = getRedisNodeLayer(destMaster.address)
           _               <- ZIO.logDebug(s"$key _____ Importing $keySlot to ${destMaster.id}")
-          _               <- ZIO.serviceWithZIO[Redis](_.setSlotImporting(keySlot, sourceMaster.id)).provideLayer(destMasterConn)
+          _ <-
+            ZIO.serviceWithZIO[Redis](_.setSlotImporting(keySlot, sourceMaster.id).execute).provideLayer(destMasterConn)
           _               <- ZIO.logDebug(s"$key _____ Migrating $keySlot from ${sourceMaster.id}")
           sourceMasterConn = getRedisNodeLayer(sourceMaster.address)
-          _               <- ZIO.serviceWithZIO[Redis](_.setSlotMigrating(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
+          _ <-
+            ZIO.serviceWithZIO[Redis](_.setSlotMigrating(keySlot, destMaster.id).execute).provideLayer(sourceMasterConn)
           _ <- ZIO
                  .serviceWithZIO[Redis](
                    _.migrate(destMaster.address.host, destMaster.address.port.toLong, key, 0, 5.seconds, keys = None)
                  )
                  .provideLayer(sourceMasterConn)
-          _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(destMasterConn)
-          _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
+          _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id).execute).provideLayer(destMasterConn)
+          _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id).execute).provideLayer(sourceMasterConn)
           value2 <- redis.get(key).returning[String] // have to refresh connection
           value3 <- redis.get(key).returning[String] // have to get value without refreshing connection
         } yield {

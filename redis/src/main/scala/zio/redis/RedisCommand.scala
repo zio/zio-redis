@@ -28,6 +28,8 @@ final class RedisCommand[-In, +Out] private (
   val executor: RedisExecutor
 ) {
 
+  private[redis] def runWith(in: In): Executable[In, Out] = Executable(this, in)
+
   private[redis] def run(in: In): IO[RedisError, Out] =
     executor
       .execute(resp(in))

@@ -34,8 +34,8 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def asking: IO[RedisError, Unit] =
-    AskingCommand(codec, executor).run(())
+  def asking: Executable[Unit, Unit] =
+    AskingCommand(codec, executor).runWith(())
 
   /**
    * Returns details about which cluster slots map to which Redis instances.
@@ -43,9 +43,9 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   details about which cluster
    */
-  def slots: IO[RedisError, Chunk[Partition]] = {
+  def slots: Executable[Unit, Chunk[Partition]] = {
     val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), codec, executor)
-    command.run(())
+    command.runWith(())
   }
 
   /**
@@ -56,10 +56,10 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
+  def setSlotStable(slot: Slot): Executable[(Long, String), Unit] = {
     val command =
       RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput, codec, executor)
-    command.run((slot.number, Stable.stringify))
+    command.runWith((slot.number, Stable.stringify))
   }
 
   /**
@@ -73,7 +73,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+  def setSlotMigrating(slot: Slot, nodeId: String): Executable[(Long, String, String), Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -81,7 +81,7 @@ trait Cluster extends RedisEnvironment {
       codec,
       executor
     )
-    command.run((slot.number, Migrating.stringify, nodeId))
+    command.runWith((slot.number, Migrating.stringify, nodeId))
   }
 
   /**
@@ -95,7 +95,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+  def setSlotImporting(slot: Slot, nodeId: String): Executable[(Long, String, String), Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -103,7 +103,7 @@ trait Cluster extends RedisEnvironment {
       codec,
       executor
     )
-    command.run((slot.number, Importing.stringify, nodeId))
+    command.runWith((slot.number, Importing.stringify, nodeId))
   }
 
   /**
@@ -117,7 +117,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+  def setSlotNode(slot: Slot, nodeId: String): Executable[(Long, String, String), Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -125,7 +125,7 @@ trait Cluster extends RedisEnvironment {
       codec,
       executor
     )
-    command.run((slot.number, Node.stringify, nodeId))
+    command.runWith((slot.number, Node.stringify, nodeId))
   }
 }
 
