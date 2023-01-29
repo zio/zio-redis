@@ -20,31 +20,22 @@ import zio._
 import zio.redis.Input.{StringInput, Varargs}
 import zio.schema.codec.BinaryCodec
 
-final class RedisCommand[-In, +Out] private (
-  val name: String,
-  val input: Input[In],
-  val output: Output[Out],
-  val codec: BinaryCodec,
-  val executor: RedisExecutor
-) {
+final class RedisCommand[-In, +Out] private (val name: String, val input: Input[In], val output: Output[Out]) {
 
-  private[redis] def run(in: In): IO[RedisError, Out] =
-    executor
-      .execute(resp(in))
-      .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(codec)))
-      .refineToOrDie[RedisError]
+  private[redis] def run(in: In): ZIO[RedisEnvironment, RedisError, Out] =
+    for {
+      env <- ZIO.service[RedisEnvironment]
+      result <- env.executor
+                  .execute(resp(in, env.codec))
+                  .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(env.codec)))
+                  .refineToOrDie[RedisError]
+    } yield result
 
-  private[redis] def resp(in: In): Chunk[RespValue.BulkString] =
+  private[redis] def resp(in: In, codec: BinaryCodec): Chunk[RespValue.BulkString] =
     Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
 }
 
 object RedisCommand {
-  private[redis] def apply[In, Out](
-    name: String,
-    input: Input[In],
-    output: Output[Out],
-    codec: BinaryCodec,
-    executor: RedisExecutor
-  ): RedisCommand[In, Out] =
-    new RedisCommand(name, input, output, codec, executor)
+  private[redis] def apply[In, Out](name: String, input: Input[In], output: Output[Out]): RedisCommand[In, Out] =
+    new RedisCommand(name, input, output)
 }

@@ -22,10 +22,9 @@ import zio.redis._
 import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
-import zio.schema.codec.BinaryCodec
-import zio.{Chunk, IO}
+import zio.{Chunk, ZIO}
 
-trait Cluster extends RedisEnvironment {
+trait Cluster {
 
   /**
    * When a cluster client receives an -ASK redirect, the ASKING command is sent to the target node followed by the
@@ -34,8 +33,8 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def asking: IO[RedisError, Unit] =
-    AskingCommand(codec, executor).run(())
+  def asking: ZIO[RedisEnvironment, RedisError, Unit] =
+    AskingCommand.run(())
 
   /**
    * Returns details about which cluster slots map to which Redis instances.
@@ -43,8 +42,8 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   details about which cluster
    */
-  def slots: IO[RedisError, Chunk[Partition]] = {
-    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), codec, executor)
+  def slots: ZIO[RedisEnvironment, RedisError, Chunk[Partition]] = {
+    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))
     command.run(())
   }
 
@@ -56,9 +55,9 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
+  def setSlotStable(slot: Slot): ZIO[RedisEnvironment, RedisError, Unit] = {
     val command =
-      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput, codec, executor)
+      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput)
     command.run((slot.number, Stable.stringify))
   }
 
@@ -73,14 +72,9 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
-      UnitOutput,
-      codec,
-      executor
-    )
+  def setSlotMigrating(slot: Slot, nodeId: String): ZIO[RedisEnvironment, RedisError, Unit] = {
+    val command =
+      RedisCommand(ClusterSetSlots, Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()), UnitOutput)
     command.run((slot.number, Migrating.stringify, nodeId))
   }
 
@@ -95,14 +89,9 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
-      UnitOutput,
-      codec,
-      executor
-    )
+  def setSlotImporting(slot: Slot, nodeId: String): ZIO[RedisEnvironment, RedisError, Unit] = {
+    val command =
+      RedisCommand(ClusterSetSlots, Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()), UnitOutput)
     command.run((slot.number, Importing.stringify, nodeId))
   }
 
@@ -117,14 +106,9 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
-      UnitOutput,
-      codec,
-      executor
-    )
+  def setSlotNode(slot: Slot, nodeId: String): ZIO[RedisEnvironment, RedisError, Unit] = {
+    val command =
+      RedisCommand(ClusterSetSlots, Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()), UnitOutput)
     command.run((slot.number, Node.stringify, nodeId))
   }
 }
@@ -134,6 +118,5 @@ private[redis] object Cluster {
   final val ClusterSlots    = "CLUSTER SLOTS"
   final val ClusterSetSlots = "CLUSTER SETSLOT"
 
-  final val AskingCommand: (BinaryCodec, RedisExecutor) => RedisCommand[Unit, Unit] =
-    RedisCommand(Asking, NoInput, UnitOutput, _, _)
+  final val AskingCommand: RedisCommand[Unit, Unit] = RedisCommand(Asking, NoInput, UnitOutput)
 }

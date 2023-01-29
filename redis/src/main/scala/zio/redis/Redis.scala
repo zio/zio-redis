@@ -17,7 +17,6 @@
 package zio.redis
 
 import zio._
-import zio.schema.codec.BinaryCodec
 
 trait Redis
     extends api.Connection
@@ -31,14 +30,11 @@ trait Redis
     with api.SortedSets
     with api.Streams
     with api.Scripting
-    with api.Cluster {
-  def codec: BinaryCodec
-  def executor: RedisExecutor
-}
+    with api.Cluster
 
-final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
+object Redis extends Redis
 
 object RedisLive {
-  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromFunction(RedisLive.apply _)
+  lazy val layer: ULayer[Redis] =
+    ZLayer.succeed(Redis)
 }

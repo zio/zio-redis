@@ -23,7 +23,7 @@ import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
 
-trait Lists extends RedisEnvironment {
+trait Lists {
   import Lists._
 
   /**
@@ -46,14 +46,8 @@ trait Lists extends RedisEnvironment {
     timeout: Duration
   ): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] = {
-        val command = RedisCommand(
-          BrPopLPush,
-          Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), DurationSecondsInput),
-          OptionalOutput(ArbitraryOutput[V]()),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] = {
+        val command = RedisCommand(BrPopLPush, Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), DurationSecondsInput), OptionalOutput(ArbitraryOutput[V]()))
 
         command.run((source, destination, timeout))
       }
@@ -72,14 +66,8 @@ trait Lists extends RedisEnvironment {
    */
   final def lIndex[K: Schema](key: K, index: Long): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(
-          LIndex,
-          Tuple2(ArbitraryInput[K](), LongInput),
-          OptionalOutput(ArbitraryOutput[V]()),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] =
+        RedisCommand(LIndex, Tuple2(ArbitraryInput[K](), LongInput), OptionalOutput(ArbitraryOutput[V]()))
           .run((key, index))
     }
 
@@ -91,8 +79,8 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the length of the list at key.
    */
-  final def lLen[K: Schema](key: K): IO[RedisError, Long] = {
-    val command = RedisCommand(LLen, ArbitraryInput[K](), LongOutput, codec, executor)
+  final def lLen[K: Schema](key: K): ZIO[RedisEnvironment, RedisError, Long] = {
+    val command = RedisCommand(LLen, ArbitraryInput[K](), LongOutput)
     command.run(key)
   }
 
@@ -106,8 +94,8 @@ trait Lists extends RedisEnvironment {
    */
   final def lPop[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(LPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()), codec, executor).run(key)
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] =
+        RedisCommand(LPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
 
   /**
@@ -123,9 +111,9 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the length of the list after the push operation.
    */
-  final def lPush[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Long] = {
+  final def lPush[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisEnvironment, RedisError, Long] = {
     val command =
-      RedisCommand(LPush, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput, codec, executor)
+      RedisCommand(LPush, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
     command.run((key, (element, elements.toList)))
   }
 
@@ -142,9 +130,9 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the length of the list after the push operation.
    */
-  final def lPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Long] = {
+  final def lPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisEnvironment, RedisError, Long] = {
     val command =
-      RedisCommand(LPushX, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput, codec, executor)
+      RedisCommand(LPushX, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
     command.run((key, (element, elements.toList)))
   }
 
@@ -161,14 +149,8 @@ trait Lists extends RedisEnvironment {
    */
   final def lRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[V: Schema]: IO[RedisError, Chunk[V]] =
-        RedisCommand(
-          LRange,
-          Tuple2(ArbitraryInput[K](), RangeInput),
-          ChunkOutput(ArbitraryOutput[V]()),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Chunk[V]] =
+        RedisCommand(LRange, Tuple2(ArbitraryInput[K](), RangeInput), ChunkOutput(ArbitraryOutput[V]()))
           .run((key, range))
     }
 
@@ -189,8 +171,8 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the number of removed elements.
    */
-  final def lRem[K: Schema](key: K, count: Long, element: String): IO[RedisError, Long] = {
-    val command = RedisCommand(LRem, Tuple3(ArbitraryInput[K](), LongInput, StringInput), LongOutput, codec, executor)
+  final def lRem[K: Schema](key: K, count: Long, element: String): ZIO[RedisEnvironment, RedisError, Long] = {
+    val command = RedisCommand(LRem, Tuple3(ArbitraryInput[K](), LongInput, StringInput), LongOutput)
     command.run((key, count, element))
   }
 
@@ -206,9 +188,9 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def lSet[K: Schema, V: Schema](key: K, index: Long, element: V): IO[RedisError, Unit] = {
+  final def lSet[K: Schema, V: Schema](key: K, index: Long, element: V): ZIO[RedisEnvironment, RedisError, Unit] = {
     val command =
-      RedisCommand(LSet, Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[V]()), UnitOutput, codec, executor)
+      RedisCommand(LSet, Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[V]()), UnitOutput)
     command.run((key, index, element))
   }
 
@@ -223,8 +205,8 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def lTrim[K: Schema](key: K, range: Range): IO[RedisError, Unit] = {
-    val command = RedisCommand(LTrim, Tuple2(ArbitraryInput[K](), RangeInput), UnitOutput, codec, executor)
+  final def lTrim[K: Schema](key: K, range: Range): ZIO[RedisEnvironment, RedisError, Unit] = {
+    val command = RedisCommand(LTrim, Tuple2(ArbitraryInput[K](), RangeInput), UnitOutput)
     command.run((key, range))
   }
 
@@ -238,8 +220,8 @@ trait Lists extends RedisEnvironment {
    */
   final def rPop[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(RPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]()), codec, executor).run(key)
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] =
+        RedisCommand(RPop, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
 
   /**
@@ -256,14 +238,8 @@ trait Lists extends RedisEnvironment {
    */
   final def rPopLPush[S: Schema, D: Schema](source: S, destination: D): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(
-          RPopLPush,
-          Tuple2(ArbitraryInput[S](), ArbitraryInput[D]()),
-          OptionalOutput(ArbitraryOutput[V]()),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] =
+        RedisCommand(RPopLPush, Tuple2(ArbitraryInput[S](), ArbitraryInput[D]()), OptionalOutput(ArbitraryOutput[V]()))
           .run((source, destination))
     }
 
@@ -280,9 +256,9 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the length of the list after the push operation.
    */
-  final def rPush[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Long] = {
+  final def rPush[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisEnvironment, RedisError, Long] = {
     val command =
-      RedisCommand(RPush, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput, codec, executor)
+      RedisCommand(RPush, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
     command.run((key, (element, elements.toList)))
   }
 
@@ -299,9 +275,9 @@ trait Lists extends RedisEnvironment {
    * @return
    *   the length of the list after the push operation.
    */
-  final def rPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Long] = {
+  final def rPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): ZIO[RedisEnvironment, RedisError, Long] = {
     val command =
-      RedisCommand(RPushX, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput, codec, executor)
+      RedisCommand(RPushX, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[V]())), LongOutput)
     command.run((key, (element, elements.toList)))
   }
 
@@ -324,14 +300,8 @@ trait Lists extends RedisEnvironment {
     timeout: Duration
   ): ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] =
     new ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] {
-      def returning[V: Schema]: IO[RedisError, Option[(K, V)]] = {
-        val command = RedisCommand(
-          BlPop,
-          Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
-          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[(K, V)]] = {
+        val command = RedisCommand(BlPop, Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput), OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())))
         command.run(((key, keys.toList), timeout))
       }
     }
@@ -355,14 +325,8 @@ trait Lists extends RedisEnvironment {
     timeout: Duration
   ): ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] =
     new ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] {
-      def returning[V: Schema]: IO[RedisError, Option[(K, V)]] = {
-        val command = RedisCommand(
-          BrPop,
-          Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput),
-          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[(K, V)]] = {
+        val command = RedisCommand(BrPop, Tuple2(NonEmptyList(ArbitraryInput[K]()), DurationSecondsInput), OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())))
         command.run(((key, keys.toList), timeout))
       }
     }
@@ -386,14 +350,8 @@ trait Lists extends RedisEnvironment {
     position: Position,
     pivot: V,
     element: V
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      LInsert,
-      Tuple4(ArbitraryInput[K](), PositionInput, ArbitraryInput[V](), ArbitraryInput[V]()),
-      LongOutput,
-      codec,
-      executor
-    )
+  ): ZIO[RedisEnvironment, RedisError, Long] = {
+    val command = RedisCommand(LInsert, Tuple4(ArbitraryInput[K](), PositionInput, ArbitraryInput[V](), ArbitraryInput[V]()), LongOutput)
     command.run((key, position, pivot, element))
   }
 
@@ -420,14 +378,8 @@ trait Lists extends RedisEnvironment {
     destinationSide: Side
   ): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] = {
-        val command = RedisCommand(
-          LMove,
-          Tuple4(ArbitraryInput[S](), ArbitraryInput[D](), SideInput, SideInput),
-          OptionalOutput(ArbitraryOutput[V]()),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] = {
+        val command = RedisCommand(LMove, Tuple4(ArbitraryInput[S](), ArbitraryInput[D](), SideInput, SideInput), OptionalOutput(ArbitraryOutput[V]()))
         command.run((source, destination, sourceSide, destinationSide))
       }
     }
@@ -459,14 +411,8 @@ trait Lists extends RedisEnvironment {
     timeout: Duration
   ): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] = {
-        val command = RedisCommand(
-          BlMove,
-          Tuple5(ArbitraryInput[S](), ArbitraryInput[D](), SideInput, SideInput, DurationSecondsInput),
-          OptionalOutput(ArbitraryOutput[V]()),
-          codec,
-          executor
-        )
+      def returning[V: Schema]: ZIO[RedisEnvironment, RedisError, Option[V]] = {
+        val command = RedisCommand(BlMove, Tuple5(ArbitraryInput[S](), ArbitraryInput[D](), SideInput, SideInput, DurationSecondsInput), OptionalOutput(ArbitraryOutput[V]()))
 
         command.run((source, destination, sourceSide, destinationSide, timeout))
       }
@@ -493,19 +439,13 @@ trait Lists extends RedisEnvironment {
     element: V,
     rank: Option[Rank] = None,
     maxLen: Option[ListMaxLen] = None
-  ): IO[RedisError, Option[Long]] = {
-    val command = RedisCommand(
-      LPos,
-      Tuple4(
-        ArbitraryInput[K](),
-        ArbitraryInput[V](),
-        OptionalInput(RankInput),
-        OptionalInput(ListMaxLenInput)
-      ),
-      OptionalOutput(LongOutput),
-      codec,
-      executor
-    )
+  ): ZIO[RedisEnvironment, RedisError, Option[Long]] = {
+    val command = RedisCommand(LPos, Tuple4(
+      ArbitraryInput[K](),
+      ArbitraryInput[V](),
+      OptionalInput(RankInput),
+      OptionalInput(ListMaxLenInput)
+    ), OptionalOutput(LongOutput))
 
     command.run((key, element, rank, maxLen))
   }
@@ -534,20 +474,14 @@ trait Lists extends RedisEnvironment {
     count: Count,
     rank: Option[Rank] = None,
     maxLen: Option[ListMaxLen] = None
-  ): IO[RedisError, Chunk[Long]] = {
-    val command = RedisCommand(
-      LPos,
-      Tuple5(
-        ArbitraryInput[K](),
-        ArbitraryInput[V](),
-        CountInput,
-        OptionalInput(RankInput),
-        OptionalInput(ListMaxLenInput)
-      ),
-      ChunkOutput(LongOutput),
-      codec,
-      executor
-    )
+  ): ZIO[RedisEnvironment, RedisError, Chunk[Long]] = {
+    val command = RedisCommand(LPos, Tuple5(
+      ArbitraryInput[K](),
+      ArbitraryInput[V](),
+      CountInput,
+      OptionalInput(RankInput),
+      OptionalInput(ListMaxLenInput)
+    ), ChunkOutput(LongOutput))
 
     command.run((key, element, count, rank, maxLen))
   }

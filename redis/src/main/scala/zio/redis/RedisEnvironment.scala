@@ -1,8 +1,15 @@
 package zio.redis
 
+import zio._
 import zio.schema.codec.BinaryCodec
 
-private[redis] trait RedisEnvironment {
-  def codec: BinaryCodec
-  def executor: RedisExecutor
+final case class RedisEnvironment(codec: BinaryCodec, executor: RedisExecutor)
+
+private[redis] object RedisEnvironment {
+  lazy val layer = ZLayer {
+    for {
+      codec    <- ZIO.service[BinaryCodec]
+      executor <- ZIO.service[RedisExecutor]
+    } yield new RedisEnvironment(codec, executor)
+  }
 }

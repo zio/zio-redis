@@ -42,7 +42,7 @@ final case class ClusterExecutor(
     def executeAsk(address: RedisUri) =
       for {
         executor <- executor(address)
-        _        <- executor.execute(AskingCommand(StringUtf8Codec, this).resp(()))
+        _        <- executor.execute(AskingCommand.resp((), StringUtf8Codec))
         res      <- executor.execute(command)
       } yield res
 
@@ -130,14 +130,14 @@ object ClusterExecutor {
 
   private def connectToCluster(address: RedisUri) =
     for {
-      temporaryRedis    <- redis(address)
-      (trLayer, trScope) = temporaryRedis
-      partitions        <- ZIO.serviceWithZIO[Redis](_.slots).provideLayer(trLayer)
-      _                 <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
-      uniqueAddresses    = partitions.map(_.master.address).distinct
-      uriExecScope      <- ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address).map(es => address -> es))
-      slots              = slotAddress(partitions)
-      _                 <- trScope.close(Exit.unit)
+      temporaryRedis             <- redis(address)
+      (trLayer, reLayer, trScope) = temporaryRedis
+      partitions                 <- ZIO.serviceWithZIO[Redis](_.slots).provide(trLayer, reLayer)
+      _                          <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
+      uniqueAddresses             = partitions.map(_.master.address).distinct
+      uriExecScope               <- ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address).map(es => address -> es))
+      slots                       = slotAddress(partitions)
+      _                          <- trScope.close(Exit.unit)
     } yield ClusterConnection(partitions, uriExecScope.toMap, slots)
 
   private def connectToNode(address: RedisUri) =
@@ -152,12 +152,14 @@ object ClusterExecutor {
   private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
     val codecLayer    = ZLayer.succeed[BinaryCodec](StringUtf8Codec)
-    val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
+    val redisEnvLayer = executorLayer ++ codecLayer >>> RedisEnvironment.layer
+    val redisLayer    = RedisLive.layer
     for {
       closableScope <- Scope.make
-      layer         <- closableScope.extend[Any](redisLayer.memoize)
+      rLayer        <- closableScope.extend[Any](redisLayer.memoize)
+      reLayer       <- closableScope.extend[Any](redisEnvLayer.memoize)
       _             <- logScopeFinalizer("Temporary redis connection is closed")
-    } yield (layer, closableScope)
+    } yield (rLayer, reLayer, closableScope)
   }
 
   private def slotAddress(partitions: Chunk[Partition]) =
