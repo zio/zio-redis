@@ -8,9 +8,7 @@
 
 > The client is still a work-in-progress. Watch this space!
 
-|Project Stage | CI | Release | Snapshot | Discord | Github |
-|--------------|----|---------|----------|---------|--------|
-|[![Experimental](https://img.shields.io/badge/Project%20Stage-Experimental-yellowgreen.svg)](https://github.com/zio/zio/wiki/Project-Stages)        |![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) |[![Sonatype Releases](https://img.shields.io/nexus/r/https/oss.sonatype.org/dev.zio/zio-redis_2.12.svg)](https://oss.sonatype.org/content/repositories/releases/dev/zio/zio-redis_2.12/) |[![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.12.svg)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.12/) |[![Chat on Discord!](https://img.shields.io/discord/629491597070827530?logo=discord)](https://discord.gg/2ccFBr4) |[![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis) |
+[![Experimental](https://img.shields.io/badge/Project%20Stage-Experimental-yellowgreen.svg)](https://github.com/zio/zio/wiki/Project-Stages) ![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) [![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.13/) [![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis)
 
 ## Introduction
 
@@ -53,12 +51,13 @@ import zio.schema.codec._
 
 object ZIORedisExample extends ZIOAppDefault {
   val myApp: ZIO[Redis, RedisError, Unit] = for {
-    _ <- set("myKey", 8L, Some(1.minutes))
-    v <- get("myKey").returning[Long]
-    _ <- Console.printLine(s"Value of myKey: $v").orDie
-    _ <- hSet("myHash", ("k1", 6), ("k2", 2))
-    _ <- rPush("myList", 1, 2, 3, 4)
-    _ <- sAdd("mySet", "a", "b", "a", "c")
+    redis <- ZIO.service[Redis]
+    _     <- redis.set("myKey", 8L, Some(1.minutes))
+    v     <- redis.get("myKey").returning[Long]
+    _     <- Console.printLine(s"Value of myKey: $v").orDie
+    _     <- redis.hSet("myHash", ("k1", 6), ("k2", 2))
+    _     <- redis.rPush("myList", 1, 2, 3, 4)
+    _     <- redis.sAdd("mySet", "a", "b", "a", "c")
   } yield ()
 
   override def run = myApp.provide(

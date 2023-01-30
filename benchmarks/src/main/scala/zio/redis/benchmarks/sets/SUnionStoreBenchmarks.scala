@@ -45,8 +45,8 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
     otherItems = (0 to count).toList.map(_.toString)
-    execute(sAdd(key, items.head, items.tail: _*).unit)
-    execute(sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(key, items.head, items.tail: _*).unit))
+    execute(ZIO.serviceWithZIO[Redis](_.sAdd(otherKey, otherItems.head, otherItems.tail: _*).unit))
 
   }
 
@@ -81,5 +81,7 @@ class SUnionStoreBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => sUnionStore(destinationKey, key, otherKey)))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(_ => ZIO.serviceWithZIO[Redis](_.sUnionStore(destinationKey, key, otherKey)))
+  )
 }

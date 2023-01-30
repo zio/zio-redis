@@ -25,7 +25,7 @@ import zio.schema.Schema
 
 import java.time.Instant
 
-trait Strings {
+trait Strings extends RedisEnvironment {
   import Strings._
 
   /**
@@ -38,8 +38,8 @@ trait Strings {
    * @return
    *   Returns the length of the string after the append operation.
    */
-  final def append[K: Schema, V: Schema](key: K, value: V): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(Append, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), LongOutput)
+  final def append[K: Schema, V: Schema](key: K, value: V): IO[RedisError, Long] = {
+    val command = RedisCommand(Append, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), LongOutput, codec, executor)
     command.run((key, value))
   }
 
@@ -53,8 +53,9 @@ trait Strings {
    * @return
    *   Returns the number of bits set to 1.
    */
-  final def bitCount[K: Schema](key: K, range: Option[Range] = None): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(BitCount, Tuple2(ArbitraryInput[K](), OptionalInput(RangeInput)), LongOutput)
+  final def bitCount[K: Schema](key: K, range: Option[Range] = None): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(BitCount, Tuple2(ArbitraryInput[K](), OptionalInput(RangeInput)), LongOutput, codec, executor)
     command.run((key, range))
   }
 
@@ -74,11 +75,13 @@ trait Strings {
     key: K,
     bitFieldCommand: BitFieldCommand,
     bitFieldCommands: BitFieldCommand*
-  ): ZIO[Redis, RedisError, Chunk[Option[Long]]] = {
+  ): IO[RedisError, Chunk[Option[Long]]] = {
     val command = RedisCommand(
       BitField,
       Tuple2(ArbitraryInput[K](), NonEmptyList(BitFieldCommandInput)),
-      ChunkOutput(OptionalOutput(LongOutput))
+      ChunkOutput(OptionalOutput(LongOutput)),
+      codec,
+      executor
     )
     command.run((key, (bitFieldCommand, bitFieldCommands.toList)))
   }
@@ -102,9 +105,15 @@ trait Strings {
     destKey: D,
     srcKey: S,
     srcKeys: S*
-  ): ZIO[Redis, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command =
-      RedisCommand(BitOp, Tuple3(BitOperationInput, ArbitraryInput[D](), NonEmptyList(ArbitraryInput[S]())), LongOutput)
+      RedisCommand(
+        BitOp,
+        Tuple3(BitOperationInput, ArbitraryInput[D](), NonEmptyList(ArbitraryInput[S]())),
+        LongOutput,
+        codec,
+        executor
+      )
     command.run((operation, destKey, (srcKey, srcKeys.toList)))
   }
 
@@ -124,9 +133,15 @@ trait Strings {
     key: K,
     bit: Boolean,
     range: Option[BitPosRange] = None
-  ): ZIO[Redis, RedisError, Long] = {
+  ): IO[RedisError, Long] = {
     val command =
-      RedisCommand(BitPos, Tuple3(ArbitraryInput[K](), BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
+      RedisCommand(
+        BitPos,
+        Tuple3(ArbitraryInput[K](), BoolInput, OptionalInput(BitPosRangeInput)),
+        LongOutput,
+        codec,
+        executor
+      )
     command.run((key, bit, range))
   }
 
@@ -138,8 +153,8 @@ trait Strings {
    * @return
    *   Returns the value of key after the decrement.
    */
-  final def decr[K: Schema](key: K): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(Decr, ArbitraryInput[K](), LongOutput)
+  final def decr[K: Schema](key: K): IO[RedisError, Long] = {
+    val command = RedisCommand(Decr, ArbitraryInput[K](), LongOutput, codec, executor)
     command.run(key)
   }
 
@@ -153,8 +168,8 @@ trait Strings {
    * @return
    *   Returns the value of key after the decrement.
    */
-  final def decrBy[K: Schema](key: K, decrement: Long): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(DecrBy, Tuple2(ArbitraryInput[K](), LongInput), LongOutput)
+  final def decrBy[K: Schema](key: K, decrement: Long): IO[RedisError, Long] = {
+    val command = RedisCommand(DecrBy, Tuple2(ArbitraryInput[K](), LongInput), LongOutput, codec, executor)
     command.run((key, decrement))
   }
 
@@ -168,8 +183,8 @@ trait Strings {
    */
   final def get[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(Get, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(Get, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]()), codec, executor).run(key)
     }
 
   /**
@@ -182,8 +197,8 @@ trait Strings {
    * @return
    *   Returns the bit value stored at offset.
    */
-  final def getBit[K: Schema](key: K, offset: Long): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(GetBit, Tuple2(ArbitraryInput[K](), LongInput), LongOutput)
+  final def getBit[K: Schema](key: K, offset: Long): IO[RedisError, Long] = {
+    val command = RedisCommand(GetBit, Tuple2(ArbitraryInput[K](), LongInput), LongOutput, codec, executor)
     command.run((key, offset))
   }
 
@@ -199,8 +214,14 @@ trait Strings {
    */
   final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(GetRange, Tuple2(ArbitraryInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]()))
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(
+          GetRange,
+          Tuple2(ArbitraryInput[K](), RangeInput),
+          OptionalOutput(ArbitraryOutput[R]()),
+          codec,
+          executor
+        )
           .run((key, range))
     }
 
@@ -216,8 +237,14 @@ trait Strings {
    */
   final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(GetSet, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), OptionalOutput(ArbitraryOutput[R]()))
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(
+          GetSet,
+          Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()),
+          OptionalOutput(ArbitraryOutput[R]()),
+          codec,
+          executor
+        )
           .run((key, value))
     }
 
@@ -231,8 +258,8 @@ trait Strings {
    */
   final def getDel[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(GetDel, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(GetDel, ArbitraryInput[K](), OptionalOutput(ArbitraryOutput[R]()), codec, executor).run(key)
     }
 
   /**
@@ -250,8 +277,9 @@ trait Strings {
    */
   final def getEx[K: Schema](key: K, expire: Expire, expireTime: Duration): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expire, expireTime))
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]()), codec, executor)
+          .run((key, expire, expireTime))
     }
 
   /**
@@ -269,8 +297,9 @@ trait Strings {
    */
   final def getEx[K: Schema](key: K, expiredAt: ExpiredAt, timestamp: Instant): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expiredAt, timestamp))
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]()), codec, executor)
+          .run((key, expiredAt, timestamp))
     }
 
   /**
@@ -285,8 +314,9 @@ trait Strings {
    */
   final def getEx[K: Schema](key: K, persist: Boolean): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: ZIO[Redis, RedisError, Option[R]] =
-        RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, persist))
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]()), codec, executor)
+          .run((key, persist))
     }
 
   /**
@@ -297,8 +327,8 @@ trait Strings {
    * @return
    *   Returns the value of key after the increment.
    */
-  final def incr[K: Schema](key: K): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(Incr, ArbitraryInput[K](), LongOutput)
+  final def incr[K: Schema](key: K): IO[RedisError, Long] = {
+    val command = RedisCommand(Incr, ArbitraryInput[K](), LongOutput, codec, executor)
     command.run(key)
   }
 
@@ -312,9 +342,9 @@ trait Strings {
    * @return
    *   Returns the value of key after the increment.
    */
-  final def incrBy[K: Schema](key: K, increment: Long): ZIO[Redis, RedisError, Long] = {
+  final def incrBy[K: Schema](key: K, increment: Long): IO[RedisError, Long] = {
     val command =
-      RedisCommand(IncrBy, Tuple2(ArbitraryInput[K](), LongInput), LongOutput)
+      RedisCommand(IncrBy, Tuple2(ArbitraryInput[K](), LongInput), LongOutput, codec, executor)
     command.run((key, increment))
   }
 
@@ -328,8 +358,8 @@ trait Strings {
    * @return
    *   Returns the value of key after the increment.
    */
-  final def incrByFloat[K: Schema](key: K, increment: Double): ZIO[Redis, RedisError, Double] = {
-    val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryInput[K](), DoubleInput), DoubleOutput)
+  final def incrByFloat[K: Schema](key: K, increment: Double): IO[RedisError, Double] = {
+    val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryInput[K](), DoubleInput), DoubleOutput, codec, executor)
     command.run((key, increment))
   }
 
@@ -348,9 +378,15 @@ trait Strings {
     keys: K*
   ): ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] =
     new ResultBuilder1[({ type lambda[x] = Chunk[Option[x]] })#lambda] {
-      def returning[V: Schema]: ZIO[Redis, RedisError, Chunk[Option[V]]] = {
+      def returning[V: Schema]: IO[RedisError, Chunk[Option[V]]] = {
         val command =
-          RedisCommand(MGet, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(OptionalOutput(ArbitraryOutput[V]())))
+          RedisCommand(
+            MGet,
+            NonEmptyList(ArbitraryInput[K]()),
+            ChunkOutput(OptionalOutput(ArbitraryOutput[V]())),
+            codec,
+            executor
+          )
         command.run((key, keys.toList))
       }
     }
@@ -363,8 +399,9 @@ trait Strings {
    * @param keyValues
    *   Subsequent tuples of key values
    */
-  final def mSet[K: Schema, V: Schema](keyValue: (K, V), keyValues: (K, V)*): ZIO[Redis, RedisError, Unit] = {
-    val command = RedisCommand(MSet, NonEmptyList(Tuple2(ArbitraryInput[K](), ArbitraryInput[V]())), UnitOutput)
+  final def mSet[K: Schema, V: Schema](keyValue: (K, V), keyValues: (K, V)*): IO[RedisError, Unit] = {
+    val command =
+      RedisCommand(MSet, NonEmptyList(Tuple2(ArbitraryInput[K](), ArbitraryInput[V]())), UnitOutput, codec, executor)
     command.run((keyValue, keyValues.toList))
   }
 
@@ -381,8 +418,9 @@ trait Strings {
   final def mSetNx[K: Schema, V: Schema](
     keyValue: (K, V),
     keyValues: (K, V)*
-  ): ZIO[Redis, RedisError, Boolean] = {
-    val command = RedisCommand(MSetNx, NonEmptyList(Tuple2(ArbitraryInput[K](), ArbitraryInput[V]())), BoolOutput)
+  ): IO[RedisError, Boolean] = {
+    val command =
+      RedisCommand(MSetNx, NonEmptyList(Tuple2(ArbitraryInput[K](), ArbitraryInput[V]())), BoolOutput, codec, executor)
     command.run((keyValue, keyValues.toList))
   }
 
@@ -400,9 +438,15 @@ trait Strings {
     key: K,
     milliseconds: Duration,
     value: V
-  ): ZIO[Redis, RedisError, Unit] = {
+  ): IO[RedisError, Unit] = {
     val command =
-      RedisCommand(PSetEx, Tuple3(ArbitraryInput[K](), DurationMillisecondsInput, ArbitraryInput[V]()), UnitOutput)
+      RedisCommand(
+        PSetEx,
+        Tuple3(ArbitraryInput[K](), DurationMillisecondsInput, ArbitraryInput[V]()),
+        UnitOutput,
+        codec,
+        executor
+      )
     command.run((key, milliseconds, value))
   }
 
@@ -429,7 +473,7 @@ trait Strings {
     expireTime: Option[Duration] = None,
     update: Option[Update] = None,
     keepTtl: Option[KeepTtl] = None
-  ): ZIO[Redis, RedisError, Boolean] = {
+  ): IO[RedisError, Boolean] = {
     val input = Tuple5(
       ArbitraryInput[K](),
       ArbitraryInput[V](),
@@ -437,7 +481,7 @@ trait Strings {
       OptionalInput(UpdateInput),
       OptionalInput(KeepTtlInput)
     )
-    val command = RedisCommand(Set, input, SetOutput)
+    val command = RedisCommand(Set, input, SetOutput, codec, executor)
     command.run((key, value, expireTime, update, keepTtl))
   }
 
@@ -453,8 +497,8 @@ trait Strings {
    * @return
    *   Returns the original bit value stored at offset.
    */
-  final def setBit[K: Schema](key: K, offset: Long, value: Boolean): ZIO[Redis, RedisError, Boolean] = {
-    val command = RedisCommand(SetBit, Tuple3(ArbitraryInput[K](), LongInput, BoolInput), BoolOutput)
+  final def setBit[K: Schema](key: K, offset: Long, value: Boolean): IO[RedisError, Boolean] = {
+    val command = RedisCommand(SetBit, Tuple3(ArbitraryInput[K](), LongInput, BoolInput), BoolOutput, codec, executor)
     command.run((key, offset, value))
   }
 
@@ -472,9 +516,15 @@ trait Strings {
     key: K,
     expiration: Duration,
     value: V
-  ): ZIO[Redis, RedisError, Unit] = {
+  ): IO[RedisError, Unit] = {
     val command =
-      RedisCommand(SetEx, Tuple3(ArbitraryInput[K](), DurationSecondsInput, ArbitraryInput[V]()), UnitOutput)
+      RedisCommand(
+        SetEx,
+        Tuple3(ArbitraryInput[K](), DurationSecondsInput, ArbitraryInput[V]()),
+        UnitOutput,
+        codec,
+        executor
+      )
     command.run((key, expiration, value))
   }
 
@@ -488,8 +538,8 @@ trait Strings {
    * @return
    *   Returns 1 if the key was set. 0 if the key was not set.
    */
-  final def setNx[K: Schema, V: Schema](key: K, value: V): ZIO[Redis, RedisError, Boolean] = {
-    val command = RedisCommand(SetNx, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), BoolOutput)
+  final def setNx[K: Schema, V: Schema](key: K, value: V): IO[RedisError, Boolean] = {
+    val command = RedisCommand(SetNx, Tuple2(ArbitraryInput[K](), ArbitraryInput[V]()), BoolOutput, codec, executor)
     command.run((key, value))
   }
 
@@ -505,8 +555,9 @@ trait Strings {
    * @return
    *   Returns the length of the string after it was modified by the command.
    */
-  final def setRange[K: Schema, V: Schema](key: K, offset: Long, value: V): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(SetRange, Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[V]()), LongOutput)
+  final def setRange[K: Schema, V: Schema](key: K, offset: Long, value: V): IO[RedisError, Long] = {
+    val command =
+      RedisCommand(SetRange, Tuple3(ArbitraryInput[K](), LongInput, ArbitraryInput[V]()), LongOutput, codec, executor)
     command.run((key, offset, value))
   }
 
@@ -518,8 +569,8 @@ trait Strings {
    * @return
    *   Returns the length of the string.
    */
-  final def strLen[K: Schema](key: K): ZIO[Redis, RedisError, Long] = {
-    val command = RedisCommand(StrLen, ArbitraryInput[K](), LongOutput)
+  final def strLen[K: Schema](key: K): IO[RedisError, Long] = {
+    val command = RedisCommand(StrLen, ArbitraryInput[K](), LongOutput, codec, executor)
     command.run(key)
   }
 
@@ -545,7 +596,7 @@ trait Strings {
     keyA: K,
     keyB: K,
     lcsQueryType: Option[StrAlgoLcsQueryType] = None
-  ): ZIO[Redis, RedisError, LcsOutput] = {
+  ): IO[RedisError, LcsOutput] = {
     val redisCommand = RedisCommand(
       StrAlgoLcs,
       Tuple4(
@@ -554,7 +605,9 @@ trait Strings {
         ArbitraryInput[K](),
         OptionalInput(StralgoLcsQueryTypeInput)
       ),
-      StrAlgoLcsOutput
+      StrAlgoLcsOutput,
+      codec,
+      executor
     )
     redisCommand.run((command.stringify, keyA, keyB, lcsQueryType))
   }

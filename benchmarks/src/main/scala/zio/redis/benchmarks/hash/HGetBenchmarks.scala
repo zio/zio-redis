@@ -40,7 +40,7 @@ class HGetBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to size).map(e => e.toString -> e.toString).toList
-    execute(hSet(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.hSet(key, items.head, items.tail: _*).unit))
   }
 
   @Benchmark
@@ -68,5 +68,7 @@ class HGetBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(it => hGet(key, it._1).returning[String]))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(it => ZIO.serviceWithZIO[Redis](_.hGet(key, it._1).returning[String]))
+  )
 }
