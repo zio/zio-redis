@@ -24,12 +24,12 @@ import zio.config.syntax._
 import zio.config.typesafe.TypesafeConfig
 import zio.redis.RedisConfig
 
-final case class AppConfig(redis: RedisConfig, server: ServerConfig)
+final case class AppConfig(redis: RedisConfig)
 
 object AppConfig {
   type Env = AppConfig with RedisConfig
 
-  private[this] final val Config     = ZIO.attempt(ConfigFactory.load.resolve.getConfig("example"))
+  private[this] final val Config     = ZIO.attempt(ConfigFactory.load.getConfig("example"))
   private[this] final val Descriptor = descriptor[AppConfig]
 
   lazy val layer: ZLayer[Any, ReadError[String], Env] =

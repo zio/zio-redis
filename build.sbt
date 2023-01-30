@@ -80,14 +80,14 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= List(
-        "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.8.5",
-        "com.softwaremill.sttp.client3" %% "zio-json"                      % "3.8.5",
-        "dev.zio"                       %% "zio-streams"                   % "2.0.5",
-        "dev.zio"                       %% "zio-config-magnolia"           % "3.0.6",
-        "dev.zio"                       %% "zio-config-typesafe"           % "3.0.6",
-        "dev.zio"                       %% "zio-schema-protobuf"           % "0.3.1",
-        "dev.zio"                       %% "zio-json"                      % "0.4.2",
-        "io.d11"                        %% "zhttp"                         % "2.0.0-RC11"
+        "com.softwaremill.sttp.client3" %% "zio"                 % "3.8.5",
+        "com.softwaremill.sttp.client3" %% "zio-json"            % "3.8.5",
+        "dev.zio"                       %% "zio-streams"         % "2.0.5",
+        "dev.zio"                       %% "zio-config-magnolia" % "3.0.6",
+        "dev.zio"                       %% "zio-config-typesafe" % "3.0.6",
+        "dev.zio"                       %% "zio-schema-protobuf" % "0.3.1",
+        "dev.zio"                       %% "zio-json"            % "0.4.2",
+        "io.d11"                        %% "zhttp"               % "2.0.0-RC11"
       )
     )
 
