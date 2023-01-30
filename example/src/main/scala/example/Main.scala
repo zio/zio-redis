@@ -18,23 +18,20 @@ package example
 
 import example.api.Api
 import example.config.AppConfig
-import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
+import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zhttp.service.Server
 import zio._
 import zio.redis.{RedisExecutor, RedisLive}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
-import scala.annotation.nowarn
-
 object Main extends ZIOAppDefault {
-  @nowarn("cat=deprecation")
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
       .start(9000, Api.routes)
       .provide(
         AppConfig.layer,
-        AsyncHttpClientZioBackend.layer(),
-        ContributorsCacheLive.layer,
+        ContributorsCache.layer,
+        HttpClientZioBackend.layer(),
         RedisExecutor.layer,
         RedisLive.layer,
         ZLayer.succeed[BinaryCodec](ProtobufCodec)

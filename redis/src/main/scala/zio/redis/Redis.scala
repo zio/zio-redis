@@ -14,6 +14,31 @@
  * limitations under the License.
  */
 
-package example.config
+package zio.redis
 
-final case class ServerConfig(port: Int)
+import zio._
+import zio.schema.codec.BinaryCodec
+
+trait Redis
+    extends api.Connection
+    with api.Geo
+    with api.Hashes
+    with api.HyperLogLog
+    with api.Keys
+    with api.Lists
+    with api.Sets
+    with api.Strings
+    with api.SortedSets
+    with api.Streams
+    with api.Scripting
+    with api.Cluster {
+  def codec: BinaryCodec
+  def executor: RedisExecutor
+}
+
+final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
+
+object RedisLive {
+  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
+    ZLayer.fromFunction(RedisLive.apply _)
+}

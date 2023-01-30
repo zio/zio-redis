@@ -40,7 +40,7 @@ class BlPopBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(rPush(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.rPush(key, items.head, items.tail: _*).unit))
   }
 
   @Benchmark
@@ -76,5 +76,7 @@ class BlPopBenchmarks extends BenchmarkRuntime {
   }
 
   @Benchmark
-  def zio(): Unit = execute(ZIO.foreachDiscard(items)(_ => blPop(key)(1.second).returning[String]))
+  def zio(): Unit = execute(
+    ZIO.foreachDiscard(items)(_ => ZIO.serviceWithZIO[Redis](_.blPop(key)(1.second).returning[String]))
+  )
 }

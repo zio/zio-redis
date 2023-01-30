@@ -40,12 +40,12 @@ class RPopLPushBenchmarks extends BenchmarkRuntime {
   @Setup(Level.Trial)
   def setup(): Unit = {
     items = (0 to count).toList.map(_.toString)
-    execute(rPush(key, items.head, items.tail: _*).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.rPush(key, items.head, items.tail: _*).unit))
   }
 
   @TearDown(Level.Trial)
   def tearDown(): Unit =
-    execute(del(key).unit)
+    execute(ZIO.serviceWithZIO[Redis](_.del(key).unit))
 
   @Benchmark
   def laserdisc(): Unit = {
@@ -77,6 +77,6 @@ class RPopLPushBenchmarks extends BenchmarkRuntime {
 
   @Benchmark
   def zio(): Unit = execute(
-    ZIO.foreachDiscard(items)(_ => rPopLPush(key, key).returning[String])
+    ZIO.foreachDiscard(items)(_ => ZIO.serviceWithZIO[Redis](_.rPopLPush(key, key).returning[String]))
   )
 }
