@@ -34,7 +34,7 @@ object Main extends ZIOAppDefault {
       .provide(
         AppConfig.layer,
         AsyncHttpClientZioBackend.layer(),
-        ContributorsCacheLive.layer,
+        ContributorsCache.layer,
         RedisExecutor.layer,
         RedisLive.layer,
         ZLayer.succeed[BinaryCodec](ProtobufCodec)
