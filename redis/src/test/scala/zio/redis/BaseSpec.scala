@@ -28,9 +28,6 @@ trait BaseSpec extends ZIOSpecDefault {
   final val uuid: UIO[String] =
     ZIO.succeed(UUID.randomUUID().toString)
 
-  final val testExecutorUnsupported: TestAspectPoly =
-    tag(BaseSpec.TestExecutorUnsupported)
-
   /* TODO
    *  We can try to support the most unsupported commands for cluster with:
    *  - default connection for commands without a key and for multiple key commands with
@@ -42,6 +39,5 @@ trait BaseSpec extends ZIOSpecDefault {
 }
 
 object BaseSpec {
-  final val TestExecutorUnsupported    = "test executor unsupported"
   final val ClusterExecutorUnsupported = "cluster executor unsupported"
 }

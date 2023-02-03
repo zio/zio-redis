@@ -179,7 +179,7 @@ trait KeysSpec extends BaseSpec {
                 .either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
-      ) @@ testExecutorUnsupported @@ clusterExecutorUnsupported,
+      ) @@ clusterExecutorUnsupported,
       suite("ttl")(
         test("check ttl for existing key") {
           for {
@@ -363,7 +363,7 @@ trait KeysSpec extends BaseSpec {
             _      <- redis.xAdd(key, "*", (field, value)).returning[String]
             stream <- redis.typeOf(key)
           } yield assert(stream)(equalTo(RedisType.Stream))
-        } @@ testExecutorUnsupported
+        }
       ),
       suite("sort")(
         test("list of numbers") {
