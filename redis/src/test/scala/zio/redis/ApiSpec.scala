@@ -22,8 +22,7 @@ object ApiSpec
   def spec: Spec[TestEnvironment, Any] =
     suite("Redis commands")(
       Node.Suite.provideLayerShared(Node.Layer) @@ sequential @@ withLiveEnvironment,
-      Cluster.Suite.provideLayerShared(Cluster.Layer) @@ sequential @@ withLiveEnvironment,
-      Test.Suite.provideLayer(Test.Layer)
+      Cluster.Suite.provideLayerShared(Cluster.Layer) @@ sequential @@ withLiveEnvironment
     )
 
   private object Node {
@@ -45,25 +44,6 @@ object ApiSpec
 
     val Layer: Layer[Any, Redis] =
       ZLayer.make[Redis](RedisExecutor.local.orDie, RedisPubSub.local.orDie, ZLayer.succeed(codec), RedisLive.layer)
-  }
-
-  private object Test {
-    val Suite: Spec[Redis, Any] =
-      suite("Test Executor")(
-        connectionSuite,
-        keysSuite,
-        setsSuite,
-        hyperLogLogSuite,
-        listSuite,
-        hashSuite,
-        sortedSetsSuite,
-        geoSuite,
-        stringsSuite,
-        pubSubSuite
-      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.TestExecutorUnsupported)).get
-
-    val Layer: Layer[Any, Redis] =
-      ZLayer.make[Redis](RedisExecutor.test, RedisPubSub.test, ZLayer.succeed(codec), RedisLive.layer)
   }
 
   private object Cluster {

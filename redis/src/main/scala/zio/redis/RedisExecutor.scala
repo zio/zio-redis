@@ -1,6 +1,6 @@
 package zio.redis
 
-import zio.{Chunk, IO, ULayer, ZLayer}
+import zio.{Chunk, IO, ZLayer}
 
 trait RedisExecutor {
   def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue]
@@ -12,7 +12,4 @@ object RedisExecutor {
 
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     RedisConnectionLive.default.fresh >>> SingleNodeExecutor.layer
-
-  lazy val test: ULayer[RedisExecutor] =
-    TestExecutor.layer
 }
