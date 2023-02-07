@@ -137,6 +137,24 @@ trait PubSubSpec extends BaseSpec {
             receiverCount <- redis.publish(channel, message).replicateZIO(numOfPublished).map(_.head)
           } yield assertTrue(receiverCount == 0L)
         },
+        test("unsubscribe response") {
+          for {
+            redis   <- ZIO.service[Redis]
+            channel <- generateRandomString()
+            res <- redis
+                     .unsubscribe(channel)
+                     .flatMap(_.await)
+          } yield assertTrue(res._1 == channel)
+        },
+        test("punsubscribe response") {
+          for {
+            redis   <- ZIO.service[Redis]
+            pattern <- generateRandomString()
+            res <- redis
+                     .pUnsubscribe(pattern)
+                     .flatMap(_.await)
+          } yield assertTrue(res._1 == pattern)
+        },
         test("unsubscribe with empty param") {
           for {
             redis    <- ZIO.service[Redis]
