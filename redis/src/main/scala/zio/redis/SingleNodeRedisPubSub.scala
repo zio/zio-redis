@@ -174,7 +174,7 @@ final class SingleNodeRedisPubSub(
 }
 
 object SingleNodeRedisPubSub {
-  final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, Unit])
+  private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, Unit])
 
   private final val True: Any => Boolean = _ => true
 
