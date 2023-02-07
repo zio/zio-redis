@@ -34,18 +34,19 @@ trait PubSub extends RedisEnvironment {
         getSubscribeStreams(channel, channels)(onSubscribe)
     }
 
-  final def unsubscribe(channel: String): IO[RedisError, Promise[RedisError, Long]] =
+  final def unsubscribe(channel: String): IO[RedisError, Promise[RedisError, (String, Long)]] =
     unsubscribe(List(channel)).flatMap(extractOne(channel, _))
 
-  final def unsubscribe(channels: List[String]): IO[RedisError, List[Promise[RedisError, Long]]] =
+  final def unsubscribe(channels: List[String]): IO[RedisError, List[Promise[RedisError, (String, Long)]]] =
     RedisPubSubCommand(PubSubCommand.Unsubscribe(channels), codec, pubSub).run
       .flatMap(
         ZIO.foreach(_)(stream =>
           for {
-            promise <- Promise.make[RedisError, Long]
+            promise <- Promise.make[RedisError, (String, Long)]
             _ <- stream.mapZIO {
-                   case PushProtocol.Unsubscribe(_, numOfSubscription) => promise.succeed(numOfSubscription)
-                   case _                                              => promise.fail(RedisError.WrongType(s"Cannot handle message except Unsubscribe"))
+                   case PushProtocol.Unsubscribe(channel, numOfSubscription) =>
+                     promise.succeed((channel, numOfSubscription))
+                   case _ => promise.fail(RedisError.WrongType(s"Cannot handle message except Unsubscribe"))
                  }.runDrain.fork
           } yield promise
         )
@@ -92,42 +93,28 @@ trait PubSub extends RedisEnvironment {
     patterns: List[String]
   )(onSubscribe: PubSubCallback) =
     RedisPubSubCommand(PubSubCommand.PSubscribe(pattern, patterns, onSubscribe), codec, pubSub).run
-      .flatMap(streams =>
-        ZIO.foreach(streams)(stream =>
-          Promise
-            .make[RedisError, Unit]
-            .map(promise =>
-              stream
-                .interruptWhen(promise)
-                .mapZIO {
-                  case PushProtocol.PSubscribe(key, numOfSubscription) =>
-                    onSubscribe(key, numOfSubscription).as(None)
-                  case _: PushProtocol.PUnsubscribe =>
-                    promise.succeed(()).as(None)
-                  case PushProtocol.PMessage(_, _, msg) =>
-                    ZIO
-                      .attempt(ArbitraryOutput[R]().unsafeDecode(msg)(codec))
-                      .refineToOrDie[RedisError]
-                      .asSome
-                  case _ => ZIO.none
-                }
-                .collectSome
-            )
-        )
-      )
+      .map(_.map(_.mapZIO {
+        case PushProtocol.PMessage(_, _, msg) =>
+          ZIO
+            .attempt(ArbitraryOutput[R]().unsafeDecode(msg)(codec))
+            .refineToOrDie[RedisError]
+            .asSome
+        case _ => ZIO.none
+      }.collectSome))
 
-  final def pUnsubscribe(pattern: String): IO[RedisError, Promise[RedisError, Long]] =
+  final def pUnsubscribe(pattern: String): IO[RedisError, Promise[RedisError, (String, Long)]] =
     pUnsubscribe(List(pattern)).flatMap(extractOne(pattern, _))
 
-  final def pUnsubscribe(patterns: List[String]): IO[RedisError, List[Promise[RedisError, Long]]] =
+  final def pUnsubscribe(patterns: List[String]): IO[RedisError, List[Promise[RedisError, (String, Long)]]] =
     RedisPubSubCommand(PubSubCommand.PUnsubscribe(patterns), codec, pubSub).run
       .flatMap(
         ZIO.foreach(_)(stream =>
           for {
-            promise <- Promise.make[RedisError, Long]
+            promise <- Promise.make[RedisError, (String, Long)]
             _ <- stream.mapZIO {
-                   case PushProtocol.PUnsubscribe(_, numOfSubscription) => promise.succeed(numOfSubscription)
-                   case _                                               => promise.fail(RedisError.WrongType(s"Cannot handle message except PUnsubscribe"))
+                   case PushProtocol.PUnsubscribe(pattern, numOfSubscription) =>
+                     promise.succeed((pattern, numOfSubscription))
+                   case _ => promise.fail(RedisError.WrongType(s"Cannot handle message except PUnsubscribe"))
                  }.runDrain.fork
           } yield promise
         )
