@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.schema.codec.BinaryCodec
 import zio.stream._
-import zio.{ULayer, ZIO, ZLayer}
+import zio.{ZIO, ZLayer}
 
 trait RedisPubSub {
   def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]]
@@ -14,9 +14,6 @@ object RedisPubSub {
 
   lazy val local: ZLayer[BinaryCodec, RedisError.IOError, RedisPubSub] =
     RedisConnectionLive.default.fresh >>> pubSublayer
-
-  lazy val test: ULayer[RedisPubSub] =
-    TestExecutor.layer
 
   private lazy val pubSublayer: ZLayer[RedisConnection with BinaryCodec, RedisError.IOError, RedisPubSub] =
     ZLayer.scoped(
