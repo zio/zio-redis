@@ -145,7 +145,7 @@ trait PubSub extends RedisEnvironment {
 }
 
 private[redis] object PubSub {
-  lazy val emptyCallback = (_: String, _: Long) => ZIO.unit
+  private lazy val emptyCallback = (_: String, _: Long) => ZIO.unit
 
   final val Subscribe      = "SUBSCRIBE"
   final val Unsubscribe    = "UNSUBSCRIBE"
