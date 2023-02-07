@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, Promise, Ref, ZIO}
+import zio.{Chunk, Promise, ZIO}
 
 import scala.util.Random
 
@@ -15,12 +15,11 @@ trait PubSubSpec extends BaseSpec {
             redis   <- ZIO.service[Redis]
             channel <- generateRandomString()
             promise <- Promise.make[RedisError, String]
-            ref     <- Ref.make(promise)
             resBuilder =
-              redis.subscribeWithCallback(channel)((key: String, _: Long) => ref.get.flatMap(_.succeed(key)).unit)
+              redis.subscribeWithCallback(channel)((key: String, _: Long) => promise.succeed(key).unit)
             stream <- resBuilder.returning[String]
             _      <- stream.interruptWhen(promise).runDrain.fork
-            res    <- ref.get.flatMap(_.await)
+            res    <- promise.await
           } yield assertTrue(res == channel)
         },
         test("message response") {

@@ -172,7 +172,7 @@ final class SingleNodeRedisPubSub(
         case PushProtocol.Subscribe(channel, numOfSubscription) =>
           runAndCleanup(SubscriptionKey.Channel(channel), numOfSubscription)
         case PushProtocol.PSubscribe(pattern, numOfSubscription) =>
-          runAndCleanup(SubscriptionKey.Channel(pattern), numOfSubscription)
+          runAndCleanup(SubscriptionKey.Pattern(pattern), numOfSubscription)
         case _ => ZIO.unit
       }
     }
