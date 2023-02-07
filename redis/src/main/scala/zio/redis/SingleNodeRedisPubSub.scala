@@ -8,77 +8,99 @@ import zio.schema.codec.BinaryCodec
 import zio.stream._
 import zio.{Chunk, ChunkBuilder, Hub, Promise, Queue, Ref, Schedule, UIO, ZIO}
 
-import scala.reflect.ClassTag
-
 final class SingleNodeRedisPubSub(
   pubSubHubsRef: Ref[Map[SubscriptionKey, Hub[PushProtocol]]],
   reqQueue: Queue[Request],
   connection: RedisConnection
 ) extends RedisPubSub {
 
-  def execute(command: RedisPubSubCommand): ZStream[BinaryCodec, RedisError, PushProtocol] =
+  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
     command match {
-      case RedisPubSubCommand.Subscribe(channel, channels)  => subscribe(channel, channels)
-      case RedisPubSubCommand.PSubscribe(pattern, patterns) => pSubscribe(pattern, patterns)
-      case RedisPubSubCommand.Unsubscribe(channels)         => unsubscribe(channels)
-      case RedisPubSubCommand.PUnsubscribe(patterns)        => pUnsubscribe(patterns)
+      case PubSubCommand.Subscribe(channel, channels)  => subscribe(channel, channels)
+      case PubSubCommand.PSubscribe(pattern, patterns) => pSubscribe(pattern, patterns)
+      case PubSubCommand.Unsubscribe(channels)         => unsubscribe(channels)
+      case PubSubCommand.PUnsubscribe(patterns)        => pUnsubscribe(patterns)
     }
 
   private def subscribe(
     channel: String,
     channels: List[String]
-  ): ZStream[BinaryCodec, RedisError, PushProtocol] =
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
     makeSubscriptionStream(PubSub.Subscribe, SubscriptionKey.Channel(channel), channels.map(SubscriptionKey.Channel(_)))
 
   private def pSubscribe(
     pattern: String,
     patterns: List[String]
-  ): ZStream[BinaryCodec, RedisError, PushProtocol] =
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
     makeSubscriptionStream(
       PubSub.PSubscribe,
       SubscriptionKey.Pattern(pattern),
       patterns.map(SubscriptionKey.Pattern(_))
     )
 
-  private def unsubscribe(channels: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
-    makeUnsubscriptionStream(PubSub.Unsubscribe, channels.map(SubscriptionKey.Channel(_)))
+  private def unsubscribe(
+    channels: List[String]
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
+    makeUnsubscriptionStream(
+      PubSub.Unsubscribe,
+      if (channels.nonEmpty)
+        ZIO.succeedNow(channels.map(SubscriptionKey.Channel(_)))
+      else
+        pubSubHubsRef.get.map(_.keys.filter(_.isChannelKey).toList)
+    )
 
-  private def pUnsubscribe(patterns: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
-    makeUnsubscriptionStream(PubSub.PUnsubscribe, patterns.map(SubscriptionKey.Pattern(_)))
+  private def pUnsubscribe(
+    patterns: List[String]
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
+    makeUnsubscriptionStream(
+      PubSub.PUnsubscribe,
+      if (patterns.nonEmpty)
+        ZIO.succeedNow(patterns.map(SubscriptionKey.Pattern(_)))
+      else
+        pubSubHubsRef.get.map(_.keys.filter(_.isPatternKey).toList)
+    )
 
   private def makeSubscriptionStream(command: String, key: SubscriptionKey, keys: List[SubscriptionKey]) =
-    ZStream.unwrap[BinaryCodec, RedisError, PushProtocol](
-      ZIO.serviceWithZIO[BinaryCodec] { implicit codec =>
-        for {
-          promise <- Promise.make[RedisError, Unit]
-          chunk    = StringInput.encode(command) ++ NonEmptyList(StringInput).encode((key.value, keys.map(_.value)))
-          stream  <- makeStream(key :: keys)
-          _       <- reqQueue.offer(Request(chunk, promise))
-          _       <- promise.await
-        } yield stream
-      }
-    )
+    ZIO.serviceWithZIO[BinaryCodec] { implicit codec =>
+      for {
+        promise <- Promise.make[RedisError, Unit]
+        chunk    = StringInput.encode(command) ++ NonEmptyList(StringInput).encode((key.value, keys.map(_.value)))
+        streams <- makeStreams(key :: keys)
+        _       <- reqQueue.offer(Request(chunk, promise))
+        _       <- promise.await
+      } yield streams
+    }
 
-  private def makeUnsubscriptionStream[T <: SubscriptionKey: ClassTag](command: String, keys: List[T]) =
-    ZStream.unwrap[BinaryCodec, RedisError, PushProtocol](
-      ZIO.serviceWithZIO[BinaryCodec] { implicit codec =>
-        for {
-          targets <- if (keys.isEmpty) pubSubHubsRef.get.map(_.keys.collect { case t: T => t }.toList)
-                     else ZIO.succeedNow(keys)
-          chunk    = StringInput.encode(command) ++ Varargs(StringInput).encode(keys.map(_.value))
-          promise <- Promise.make[RedisError, Unit]
-          stream  <- makeStream(targets)
-          _       <- reqQueue.offer(Request(chunk, promise))
-          _       <- promise.await
-        } yield stream
-      }
-    )
+  private def makeUnsubscriptionStream(command: String, keys: UIO[List[SubscriptionKey]]) = {
+    def releaseHub(key: SubscriptionKey) =
+      for {
+        pubSubs <- pubSubHubsRef.get
+        hubOpt   = pubSubs.get(key)
+        _       <- ZIO.fromOption(hubOpt).flatMap(_.shutdown).ignore
+        _       <- pubSubHubsRef.update(_ - key)
+      } yield ()
 
-  private def makeStream(keys: List[SubscriptionKey]): UIO[Stream[RedisError, PushProtocol]] =
-    for {
-      streams <- ZIO.foreach(keys)(getHub(_).map(ZStream.fromHub(_)))
-      stream   = streams.fold(ZStream.empty)(_ merge _)
-    } yield stream
+    ZIO.serviceWithZIO[BinaryCodec] { implicit codec =>
+      for {
+        targets  <- keys
+        chunk     = StringInput.encode(command) ++ Varargs(StringInput).encode(targets.map(_.value))
+        promise  <- Promise.make[RedisError, Unit]
+        streams  <- makeStreams(targets)
+        targetSet = targets.map(_.value).toSet
+        _        <- reqQueue.offer(Request(chunk, promise))
+        _        <- promise.await
+      } yield streams.map(_.tap {
+        case PushProtocol.Unsubscribe(channel, _) if targetSet contains channel =>
+          releaseHub(SubscriptionKey.Channel(channel))
+        case PushProtocol.PUnsubscribe(pattern, _) if targetSet contains pattern =>
+          releaseHub(SubscriptionKey.Pattern(pattern))
+        case _ => ZIO.unit
+      })
+    }
+  }
+
+  private def makeStreams(keys: List[SubscriptionKey]): UIO[List[Stream[RedisError, PushProtocol]]] =
+    ZIO.foreach(keys)(getHub(_).map(ZStream.fromHub(_)))
 
   private def getHub(key: SubscriptionKey) = {
     def makeNewHub =

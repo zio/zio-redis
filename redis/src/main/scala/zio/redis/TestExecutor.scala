@@ -25,7 +25,7 @@ import zio.redis.TestExecutor._
 import zio.redis.api.PubSub
 import zio.schema.codec.BinaryCodec
 import zio.stm._
-import zio.stream.ZStream
+import zio.stream._
 
 import java.nio.file.{FileSystems, Paths}
 import java.time.Instant
@@ -48,70 +48,84 @@ final class TestExecutor private (
 ) extends RedisExecutor
     with RedisPubSub {
 
-  def execute(command: RedisPubSubCommand): ZStream[BinaryCodec, RedisError, PushProtocol] =
+  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
     command match {
-      case RedisPubSubCommand.Subscribe(channel, channels)  => subscribe(channel, channels)
-      case RedisPubSubCommand.PSubscribe(pattern, patterns) => pSubscribe(pattern, patterns)
-      case RedisPubSubCommand.Unsubscribe(channels)         => unsubscribe(channels)
-      case RedisPubSubCommand.PUnsubscribe(patterns)        => pUnsubscribe(patterns)
+      case PubSubCommand.Subscribe(channel, channels)  => subscribe(channel, channels)
+      case PubSubCommand.PSubscribe(pattern, patterns) => pSubscribe(pattern, patterns)
+      case PubSubCommand.Unsubscribe(channels)         => unsubscribe(channels)
+      case PubSubCommand.PUnsubscribe(patterns)        => pUnsubscribe(patterns)
     }
 
-  private def subscribe(channel: String, channels: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
-    pubSubStream(PubSub.Subscribe, (channel :: channels).map(SubscriptionKey.Channel(_)), false)
-
-  private def unsubscribe(channels: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
-    ZStream
-      .unwrap(
-        (for {
-          keys <- if (channels.isEmpty) pubSubs.keys.map(_.collect { case t: SubscriptionKey.Channel => t })
-                  else ZSTM.succeed(channels.map(SubscriptionKey.Channel(_)))
-          stream = pubSubStream(PubSub.Unsubscribe, keys, true)
-        } yield stream).commit
+  private def subscribe(
+    channel: String,
+    channels: List[String]
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
+    ZIO.clockWith(
+      _.instant.flatMap(
+        pubSubStream(PubSub.Subscribe, (channel :: channels).map(SubscriptionKey.Channel(_)), _, false).commit
       )
+    )
 
-  private def pSubscribe(pattern: String, patterns: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
-    pubSubStream(PubSub.PSubscribe, (pattern :: patterns).map(SubscriptionKey.Pattern(_)), false)
+  private def unsubscribe(
+    channels: List[String]
+  ) =
+    ZIO.clockWith { clock =>
+      for {
+        now <- clock.instant
+        streams <- (for {
+                     keys <- if (channels.isEmpty) pubSubs.keys.map(_.collect { case t: SubscriptionKey.Channel => t })
+                             else ZSTM.succeed(channels.map(SubscriptionKey.Channel(_)))
+                     stream <- pubSubStream(PubSub.Unsubscribe, keys, now, true)
+                   } yield stream).commit
+      } yield streams
+    }
 
-  private def pUnsubscribe(patterns: List[String]): ZStream[BinaryCodec, RedisError, PushProtocol] =
-    ZStream
-      .unwrap(
-        (for {
-          keys <- if (patterns.isEmpty) pubSubs.keys.map(_.collect { case t: SubscriptionKey.Pattern => t })
-                  else ZSTM.succeed(patterns.map(SubscriptionKey.Pattern(_)))
-          stream = pubSubStream(PubSub.PUnsubscribe, keys, true)
-        } yield stream).commit
+  private def pSubscribe(
+    pattern: String,
+    patterns: List[String]
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
+    ZIO.clockWith(
+      _.instant.flatMap(
+        pubSubStream(PubSub.PSubscribe, (pattern :: patterns).map(SubscriptionKey.Pattern(_)), _, false).commit
       )
-  private def pubSubStream(cmd: String, keys: List[SubscriptionKey], isUnSubs: Boolean) =
-    ZStream
-      .unwrap[BinaryCodec, RedisError, PushProtocol](
-        ZIO
-          .clockWith(_.instant)
-          .flatMap(now =>
-            ZSTM
-              .serviceWithSTM[BinaryCodec] { implicit codec =>
-                for {
-                  streams <-
-                    ZSTM.foreach(keys) { key =>
-                      for {
-                        resp  <- runCommand(cmd, StringInput.encode(key.value), now)
-                        hub   <- getPubSubHub(key)
-                        queue <- hub.subscribe
-                        _ <- resp match {
-                               case RespValue.ArrayValues(value) =>
-                                 hub.offer(value)
-                               case other =>
-                                 ZSTM.fail(RedisError.ProtocolError(s"Invalid pubsub command response $other"))
-                             }
-                        _ <- pubSubs.delete(key).when(isUnSubs)
-                      } yield ZStream
-                        .fromTQueue(queue)
-                        .mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)).refineToOrDie[RedisError])
-                    }
-                } yield streams.fold(ZStream.empty)(_ merge _)
-              }
-              .commit
-          )
-      )
+    )
+
+  private def pUnsubscribe(
+    patterns: List[String]
+  ): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]] =
+    ZIO.clockWith { clock =>
+      for {
+        now <- clock.instant
+        streams <- (for {
+                     keys <- if (patterns.isEmpty) pubSubs.keys.map(_.collect { case t: SubscriptionKey.Pattern => t })
+                             else ZSTM.succeed(patterns.map(SubscriptionKey.Pattern(_)))
+                     stream <- pubSubStream(PubSub.PUnsubscribe, keys, now, true)
+                   } yield stream).commit
+      } yield streams
+    }
+  private def pubSubStream(cmd: String, keys: List[SubscriptionKey], now: Instant, isUnSubs: Boolean) =
+    ZSTM
+      .serviceWithSTM[BinaryCodec] { implicit codec =>
+        for {
+          streams <-
+            ZSTM.foreach(keys) { key =>
+              for {
+                resp  <- runCommand(cmd, StringInput.encode(key.value), now)
+                hub   <- getPubSubHub(key)
+                queue <- hub.subscribe
+                _ <- resp match {
+                       case RespValue.ArrayValues(value) =>
+                         hub.offer(value)
+                       case other =>
+                         ZSTM.fail(RedisError.ProtocolError(s"Invalid pubsub command response $other"))
+                     }
+                _ <- (pubSubs.delete(key)).when(isUnSubs)
+              } yield ZStream
+                .fromTQueue(queue)
+                .mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)).refineToOrDie[RedisError])
+            }
+        } yield streams
+      }
 
   override def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
     for {

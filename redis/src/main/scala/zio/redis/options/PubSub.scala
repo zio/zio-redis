@@ -1,8 +1,10 @@
 package zio.redis.options
 
-import zio.redis.RespValue
+import zio.IO
+import zio.redis.{RedisError, RespValue}
 
 trait PubSub {
+  type PubSubCallback = (String, Long) => IO[RedisError, Unit]
 
   sealed trait SubscriptionKey { self =>
     def value: String

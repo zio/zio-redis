@@ -33,7 +33,6 @@ object Main extends ZIOAppDefault {
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
         RedisExecutor.layer,
-        RedisPubSub.layer,
         RedisLive.layer,
         ZLayer.succeed[BinaryCodec](ProtobufCodec)
       )

@@ -31,7 +31,8 @@ trait Redis
     with api.SortedSets
     with api.Streams
     with api.Scripting
-    with api.Cluster {
+    with api.Cluster
+    with api.PubSub {
   def codec: BinaryCodec
   def executor: RedisExecutor
   def pubSub: RedisPubSub

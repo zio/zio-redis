@@ -5,7 +5,7 @@ import zio.stream._
 import zio.{ULayer, ZIO, ZLayer}
 
 trait RedisPubSub {
-  def execute(command: RedisPubSubCommand): ZStream[BinaryCodec, RedisError, PushProtocol]
+  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]]
 }
 
 object RedisPubSub {
