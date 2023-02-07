@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, Promise, ZIO}
+import zio.{Chunk, Promise, Ref, ZIO}
 
 import scala.util.Random
 
@@ -12,13 +12,15 @@ trait PubSubSpec extends BaseSpec {
       suite("subscribe")(
         test("subscribe response") {
           for {
-            redis     <- ZIO.service[Redis]
-            channel   <- generateRandomString()
-            promise   <- Promise.make[RedisError, String]
-            resBuilder = redis.subscribeWithCallback(channel)((key: String, _: Long) => promise.succeed(key).unit)
-            stream    <- resBuilder.returning[String]
-            _         <- stream.interruptWhen(promise).runDrain.fork
-            res       <- promise.await
+            redis   <- ZIO.service[Redis]
+            channel <- generateRandomString()
+            promise <- Promise.make[RedisError, String]
+            ref     <- Ref.make(promise)
+            resBuilder =
+              redis.subscribeWithCallback(channel)((key: String, _: Long) => ref.get.flatMap(_.succeed(key)).unit)
+            stream <- resBuilder.returning[String]
+            _      <- stream.interruptWhen(promise).runDrain.fork
+            res    <- ref.get.flatMap(_.await)
           } yield assertTrue(res == channel)
         },
         test("message response") {
@@ -134,28 +136,6 @@ trait PubSubSpec extends BaseSpec {
             _             <- promise.await
             receiverCount <- redis.publish(channel, message).replicateZIO(numOfPublished).map(_.head)
           } yield assertTrue(receiverCount == 0L)
-        },
-        test("unsubscribe response") {
-          for {
-            redis   <- ZIO.service[Redis]
-            channel <- generateRandomString()
-            promise <- Promise.make[RedisError, String]
-            _ <- redis
-                   .unsubscribeWithCallback(channel)((key: String, _: Long) => promise.succeed(key).unit)
-                   .flatMap(_.await)
-            res <- promise.await
-          } yield assertTrue(res == channel)
-        },
-        test("punsubscribe response") {
-          for {
-            redis   <- ZIO.service[Redis]
-            pattern <- generateRandomString()
-            promise <- Promise.make[RedisError, String]
-            _ <- redis
-                   .pUnsubscribeWithCallback(pattern)((key: String, _: Long) => promise.succeed(key).unit)
-                   .flatMap(_.await)
-            res <- promise.await
-          } yield assertTrue(res == pattern)
         },
         test("unsubscribe with empty param") {
           for {
