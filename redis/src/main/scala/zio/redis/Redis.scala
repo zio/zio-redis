@@ -36,9 +36,13 @@ trait Redis
   def executor: RedisExecutor
 }
 
-final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor) extends Redis
-
-object RedisLive {
+object Redis {
   lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromFunction(RedisLive.apply _)
+    ZLayer.fromZIO(for {
+      redisExecutor <- ZIO.service[RedisExecutor]
+      binaryCodec   <- ZIO.service[BinaryCodec]
+    } yield new Redis {
+      def codec: BinaryCodec      = binaryCodec
+      def executor: RedisExecutor = redisExecutor
+    })
 }
