@@ -465,7 +465,7 @@ object KeysSpec {
         RedisConnectionLive.layer,
         SingleNodeExecutor.layer,
         ZLayer.succeed[BinaryCodec](ProtobufCodec),
-        RedisLive.layer
+        Redis.layer
       )
       .fresh
 }

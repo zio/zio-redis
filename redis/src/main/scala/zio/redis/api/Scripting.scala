@@ -75,6 +75,19 @@ trait Scripting extends RedisEnvironment {
   }
 
   /**
+   * Set the debug mode for executed scripts.
+   *
+   * @param mode
+   *   mode in which scripts debug is going to work ["YES", "SYNC", "NO"]
+   * @return
+   *   the Unit value.
+   */
+  def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = {
+    val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput, codec, executor)
+    command.run(mode)
+  }
+
+  /**
    * Checks existence of the scripts in the script cache.
    *
    * @param sha1
@@ -88,6 +101,31 @@ trait Scripting extends RedisEnvironment {
   def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
     val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput), codec, executor)
     command.run((sha1, sha1s.toList))
+  }
+
+  /**
+   * Remove all the scripts from the script cache.
+   *
+   * @param mode
+   *   mode in which script flush is going to be executed ["ASYNC", "SYNC"] Note: "SYNC" mode is used by default (if no
+   *   mode is provided)
+   * @return
+   *   the Unit value.
+   */
+  def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = {
+    val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput, codec, executor)
+    command.run(mode)
+  }
+
+  /**
+   * Kill the currently executing EVAL script, assuming no write operation was yet performed by the script.
+   *
+   * @return
+   *   the Unit value.
+   */
+  def scriptKill: IO[RedisError, Unit] = {
+    val command = RedisCommand(ScriptKill, NoInput, UnitOutput, codec, executor)
+    command.run(())
   }
 
   /**
@@ -108,6 +146,9 @@ trait Scripting extends RedisEnvironment {
 private[redis] object Scripting {
   final val Eval         = "EVAL"
   final val EvalSha      = "EVALSHA"
+  final val ScriptDebug  = "SCRIPT DEBUG"
   final val ScriptExists = "SCRIPT EXISTS"
+  final val ScriptFlush  = "SCRIPT FLUSH"
+  final val ScriptKill   = "SCRIPT KILL"
   final val ScriptLoad   = "SCRIPT LOAD"
 }

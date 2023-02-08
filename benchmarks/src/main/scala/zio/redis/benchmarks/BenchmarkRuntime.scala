@@ -36,6 +36,6 @@ object BenchmarkRuntime {
     ZLayer.make[Redis](
       RedisExecutor.local,
       ZLayer.succeed[BinaryCodec](ProtobufCodec),
-      RedisLive.layer
+      Redis.layer
     )
 }
