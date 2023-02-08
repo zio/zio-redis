@@ -163,6 +163,26 @@ trait ScriptingSpec extends BaseSpec {
           } yield assert(res)(isLeft(isSubtype[NoScript](hasField("message", _.message, equalTo(error)))))
         }
       ),
+      suite("scriptDebug")(
+        test("enable non-blocking asynchronous debugging") {
+          for {
+            redis <- ZIO.service[Redis]
+            res   <- redis.scriptDebug(DebugMode.Yes)
+          } yield assert(res)(isUnit)
+        },
+        test("enable blocking synchronous debugging") {
+          for {
+            redis <- ZIO.service[Redis]
+            res   <- redis.scriptDebug(DebugMode.Sync)
+          } yield assert(res)(isUnit)
+        },
+        test("disable debug mode") {
+          for {
+            redis <- ZIO.service[Redis]
+            res   <- redis.scriptDebug(DebugMode.No)
+          } yield assert(res)(isUnit)
+        }
+      ),
       suite("scriptExists")(
         test("return true if scripts are found in the cache") {
           val lua1 = """return "1""""
@@ -181,6 +201,49 @@ trait ScriptingSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             res   <- redis.scriptExists(lua1, lua2)
           } yield assertTrue(res == Chunk(false, false))
+        }
+      ),
+      suite("scriptFlush")(
+        test("flush scripts in default mode") {
+          val lua1 = """return "1""""
+          val lua2 = """return "2""""
+          for {
+            redis <- ZIO.service[Redis]
+            sha1  <- redis.scriptLoad(lua1)
+            sha2  <- redis.scriptLoad(lua2)
+            res   <- redis.scriptFlush()
+            found <- redis.scriptExists(sha1, sha2)
+          } yield assert(res)(isUnit) && assertTrue(found == Chunk(false, false))
+        },
+        test("flush scripts in SYNC mode") {
+          val lua1 = """return "1""""
+          val lua2 = """return "2""""
+          for {
+            redis <- ZIO.service[Redis]
+            sha1  <- redis.scriptLoad(lua1)
+            sha2  <- redis.scriptLoad(lua2)
+            res   <- redis.scriptFlush(mode = Some(FlushMode.Sync))
+            found <- redis.scriptExists(sha1, sha2)
+          } yield assert(res)(isUnit) && assertTrue(found == Chunk(false, false))
+        },
+        test("flush scripts in ASYNC mode") {
+          val lua1 = """return "1""""
+          val lua2 = """return "2""""
+          for {
+            redis <- ZIO.service[Redis]
+            sha1  <- redis.scriptLoad(lua1)
+            sha2  <- redis.scriptLoad(lua2)
+            res   <- redis.scriptFlush(mode = Some(FlushMode.Async))
+            found <- redis.scriptExists(sha1, sha2)
+          } yield assert(res)(isUnit) && assertTrue(found == Chunk(false, false))
+        }
+      ),
+      suite("scriptKill")(
+        test("return NOTBUSY when there is no scripts in execution") {
+          for {
+            redis <- ZIO.service[Redis]
+            res   <- redis.scriptKill.either
+          } yield assert(res)(isLeft(isSubtype[RedisError.NotBusy](anything)))
         }
       ),
       suite("scriptLoad")(

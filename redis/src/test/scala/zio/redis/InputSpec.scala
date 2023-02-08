@@ -817,6 +817,35 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(respArgs("4.2", "5.2")))
         }
       ),
+      suite("ScriptDebug")(
+        test("yes") {
+          for {
+            result <- ZIO.attempt(ScriptDebugInput.encode(DebugMode.Yes))
+          } yield assert(result)(equalTo(respArgs("YES")))
+        },
+        test("sync") {
+          for {
+            result <- ZIO.attempt(ScriptDebugInput.encode(DebugMode.Sync))
+          } yield assert(result)(equalTo(respArgs("SYNC")))
+        },
+        test("no") {
+          for {
+            result <- ZIO.attempt(ScriptDebugInput.encode(DebugMode.No))
+          } yield assert(result)(equalTo(respArgs("NO")))
+        }
+      ),
+      suite("ScriptFlush")(
+        test("asynchronous") {
+          for {
+            result <- ZIO.attempt(ScriptFlushInput.encode(FlushMode.Async))
+          } yield assert(result)(equalTo(respArgs("ASYNC")))
+        },
+        test("synchronous") {
+          for {
+            result <- ZIO.attempt(ScriptFlushInput.encode(FlushMode.Sync))
+          } yield assert(result)(equalTo(respArgs("SYNC")))
+        }
+      ),
       suite("String")(
         test("non-empty value") {
           for {
