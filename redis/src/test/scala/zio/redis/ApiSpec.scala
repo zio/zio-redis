@@ -40,7 +40,7 @@ object ApiSpec
         scriptingSpec
       )
 
-    val Layer: Layer[Any, Redis] = ZLayer.make[Redis](RedisExecutor.local.orDie, ZLayer.succeed(codec), RedisLive.layer)
+    val Layer: Layer[Any, Redis] = ZLayer.make[Redis](RedisExecutor.local.orDie, ZLayer.succeed(codec), Redis.layer)
   }
 
   private object Cluster {
@@ -65,7 +65,7 @@ object ApiSpec
         ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000)))),
         ClusterExecutor.layer,
         ZLayer.succeed(codec),
-        RedisLive.layer
+        Redis.layer
       )
   }
 
