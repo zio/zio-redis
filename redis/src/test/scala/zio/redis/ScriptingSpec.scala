@@ -211,9 +211,9 @@ trait ScriptingSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             sha1  <- redis.scriptLoad(lua1)
             sha2  <- redis.scriptLoad(lua2)
-            res   <- redis.scriptFlush()
-            found <- redis.scriptExists(sha1, sha2)
-          } yield assert(res)(isUnit) && assertTrue(found == Chunk(false, false))
+            _     <- redis.scriptFlush()
+            res   <- redis.scriptExists(sha1, sha2)
+          } yield assertTrue(res == Chunk(false, false))
         },
         test("flush scripts in SYNC mode") {
           val lua1 = """return "1""""
@@ -222,9 +222,9 @@ trait ScriptingSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             sha1  <- redis.scriptLoad(lua1)
             sha2  <- redis.scriptLoad(lua2)
-            res   <- redis.scriptFlush(mode = Some(FlushMode.Sync))
-            found <- redis.scriptExists(sha1, sha2)
-          } yield assert(res)(isUnit) && assertTrue(found == Chunk(false, false))
+            _     <- redis.scriptFlush(mode = Some(FlushMode.Sync))
+            res   <- redis.scriptExists(sha1, sha2)
+          } yield assertTrue(res == Chunk(false, false))
         },
         test("flush scripts in ASYNC mode") {
           val lua1 = """return "1""""
@@ -233,9 +233,9 @@ trait ScriptingSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             sha1  <- redis.scriptLoad(lua1)
             sha2  <- redis.scriptLoad(lua2)
-            res   <- redis.scriptFlush(mode = Some(FlushMode.Async))
-            found <- redis.scriptExists(sha1, sha2)
-          } yield assert(res)(isUnit) && assertTrue(found == Chunk(false, false))
+            _     <- redis.scriptFlush(mode = Some(FlushMode.Async))
+            res   <- redis.scriptExists(sha1, sha2)
+          } yield assertTrue(res == Chunk(false, false))
         }
       ),
       suite("scriptKill")(

@@ -38,11 +38,12 @@ trait Redis
 
 object Redis {
   lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromZIO(for {
-      redisExecutor <- ZIO.service[RedisExecutor]
-      binaryCodec   <- ZIO.service[BinaryCodec]
-    } yield new Redis {
-      def codec: BinaryCodec      = binaryCodec
-      def executor: RedisExecutor = redisExecutor
-    })
+    ZLayer {
+      for {
+        executor <- ZIO.service[RedisExecutor]
+        codec    <- ZIO.service[BinaryCodec]
+      } yield Live(codec, executor)
+    }
+
+  private final case class Live(codec: BinaryCodec, executor: RedisExecutor) extends Redis
 }
