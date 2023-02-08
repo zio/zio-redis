@@ -61,7 +61,7 @@ object ZIORedisExample extends ZIOAppDefault {
   } yield ()
 
   override def run = myApp.provide(
-    RedisLive.layer,
+    Redis.layer,
     RedisExecutor.layer,
     ZLayer.succeed(RedisConfig.Default),
     ZLayer.succeed[BinaryCodec](ProtobufCodec)
