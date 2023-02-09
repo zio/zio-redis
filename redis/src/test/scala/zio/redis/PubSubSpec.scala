@@ -1,5 +1,6 @@
 package zio.redis
 
+import zio.redis.options.PubSub.NumberOfSubscribers
 import zio.test.Assertion._
 import zio.test._
 import zio.{Chunk, Promise, ZIO}
@@ -12,14 +13,13 @@ trait PubSubSpec extends BaseSpec {
       suite("subscribe")(
         test("subscribe response") {
           for {
-            redis   <- ZIO.service[Redis]
-            channel <- generateRandomString()
-            promise <- Promise.make[RedisError, String]
-            resBuilder =
-              redis.subscribeWithCallback(channel)((key: String, _: Long) => promise.succeed(key).unit)
-            stream <- resBuilder.returning[String]
-            _      <- stream.interruptWhen(promise).runDrain.fork
-            res    <- promise.await
+            redis     <- ZIO.service[Redis]
+            channel   <- generateRandomString()
+            promise   <- Promise.make[RedisError, String]
+            resBuilder = redis.subscribeWithCallback(channel)((key: String, _: Long) => promise.succeed(key).unit)
+            stream    <- resBuilder.returning[String]
+            _         <- stream.interruptWhen(promise).runDrain.fork
+            res       <- promise.await
           } yield assertTrue(res == channel)
         },
         test("message response") {
@@ -59,8 +59,8 @@ trait PubSubSpec extends BaseSpec {
                    .repeatUntil(channels => channels.size >= 2)
             ch1SubsCount <- redis.publish(channel1, message).replicateZIO(numOfPublish).map(_.head)
             ch2SubsCount <- redis.publish(channel2, message).replicateZIO(numOfPublish).map(_.head)
-            promises     <- redis.unsubscribe(List.empty)
-            _            <- ZIO.foreachDiscard(promises)(_.await)
+            promises     <- redis.unsubscribe()
+            _            <- promises.await
             _            <- stream1.join
             _            <- stream2.join
           } yield assertTrue(ch1SubsCount == 1L) && assertTrue(ch2SubsCount == 1L)
@@ -143,7 +143,7 @@ trait PubSubSpec extends BaseSpec {
             res <- redis
                      .unsubscribe(channel)
                      .flatMap(_.await)
-          } yield assertTrue(res._1 == channel)
+          } yield assertTrue(res.head._1 == channel)
         },
         test("punsubscribe response") {
           for {
@@ -152,7 +152,7 @@ trait PubSubSpec extends BaseSpec {
             res <- redis
                      .pUnsubscribe(pattern)
                      .flatMap(_.await)
-          } yield assertTrue(res._1 == pattern)
+          } yield assertTrue(res.head._1 == pattern)
         },
         test("unsubscribe with empty param") {
           for {
@@ -176,12 +176,12 @@ trait PubSubSpec extends BaseSpec {
             _ <- redis
                    .pubSubChannels(pattern)
                    .repeatUntil(_.size >= 2)
-            _               <- redis.unsubscribe(List.empty).flatMap(ZIO.foreach(_)(_.await))
+            _               <- redis.unsubscribe().flatMap(_.await)
             numSubResponses <- redis.pubSubNumSub(channel1, channel2)
           } yield assertTrue(
             numSubResponses == Chunk(
-              NumSubResponse(channel1, 0L),
-              NumSubResponse(channel2, 0L)
+              NumberOfSubscribers(channel1, 0L),
+              NumberOfSubscribers(channel2, 0L)
             )
           )
         }
