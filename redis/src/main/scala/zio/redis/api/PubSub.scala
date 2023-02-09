@@ -4,9 +4,10 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder.ResultStreamBuilder
 import zio.redis._
+import zio.redis.options.PubSub.NumberOfSubscribers
 import zio.schema.Schema
 import zio.stream._
-import zio.{Chunk, IO, Promise, ZIO}
+import zio.{Chunk, IO, Promise, Ref, ZIO}
 
 trait PubSub extends RedisEnvironment {
   import PubSub._
@@ -14,57 +15,19 @@ trait PubSub extends RedisEnvironment {
   final def subscribe(channel: String): ResultStreamBuilder[Id] =
     subscribeWithCallback(channel)(emptyCallback)
 
-  final def subscribe(channel: String, channels: List[String]): ResultStreamBuilder[List] =
-    subscribeWithCallback(channel, channels)(emptyCallback)
-
-  final def subscribeWithCallback(
-    channel: String
-  )(onSubscribe: PubSubCallback): ResultStreamBuilder[Id] =
+  final def subscribeWithCallback(channel: String)(onSubscribe: PubSubCallback): ResultStreamBuilder[Id] =
     new ResultStreamBuilder[Id] {
       def returning[R: Schema]: IO[RedisError, Id[Stream[RedisError, R]]] =
-        getSubscribeStreams(channel, List.empty)(onSubscribe).flatMap(extractOne(channel, _))
+        runSubscription(PubSubCommand.Subscribe(channel, List.empty), onSubscribe).flatMap(extractOne(channel, _))
     }
 
-  final def subscribeWithCallback(
-    channel: String,
-    channels: List[String]
-  )(onSubscribe: PubSubCallback): ResultStreamBuilder[List] =
-    new ResultStreamBuilder[List] {
-      def returning[R: Schema]: IO[RedisError, List[Stream[RedisError, R]]] =
-        getSubscribeStreams(channel, channels)(onSubscribe)
-    }
+  final def subscribe(channel: String, channels: String*): ResultStreamBuilder[List] =
+    createStreamListBuilder(channel, channels.toList, emptyCallback, isPatterned = false)
 
-  final def unsubscribe(channel: String): IO[RedisError, Promise[RedisError, (String, Long)]] =
-    unsubscribe(List(channel)).flatMap(extractOne(channel, _))
-
-  final def unsubscribe(channels: List[String]): IO[RedisError, List[Promise[RedisError, (String, Long)]]] =
-    RedisPubSubCommand(PubSubCommand.Unsubscribe(channels), codec, pubSub).run
-      .flatMap(
-        ZIO.foreach(_)(stream =>
-          for {
-            promise <- Promise.make[RedisError, (String, Long)]
-            _ <- stream.mapZIO {
-                   case PushProtocol.Unsubscribe(channel, numOfSubscription) =>
-                     promise.succeed((channel, numOfSubscription))
-                   case _ => promise.fail(RedisError.WrongType(s"Cannot handle message except Unsubscribe"))
-                 }.runDrain.fork
-          } yield promise
-        )
-      )
-
-  private def getSubscribeStreams[R: Schema](
-    channel: String,
-    channels: List[String]
-  )(onSubscribe: PubSubCallback) =
-    RedisPubSubCommand(PubSubCommand.Subscribe(channel, channels, onSubscribe), codec, pubSub).run
-      .map(_.map(_.mapZIO {
-        case PushProtocol.Message(_, msg) =>
-          ZIO
-            .attempt(ArbitraryOutput[R]().unsafeDecode(msg)(codec))
-            .refineToOrDie[RedisError]
-            .asSome
-        case _ => ZIO.none
-      }.collectSome))
+  final def subscribeWithCallback(channel: String, channels: String*)(
+    onSubscribe: PubSubCallback
+  ): ResultStreamBuilder[List] =
+    createStreamListBuilder(channel, channels.toList, onSubscribe, isPatterned = false)
 
   final def pSubscribe(pattern: String): ResultStreamBuilder[Id] =
     pSubscribeWithCallback(pattern)(emptyCallback)
@@ -74,54 +37,22 @@ trait PubSub extends RedisEnvironment {
   )(onSubscribe: PubSubCallback): ResultStreamBuilder[Id] =
     new ResultStreamBuilder[Id] {
       def returning[R: Schema]: IO[RedisError, Id[Stream[RedisError, R]]] =
-        getPSubscribeStreams(pattern, List.empty)(onSubscribe).flatMap(extractOne(pattern, _))
+        runSubscription(PubSubCommand.PSubscribe(pattern, List.empty), onSubscribe).flatMap(extractOne(pattern, _))
     }
 
-  final def pSubscribe(pattern: String, patterns: List[String]): ResultStreamBuilder[List] =
-    pSubscribeWithCallback(pattern, patterns)(emptyCallback)
+  final def pSubscribe(pattern: String, patterns: String*): ResultStreamBuilder[List] =
+    createStreamListBuilder(pattern, patterns.toList, emptyCallback, isPatterned = true)
 
-  final def pSubscribeWithCallback(pattern: String, patterns: List[String])(
+  final def pSubscribeWithCallback(pattern: String, patterns: String*)(
     onSubscribe: PubSubCallback
   ): ResultStreamBuilder[List] =
-    new ResultStreamBuilder[List] {
-      def returning[R: Schema]: IO[RedisError, List[Stream[RedisError, R]]] =
-        getPSubscribeStreams(pattern, patterns)(onSubscribe)
-    }
+    createStreamListBuilder(pattern, patterns.toList, onSubscribe, isPatterned = true)
 
-  private def getPSubscribeStreams[R: Schema](
-    pattern: String,
-    patterns: List[String]
-  )(onSubscribe: PubSubCallback) =
-    RedisPubSubCommand(PubSubCommand.PSubscribe(pattern, patterns, onSubscribe), codec, pubSub).run
-      .map(_.map(_.mapZIO {
-        case PushProtocol.PMessage(_, _, msg) =>
-          ZIO
-            .attempt(ArbitraryOutput[R]().unsafeDecode(msg)(codec))
-            .refineToOrDie[RedisError]
-            .asSome
-        case _ => ZIO.none
-      }.collectSome))
+  final def unsubscribe(channels: String*): IO[RedisError, Promise[RedisError, Chunk[(String, Long)]]] =
+    runUnsubscription(PubSubCommand.Unsubscribe(channels.toList))
 
-  final def pUnsubscribe(pattern: String): IO[RedisError, Promise[RedisError, (String, Long)]] =
-    pUnsubscribe(List(pattern)).flatMap(extractOne(pattern, _))
-
-  final def pUnsubscribe(patterns: List[String]): IO[RedisError, List[Promise[RedisError, (String, Long)]]] =
-    RedisPubSubCommand(PubSubCommand.PUnsubscribe(patterns), codec, pubSub).run
-      .flatMap(
-        ZIO.foreach(_)(stream =>
-          for {
-            promise <- Promise.make[RedisError, (String, Long)]
-            _ <- stream.mapZIO {
-                   case PushProtocol.PUnsubscribe(pattern, numOfSubscription) =>
-                     promise.succeed((pattern, numOfSubscription))
-                   case _ => promise.fail(RedisError.WrongType(s"Cannot handle message except PUnsubscribe"))
-                 }.runDrain.fork
-          } yield promise
-        )
-      )
-
-  private def extractOne[A](key: String, elements: List[A]) =
-    ZIO.fromOption(elements.headOption).orElseFail(RedisError.NoPubSubStream(key))
+  final def pUnsubscribe(patterns: String*): IO[RedisError, Promise[RedisError, Chunk[(String, Long)]]] =
+    runUnsubscription(PubSubCommand.PUnsubscribe(patterns.toList))
 
   final def publish[A: Schema](channel: String, message: A): IO[RedisError, Long] = {
     val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryInput[A]()), LongOutput, codec, executor)
@@ -138,10 +69,58 @@ trait PubSub extends RedisEnvironment {
     command.run(())
   }
 
-  final def pubSubNumSub(channel: String, channels: String*): IO[RedisError, Chunk[NumSubResponse]] = {
+  final def pubSubNumSub(channel: String, channels: String*): IO[RedisError, Chunk[NumberOfSubscribers]] = {
     val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput, codec, executor)
     command.run((channel, channels.toList))
   }
+
+  private def createStreamListBuilder(
+    key: String,
+    keys: List[String],
+    callback: PubSubCallback,
+    isPatterned: Boolean
+  ): ResultStreamBuilder[List] =
+    new ResultStreamBuilder[List] {
+      def returning[R: Schema]: IO[RedisError, List[Stream[RedisError, R]]] =
+        if (isPatterned) runSubscription(PubSubCommand.PSubscribe(key, keys), callback)
+        else runSubscription(PubSubCommand.Subscribe(key, keys), callback)
+    }
+
+  private def runUnsubscription(
+    command: PubSubCommand
+  ): IO[RedisError, Promise[RedisError, Chunk[(String, Long)]]] =
+    for {
+      promise <- Promise.make[RedisError, Chunk[(String, Long)]]
+      ref     <- Ref.make(Chunk.empty[(String, Long)])
+      streams <- RedisPubSubCommand(command, codec, pubSub).run[Unit] {
+                   case PushProtocol.Unsubscribe(channel, numOfSubscription) =>
+                     ref.update(_ appended (channel, numOfSubscription))
+                   case PushProtocol.PUnsubscribe(pattern, numOfSubscription) =>
+                     ref.update(_ appended (pattern, numOfSubscription))
+                   case _ => ZIO.unit
+                 }
+      _ <- streams
+             .fold(ZStream.empty)(_ merge _)
+             .runDrain
+             .onDone(
+               e => promise.fail(e),
+               _ => ref.get.flatMap(promise.succeed(_))
+             )
+             .fork
+    } yield promise
+
+  private def runSubscription[R: Schema](
+    command: PubSubCommand,
+    onSubscribe: PubSubCallback
+  ): IO[RedisError, List[Stream[RedisError, R]]] =
+    RedisPubSubCommand(command, codec, pubSub).run[R] {
+      case PushProtocol.Subscribe(key, numOfSubscription)  => onSubscribe(key, numOfSubscription)
+      case PushProtocol.PSubscribe(key, numOfSubscription) => onSubscribe(key, numOfSubscription)
+      case _                                               => ZIO.unit
+    }
+
+  private def extractOne[A](key: String, elements: List[A]) =
+    ZIO.fromOption(elements.headOption).orElseFail(RedisError.NoPubSubStream(key))
 }
 
 private[redis] object PubSub {

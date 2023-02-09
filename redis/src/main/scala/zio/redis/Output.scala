@@ -18,6 +18,7 @@ package zio.redis
 
 import zio._
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
+import zio.redis.options.PubSub.NumberOfSubscribers
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
@@ -859,14 +860,14 @@ object Output {
       }
   }
 
-  case object NumSubResponseOutput extends Output[Chunk[NumSubResponse]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[NumSubResponse] =
+  case object NumSubResponseOutput extends Output[Chunk[NumberOfSubscribers]] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[NumberOfSubscribers] =
       respValue match {
         case RespValue.Array(values) =>
           Chunk.fromIterator(values.grouped(2).map { chunk =>
             val channel           = MultiStringOutput.unsafeDecode(chunk(0))
             val numOfSubscription = LongOutput.unsafeDecode(chunk(1))
-            NumSubResponse(channel, numOfSubscription)
+            NumberOfSubscribers(channel, numOfSubscription)
           })
         case other => throw ProtocolError(s"$other isn't an array")
       }

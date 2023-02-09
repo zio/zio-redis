@@ -2,7 +2,6 @@ package zio.redis.options
 
 import zio.IO
 import zio.redis.{RedisError, RespValue}
-
 trait PubSub {
   type PubSubCallback = (String, Long) => IO[RedisError, Unit]
 
@@ -22,30 +21,32 @@ trait PubSub {
     case class Pattern(value: String) extends SubscriptionKey
   }
 
-  case class NumSubResponse(channel: String, subscriberCount: Long)
-
   sealed trait PushProtocol {
-    def key: SubscriptionKey
+    def key: String
   }
 
   object PushProtocol {
     case class Subscribe(channel: String, numOfSubscription: Long) extends PushProtocol {
-      def key: SubscriptionKey = SubscriptionKey.Channel(channel)
+      def key: String = channel
     }
     case class PSubscribe(pattern: String, numOfSubscription: Long) extends PushProtocol {
-      def key: SubscriptionKey = SubscriptionKey.Pattern(pattern)
+      def key: String = pattern
     }
     case class Unsubscribe(channel: String, numOfSubscription: Long) extends PushProtocol {
-      def key: SubscriptionKey = SubscriptionKey.Channel(channel)
+      def key: String = channel
     }
     case class PUnsubscribe(pattern: String, numOfSubscription: Long) extends PushProtocol {
-      def key: SubscriptionKey = SubscriptionKey.Pattern(pattern)
+      def key: String = pattern
     }
     case class Message(channel: String, message: RespValue) extends PushProtocol {
-      def key: SubscriptionKey = SubscriptionKey.Channel(channel)
+      def key: String = channel
     }
     case class PMessage(pattern: String, channel: String, message: RespValue) extends PushProtocol {
-      def key: SubscriptionKey = SubscriptionKey.Pattern(pattern)
+      def key: String = pattern
     }
   }
+}
+
+object PubSub {
+  final case class NumberOfSubscribers(channel: String, subscriberCount: Long)
 }
