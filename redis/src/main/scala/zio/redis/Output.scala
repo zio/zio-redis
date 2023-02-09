@@ -852,8 +852,7 @@ object Output {
               PushProtocol.Message(key, values(2))
             case "pmessage" =>
               val channel = MultiStringOutput.unsafeDecode(values(2))
-              val message = values(3)
-              PushProtocol.PMessage(key, channel, message)
+              PushProtocol.PMessage(key, channel, values(3))
             case other => throw ProtocolError(s"$other isn't a pushed message")
           }
         case other => throw ProtocolError(s"$other isn't an array")
