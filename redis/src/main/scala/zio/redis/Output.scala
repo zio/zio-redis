@@ -849,8 +849,7 @@ object Output {
               val num = LongOutput.unsafeDecode(values(2))
               PushProtocol.PUnsubscribe(key, num)
             case "message" =>
-              val message = values(2)
-              PushProtocol.Message(key, message)
+              PushProtocol.Message(key, values(2))
             case "pmessage" =>
               val channel = MultiStringOutput.unsafeDecode(values(2))
               val message = values(3)
