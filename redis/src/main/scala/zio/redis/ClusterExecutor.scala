@@ -154,7 +154,7 @@ object ClusterExecutor {
     val codecLayer       = ZLayer.succeed[BinaryCodec](StringUtf8Codec)
     val executorLayer    = redisConfigLayer >>> RedisExecutor.layer
     val pubSubLayer      = redisConfigLayer ++ codecLayer >>> RedisPubSub.layer
-    val redisLayer       = executorLayer ++ pubSubLayer ++ codecLayer >>> RedisLive.layer
+    val redisLayer       = executorLayer ++ pubSubLayer ++ codecLayer >>> Redis.layer
     for {
       closableScope <- Scope.make
       layer         <- closableScope.extend[Any](redisLayer.memoize)

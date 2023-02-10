@@ -38,15 +38,15 @@ trait Redis
   def pubSub: RedisPubSub
 }
 
-final case class RedisLive(codec: BinaryCodec, executor: RedisExecutor, pubSub: RedisPubSub) extends Redis
-
-object RedisLive {
-  lazy val layer: URLayer[RedisPubSub with RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromZIO(
+object Redis {
+  lazy val layer: URLayer[RedisExecutor with RedisPubSub with BinaryCodec, Redis] =
+    ZLayer {
       for {
-        codec    <- ZIO.service[BinaryCodec]
         executor <- ZIO.service[RedisExecutor]
         pubSub   <- ZIO.service[RedisPubSub]
-      } yield RedisLive(codec, executor, pubSub)
-    )
+        codec    <- ZIO.service[BinaryCodec]
+      } yield Live(codec, executor, pubSub)
+    }
+
+  private final case class Live(codec: BinaryCodec, executor: RedisExecutor, pubSub: RedisPubSub) extends Redis
 }

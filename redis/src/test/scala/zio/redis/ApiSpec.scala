@@ -43,7 +43,7 @@ object ApiSpec
       )
 
     val Layer: Layer[Any, Redis] =
-      ZLayer.make[Redis](RedisExecutor.local.orDie, RedisPubSub.local.orDie, ZLayer.succeed(codec), RedisLive.layer)
+      ZLayer.make[Redis](RedisExecutor.local.orDie, RedisPubSub.local.orDie, ZLayer.succeed(codec), Redis.layer)
   }
 
   private object Cluster {
@@ -70,7 +70,7 @@ object ApiSpec
         ClusterExecutor.layer,
         RedisPubSub.local,
         ZLayer.succeed(codec),
-        RedisLive.layer
+        Redis.layer
       )
   }
 

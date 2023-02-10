@@ -71,7 +71,7 @@ object ClusterExecutorSpec extends BaseSpec {
       RedisExecutor.layer,
       RedisPubSub.layer,
       ZLayer.succeed(codec),
-      RedisLive.layer
+      Redis.layer
     )
 
   private val ClusterLayer: Layer[Any, Redis] = {
@@ -82,7 +82,7 @@ object ClusterExecutorSpec extends BaseSpec {
       ClusterExecutor.layer.orDie,
       RedisPubSub.local.orDie,
       ZLayer.succeed(codec),
-      RedisLive.layer
+      Redis.layer
     )
   }
 }
