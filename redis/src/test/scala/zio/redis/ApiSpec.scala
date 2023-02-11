@@ -51,11 +51,14 @@ object ApiSpec
       sortedSetsSuite,
       hyperLogLogSuite,
       geoSuite,
+      streamsSuite @@ clusterExecutorUnsupported,
+      scriptingSpec @@ clusterExecutorUnsupported,
       clusterSpec
     ).provideShared(
       ClusterExecutor.layer,
       Redis.layer,
       ZLayer.succeed(codec),
       ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
-    )
+    ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
+      .getOrElse(Spec.empty)
 }

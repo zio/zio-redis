@@ -32,5 +32,9 @@ trait BaseSpec extends ZIOSpecDefault {
    *  - fork/join approach for commands that operate on keys with different slots
    */
   final val clusterExecutorUnsupported: TestAspectPoly =
-    tag("cluster executor unsupported")
+    tag(BaseSpec.ClusterExecutorUnsupported)
+}
+
+object BaseSpec {
+  final val ClusterExecutorUnsupported = "cluster executor not supported"
 }
