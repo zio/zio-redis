@@ -5,7 +5,6 @@ import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import zio.test.TestAspect.{fibers, silentLogging, tag, timeout}
 import zio.test._
 
-import java.time.Instant
 import java.util.UUID
 
 trait BaseSpec extends ZIOSpecDefault {
@@ -13,8 +12,6 @@ trait BaseSpec extends ZIOSpecDefault {
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
     Chunk(fibers, silentLogging, timeout(10.seconds))
-
-  def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
 
   final val genStringRedisTypeOption: Gen[Any, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
@@ -35,9 +32,5 @@ trait BaseSpec extends ZIOSpecDefault {
    *  - fork/join approach for commands that operate on keys with different slots
    */
   final val clusterExecutorUnsupported: TestAspectPoly =
-    tag(BaseSpec.ClusterExecutorUnsupported)
-}
-
-object BaseSpec {
-  final val ClusterExecutorUnsupported = "cluster executor unsupported"
+    tag("cluster executor unsupported")
 }
