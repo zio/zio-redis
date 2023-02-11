@@ -143,7 +143,7 @@ final class SingleNodeRedisPubSub(
           _       <- releasePendingPromise(msg)
           pubSubs <- pubSubHubsRef.get
           hubOpt   = pubSubs.get(key)
-          _       <- ZIO.fromOption(hubOpt).flatMap(_.shutdown).orElse(ZIO.unit)
+          _       <- ZIO.fromOption(hubOpt).flatMap(_.offer(Take.end)).orElse(ZIO.unit)
           _       <- pubSubHubsRef.update(_ - key)
         } yield ()
 
@@ -176,7 +176,7 @@ final class SingleNodeRedisPubSub(
         .collectSome
         .mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)))
         .refineToOrDie[RedisError]
-        .foreach(push => handlePushProtocolMessage(push))
+        .foreach(handlePushProtocolMessage(_))
     }
   }
 
