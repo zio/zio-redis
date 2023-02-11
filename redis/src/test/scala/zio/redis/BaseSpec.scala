@@ -2,7 +2,7 @@ package zio.redis
 
 import zio._
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test.TestAspect.tag
+import zio.test.TestAspect.{fibers, silentLogging, tag, timeout}
 import zio.test._
 
 import java.time.Instant
@@ -12,7 +12,7 @@ trait BaseSpec extends ZIOSpecDefault {
   implicit val codec: BinaryCodec = ProtobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk.succeed(TestAspect.timeout(10.seconds))
+    Chunk(fibers, silentLogging, timeout(10.seconds))
 
   def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
 
