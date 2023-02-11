@@ -1,8 +1,8 @@
 package zio.redis
 
-sealed trait PubSubCommand
+private[redis] sealed trait PubSubCommand
 
-object PubSubCommand {
+private[redis] object PubSubCommand {
   case class Subscribe(
     channel: String,
     channels: List[String]
