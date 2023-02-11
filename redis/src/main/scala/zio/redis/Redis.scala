@@ -32,8 +32,8 @@ trait Redis
     with api.Streams
     with api.Scripting
     with api.Cluster {
-  def codec: BinaryCodec
-  def executor: RedisExecutor
+  protected def codec: BinaryCodec
+  protected def executor: RedisExecutor
 }
 
 object Redis {
