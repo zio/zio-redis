@@ -1149,7 +1149,7 @@ trait SortedSets extends RedisEnvironment {
    */
   final def zMScore[K: Schema](key: K, keys: K*): IO[RedisError, Chunk[Option[Double]]] = {
     val command = RedisCommand(
-      Zmscore,
+      ZMScore,
       NonEmptyList(ArbitraryInput[K]()),
       ChunkOutput(OptionalOutput(DoubleOutput)),
       codec,
@@ -1245,6 +1245,7 @@ private[redis] object SortedSets {
   final val ZInter           = "ZINTER"
   final val ZInterStore      = "ZINTERSTORE"
   final val ZLexCount        = "ZLEXCOUNT"
+  final val ZMScore          = "ZMSCORE"
   final val ZPopMax          = "ZPOPMAX"
   final val ZPopMin          = "ZPOPMIN"
   final val ZRange           = "ZRANGE"
@@ -1263,6 +1264,5 @@ private[redis] object SortedSets {
   final val ZScore           = "ZSCORE"
   final val ZUnion           = "ZUNION"
   final val ZUnionStore      = "ZUNIONSTORE"
-  final val Zmscore          = "ZMSCORE"
   final val ZRandMember      = "ZRANDMEMBER"
 }
