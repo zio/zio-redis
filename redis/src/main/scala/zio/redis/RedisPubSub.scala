@@ -2,10 +2,10 @@ package zio.redis
 
 import zio.schema.codec.BinaryCodec
 import zio.stream._
-import zio.{ZIO, ZLayer}
+import zio.{Chunk, ZIO, ZLayer}
 
 trait RedisPubSub {
-  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, List[Stream[RedisError, PushProtocol]]]
+  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, Chunk[Stream[RedisError, PushProtocol]]]
 }
 
 object RedisPubSub {

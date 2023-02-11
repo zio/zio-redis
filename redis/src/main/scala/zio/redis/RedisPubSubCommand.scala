@@ -4,12 +4,12 @@ import zio.redis.Output.ArbitraryOutput
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 import zio.stream._
-import zio.{IO, ZIO, ZLayer}
+import zio.{Chunk, IO, ZIO, ZLayer}
 
 final case class RedisPubSubCommand(command: PubSubCommand, codec: BinaryCodec, executor: RedisPubSub) {
   def run[R: Schema](
     callback: PushProtocol => IO[RedisError, Unit]
-  ): IO[RedisError, List[Stream[RedisError, R]]] = {
+  ): IO[RedisError, Chunk[Stream[RedisError, R]]] = {
     val codecLayer = ZLayer.succeed(codec)
     executor
       .execute(command)

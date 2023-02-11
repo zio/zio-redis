@@ -21,12 +21,12 @@ trait PubSub extends RedisEnvironment {
         runSubscription(PubSubCommand.Subscribe(channel, List.empty), onSubscribe).flatMap(extractOne(channel, _))
     }
 
-  final def subscribe(channel: String, channels: String*): ResultStreamBuilder[List] =
+  final def subscribe(channel: String, channels: String*): ResultStreamBuilder[Chunk] =
     createStreamListBuilder(channel, channels.toList, emptyCallback, isPatterned = false)
 
   final def subscribeWithCallback(channel: String, channels: String*)(
     onSubscribe: PubSubCallback
-  ): ResultStreamBuilder[List] =
+  ): ResultStreamBuilder[Chunk] =
     createStreamListBuilder(channel, channels.toList, onSubscribe, isPatterned = false)
 
   final def pSubscribe(pattern: String): ResultStreamBuilder[Id] =
@@ -40,12 +40,12 @@ trait PubSub extends RedisEnvironment {
         runSubscription(PubSubCommand.PSubscribe(pattern, List.empty), onSubscribe).flatMap(extractOne(pattern, _))
     }
 
-  final def pSubscribe(pattern: String, patterns: String*): ResultStreamBuilder[List] =
+  final def pSubscribe(pattern: String, patterns: String*): ResultStreamBuilder[Chunk] =
     createStreamListBuilder(pattern, patterns.toList, emptyCallback, isPatterned = true)
 
   final def pSubscribeWithCallback(pattern: String, patterns: String*)(
     onSubscribe: PubSubCallback
-  ): ResultStreamBuilder[List] =
+  ): ResultStreamBuilder[Chunk] =
     createStreamListBuilder(pattern, patterns.toList, onSubscribe, isPatterned = true)
 
   final def unsubscribe(channels: String*): IO[RedisError, Promise[RedisError, Chunk[(String, Long)]]] =
@@ -79,9 +79,9 @@ trait PubSub extends RedisEnvironment {
     keys: List[String],
     callback: PubSubCallback,
     isPatterned: Boolean
-  ): ResultStreamBuilder[List] =
-    new ResultStreamBuilder[List] {
-      def returning[R: Schema]: IO[RedisError, List[Stream[RedisError, R]]] =
+  ): ResultStreamBuilder[Chunk] =
+    new ResultStreamBuilder[Chunk] {
+      def returning[R: Schema]: IO[RedisError, Chunk[Stream[RedisError, R]]] =
         if (isPatterned) runSubscription(PubSubCommand.PSubscribe(key, keys), callback)
         else runSubscription(PubSubCommand.Subscribe(key, keys), callback)
     }
@@ -112,14 +112,14 @@ trait PubSub extends RedisEnvironment {
   private def runSubscription[R: Schema](
     command: PubSubCommand,
     onSubscribe: PubSubCallback
-  ): IO[RedisError, List[Stream[RedisError, R]]] =
+  ): IO[RedisError, Chunk[Stream[RedisError, R]]] =
     RedisPubSubCommand(command, codec, pubSub).run[R] {
       case PushProtocol.Subscribe(key, numOfSubscription)  => onSubscribe(key, numOfSubscription)
       case PushProtocol.PSubscribe(key, numOfSubscription) => onSubscribe(key, numOfSubscription)
       case _                                               => ZIO.unit
     }
 
-  private def extractOne[A](key: String, elements: List[A]) =
+  private def extractOne[A](key: String, elements: Chunk[A]) =
     ZIO.fromOption(elements.headOption).orElseFail(RedisError.NoPubSubStream(key))
 }
 
