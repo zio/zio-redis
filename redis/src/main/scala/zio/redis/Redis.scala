@@ -31,10 +31,7 @@ trait Redis
     with api.SortedSets
     with api.Streams
     with api.Scripting
-    with api.Cluster {
-  protected def codec: BinaryCodec
-  protected def executor: RedisExecutor
-}
+    with api.Cluster
 
 object Redis {
   lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
