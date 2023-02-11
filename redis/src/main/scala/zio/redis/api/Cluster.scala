@@ -34,7 +34,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def asking: IO[RedisError, Unit] =
+  final def asking: IO[RedisError, Unit] =
     AskingCommand(codec, executor).run(())
 
   /**
@@ -43,7 +43,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   details about which cluster
    */
-  def slots: IO[RedisError, Chunk[Partition]] = {
+  final def slots: IO[RedisError, Chunk[Partition]] = {
     val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), codec, executor)
     command.run(())
   }
@@ -56,7 +56,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
+  final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
     val command =
       RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput, codec, executor)
     command.run((slot.number, Stable.stringify))
@@ -73,7 +73,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+  final def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -95,7 +95,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+  final def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
@@ -117,7 +117,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+  final def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
