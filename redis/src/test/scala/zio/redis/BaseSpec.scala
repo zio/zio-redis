@@ -2,19 +2,16 @@ package zio.redis
 
 import zio._
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test.TestAspect.tag
+import zio.test.TestAspect.{fibers, silentLogging, tag, timeout}
 import zio.test._
 
-import java.time.Instant
 import java.util.UUID
 
 trait BaseSpec extends ZIOSpecDefault {
   implicit val codec: BinaryCodec = ProtobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk.succeed(TestAspect.timeout(10.seconds))
-
-  def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
+    Chunk(fibers, silentLogging, timeout(10.seconds))
 
   final val genStringRedisTypeOption: Gen[Any, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
@@ -39,5 +36,5 @@ trait BaseSpec extends ZIOSpecDefault {
 }
 
 object BaseSpec {
-  final val ClusterExecutorUnsupported = "cluster executor unsupported"
+  final val ClusterExecutorUnsupported = "cluster executor not supported"
 }
