@@ -122,7 +122,7 @@ object ClusterExecutor {
     ZIO
       .collectFirst(addresses) { address =>
         connectToCluster(address).foldZIO(
-          error => ZIO.logError(s"The connection to cluster has been failed, $error").as(None),
+          error => ZIO.logError(s"The connection to cluster failed. Cause: $error").as(None),
           cc => ZIO.logInfo("The connection to cluster has been established").as(Some(cc))
         )
       }
@@ -152,7 +152,7 @@ object ClusterExecutor {
   private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
     val codecLayer    = ZLayer.succeed[BinaryCodec](StringUtf8Codec)
-    val redisLayer    = executorLayer ++ codecLayer >>> RedisLive.layer
+    val redisLayer    = executorLayer ++ codecLayer >>> Redis.layer
     for {
       closableScope <- Scope.make
       layer         <- closableScope.extend[Any](redisLayer.memoize)

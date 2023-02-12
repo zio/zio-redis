@@ -2,19 +2,16 @@ package zio.redis
 
 import zio._
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test.TestAspect.tag
+import zio.test.TestAspect.{fibers, silentLogging, tag, timeout}
 import zio.test._
 
-import java.time.Instant
 import java.util.UUID
 
 trait BaseSpec extends ZIOSpecDefault {
   implicit val codec: BinaryCodec = ProtobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk.succeed(TestAspect.timeout(10.seconds))
-
-  def instantOf(millis: Long): UIO[Instant] = ZIO.succeed(Instant.now().plusMillis(millis))
+    Chunk(fibers, silentLogging, timeout(10.seconds))
 
   final val genStringRedisTypeOption: Gen[Any, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
@@ -28,9 +25,6 @@ trait BaseSpec extends ZIOSpecDefault {
   final val uuid: UIO[String] =
     ZIO.succeed(UUID.randomUUID().toString)
 
-  final val testExecutorUnsupported: TestAspectPoly =
-    tag(BaseSpec.TestExecutorUnsupported)
-
   /* TODO
    *  We can try to support the most unsupported commands for cluster with:
    *  - default connection for commands without a key and for multiple key commands with
@@ -42,6 +36,5 @@ trait BaseSpec extends ZIOSpecDefault {
 }
 
 object BaseSpec {
-  final val TestExecutorUnsupported    = "test executor unsupported"
-  final val ClusterExecutorUnsupported = "cluster executor unsupported"
+  final val ClusterExecutorUnsupported = "cluster executor not supported"
 }

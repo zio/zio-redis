@@ -70,7 +70,7 @@ object ClusterExecutorSpec extends BaseSpec {
       ZLayer.succeed(RedisConfig(uri.host, uri.port)),
       RedisExecutor.layer,
       ZLayer.succeed(codec),
-      RedisLive.layer
+      Redis.layer
     )
 
   private val ClusterLayer: Layer[Any, Redis] = {
@@ -80,7 +80,7 @@ object ClusterExecutorSpec extends BaseSpec {
       ZLayer.succeed(RedisClusterConfig(Chunk(address1, address2))),
       ClusterExecutor.layer.orDie,
       ZLayer.succeed(codec),
-      RedisLive.layer
+      Redis.layer
     )
   }
 }

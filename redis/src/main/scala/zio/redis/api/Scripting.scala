@@ -38,7 +38,7 @@ trait Scripting extends RedisEnvironment {
    *   redis protocol value that is converted from the Lua type. You have to write decoder that would convert redis
    *   protocol value to a suitable type for your app
    */
-  def eval[K: Input, A: Input](
+  final def eval[K: Input, A: Input](
     script: String,
     keys: Chunk[K],
     args: Chunk[A]
@@ -63,7 +63,7 @@ trait Scripting extends RedisEnvironment {
    *   redis protocol value that is converted from the Lua type. You have to write decoder that would convert redis
    *   protocol value to a suitable type for your app
    */
-  def evalSha[K: Input, A: Input](
+  final def evalSha[K: Input, A: Input](
     sha1: String,
     keys: Chunk[K],
     args: Chunk[A]
@@ -72,6 +72,19 @@ trait Scripting extends RedisEnvironment {
       val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R], codec, executor)
       command.run((sha1, keys, args))
     }
+  }
+
+  /**
+   * Set the debug mode for executed scripts.
+   *
+   * @param mode
+   *   mode in which scripts debug is going to work ["YES", "SYNC", "NO"]
+   * @return
+   *   the Unit value.
+   */
+  final def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = {
+    val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput, codec, executor)
+    command.run(mode)
   }
 
   /**
@@ -85,9 +98,34 @@ trait Scripting extends RedisEnvironment {
    *   for every corresponding SHA1 digest of a script that actually exists in the script cache, an true is returned,
    *   otherwise false is returned.
    */
-  def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
+  final def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
     val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput), codec, executor)
     command.run((sha1, sha1s.toList))
+  }
+
+  /**
+   * Remove all the scripts from the script cache.
+   *
+   * @param mode
+   *   mode in which script flush is going to be executed ["ASYNC", "SYNC"] Note: "SYNC" mode is used by default (if no
+   *   mode is provided)
+   * @return
+   *   the Unit value.
+   */
+  final def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = {
+    val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput, codec, executor)
+    command.run(mode)
+  }
+
+  /**
+   * Kill the currently executing EVAL script, assuming no write operation was yet performed by the script.
+   *
+   * @return
+   *   the Unit value.
+   */
+  final def scriptKill: IO[RedisError, Unit] = {
+    val command = RedisCommand(ScriptKill, NoInput, UnitOutput, codec, executor)
+    command.run(())
   }
 
   /**
@@ -99,7 +137,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the SHA1 digest of the script added into the script cache.
    */
-  def scriptLoad(script: String): IO[RedisError, String] = {
+  final def scriptLoad(script: String): IO[RedisError, String] = {
     val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput, codec, executor)
     command.run(script)
   }
@@ -108,6 +146,9 @@ trait Scripting extends RedisEnvironment {
 private[redis] object Scripting {
   final val Eval         = "EVAL"
   final val EvalSha      = "EVALSHA"
+  final val ScriptDebug  = "SCRIPT DEBUG"
   final val ScriptExists = "SCRIPT EXISTS"
+  final val ScriptFlush  = "SCRIPT FLUSH"
+  final val ScriptKill   = "SCRIPT KILL"
   final val ScriptLoad   = "SCRIPT LOAD"
 }
