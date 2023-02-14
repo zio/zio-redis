@@ -1,8 +1,8 @@
 package zio.redis
 
-import zio._
 import zio.test.TestAspect._
 import zio.test._
+import zio.{ZLayer, _}
 
 object ApiSpec
     extends ConnectionSpec
@@ -63,7 +63,8 @@ object ApiSpec
       RedisPubSub.layer,
       Redis.layer,
       ZLayer.succeed(codec),
-      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
+      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000)))),
+      ZLayer.succeed(RedisConfig("localhost", 5000))
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
       .getOrElse(Spec.empty)
 }
