@@ -6,7 +6,7 @@ import zio.redis.SingleNodeRedisPubSub.{Request, RequestQueueSize, SubscriptionK
 import zio.redis.api.PubSub
 import zio.schema.codec.BinaryCodec
 import zio.stream._
-import zio.{Chunk, ChunkBuilder, Hub, Promise, Queue, Ref, Schedule, UIO, ZIO}
+import zio.{Chunk, ChunkBuilder, Hub, IO, Promise, Queue, Ref, Schedule, UIO, ZIO}
 
 final class SingleNodeRedisPubSub(
   pubSubHubsRef: Ref[Map[SubscriptionKey, Hub[Take[RedisError, PushProtocol]]]],
@@ -15,15 +15,34 @@ final class SingleNodeRedisPubSub(
   connection: RedisConnection
 ) extends RedisPubSub {
 
-  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, Chunk[Stream[RedisError, PushProtocol]]] =
+  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, Chunk[Stream[RedisError, RespValue]]] = {
+    def applyCallback(
+      streams: Chunk[Stream[RedisError, PushProtocol]],
+      callback: PushProtocol => IO[RedisError, Unit]
+    ) =
+      streams.map(
+        _.tap(callback(_)).map {
+          case PushProtocol.Message(_, msg)     => Some(msg)
+          case PushProtocol.PMessage(_, _, msg) => Some(msg)
+          case _                                => None
+        }.collectSome
+      )
+
     command match {
-      case PubSubCommand.Subscribe(channel, channels) =>
+      case PubSubCommand.Subscribe(channel, channels, callback) =>
         subscribe(channel, channels)
-      case PubSubCommand.PSubscribe(pattern, patterns) =>
+          .map(applyCallback(_, callback))
+      case PubSubCommand.PSubscribe(pattern, patterns, callback) =>
         pSubscribe(pattern, patterns)
-      case PubSubCommand.Unsubscribe(channels)  => unsubscribe(channels)
-      case PubSubCommand.PUnsubscribe(patterns) => pUnsubscribe(patterns)
+          .map(applyCallback(_, callback))
+      case PubSubCommand.Unsubscribe(channels, callback) =>
+        unsubscribe(channels)
+          .map(applyCallback(_, callback))
+      case PubSubCommand.PUnsubscribe(patterns, callback) =>
+        pUnsubscribe(patterns)
+          .map(applyCallback(_, callback))
     }
+  }
 
   private def subscribe(
     channel: String,
