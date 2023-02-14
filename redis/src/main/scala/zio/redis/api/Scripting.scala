@@ -38,7 +38,7 @@ trait Scripting extends RedisEnvironment {
    *   redis protocol value that is converted from the Lua type. You have to write decoder that would convert redis
    *   protocol value to a suitable type for your app
    */
-  def eval[K: Input, A: Input](
+  final def eval[K: Input, A: Input](
     script: String,
     keys: Chunk[K],
     args: Chunk[A]
@@ -63,7 +63,7 @@ trait Scripting extends RedisEnvironment {
    *   redis protocol value that is converted from the Lua type. You have to write decoder that would convert redis
    *   protocol value to a suitable type for your app
    */
-  def evalSha[K: Input, A: Input](
+  final def evalSha[K: Input, A: Input](
     sha1: String,
     keys: Chunk[K],
     args: Chunk[A]
@@ -82,7 +82,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = {
+  final def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = {
     val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput, codec, executor)
     command.run(mode)
   }
@@ -98,7 +98,7 @@ trait Scripting extends RedisEnvironment {
    *   for every corresponding SHA1 digest of a script that actually exists in the script cache, an true is returned,
    *   otherwise false is returned.
    */
-  def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
+  final def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
     val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput), codec, executor)
     command.run((sha1, sha1s.toList))
   }
@@ -112,7 +112,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = {
+  final def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = {
     val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput, codec, executor)
     command.run(mode)
   }
@@ -123,7 +123,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  def scriptKill: IO[RedisError, Unit] = {
+  final def scriptKill: IO[RedisError, Unit] = {
     val command = RedisCommand(ScriptKill, NoInput, UnitOutput, codec, executor)
     command.run(())
   }
@@ -137,7 +137,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the SHA1 digest of the script added into the script cache.
    */
-  def scriptLoad(script: String): IO[RedisError, String] = {
+  final def scriptLoad(script: String): IO[RedisError, String] = {
     val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput, codec, executor)
     command.run(script)
   }

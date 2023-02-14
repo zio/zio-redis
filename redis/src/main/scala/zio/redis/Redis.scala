@@ -32,11 +32,7 @@ trait Redis
     with api.Streams
     with api.Scripting
     with api.Cluster
-    with api.PubSub {
-  def codec: BinaryCodec
-  def executor: RedisExecutor
-  def pubSub: RedisPubSub
-}
+    with api.PubSub
 
 object Redis {
   lazy val layer: URLayer[RedisExecutor with RedisPubSub with BinaryCodec, Redis] =

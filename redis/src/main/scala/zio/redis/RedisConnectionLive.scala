@@ -98,7 +98,7 @@ private[redis] object RedisConnectionLive {
 
   private def completionHandler[A](k: IO[IOException, A] => Unit): CompletionHandler[A, Any] =
     new CompletionHandler[A, Any] {
-      def completed(result: A, u: Any): Unit = k(ZIO.succeedNow(result))
+      def completed(result: A, u: Any): Unit = k(ZIO.succeed(result))
 
       def failed(t: Throwable, u: Any): Unit =
         t match {

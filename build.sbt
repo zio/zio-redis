@@ -44,12 +44,12 @@ lazy val redis =
     .settings(stdSettings("zio-redis"))
     .settings(
       libraryDependencies ++= List(
-        "dev.zio"                %% "zio-streams"             % "2.0.6",
-        "dev.zio"                %% "zio-logging"             % "2.1.8",
+        "dev.zio"                %% "zio-streams"             % "2.0.8",
+        "dev.zio"                %% "zio-logging"             % "2.1.9",
         "dev.zio"                %% "zio-schema"              % "0.3.1",
         "dev.zio"                %% "zio-schema-protobuf"     % "0.3.1" % Test,
-        "dev.zio"                %% "zio-test"                % "2.0.6" % Test,
-        "dev.zio"                %% "zio-test-sbt"            % "2.0.6" % Test,
+        "dev.zio"                %% "zio-test"                % "2.0.8" % Test,
+        "dev.zio"                %% "zio-test-sbt"            % "2.0.8" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0"
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
@@ -80,9 +80,9 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= List(
-        "com.softwaremill.sttp.client3" %% "zio"                 % "3.8.5",
-        "com.softwaremill.sttp.client3" %% "zio-json"            % "3.8.5",
-        "dev.zio"                       %% "zio-streams"         % "2.0.6",
+        "com.softwaremill.sttp.client3" %% "zio"                 % "3.8.11",
+        "com.softwaremill.sttp.client3" %% "zio-json"            % "3.8.11",
+        "dev.zio"                       %% "zio-streams"         % "2.0.8",
         "dev.zio"                       %% "zio-config-magnolia" % "3.0.7",
         "dev.zio"                       %% "zio-config-typesafe" % "3.0.7",
         "dev.zio"                       %% "zio-schema-protobuf" % "0.3.1",

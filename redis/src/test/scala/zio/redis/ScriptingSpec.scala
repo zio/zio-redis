@@ -46,7 +46,7 @@ trait ScriptingSpec extends BaseSpec {
             key1    <- uuid.map(_ + s"{$keyHash}")
             key2    <- uuid.map(_ + s"{$keyHash}")
             arg1    <- uuid
-            arg2    <- ZIO.succeedNow(Random.nextLong())
+            arg2    <- ZIO.succeed(Random.nextLong())
             arg      = CustomInputValue(arg1, arg2)
             lua      = """return {ARGV[1],ARGV[2]}"""
             res     <- redis.eval(lua, Chunk(key1, key2), Chunk(arg)).returning[Map[String, String]]

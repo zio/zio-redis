@@ -1,8 +1,8 @@
 package zio.redis
 
+import zio._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{Chunk, Layer, ZLayer}
 
 object ApiSpec
     extends ConnectionSpec
@@ -20,58 +20,50 @@ object ApiSpec
     with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("Redis commands")(
-      Node.Suite.provideLayerShared(Node.Layer) @@ sequential @@ withLiveEnvironment,
-      Cluster.Suite.provideLayerShared(Cluster.Layer) @@ sequential @@ withLiveEnvironment
+    suite("Redis commands")(clusterSuite, singleNodeSuite) @@ sequential @@ withLiveEnvironment
+
+  private val singleNodeSuite =
+    suite("Single node executor")(
+      connectionSuite,
+      keysSuite,
+      listSuite,
+      setsSuite,
+      sortedSetsSuite,
+      stringsSuite,
+      geoSuite,
+      hyperLogLogSuite,
+      hashSuite,
+      streamsSuite,
+      scriptingSpec,
+      pubSubSuite
+    ).provideShared(
+      RedisExecutor.local,
+      RedisPubSub.local,
+      Redis.layer,
+      ZLayer.succeed(codec)
     )
 
-  private object Node {
-    val Suite: Spec[Redis, Any] =
-      suite("Node Executor")(
-        connectionSuite,
-        keysSuite,
-        listSuite,
-        setsSuite,
-        sortedSetsSuite,
-        stringsSuite,
-        geoSuite,
-        hyperLogLogSuite,
-        hashSuite,
-        streamsSuite,
-        scriptingSpec,
-        pubSubSuite
-      )
-
-    val Layer: Layer[Any, Redis] =
-      ZLayer.make[Redis](RedisExecutor.local.orDie, RedisPubSub.local.orDie, ZLayer.succeed(codec), Redis.layer)
-  }
-
-  private object Cluster {
-    val Suite: Spec[Redis, Any] =
-      suite("Cluster Executor")(
-        connectionSuite,
-        keysSuite,
-        listSuite,
-        stringsSuite,
-        hashSuite,
-        setsSuite,
-        sortedSetsSuite,
-        hyperLogLogSuite,
-        geoSuite,
-        streamsSuite @@ clusterExecutorUnsupported,
-        scriptingSpec @@ clusterExecutorUnsupported,
-        clusterSpec,
-        pubSubSuite
-      ).filterAnnotations(TestAnnotation.tagged)(t => !t.contains(BaseSpec.ClusterExecutorUnsupported)).get
-
-    val Layer: Layer[Any, Redis] =
-      ZLayer.make[Redis](
-        ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000)))),
-        ClusterExecutor.layer,
-        RedisPubSub.local,
-        ZLayer.succeed(codec),
-        Redis.layer
-      )
-  }
-
+  private val clusterSuite =
+    suite("Cluster executor")(
+      connectionSuite,
+      keysSuite,
+      listSuite,
+      stringsSuite,
+      hashSuite,
+      setsSuite,
+      sortedSetsSuite,
+      hyperLogLogSuite,
+      geoSuite,
+      streamsSuite @@ clusterExecutorUnsupported,
+      scriptingSpec @@ clusterExecutorUnsupported,
+      clusterSpec,
+      pubSubSuite
+    ).provideShared(
+      ClusterExecutor.layer,
+      RedisPubSub.layer,
+      Redis.layer,
+      ZLayer.succeed(codec),
+      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
+    ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
+      .getOrElse(Spec.empty)
 }
