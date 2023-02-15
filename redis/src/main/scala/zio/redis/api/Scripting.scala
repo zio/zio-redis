@@ -75,10 +75,12 @@ trait Scripting extends RedisEnvironment {
   }
 
   /**
-   * Set the debug mode for executed scripts.
+   * Set the debug mode for subsequent scripts executed with [[zio.redis.api.Scripting.eval]].
    *
    * @param mode
-   *   mode in which scripts debug is going to work ["YES", "SYNC", "NO"]
+   *   - [[zio.redis.DebugMode.Yes]]: Enable non-blocking asynchronous debugging of Lua scripts (changes are discarded).
+   *   - [[zio.redis.DebugMode.Sync]]: Enable blocking synchronous debugging of Lua scripts (saves changes to data).
+   *   - [[zio.redis.DebugMode.No]]: Disables scripts debug mode.
    * @return
    *   the Unit value.
    */
@@ -109,6 +111,10 @@ trait Scripting extends RedisEnvironment {
    * @param mode
    *   mode in which script flush is going to be executed ["ASYNC", "SYNC"] Note: "SYNC" mode is used by default (if no
    *   mode is provided)
+   *   - [[zio.redis.FlushMode.Async]]: Flushes the cache asynchronously.
+   *   - [[zio.redis.FlushMode.Sync]]: Flushes the cache synchronously.
+   *
+   * Note: If no mode is provided, command is going to be executed in [[zio.redis.FlushMode.Sync]] mode.
    * @return
    *   the Unit value.
    */
@@ -118,7 +124,8 @@ trait Scripting extends RedisEnvironment {
   }
 
   /**
-   * Kill the currently executing EVAL script, assuming no write operation was yet performed by the script.
+   * Kill the currently executing [[zio.redis.api.Scripting.eval]] script, assuming no write operation was yet performed
+   * by the script.
    *
    * @return
    *   the Unit value.
