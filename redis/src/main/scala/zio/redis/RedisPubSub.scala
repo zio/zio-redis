@@ -2,10 +2,10 @@ package zio.redis
 
 import zio.schema.codec.BinaryCodec
 import zio.stream._
-import zio.{Chunk, ZIO, ZLayer}
+import zio.{Chunk, IO, ZIO, ZLayer}
 
 trait RedisPubSub {
-  def execute(command: PubSubCommand): ZIO[BinaryCodec, RedisError, Chunk[Stream[RedisError, RespValue]]]
+  def execute(command: PubSubCommand): IO[RedisError, Chunk[Stream[RedisError, RespValue]]]
 }
 
 object RedisPubSub {
@@ -17,6 +17,10 @@ object RedisPubSub {
 
   private lazy val pubSublayer: ZLayer[RedisConnection with BinaryCodec, RedisError.IOError, RedisPubSub] =
     ZLayer.scoped(
-      ZIO.service[RedisConnection].flatMap(SingleNodeRedisPubSub.create(_))
+      for {
+        conn   <- ZIO.service[RedisConnection]
+        codec  <- ZIO.service[BinaryCodec]
+        pubSub <- SingleNodeRedisPubSub.create(conn, codec)
+      } yield pubSub
     )
 }
