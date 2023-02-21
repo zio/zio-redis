@@ -17,13 +17,10 @@
 package zio.redis.api
 
 import zio.IO
-import zio.redis.Input._
-import zio.redis.Output._
 import zio.redis._
 import zio.schema.Schema
 
-trait HyperLogLog extends RedisEnvironment {
-  import HyperLogLog._
+trait HyperLogLog extends commands.HyperLogLog {
 
   /**
    * Adds the specified elements to the specified HyperLogLog.
@@ -37,17 +34,8 @@ trait HyperLogLog extends RedisEnvironment {
    * @return
    *   boolean indicating if at least 1 HyperLogLog register was altered.
    */
-  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Boolean] = {
-    val command =
-      RedisCommand(
-        PfAdd,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())),
-        BoolOutput,
-        codec,
-        executor
-      )
-    command.run((key, (element, elements.toList)))
-  }
+  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Boolean] =
+    _pfAdd[K, V].run((key, (element, elements.toList)))
 
   /**
    * Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s).
@@ -59,10 +47,7 @@ trait HyperLogLog extends RedisEnvironment {
    * @return
    *   approximate number of unique elements observed via PFADD.
    */
-  final def pfCount[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput, codec, executor)
-    command.run((key, keys.toList))
-  }
+  final def pfCount[K: Schema](key: K, keys: K*): IO[RedisError, Long] = _pfCount[K].run((key, keys.toList))
 
   /**
    * Merge N different HyperLogLogs into a single one.
@@ -74,21 +59,6 @@ trait HyperLogLog extends RedisEnvironment {
    * @param sourceKeys
    *   additional keys to merge
    */
-  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): IO[RedisError, Unit] = {
-    val command =
-      RedisCommand(
-        PfMerge,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryKeyInput[K]())),
-        UnitOutput,
-        codec,
-        executor
-      )
-    command.run((destKey, (sourceKey, sourceKeys.toList)))
-  }
-}
-
-private[redis] object HyperLogLog {
-  final val PfAdd   = "PFADD"
-  final val PfCount = "PFCOUNT"
-  final val PfMerge = "PFMERGE"
+  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): IO[RedisError, Unit] =
+    _pfMerge[K].run((destKey, (sourceKey, sourceKeys.toList)))
 }

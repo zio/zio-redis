@@ -17,16 +17,13 @@
 package zio.redis.transactional.api
 
 import zio._
-import zio.redis.Input._
-import zio.redis.Output._
+import zio.redis._
 import zio.redis.transactional.RedisTransaction
 import zio.redis.transactional.RedisTransaction.single
 import zio.redis.transactional.ResultBuilder._
-import zio.redis.{RedisCommand, _}
 import zio.schema.Schema
 
-trait Sets extends RedisEnvironment {
-  import Sets._
+trait Sets extends commands.Sets {
 
   /**
    * Add one or more members to a set.
@@ -42,10 +39,7 @@ trait Sets extends RedisEnvironment {
    *   the set.
    */
   final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): RedisTransaction[Long] =
-    single(
-      RedisCommand(SAdd, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput, codec, executor),
-      (key, (member, members.toList))
-    )
+    single(_sAdd[K, M], (key, (member, members.toList)))
 
   /**
    * Get the number of members in a set.
@@ -55,8 +49,7 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
-  final def sCard[K: Schema](key: K): RedisTransaction[Long] =
-    single(RedisCommand(SCard, ArbitraryInput[K](), LongOutput, codec, executor), key)
+  final def sCard[K: Schema](key: K): RedisTransaction[Long] = single(_sCard[K], key)
 
   /**
    * Subtract multiple sets.
@@ -70,11 +63,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: RedisTransaction[Chunk[R]] =
-        single(
-          RedisCommand(SDiff, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor),
-          (key, keys.toList)
-        )
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sDiff[K, R], (key, keys.toList))
     }
 
   /**
@@ -90,16 +79,7 @@ trait Sets extends RedisEnvironment {
    *   Returns the number of elements in the resulting set.
    */
   final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): RedisTransaction[Long] =
-    single(
-      RedisCommand(
-        SDiffStore,
-        Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())),
-        LongOutput,
-        codec,
-        executor
-      ),
-      (destination, (key, keys.toList))
-    )
+    single(_sDiffStore[D, K], (destination, (key, keys.toList)))
 
   /**
    * Intersect multiple sets and store the resulting set in a key.
@@ -114,10 +94,7 @@ trait Sets extends RedisEnvironment {
   final def sInter[K: Schema](destination: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: RedisTransaction[Chunk[R]] =
-        single(
-          RedisCommand(SInter, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor),
-          (destination, keys.toList)
-        )
+        single(_sInter[K, R], (destination, keys.toList))
     }
 
   /**
@@ -132,21 +109,8 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sInterStore[D: Schema, K: Schema](
-    destination: D,
-    key: K,
-    keys: K*
-  ): RedisTransaction[Long] =
-    single(
-      RedisCommand(
-        SInterStore,
-        Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())),
-        LongOutput,
-        codec,
-        executor
-      ),
-      (destination, (key, keys.toList))
-    )
+  final def sInterStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): RedisTransaction[Long] =
+    single(_sInterStore[D, K], (destination, (key, keys.toList)))
 
   /**
    * Determine if a given value is a member of a set.
@@ -160,10 +124,7 @@ trait Sets extends RedisEnvironment {
    *   exist.
    */
   final def sIsMember[K: Schema, M: Schema](key: K, member: M): RedisTransaction[Boolean] =
-    single(
-      RedisCommand(SIsMember, Tuple2(ArbitraryInput[K](), ArbitraryInput[M]()), BoolOutput, codec, executor),
-      (key, member)
-    )
+    single(_sIsMember[K, M], (key, member))
 
   /**
    * Get all the members in a set.
@@ -175,8 +136,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sMembers[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: RedisTransaction[Chunk[R]] =
-        single(RedisCommand(SMembers, ArbitraryInput[K](), ChunkOutput(ArbitraryOutput[R]()), codec, executor), key)
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sMembers[K, R], key)
     }
 
   /**
@@ -191,21 +151,8 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns 1 if the element was moved. 0 if it was not found.
    */
-  final def sMove[S: Schema, D: Schema, M: Schema](
-    source: S,
-    destination: D,
-    member: M
-  ): RedisTransaction[Boolean] =
-    single(
-      RedisCommand(
-        SMove,
-        Tuple3(ArbitraryInput[S](), ArbitraryInput[D](), ArbitraryInput[M]()),
-        BoolOutput,
-        codec,
-        executor
-      ),
-      (source, destination, member)
-    )
+  final def sMove[S: Schema, D: Schema, M: Schema](source: S, destination: D, member: M): RedisTransaction[Boolean] =
+    single(_sMove[S, D, M], (source, destination, member))
 
   /**
    * Remove and return one or multiple random members from a set.
@@ -219,17 +166,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sPop[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: RedisTransaction[Chunk[R]] =
-        single(
-          RedisCommand(
-            SPop,
-            Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
-            MultiStringChunkOutput(ArbitraryOutput[R]()),
-            codec,
-            executor
-          ),
-          (key, count)
-        )
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sPop[K, R], (key, count))
     }
 
   /**
@@ -244,17 +181,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sRandMember[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: RedisTransaction[Chunk[R]] =
-        single(
-          RedisCommand(
-            SRandMember,
-            Tuple2(ArbitraryInput[K](), OptionalInput(LongInput)),
-            MultiStringChunkOutput(ArbitraryOutput[R]()),
-            codec,
-            executor
-          ),
-          (key, count)
-        )
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sRandMember[K, R], (key, count))
     }
 
   /**
@@ -270,10 +197,7 @@ trait Sets extends RedisEnvironment {
    *   Returns the number of members that were removed from the set, not including non existing members.
    */
   final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): RedisTransaction[Long] =
-    single(
-      RedisCommand(SRem, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), LongOutput, codec, executor),
-      (key, (member, members.toList))
-    )
+    single(_sRem[K, M], (key, (member, members.toList)))
 
   /**
    * Incrementally iterate Set elements.
@@ -300,16 +224,7 @@ trait Sets extends RedisEnvironment {
   ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
     new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
       def returning[R: Schema]: RedisTransaction[(Long, Chunk[R])] =
-        single(
-          RedisCommand(
-            SScan,
-            Tuple4(ArbitraryInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-            Tuple2Output(MultiStringOutput.map(_.toLong), ChunkOutput(ArbitraryOutput[R]())),
-            codec,
-            executor
-          ),
-          (key, cursor, pattern.map(Pattern(_)), count)
-        )
+        single(_sScan[K, R], (key, cursor, pattern.map(Pattern(_)), count))
     }
 
   /**
@@ -324,11 +239,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sUnion[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: RedisTransaction[Chunk[R]] =
-        single(
-          RedisCommand(SUnion, NonEmptyList(ArbitraryInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor),
-          (key, keys.toList)
-        )
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sUnion[K, R], (key, keys.toList))
     }
 
   /**
@@ -343,37 +254,6 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sUnionStore[D: Schema, K: Schema](
-    destination: D,
-    key: K,
-    keys: K*
-  ): RedisTransaction[Long] =
-    single(
-      RedisCommand(
-        SUnionStore,
-        Tuple2(ArbitraryInput[D](), NonEmptyList(ArbitraryInput[K]())),
-        LongOutput,
-        codec,
-        executor
-      ),
-      (destination, (key, keys.toList))
-    )
-}
-
-private[redis] object Sets {
-  val SAdd        = "SADD"
-  val SCard       = "SCARD"
-  val SDiff       = "SDIFF"
-  val SDiffStore  = "SDIFFSTORE"
-  val SInter      = "SINTER"
-  val SInterStore = "SINTERSTORE"
-  val SIsMember   = "SISMEMBER"
-  val SMembers    = "SMEMBERS"
-  val SMove       = "SMOVE"
-  val SPop        = "SPOP"
-  val SRandMember = "SRANDMEMBER"
-  val SRem        = "SREM"
-  val SScan       = "SSCAN"
-  val SUnion      = "SUNION"
-  val SUnionStore = "SUNIONSTORE"
+  final def sUnionStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): RedisTransaction[Long] =
+    single(_sUnionStore[D, K], (destination, (key, keys.toList)))
 }

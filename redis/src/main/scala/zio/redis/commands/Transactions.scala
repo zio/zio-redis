@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-package zio.redis.transactional
+package zio.redis.commands
 
-import zio.redis.RedisExecutor
-import zio.redis.commands.Transactions
-import zio.schema.codec.BinaryCodec
-import zio.{URLayer, ZLayer}
+import zio.redis.Input._
+import zio.redis.Output._
+import zio.redis._
 
-trait Redis extends api.Sets with Transactions
+private[redis] trait Transactions extends RedisEnvironment {
+  import Transactions._
 
-object Redis {
-  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
-    ZLayer.fromFunction(Live.apply _)
+  final val _multi: RedisCommand[Unit, Unit] = RedisCommand(Multi, NoInput, UnitOutput, codec, executor)
 
-  private final case class Live(codec: BinaryCodec, executor: RedisExecutor) extends Redis
+  final def _exec[Out](output: Output[Out]): RedisCommand[Unit, Out] =
+    RedisCommand(Exec, NoInput, output, codec, executor)
+}
+
+private object Transactions {
+  final val Multi = "Multi"
+  final val Exec  = "Exec"
 }

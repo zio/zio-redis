@@ -41,7 +41,7 @@ object ApiSpec
       RedisExecutor.local,
       Redis.layer,
       ZLayer.succeed(codec),
-      transactional.RedisLive.layer
+      transactional.Redis.layer
     )
 
   private val clusterSuite =

@@ -17,13 +17,10 @@
 package zio.redis.api
 
 import zio._
-import zio.redis.Input._
-import zio.redis.Output._
 import zio.redis.ResultBuilder.ResultOutputBuilder
 import zio.redis._
 
-trait Scripting extends RedisEnvironment {
-  import Scripting._
+trait Scripting extends commands.Scripting {
 
   /**
    * Evaluates a Lua script.
@@ -43,10 +40,7 @@ trait Scripting extends RedisEnvironment {
     keys: Chunk[K],
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: IO[RedisError, R] = {
-      val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R], codec, executor)
-      command.run((script, keys, args))
-    }
+    def returning[R: Output]: IO[RedisError, R] = _eval[K, A, R].run((script, keys, args))
   }
 
   /**
@@ -68,10 +62,7 @@ trait Scripting extends RedisEnvironment {
     keys: Chunk[K],
     args: Chunk[A]
   ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: IO[RedisError, R] = {
-      val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R], codec, executor)
-      command.run((sha1, keys, args))
-    }
+    def returning[R: Output]: IO[RedisError, R] = _evalSha[K, A, R].run((sha1, keys, args))
   }
 
   /**
@@ -84,10 +75,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = {
-    val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput, codec, executor)
-    command.run(mode)
-  }
+  final def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = _scriptDebug.run(mode)
 
   /**
    * Checks existence of the scripts in the script cache.
@@ -100,10 +88,8 @@ trait Scripting extends RedisEnvironment {
    *   for every corresponding SHA1 digest of a script that actually exists in the script cache, an true is returned,
    *   otherwise false is returned.
    */
-  final def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
-    val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput), codec, executor)
-    command.run((sha1, sha1s.toList))
-  }
+  final def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] =
+    _scriptExists.run((sha1, sha1s.toList))
 
   /**
    * Remove all the scripts from the script cache.
@@ -118,10 +104,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = {
-    val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput, codec, executor)
-    command.run(mode)
-  }
+  final def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = _scriptFlush.run(mode)
 
   /**
    * Kill the currently executing [[zio.redis.api.Scripting.eval]] script, assuming no write operation was yet performed
@@ -130,10 +113,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def scriptKill: IO[RedisError, Unit] = {
-    val command = RedisCommand(ScriptKill, NoInput, UnitOutput, codec, executor)
-    command.run(())
-  }
+  final def scriptKill: IO[RedisError, Unit] = _scriptKill.run(())
 
   /**
    * Loads a script into the scripts cache. After the script is loaded into the script cache it could be evaluated using
@@ -144,18 +124,5 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the SHA1 digest of the script added into the script cache.
    */
-  final def scriptLoad(script: String): IO[RedisError, String] = {
-    val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput, codec, executor)
-    command.run(script)
-  }
-}
-
-private[redis] object Scripting {
-  final val Eval         = "EVAL"
-  final val EvalSha      = "EVALSHA"
-  final val ScriptDebug  = "SCRIPT DEBUG"
-  final val ScriptExists = "SCRIPT EXISTS"
-  final val ScriptFlush  = "SCRIPT FLUSH"
-  final val ScriptKill   = "SCRIPT KILL"
-  final val ScriptLoad   = "SCRIPT LOAD"
+  final def scriptLoad(script: String): IO[RedisError, String] = _scriptLoad.run(script)
 }

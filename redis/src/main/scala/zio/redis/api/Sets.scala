@@ -17,14 +17,11 @@
 package zio.redis.api
 
 import zio._
-import zio.redis.Input._
-import zio.redis.Output._
 import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
 
-trait Sets extends RedisEnvironment {
-  import Sets._
+trait Sets extends commands.Sets {
 
   /**
    * Add one or more members to a set.
@@ -39,17 +36,8 @@ trait Sets extends RedisEnvironment {
    *   Returns the number of elements that were added to the set, not including all the elements already present into
    *   the set.
    */
-  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
-    val command =
-      RedisCommand(
-        SAdd,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
-        LongOutput,
-        codec,
-        executor
-      )
-    command.run((key, (member, members.toList)))
-  }
+  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] =
+    _sAdd[K, M].run((key, (member, members.toList)))
 
   /**
    * Get the number of members in a set.
@@ -59,10 +47,7 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
-  final def sCard[K: Schema](key: K): IO[RedisError, Long] = {
-    val command = RedisCommand(SCard, ArbitraryKeyInput[K](), LongOutput, codec, executor)
-    command.run(key)
-  }
+  final def sCard[K: Schema](key: K): IO[RedisError, Long] = _sCard[K].run(key)
 
   /**
    * Subtract multiple sets.
@@ -76,9 +61,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SDiff, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor)
-          .run((key, keys.toList))
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sDiff[K, R].run((key, keys.toList))
     }
 
   /**
@@ -93,16 +76,8 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      SDiffStore,
-      Tuple2(ArbitraryValueInput[D](), NonEmptyList(ArbitraryKeyInput[K]())),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((destination, (key, keys.toList)))
-  }
+  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] =
+    _sDiffStore[D, K].run((destination, (key, keys.toList)))
 
   /**
    * Intersect multiple sets and store the resulting set in a key.
@@ -116,9 +91,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sInter[K: Schema](destination: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SInter, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor)
-          .run((destination, keys.toList))
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sInter[K, R].run((destination, keys.toList))
     }
 
   /**
@@ -133,20 +106,8 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sInterStore[D: Schema, K: Schema](
-    destination: D,
-    key: K,
-    keys: K*
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      SInterStore,
-      Tuple2(ArbitraryValueInput[D](), NonEmptyList(ArbitraryKeyInput[K]())),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((destination, (key, keys.toList)))
-  }
+  final def sInterStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] =
+    _sInterStore[D, K].run((destination, (key, keys.toList)))
 
   /**
    * Determine if a given value is a member of a set.
@@ -159,11 +120,8 @@ trait Sets extends RedisEnvironment {
    *   Returns 1 if the element is a member of the set. 0 if the element is not a member of the set, or if key does not
    *   exist.
    */
-  final def sIsMember[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Boolean] = {
-    val command =
-      RedisCommand(SIsMember, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()), BoolOutput, codec, executor)
-    command.run((key, member))
-  }
+  final def sIsMember[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Boolean] =
+    _sIsMember[K, M].run((key, member))
 
   /**
    * Get all the members in a set.
@@ -175,8 +133,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sMembers[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SMembers, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[R]()), codec, executor).run(key)
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sMembers[K, R].run(key)
     }
 
   /**
@@ -191,20 +148,8 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns 1 if the element was moved. 0 if it was not found.
    */
-  final def sMove[S: Schema, D: Schema, M: Schema](
-    source: S,
-    destination: D,
-    member: M
-  ): IO[RedisError, Boolean] = {
-    val command = RedisCommand(
-      SMove,
-      Tuple3(ArbitraryValueInput[S](), ArbitraryValueInput[D](), ArbitraryValueInput[M]()),
-      BoolOutput,
-      codec,
-      executor
-    )
-    command.run((source, destination, member))
-  }
+  final def sMove[S: Schema, D: Schema, M: Schema](source: S, destination: D, member: M): IO[RedisError, Boolean] =
+    _sMove[S, D, M].run((source, destination, member))
 
   /**
    * Remove and return one or multiple random members from a set.
@@ -218,16 +163,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sPop[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
-        val command = RedisCommand(
-          SPop,
-          Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
-          MultiStringChunkOutput(ArbitraryOutput[R]()),
-          codec,
-          executor
-        )
-        command.run((key, count))
-      }
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sPop[K, R].run((key, count))
     }
 
   /**
@@ -242,16 +178,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sRandMember[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
-        val command = RedisCommand(
-          SRandMember,
-          Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
-          MultiStringChunkOutput(ArbitraryOutput[R]()),
-          codec,
-          executor
-        )
-        command.run((key, count))
-      }
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sRandMember[K, R].run((key, count))
     }
 
   /**
@@ -266,17 +193,8 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the number of members that were removed from the set, not including non existing members.
    */
-  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
-    val command =
-      RedisCommand(
-        SRem,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
-        LongOutput,
-        codec,
-        executor
-      )
-    command.run((key, (member, members.toList)))
-  }
+  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] =
+    _sRem[K, M].run((key, (member, members.toList)))
 
   /**
    * Incrementally iterate Set elements.
@@ -302,16 +220,8 @@ trait Sets extends RedisEnvironment {
     count: Option[Count] = None
   ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
     new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
-      def returning[R: Schema]: IO[RedisError, (Long, Chunk[R])] = {
-        val command = RedisCommand(
-          SScan,
-          Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-          Tuple2Output(MultiStringOutput.map(_.toLong), ChunkOutput(ArbitraryOutput[R]())),
-          codec,
-          executor
-        )
-        command.run((key, cursor, pattern.map(Pattern(_)), count))
-      }
+      def returning[R: Schema]: IO[RedisError, (Long, Chunk[R])] =
+        _sScan[K, R].run((key, cursor, pattern.map(Pattern(_)), count))
     }
 
   /**
@@ -326,9 +236,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sUnion[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SUnion, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor)
-          .run((key, keys.toList))
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sUnion[K, R].run((key, keys.toList))
     }
 
   /**
@@ -343,36 +251,6 @@ trait Sets extends RedisEnvironment {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sUnionStore[D: Schema, K: Schema](
-    destination: D,
-    key: K,
-    keys: K*
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      SUnionStore,
-      Tuple2(ArbitraryValueInput[D](), NonEmptyList(ArbitraryKeyInput[K]())),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((destination, (key, keys.toList)))
-  }
-}
-
-private[redis] object Sets {
-  final val SAdd        = "SADD"
-  final val SCard       = "SCARD"
-  final val SDiff       = "SDIFF"
-  final val SDiffStore  = "SDIFFSTORE"
-  final val SInter      = "SINTER"
-  final val SInterStore = "SINTERSTORE"
-  final val SIsMember   = "SISMEMBER"
-  final val SMembers    = "SMEMBERS"
-  final val SMove       = "SMOVE"
-  final val SPop        = "SPOP"
-  final val SRandMember = "SRANDMEMBER"
-  final val SRem        = "SREM"
-  final val SScan       = "SSCAN"
-  final val SUnion      = "SUNION"
-  final val SUnionStore = "SUNIONSTORE"
+  final def sUnionStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] =
+    _sUnionStore[D, K].run((destination, (key, keys.toList)))
 }

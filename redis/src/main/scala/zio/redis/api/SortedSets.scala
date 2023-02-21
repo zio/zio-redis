@@ -17,14 +17,11 @@
 package zio.redis.api
 
 import zio._
-import zio.redis.Input._
-import zio.redis.Output._
 import zio.redis.ResultBuilder._
 import zio.redis._
 import zio.schema.Schema
 
-trait SortedSets extends RedisEnvironment {
-  import SortedSets._
+trait SortedSets extends commands.SortedSets {
 
   /**
    * Remove and return the member with the highest score from one or more sorted sets, or block until one is available.
@@ -46,20 +43,8 @@ trait SortedSets extends RedisEnvironment {
     keys: K*
   ): ResultBuilder1[({ type lambda[x] = Option[(K, MemberScore[x])] })#lambda] =
     new ResultBuilder1[({ type lambda[x] = Option[(K, MemberScore[x])] })#lambda] {
-      def returning[M: Schema]: IO[RedisError, Option[(K, MemberScore[M])]] = {
-        val memberScoreOutput =
-          Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
-            (k, MemberScore(s, m))
-          }
-        val command = RedisCommand(
-          BzPopMax,
-          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
-          OptionalOutput(memberScoreOutput),
-          codec,
-          executor
-        )
-        command.run(((key, keys.toList), timeout))
-      }
+      def returning[M: Schema]: IO[RedisError, Option[(K, MemberScore[M])]] =
+        _bzPopMax[K, M].run(((key, keys.toList), timeout))
     }
 
   /**
@@ -82,20 +67,8 @@ trait SortedSets extends RedisEnvironment {
     keys: K*
   ): ResultBuilder1[({ type lambda[x] = Option[(K, MemberScore[x])] })#lambda] =
     new ResultBuilder1[({ type lambda[x] = Option[(K, MemberScore[x])] })#lambda] {
-      def returning[M: Schema]: IO[RedisError, Option[(K, MemberScore[M])]] = {
-        val memberScoreOutput =
-          Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
-            (k, MemberScore(s, m))
-          }
-        val command = RedisCommand(
-          BzPopMin,
-          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
-          OptionalOutput(memberScoreOutput),
-          codec,
-          executor
-        )
-        command.run(((key, keys.toList), timeout))
-      }
+      def returning[M: Schema]: IO[RedisError, Option[(K, MemberScore[M])]] =
+        _bzPopMin[K, M].run(((key, keys.toList), timeout))
     }
 
   /**
@@ -118,21 +91,7 @@ trait SortedSets extends RedisEnvironment {
   final def zAdd[K: Schema, M: Schema](key: K, update: Option[Update] = None, change: Option[Changed] = None)(
     memberScore: MemberScore[M],
     memberScores: MemberScore[M]*
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      ZAdd,
-      Tuple4(
-        ArbitraryKeyInput[K](),
-        OptionalInput(UpdateInput),
-        OptionalInput(ChangedInput),
-        NonEmptyList(MemberScoreInput[M]())
-      ),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((key, update, change, (memberScore, memberScores.toList)))
-  }
+  ): IO[RedisError, Long] = _zAdd[K, M].run((key, update, change, (memberScore, memberScores.toList)))
 
   /**
    * Add one or more members to a sorted set, or update its score if it already exists.
@@ -157,22 +116,8 @@ trait SortedSets extends RedisEnvironment {
     increment: Increment,
     memberScore: MemberScore[M],
     memberScores: MemberScore[M]*
-  ): IO[RedisError, Option[Double]] = {
-    val command = RedisCommand(
-      ZAdd,
-      Tuple5(
-        ArbitraryKeyInput[K](),
-        OptionalInput(UpdateInput),
-        OptionalInput(ChangedInput),
-        IncrementInput,
-        NonEmptyList(MemberScoreInput[M]())
-      ),
-      OptionalOutput(DoubleOutput),
-      codec,
-      executor
-    )
-    command.run((key, update, change, increment, (memberScore, memberScores.toList)))
-  }
+  ): IO[RedisError, Option[Double]] =
+    _zAddWithIncr[K, M].run((key, update, change, increment, (memberScore, memberScores.toList)))
 
   /**
    * Get the number of members in a sorted set.
@@ -182,10 +127,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The cardinality (number of elements) of the sorted set, or 0 if key does not exist.
    */
-  final def zCard[K: Schema](key: K): IO[RedisError, Long] = {
-    val command = RedisCommand(ZCard, ArbitraryKeyInput[K](), LongOutput, codec, executor)
-    command.run(key)
-  }
+  final def zCard[K: Schema](key: K): IO[RedisError, Long] = _zCard[K].run(key)
 
   /**
    * Returns the number of elements in the sorted set at key with a score between min and max.
@@ -197,10 +139,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   the number of elements in the specified score range.
    */
-  final def zCount[K: Schema](key: K, range: Range): IO[RedisError, Long] = {
-    val command = RedisCommand(ZCount, Tuple2(ArbitraryKeyInput[K](), RangeInput), LongOutput, codec, executor)
-    command.run((key, range))
-  }
+  final def zCount[K: Schema](key: K, range: Range): IO[RedisError, Long] = _zCount[K].run((key, range))
 
   /**
    * Subtract multiple sorted sets and return members.
@@ -214,26 +153,10 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of differences between the first and successive input sorted sets.
    */
-  final def zDiff[K: Schema](
-    inputKeysNum: Long,
-    key: K,
-    keys: K*
-  ): ResultBuilder1[Chunk] =
+  final def zDiff[K: Schema](inputKeysNum: Long, key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command =
-          RedisCommand(
-            ZDiff,
-            Tuple2(
-              LongInput,
-              NonEmptyList(ArbitraryKeyInput[K]())
-            ),
-            ChunkOutput(ArbitraryOutput[M]()),
-            codec,
-            executor
-          )
-        command.run((inputKeysNum, (key, keys.toList)))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zDiff[K, M].run((inputKeysNum, (key, keys.toList)))
     }
 
   /**
@@ -254,22 +177,8 @@ trait SortedSets extends RedisEnvironment {
     keys: K*
   ): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command =
-          RedisCommand(
-            ZDiff,
-            Tuple3(
-              LongInput,
-              NonEmptyList(ArbitraryKeyInput[K]()),
-              ArbitraryValueInput[String]()
-            ),
-            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-              .map(_.map { case (m, s) => MemberScore(s, m) }),
-            codec,
-            executor
-          )
-        command.run((inputKeysNum, (key, keys.toList), WithScores.stringify))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] =
+        _zDiffWithScores[K, M].run((inputKeysNum, (key, keys.toList), WithScores.stringify))
     }
 
   /**
@@ -291,21 +200,8 @@ trait SortedSets extends RedisEnvironment {
     inputKeysNum: Long,
     key: K,
     keys: K*
-  ): IO[RedisError, Long] = {
-    val command =
-      RedisCommand(
-        ZDiffStore,
-        Tuple3(
-          ArbitraryValueInput[DK](),
-          LongInput,
-          NonEmptyList(ArbitraryKeyInput[K]())
-        ),
-        LongOutput,
-        codec,
-        executor
-      )
-    command.run((destination, inputKeysNum, (key, keys.toList)))
-  }
+  ): IO[RedisError, Long] =
+    _zDiffStore[DK, K].run((destination, inputKeysNum, (key, keys.toList)))
 
   /**
    * Increment the score of a member in a sorted set.
@@ -319,21 +215,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The new score of member (a double precision floating point number).
    */
-  final def zIncrBy[K: Schema, M: Schema](
-    key: K,
-    increment: Long,
-    member: M
-  ): IO[RedisError, Double] = {
-    val command =
-      RedisCommand(
-        ZIncrBy,
-        Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[M]()),
-        DoubleOutput,
-        codec,
-        executor
-      )
-    command.run((key, increment, member))
-  }
+  final def zIncrBy[K: Schema, M: Schema](key: K, increment: Long, member: M): IO[RedisError, Double] =
+    _zIncrBy[K, M].run((key, increment, member))
 
   /**
    * Intersect multiple sorted sets and return members.
@@ -358,21 +241,8 @@ trait SortedSets extends RedisEnvironment {
     weights: Option[::[Double]] = None
   ): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZInter,
-          Tuple4(
-            LongInput,
-            NonEmptyList(ArbitraryKeyInput[K]()),
-            OptionalInput(AggregateInput),
-            OptionalInput(WeightsInput)
-          ),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((inputKeysNum, (key, keys.toList), aggregate, weights))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zInter[K, M].run((inputKeysNum, (key, keys.toList), aggregate, weights))
     }
 
   /**
@@ -398,23 +268,8 @@ trait SortedSets extends RedisEnvironment {
     weights: Option[::[Double]] = None
   ): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZInter,
-          Tuple5(
-            LongInput,
-            NonEmptyList(ArbitraryKeyInput[K]()),
-            OptionalInput(AggregateInput),
-            OptionalInput(WeightsInput),
-            ArbitraryValueInput[String]()
-          ),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] =
+        _zInterWithScores[K, M].run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
     }
 
   /**
@@ -440,22 +295,8 @@ trait SortedSets extends RedisEnvironment {
   final def zInterStore[DK: Schema, K: Schema](destination: DK, inputKeysNum: Long, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      ZInterStore,
-      Tuple5(
-        ArbitraryValueInput[DK](),
-        LongInput,
-        NonEmptyList(ArbitraryKeyInput[K]()),
-        OptionalInput(AggregateInput),
-        OptionalInput(WeightsInput)
-      ),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((destination, inputKeysNum, (key, keys.toList), aggregate, weights))
-  }
+  ): IO[RedisError, Long] =
+    _zInterStore[DK, K].run((destination, inputKeysNum, (key, keys.toList), aggregate, weights))
 
   /**
    * Count the number of members in a sorted set between a given lexicographical range.
@@ -467,16 +308,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of elements in the specified score range.
    */
-  final def zLexCount[K: Schema](key: K, lexRange: LexRange): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      ZLexCount,
-      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((key, lexRange.min.stringify, lexRange.max.stringify))
-  }
+  final def zLexCount[K: Schema](key: K, lexRange: LexRange): IO[RedisError, Long] =
+    _zLexCount[K].run((key, lexRange.min.stringify, lexRange.max.stringify))
 
   /**
    * Remove and return members with the highest scores in a sorted set.
@@ -490,22 +323,9 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of popped elements and scores.
    */
-  final def zPopMax[K: Schema](
-    key: K,
-    count: Option[Long] = None
-  ): ResultBuilder1[MemberScores] =
+  final def zPopMax[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZPopMax,
-          Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((key, count))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = _zPopMax[K, M].run((key, count))
     }
 
   /**
@@ -520,22 +340,9 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of popped elements and scores.
    */
-  final def zPopMin[K: Schema](
-    key: K,
-    count: Option[Long] = None
-  ): ResultBuilder1[MemberScores] =
+  final def zPopMin[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZPopMin,
-          Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((key, count))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = _zPopMin[K, M].run((key, count))
     }
 
   /**
@@ -550,16 +357,7 @@ trait SortedSets extends RedisEnvironment {
    */
   final def zRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRange,
-          Tuple2(ArbitraryKeyInput[K](), RangeInput),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, range))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] = _zRange[K, M].run((key, range))
     }
 
   /**
@@ -572,22 +370,10 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRangeWithScores[K: Schema](
-    key: K,
-    range: Range
-  ): ResultBuilder1[MemberScores] =
+  final def zRangeWithScores[K: Schema](key: K, range: Range): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZRange,
-          Tuple3(ArbitraryKeyInput[K](), RangeInput, ArbitraryValueInput[String]()),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((key, range, WithScores.stringify))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] =
+        _zRangeWithScores[K, M].run((key, range, WithScores.stringify))
     }
 
   /**
@@ -603,27 +389,10 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  final def zRangeByLex[K: Schema](
-    key: K,
-    lexRange: LexRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk] =
+  final def zRangeByLex[K: Schema](key: K, lexRange: LexRange, limit: Option[Limit] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRangeByLex,
-          Tuple4(
-            ArbitraryKeyInput[K](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            OptionalInput(LimitInput)
-          ),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, lexRange.min.stringify, lexRange.max.stringify, limit))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zRangeByLex[K, M].run((key, lexRange.min.stringify, lexRange.max.stringify, limit))
     }
 
   /**
@@ -645,21 +414,8 @@ trait SortedSets extends RedisEnvironment {
     limit: Option[Limit] = None
   ): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRangeByScore,
-          Tuple4(
-            ArbitraryKeyInput[K](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            OptionalInput(LimitInput)
-          ),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, scoreRange.min.stringify, scoreRange.max.stringify, limit))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zRangeByScore[K, M].run((key, scoreRange.min.stringify, scoreRange.max.stringify, limit))
     }
 
   /**
@@ -681,23 +437,9 @@ trait SortedSets extends RedisEnvironment {
     limit: Option[Limit] = None
   ): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZRangeByScore,
-          Tuple5(
-            ArbitraryKeyInput[K](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            OptionalInput(LimitInput)
-          ),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((key, scoreRange.min.stringify, scoreRange.max.stringify, WithScores.stringify, limit))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = _zRangeByScoreWithScores[K, M].run(
+        (key, scoreRange.min.stringify, scoreRange.max.stringify, WithScores.stringify, limit)
+      )
     }
 
   /**
@@ -710,17 +452,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The rank of member in the sorted set stored at key, with the scores ordered from low to high.
    */
-  final def zRank[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Long]] = {
-    val command =
-      RedisCommand(
-        ZRank,
-        Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
-        OptionalOutput(LongOutput),
-        codec,
-        executor
-      )
-    command.run((key, member))
-  }
+  final def zRank[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Long]] =
+    _zRank[K, M].run((key, member))
 
   /**
    * Remove one or more members from a sorted set.
@@ -734,21 +467,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of members removed from the sorted set, not including non existing members.
    */
-  final def zRem[K: Schema, M: Schema](
-    key: K,
-    firstMember: M,
-    restMembers: M*
-  ): IO[RedisError, Long] = {
-    val command =
-      RedisCommand(
-        ZRem,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
-        LongOutput,
-        codec,
-        executor
-      )
-    command.run((key, (firstMember, restMembers.toList)))
-  }
+  final def zRem[K: Schema, M: Schema](key: K, firstMember: M, restMembers: M*): IO[RedisError, Long] =
+    _zRem[K, M].run((key, (firstMember, restMembers.toList)))
 
   /**
    * Remove all members in a sorted set between the given lexicographical range.
@@ -760,16 +480,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of elements removed.
    */
-  final def zRemRangeByLex[K: Schema](key: K, lexRange: LexRange): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      ZRemRangeByLex,
-      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((key, lexRange.min.stringify, lexRange.max.stringify))
-  }
+  final def zRemRangeByLex[K: Schema](key: K, lexRange: LexRange): IO[RedisError, Long] =
+    _zRemRangeByLex[K].run((key, lexRange.min.stringify, lexRange.max.stringify))
 
   /**
    * Remove all members in a sorted set within the given indexes.
@@ -781,10 +493,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of elements removed.
    */
-  final def zRemRangeByRank[K: Schema](key: K, range: Range): IO[RedisError, Long] = {
-    val command = RedisCommand(ZRemRangeByRank, Tuple2(ArbitraryKeyInput[K](), RangeInput), LongOutput, codec, executor)
-    command.run((key, range))
-  }
+  final def zRemRangeByRank[K: Schema](key: K, range: Range): IO[RedisError, Long] =
+    _zRemRangeByRank[K].run((key, range))
 
   /**
    * Remove all members in a sorted set within the given scores.
@@ -796,16 +506,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of elements removed.
    */
-  final def zRemRangeByScore[K: Schema](key: K, scoreRange: ScoreRange): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      ZRemRangeByScore,
-      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((key, scoreRange.min.stringify, scoreRange.max.stringify))
-  }
+  final def zRemRangeByScore[K: Schema](key: K, scoreRange: ScoreRange): IO[RedisError, Long] =
+    _zRemRangeByScore[K].run((key, scoreRange.min.stringify, scoreRange.max.stringify))
 
   /**
    * Return a range of members in a sorted set, by index, with scores ordered from high to low.
@@ -819,16 +521,7 @@ trait SortedSets extends RedisEnvironment {
    */
   final def zRevRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRevRange,
-          Tuple2(ArbitraryKeyInput[K](), RangeInput),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, range))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] = _zRevRange[K, M].run((key, range))
     }
 
   /**
@@ -841,22 +534,10 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRevRangeWithScores[K: Schema](
-    key: K,
-    range: Range
-  ): ResultBuilder1[MemberScores] =
+  final def zRevRangeWithScores[K: Schema](key: K, range: Range): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZRevRange,
-          Tuple3(ArbitraryKeyInput[K](), RangeInput, ArbitraryValueInput[String]()),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((key, range, WithScores.stringify))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] =
+        _zRevRangeWithScores[K, M].run((key, range, WithScores.stringify))
     }
 
   /**
@@ -872,27 +553,10 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  final def zRevRangeByLex[K: Schema](
-    key: K,
-    lexRange: LexRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk] =
+  final def zRevRangeByLex[K: Schema](key: K, lexRange: LexRange, limit: Option[Limit] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRevRangeByLex,
-          Tuple4(
-            ArbitraryKeyInput[K](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            OptionalInput(LimitInput)
-          ),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, lexRange.max.stringify, lexRange.min.stringify, limit))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zRevRangeByLex[K, M].run((key, lexRange.max.stringify, lexRange.min.stringify, limit))
     }
 
   /**
@@ -914,21 +578,8 @@ trait SortedSets extends RedisEnvironment {
     limit: Option[Limit] = None
   ): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRevRangeByScore,
-          Tuple4(
-            ArbitraryKeyInput[K](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            OptionalInput(LimitInput)
-          ),
-          ChunkOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, scoreRange.max.stringify, scoreRange.min.stringify, limit))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zRevRangeByScore[K, M].run((key, scoreRange.max.stringify, scoreRange.min.stringify, limit))
     }
 
   /**
@@ -950,23 +601,9 @@ trait SortedSets extends RedisEnvironment {
     limit: Option[Limit] = None
   ): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZRevRangeByScore,
-          Tuple5(
-            ArbitraryKeyInput[K](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
-            OptionalInput(LimitInput)
-          ),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-        command.run((key, scoreRange.max.stringify, scoreRange.min.stringify, WithScores.stringify, limit))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = _zRevRangeByScoreWithScores[K, M].run(
+        (key, scoreRange.max.stringify, scoreRange.min.stringify, WithScores.stringify, limit)
+      )
     }
 
   /**
@@ -979,16 +616,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The rank of member.
    */
-  final def zRevRank[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Long]] = {
-    val command = RedisCommand(
-      ZRevRank,
-      Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
-      OptionalOutput(LongOutput),
-      codec,
-      executor
-    )
-    command.run((key, member))
-  }
+  final def zRevRank[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Long]] =
+    _zRevRank[K, M].run((key, member))
 
   /**
    * Incrementally iterate sorted sets elements and associated scores.
@@ -1011,18 +640,8 @@ trait SortedSets extends RedisEnvironment {
     count: Option[Count] = None
   ): ResultBuilder1[({ type lambda[x] = (Long, MemberScores[x]) })#lambda] =
     new ResultBuilder1[({ type lambda[x] = (Long, MemberScores[x]) })#lambda] {
-      def returning[M: Schema]: IO[RedisError, (Long, Chunk[MemberScore[M]])] = {
-        val memberScoresOutput =
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput).map(_.map { case (m, s) => MemberScore(s, m) })
-        val command = RedisCommand(
-          ZScan,
-          Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-          Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput),
-          codec,
-          executor
-        )
-        command.run((key, cursor, pattern.map(Pattern(_)), count))
-      }
+      def returning[M: Schema]: IO[RedisError, (Long, Chunk[MemberScore[M]])] =
+        _zScan[K, M].run((key, cursor, pattern.map(Pattern(_)), count))
     }
 
   /**
@@ -1035,16 +654,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The score of member (a double precision floating point number.
    */
-  final def zScore[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Double]] = {
-    val command = RedisCommand(
-      ZScore,
-      Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
-      OptionalOutput(DoubleOutput),
-      codec,
-      executor
-    )
-    command.run((key, member))
-  }
+  final def zScore[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Double]] =
+    _zScore[K, M].run((key, member))
 
   /**
    * Add multiple sorted sets and return each member.
@@ -1069,22 +680,8 @@ trait SortedSets extends RedisEnvironment {
     aggregate: Option[Aggregate] = None
   ): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command =
-          RedisCommand(
-            ZUnion,
-            Tuple4(
-              LongInput,
-              NonEmptyList(ArbitraryKeyInput[K]()),
-              OptionalInput(WeightsInput),
-              OptionalInput(AggregateInput)
-            ),
-            ChunkOutput(ArbitraryOutput[M]()),
-            codec,
-            executor
-          )
-        command.run((inputKeysNum, (key, keys.toList), weights, aggregate))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] =
+        _zUnion[K, M].run((inputKeysNum, (key, keys.toList), weights, aggregate))
     }
 
   /**
@@ -1110,24 +707,8 @@ trait SortedSets extends RedisEnvironment {
     aggregate: Option[Aggregate] = None
   ): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command =
-          RedisCommand(
-            ZUnion,
-            Tuple5(
-              LongInput,
-              NonEmptyList(ArbitraryKeyInput[K]()),
-              OptionalInput(WeightsInput),
-              OptionalInput(AggregateInput),
-              ArbitraryValueInput[String]()
-            ),
-            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-              .map(_.map { case (m, s) => MemberScore(s, m) }),
-            codec,
-            executor
-          )
-        command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.stringify))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] =
+        _zUnionWithScores[K, M].run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.stringify))
     }
 
   /**
@@ -1153,22 +734,8 @@ trait SortedSets extends RedisEnvironment {
   final def zUnionStore[DK: Schema, K: Schema](destination: DK, inputKeysNum: Long, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      ZUnionStore,
-      Tuple5(
-        ArbitraryValueInput[DK](),
-        LongInput,
-        NonEmptyList(ArbitraryKeyInput[K]()),
-        OptionalInput(WeightsInput),
-        OptionalInput(AggregateInput)
-      ),
-      LongOutput,
-      codec,
-      executor
-    )
-    command.run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
-  }
+  ): IO[RedisError, Long] =
+    _zUnionStore[DK, K].run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
 
   /**
    * Returns the scores associated with the specified members in the sorted set stored at key.
@@ -1180,16 +747,8 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   List of scores or None associated with the specified member values (a double precision floating point number).
    */
-  final def zMScore[K: Schema](key: K, keys: K*): IO[RedisError, Chunk[Option[Double]]] = {
-    val command = RedisCommand(
-      ZMScore,
-      NonEmptyList(ArbitraryKeyInput[K]()),
-      ChunkOutput(OptionalOutput(DoubleOutput)),
-      codec,
-      executor
-    )
-    command.run((key, keys.toList))
-  }
+  final def zMScore[K: Schema](key: K, keys: K*): IO[RedisError, Chunk[Option[Double]]] =
+    _zMScore[K].run((key, keys.toList))
 
   /**
    * Return a random element from the sorted set value stored at key.
@@ -1201,9 +760,7 @@ trait SortedSets extends RedisEnvironment {
    */
   final def zRandMember[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
-      def returning[R: Schema]: IO[RedisError, Option[R]] =
-        RedisCommand(ZRandMember, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]()), codec, executor)
-          .run(key)
+      def returning[R: Schema]: IO[RedisError, Option[R]] = _zRandMember[K, R].run(key)
     }
 
   /**
@@ -1217,21 +774,9 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Return an array of elements from the sorted set value stored at key.
    */
-  final def zRandMember[K: Schema](
-    key: K,
-    count: Long
-  ): ResultBuilder1[Chunk] =
+  final def zRandMember[K: Schema](key: K, count: Long): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRandMember,
-          Tuple2(ArbitraryKeyInput[K](), LongInput),
-          ZRandMemberOutput(ArbitraryOutput[M]()),
-          codec,
-          executor
-        )
-        command.run((key, count))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] = _zRandMemberWithCount[K, M].run((key, count))
     }
 
   /**
@@ -1247,56 +792,9 @@ trait SortedSets extends RedisEnvironment {
    *   key does not exist. If the WITHSCORES modifier is used, the reply is a list elements and their scores from the
    *   sorted set.
    */
-  final def zRandMemberWithScores[K: Schema](
-    key: K,
-    count: Long
-  ): ResultBuilder1[MemberScores] =
+  final def zRandMemberWithScores[K: Schema](key: K, count: Long): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZRandMember,
-          Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[String]()),
-          ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          codec,
-          executor
-        )
-
-        command.run((key, count, WithScores.stringify))
-      }
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] =
+        _zRandMemberWithScores[K, M].run((key, count, WithScores.stringify))
     }
-}
-
-private[redis] object SortedSets {
-  final val BzPopMax         = "BZPOPMAX"
-  final val BzPopMin         = "BZPOPMIN"
-  final val ZAdd             = "ZADD"
-  final val ZCard            = "ZCARD"
-  final val ZCount           = "ZCOUNT"
-  final val ZDiff            = "ZDIFF"
-  final val ZDiffStore       = "ZDIFFSTORE"
-  final val ZIncrBy          = "ZINCRBY"
-  final val ZInter           = "ZINTER"
-  final val ZInterStore      = "ZINTERSTORE"
-  final val ZLexCount        = "ZLEXCOUNT"
-  final val ZMScore          = "ZMSCORE"
-  final val ZPopMax          = "ZPOPMAX"
-  final val ZPopMin          = "ZPOPMIN"
-  final val ZRange           = "ZRANGE"
-  final val ZRangeByLex      = "ZRANGEBYLEX"
-  final val ZRangeByScore    = "ZRANGEBYSCORE"
-  final val ZRank            = "ZRANK"
-  final val ZRem             = "ZREM"
-  final val ZRemRangeByLex   = "ZREMRANGEBYLEX"
-  final val ZRemRangeByRank  = "ZREMRANGEBYRANK"
-  final val ZRemRangeByScore = "ZREMRANGEBYSCORE"
-  final val ZRevRange        = "ZREVRANGE"
-  final val ZRevRangeByLex   = "ZREVRANGEBYLEX"
-  final val ZRevRangeByScore = "ZREVRANGEBYSCORE"
-  final val ZRevRank         = "ZREVRANK"
-  final val ZScan            = "ZSCAN"
-  final val ZScore           = "ZSCORE"
-  final val ZUnion           = "ZUNION"
-  final val ZUnionStore      = "ZUNIONSTORE"
-  final val ZRandMember      = "ZRANDMEMBER"
 }

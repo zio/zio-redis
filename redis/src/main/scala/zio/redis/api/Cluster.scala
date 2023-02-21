@@ -16,16 +16,12 @@
 
 package zio.redis.api
 
-import zio.redis.Input._
-import zio.redis.Output.{ChunkOutput, ClusterPartitionOutput, UnitOutput}
 import zio.redis._
-import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
-import zio.schema.codec.BinaryCodec
 import zio.{Chunk, IO}
 
-trait Cluster extends RedisEnvironment {
+trait Cluster extends commands.Cluster {
 
   /**
    * When a cluster client receives an -ASK redirect, the ASKING command is sent to the target node followed by the
@@ -34,8 +30,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def asking: IO[RedisError, Unit] =
-    AskingCommand(codec, executor).run(())
+  final def asking: IO[RedisError, Unit] = _asking.run(())
 
   /**
    * Returns details about which cluster slots map to which Redis instances.
@@ -43,10 +38,7 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   details about which cluster
    */
-  final def slots: IO[RedisError, Chunk[Partition]] = {
-    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), codec, executor)
-    command.run(())
-  }
+  final def slots: IO[RedisError, Chunk[Partition]] = _slots.run(())
 
   /**
    * Clear any importing / migrating state from hash slot.
@@ -56,11 +48,8 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
-    val command =
-      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, codec, executor)
-    command.run((slot.number, Stable.stringify))
-  }
+
+  final def setSlotStable(slot: Slot): IO[RedisError, Unit] = _setSlotStable.run((slot.number, Stable.stringify))
 
   /**
    * Set a hash slot in migrating state. Command should be executed on the node from which hash slot will be imported
@@ -73,16 +62,8 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      UnitOutput,
-      codec,
-      executor
-    )
-    command.run((slot.number, Migrating.stringify, nodeId))
-  }
+  final def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] =
+    _setSlotMigrating.run((slot.number, Migrating.stringify, nodeId))
 
   /**
    * Set a hash slot in importing state. Command should be executed on the node where hash slot will be migrated
@@ -95,16 +76,9 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      UnitOutput,
-      codec,
-      executor
-    )
-    command.run((slot.number, Importing.stringify, nodeId))
-  }
+
+  final def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] =
+    _setSlotImporting.run((slot.number, Importing.stringify, nodeId))
 
   /**
    * Bind the hash slot to a different node. It associates the hash slot with the specified node, however the command
@@ -117,23 +91,6 @@ trait Cluster extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      UnitOutput,
-      codec,
-      executor
-    )
-    command.run((slot.number, Node.stringify, nodeId))
-  }
-}
-
-private[redis] object Cluster {
-  final val Asking          = "ASKING"
-  final val ClusterSlots    = "CLUSTER SLOTS"
-  final val ClusterSetSlots = "CLUSTER SETSLOT"
-
-  final val AskingCommand: (BinaryCodec, RedisExecutor) => RedisCommand[Unit, Unit] =
-    RedisCommand(Asking, NoInput, UnitOutput, _, _)
+  final def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] =
+    _setSlotNode.run((slot.number, Node.stringify, nodeId))
 }

@@ -1,24 +1,38 @@
+/*
+ * Copyright 2021 John A. De Goes and the ZIO contributors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zio.redis.transactional
 
 import zio.ZIO
-import zio.redis.Input.NoInput
-import zio.redis.Output.{QueuedOutput, UnitOutput}
+import zio.redis.Output.QueuedOutput
 import zio.redis.{Output, RedisCommand, RedisError}
 
-sealed trait RedisTransaction[+Out] {
+private[transactional] sealed trait RedisTransaction[+Out] { self =>
   import RedisTransaction._
 
   def commit: ZIO[Redis, RedisError, Out] =
     ZIO.serviceWithZIO[Redis] { redis =>
-      this match {
+      self match {
         case Single(command, in) =>
-          RedisCommand(command.name, command.input, command.output, redis.codec, redis.executor)
-            .run(in)
+          command.run(in)
         case _ =>
-          RedisCommand(Commands.Multi, NoInput, UnitOutput, redis.codec, redis.executor)
+          redis._multi
             .run(())
             .zipRight(
-              run.flatMap(output => RedisCommand(Commands.Exec, NoInput, output, redis.codec, redis.executor).run(()))
+              run.flatMap(output => redis._exec(output).run(()))
             )
       }
     }
@@ -32,24 +46,23 @@ sealed trait RedisTransaction[+Out] {
   def zipRight[A](that: RedisTransaction[A]): RedisTransaction[A] =
     ZipRight(this, that)
 
-  private[transactional] def run: ZIO[Redis, RedisError, Output[Out]]
+  def run: ZIO[Redis, RedisError, Output[Out]]
 }
 
-object RedisTransaction {
-  def single[In, Out](command: RedisCommand[In, Out], in: In): RedisTransaction[Out] =
+private[transactional] object RedisTransaction {
+  final def single[In, Out](command: RedisCommand[In, Out], in: In): RedisTransaction[Out] =
     Single(command, in)
 
-  private[transactional] final case class Single[In, Out](
-    command: RedisCommand[In, Out],
-    in: In
-  ) extends RedisTransaction[Out] {
-    def run: ZIO[Redis, RedisError, Output[Out]] =
-      RedisCommand[In, Unit](command.name, command.input, QueuedOutput, command.codec, command.executor)
-        .run(in)
+  final case class Single[In, Out](command: RedisCommand[In, Out], in: In) extends RedisTransaction[Out] {
+    def run: ZIO[Any, RedisError, Output[Out]] =
+      command.executor
+        .execute(command.resp(in))
+        .flatMap(out => ZIO.attempt(QueuedOutput.unsafeDecode(out)(command.codec)))
+        .refineToOrDie[RedisError]
         .as(command.output)
   }
 
-  private[transactional] final case class Zip[A, B](
+  final case class Zip[A, B](
     left: RedisTransaction[A],
     right: RedisTransaction[B]
   ) extends RedisTransaction[(A, B)] {
@@ -61,7 +74,7 @@ object RedisTransaction {
         }
   }
 
-  private[transactional] final case class ZipLeft[A, B](
+  final case class ZipLeft[A, B](
     left: RedisTransaction[A],
     right: RedisTransaction[B]
   ) extends RedisTransaction[A] {
@@ -69,17 +82,11 @@ object RedisTransaction {
       left.run.zip(right.run).map(outputs => Output.ZipLeft(outputs._1, outputs._2))
   }
 
-  private[transactional] final case class ZipRight[A, B](
+  final case class ZipRight[A, B](
     left: RedisTransaction[A],
     right: RedisTransaction[B]
   ) extends RedisTransaction[B] {
     def run: ZIO[Redis, RedisError, Output[B]] =
       left.run.zip(right.run).map(outputs => Output.ZipRight(outputs._1, outputs._2))
   }
-
-  private object Commands {
-    val Multi = "Multi"
-    val Exec  = "Exec"
-  }
-
 }

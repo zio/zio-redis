@@ -18,8 +18,8 @@ package zio.redis
 
 import zio._
 import zio.redis.ClusterExecutor._
-import zio.redis.api.Cluster.AskingCommand
 import zio.redis.codecs.StringUtf8Codec
+import zio.redis.commands.Cluster.askingCommand
 import zio.redis.options.Cluster._
 import zio.schema.codec.BinaryCodec
 
@@ -42,7 +42,7 @@ final case class ClusterExecutor(
     def executeAsk(address: RedisUri) =
       for {
         executor <- executor(address)
-        _        <- executor.execute(AskingCommand(StringUtf8Codec, this).resp(()))
+        _        <- executor.execute(askingCommand(StringUtf8Codec, this).resp(()))
         res      <- executor.execute(command)
       } yield res
 
