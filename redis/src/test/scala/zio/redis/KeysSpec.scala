@@ -44,6 +44,15 @@ trait KeysSpec extends BaseSpec {
           e2    <- redis.exists("unknown")
         } yield assert(e1)(equalTo(1L)) && assert(e2)(equalTo(0L))
       },
+      test("check multiple existence") {
+        for {
+          redis <- ZIO.service[Redis]
+          key   <- uuid
+          value <- uuid
+          _     <- redis.set(key, value)
+          e1    <- redis.exists(key, "unknown")
+        } yield assert(e1)(equalTo(1L))
+      } @@ clusterExecutorUnsupported,
       test("delete existing key") {
         for {
           redis   <- ZIO.service[Redis]
@@ -53,6 +62,17 @@ trait KeysSpec extends BaseSpec {
           deleted <- redis.del(key)
         } yield assert(deleted)(equalTo(1L))
       },
+      test("delete multiple existing key") {
+        for {
+          redis   <- ZIO.service[Redis]
+          key1    <- uuid
+          key2    <- uuid
+          value   <- uuid
+          _       <- redis.set(key1, value)
+          _       <- redis.set(key2, value)
+          deleted <- redis.del(key1, key2)
+        } yield assert(deleted)(equalTo(2L))
+      } @@ clusterExecutorUnsupported,
       test("find all keys matching pattern") {
         for {
           redis    <- ZIO.service[Redis]
@@ -72,7 +92,7 @@ trait KeysSpec extends BaseSpec {
           _       <- redis.set(key, value)
           removed <- redis.unlink(key)
         } yield assert(removed)(equalTo(1L))
-      },
+      } @@ clusterExecutorUnsupported,
       test("touch two existing keys") {
         for {
           redis   <- ZIO.service[Redis]
@@ -96,7 +116,7 @@ trait KeysSpec extends BaseSpec {
             (next, elements) = scan
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         }
-      ) @@ flaky,
+      ) @@ flaky @@ clusterExecutorUnsupported,
       test("fetch random key") {
         for {
           redis     <- ZIO.service[Redis]
@@ -106,7 +126,7 @@ trait KeysSpec extends BaseSpec {
           allKeys   <- redis.keys("*").returning[String]
           randomKey <- redis.randomKey.returning[String]
         } yield assert(allKeys)(contains(randomKey.get))
-      } @@ ignore,
+      } @@ ignore @@ clusterExecutorUnsupported,
       test("dump followed by restore") {
         for {
           redis    <- ZIO.service[Redis]

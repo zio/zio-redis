@@ -31,7 +31,7 @@ final case class ClusterExecutor(
   scope: Scope.Closeable
 ) extends RedisExecutor {
 
-  def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] = {
+  def execute(command: RespCommand): IO[RedisError, RespValue] = {
 
     def execute(keySlot: Slot) =
       for {
@@ -58,7 +58,7 @@ final case class ClusterExecutor(
     }
 
     for {
-      key    <- ZIO.attempt(command(1)).orElseFail(CusterKeyError)
+      key    <- ZIO.attempt(command.args(1).value).orElseFail(CusterKeyError)
       keySlot = Slot((key.asCRC16 % SlotsAmount).toLong)
       result <- executeSafe(keySlot)
     } yield result
