@@ -1,7 +1,7 @@
 package zio.redis
 
 import zio._
-import zio.redis.Input.{BoolInput, ByteInput, LongInput, StringInput}
+import zio.redis.Input.{BoolInput, LongInput, StringInput, ValueInput}
 import zio.redis.Output._
 import zio.redis.RedisError._
 import zio.redis.ScriptingSpec._
@@ -162,7 +162,7 @@ trait ScriptingSpec extends BaseSpec {
             res   <- redis.evalSha(lua, emptyInput, emptyInput).returning[String].either
           } yield assert(res)(isLeft(isSubtype[NoScript](hasField("message", _.message, equalTo(error)))))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("scriptDebug")(
         test("enable non-blocking asynchronous debugging") {
           for {
@@ -202,7 +202,7 @@ trait ScriptingSpec extends BaseSpec {
             res   <- redis.scriptExists(lua1, lua2)
           } yield assertTrue(res == Chunk(false, false))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("scriptFlush")(
         test("flush scripts in default mode") {
           val lua1 = """return "1""""
@@ -237,7 +237,7 @@ trait ScriptingSpec extends BaseSpec {
             res   <- redis.scriptExists(sha1, sha2)
           } yield assertTrue(res == Chunk(false, false))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("scriptKill")(
         test("return NOTBUSY when there is no scripts in execution") {
           for {
@@ -245,7 +245,7 @@ trait ScriptingSpec extends BaseSpec {
             res   <- redis.scriptKill.either
           } yield assert(res)(isLeft(isSubtype[RedisError.NotBusy](anything)))
         }
-      ),
+      ) @@ clusterExecutorUnsupported,
       suite("scriptLoad")(
         test("return OK") {
           val lua = """return "1""""
@@ -262,7 +262,7 @@ trait ScriptingSpec extends BaseSpec {
             sha   <- redis.scriptLoad(lua).either
           } yield assert(sha)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         }
-      )
+      ) @@ clusterExecutorUnsupported
     )
 }
 
@@ -301,7 +301,7 @@ object ScriptingSpec {
     case other                       => throw ProtocolError(s"$other isn't a string type")
   }
 
-  implicit val bytesEncoder: Input[Chunk[Byte]] = ByteInput
+  implicit val bytesEncoder: Input[Chunk[Byte]] = ValueInput
   implicit val booleanInput: Input[Boolean]     = BoolInput
   implicit val stringInput: Input[String]       = StringInput
   implicit val longInput: Input[Long]           = LongInput
