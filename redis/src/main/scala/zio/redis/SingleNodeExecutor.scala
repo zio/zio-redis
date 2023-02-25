@@ -26,10 +26,10 @@ final class SingleNodeExecutor(
 ) extends RedisExecutor {
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
-  def execute(command: Chunk[RespValue.BulkString]): IO[RedisError, RespValue] =
+  def execute(command: RespCommand): IO[RedisError, RespValue] =
     Promise
       .make[RedisError, RespValue]
-      .flatMap(promise => reqQueue.offer(Request(command, promise)) *> promise.await)
+      .flatMap(promise => reqQueue.offer(Request(command.args.map(_.value), promise)) *> promise.await)
 
   /**
    * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a

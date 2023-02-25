@@ -17,7 +17,7 @@
 package zio.redis
 
 import zio._
-import zio.redis.Input.{StringInput, Varargs}
+import zio.redis.Input.{CommandNameInput, Varargs}
 import zio.schema.codec.BinaryCodec
 
 final class RedisCommand[-In, +Out] private (
@@ -34,8 +34,8 @@ final class RedisCommand[-In, +Out] private (
       .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(codec)))
       .refineToOrDie[RedisError]
 
-  private[redis] def resp(in: In): Chunk[RespValue.BulkString] =
-    Varargs(StringInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
+  private[redis] def resp(in: In): RespCommand =
+    Varargs(CommandNameInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
 }
 
 object RedisCommand {
