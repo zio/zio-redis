@@ -80,8 +80,8 @@ lazy val example =
     .settings(
       publish / skip := true,
       libraryDependencies ++= List(
-        "com.softwaremill.sttp.client3" %% "zio"                 % "3.8.11",
-        "com.softwaremill.sttp.client3" %% "zio-json"            % "3.8.11",
+        "com.softwaremill.sttp.client3" %% "zio"                 % "3.8.13",
+        "com.softwaremill.sttp.client3" %% "zio-json"            % "3.8.13",
         "dev.zio"                       %% "zio-streams"         % "2.0.8",
         "dev.zio"                       %% "zio-config-magnolia" % "3.0.7",
         "dev.zio"                       %% "zio-config-typesafe" % "3.0.7",
