@@ -30,7 +30,7 @@ object EmbeddedRedis {
       socket <- ZIO.attemptBlockingIO(new ServerSocket(0))
       port    = socket.getLocalPort
       _      <- ZIO.attemptBlockingIO(socket.close)
-    } yield port).catchSome { case ex: IOException =>
+    } yield port).catchSome { case _: IOException =>
       findFreePort
     }
 
