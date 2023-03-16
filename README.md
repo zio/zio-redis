@@ -84,16 +84,12 @@ import zio.schema.{DeriveSchema, Schema}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import zio.test._
 import zio.test.Assertion._
-
 import java.util.UUID
-
 object EmbeddedRedisSpec extends ZIOSpecDefault {
-
   final case class Item private (id: UUID, name: String, quantity: Int)
   object Item {
     implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
   }
-
   def spec = suite("EmbeddedRedis should")(
     test("set and get values") {
       for {
@@ -110,7 +106,6 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
     Redis.layer
   ) @@ TestAspect.silentLogging
 }
-
 ```
 
 ## Resources
