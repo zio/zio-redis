@@ -43,15 +43,12 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Authenticates the current connection to the server in two cases:
-   *   - If the Redis server is password protected via the the ''requirepass'' option
-   *   - If a Redis 6.0 instance, or greater, is using the [[https://redis.io/topics/acl Redis ACL system]]. In this
-   *     case it is assumed that the implicit username is ''default''.
+   * Authenticates the current connection to the server using username and password.
    *
-   * @param password
-   *   the password used to authenticate the connection
    * @param username
    *   the username used to authenticate the connection
+   * @param password
+   *   the password used to authenticate the connection
    * @return
    *   if the password provided via AUTH matches the password in the configuration file, the Unit value is returned and
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
