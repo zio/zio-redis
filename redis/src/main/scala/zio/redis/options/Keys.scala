@@ -30,7 +30,7 @@ trait Keys {
 
   type Alpha = Alpha.type
 
-  sealed case class Auth(password: String)
+  sealed case class Auth(password: String, username: Option[String])
 
   sealed case class By(pattern: String)
 

@@ -59,7 +59,13 @@ object Input {
 
   case object AuthInput extends Input[Auth] {
     def encode(data: Auth)(implicit codec: BinaryCodec): RespCommand =
-      RespCommand(RespArgument.Literal("AUTH"), RespArgument.Value(data.password))
+      data.username match {
+        case Some(username) =>
+          RespCommand(RespArgument.Literal("AUTH"), RespArgument.Value(username), RespArgument.Value(data.password))
+        case None =>
+          RespCommand(RespArgument.Literal("AUTH"), RespArgument.Value(data.password))
+      }
+
   }
 
   case object BoolInput extends Input[Boolean] {

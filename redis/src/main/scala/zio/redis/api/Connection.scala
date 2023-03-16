@@ -37,9 +37,29 @@ trait Connection extends RedisEnvironment {
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
   final def auth(password: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(Auth, StringInput, UnitOutput, codec, executor)
+    val command = RedisCommand(Auth, Tuple2(StringInput, OptionalInput(StringInput)), UnitOutput, codec, executor)
 
-    command.run(password)
+    command.run((password, None))
+  }
+
+  /**
+   * Authenticates the current connection to the server in two cases:
+   *   - If the Redis server is password protected via the the ''requirepass'' option
+   *   - If a Redis 6.0 instance, or greater, is using the [[https://redis.io/topics/acl Redis ACL system]]. In this
+   *     case it is assumed that the implicit username is ''default''.
+   *
+   * @param password
+   *   the password used to authenticate the connection
+   * @param username
+   *   the username used to authenticate the connection
+   * @return
+   *   if the password provided via AUTH matches the password in the configuration file, the Unit value is returned and
+   *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
+   */
+  final def auth(password: String, username: String): IO[RedisError, Unit] = {
+    val command = RedisCommand(Auth, Tuple2(StringInput, OptionalInput(StringInput)), UnitOutput, codec, executor)
+
+    command.run((password, Some(username)))
   }
 
   /**
