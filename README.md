@@ -6,8 +6,6 @@
 
 [ZIO Redis](https://github.com/zio/zio-redis) is a ZIO native Redis client.
 
-> The client is still a work-in-progress. Watch this space!
-
 [![Experimental](https://img.shields.io/badge/Project%20Stage-Experimental-yellowgreen.svg)](https://github.com/zio/zio/wiki/Project-Stages) ![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) [![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.13/) [![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis)
 
 ## Introduction
