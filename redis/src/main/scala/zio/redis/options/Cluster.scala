@@ -38,6 +38,10 @@ object Cluster {
 
   final case class Slot(number: Long) extends AnyVal
 
+  object Slot {
+    val Default: Slot = Slot(1)
+  }
+
   final case class Node(id: String, address: RedisUri)
 
   final case class SlotRange(start: Long, end: Long) {

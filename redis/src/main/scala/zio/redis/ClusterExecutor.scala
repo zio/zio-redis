@@ -58,8 +58,8 @@ final case class ClusterExecutor(
     }
 
     for {
-      key    <- ZIO.attempt(command.args(1).value).orElseFail(CusterKeyError)
-      keySlot = Slot((key.asCRC16 % SlotsAmount).toLong)
+      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespArgument.Key => key })
+      keySlot = keyOpt.fold(Slot.Default)(key => Slot((key.asCRC16 & (SlotsAmount - 1)).toLong))
       result <- executeSafe(keySlot)
     } yield result
   }
@@ -165,12 +165,8 @@ object ClusterExecutor {
       for (i <- p.slotRange.start to p.slotRange.end) yield Slot(i) -> p.master.address
     }.toMap
 
-  private final val CusterKeyError =
-    RedisError.ProtocolError("Key doesn't found. No way to dispatch this command to Redis Cluster")
   private final val CusterKeyExecutorError =
-    RedisError.IOError(
-      new IOException("Executor for key doesn't found. No way to dispatch this command to Redis Cluster")
-    )
+    RedisError.IOError(new IOException("Executor doesn't found. No way to dispatch this command to Redis Cluster"))
   private final val CusterConnectionError =
     RedisError.IOError(new IOException("The connection to cluster has been failed. Can't reach a single startup node."))
 }
