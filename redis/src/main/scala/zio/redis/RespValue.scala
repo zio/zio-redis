@@ -17,7 +17,6 @@
 package zio.redis
 
 import zio._
-import zio.redis.codecs.CRC16
 import zio.redis.options.Cluster.Slot
 import zio.stream._
 
@@ -75,12 +74,6 @@ object RespValue {
     private[redis] def asString: String = decode(value)
 
     private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
-
-    private[redis] def asCRC16: Int = {
-      val betweenBraces = value.dropWhile(b => b != '{').drop(1).takeWhile(b => b != '}')
-      val key           = if (betweenBraces.isEmpty) value else betweenBraces
-      CRC16.get(key)
-    }
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue

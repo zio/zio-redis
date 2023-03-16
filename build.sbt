@@ -33,7 +33,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(publish / skip := true)
-    .aggregate(redis, benchmarks, example, docs)
+    .aggregate(redis, embedded, benchmarks, example, docs)
 
 lazy val redis =
   project
@@ -44,16 +44,36 @@ lazy val redis =
     .settings(stdSettings("zio-redis"))
     .settings(
       libraryDependencies ++= List(
-        "dev.zio"                %% "zio-streams"             % "2.0.8",
+        "dev.zio"                %% "zio-streams"             % "2.0.10",
         "dev.zio"                %% "zio-logging"             % "2.1.9",
         "dev.zio"                %% "zio-schema"              % "0.3.1",
-        "dev.zio"                %% "zio-schema-protobuf"     % "0.3.1" % Test,
-        "dev.zio"                %% "zio-test"                % "2.0.8" % Test,
-        "dev.zio"                %% "zio-test-sbt"            % "2.0.8" % Test,
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.3.1"  % Test,
+        "dev.zio"                %% "zio-test"                % "2.0.10" % Test,
+        "dev.zio"                %% "zio-test-sbt"            % "2.0.10" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0"
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
+
+lazy val embedded =
+  project
+    .in(file("embedded"))
+    .enablePlugins(BuildInfoPlugin)
+    .settings(buildInfoSettings("zio.redis.embedded"))
+    .settings(scala3Settings)
+    .settings(stdSettings("zio-redis-embedded"))
+    .settings(
+      libraryDependencies ++= List(
+        "dev.zio"          %% "zio"                 % "2.0.8",
+        "com.github.kstyrc" % "embedded-redis"      % "0.6",
+        "dev.zio"          %% "zio-schema"          % "0.3.1" % Test,
+        "dev.zio"          %% "zio-schema-protobuf" % "0.3.1" % Test,
+        "dev.zio"          %% "zio-test"            % "2.0.8" % Test,
+        "dev.zio"          %% "zio-test-sbt"        % "2.0.8" % Test
+      ),
+      testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
+    )
+    .dependsOn(redis)
 
 lazy val benchmarks =
   project
@@ -82,7 +102,7 @@ lazy val example =
       libraryDependencies ++= List(
         "com.softwaremill.sttp.client3" %% "zio"                 % "3.8.13",
         "com.softwaremill.sttp.client3" %% "zio-json"            % "3.8.13",
-        "dev.zio"                       %% "zio-streams"         % "2.0.8",
+        "dev.zio"                       %% "zio-streams"         % "2.0.10",
         "dev.zio"                       %% "zio-config-magnolia" % "3.0.7",
         "dev.zio"                       %% "zio-config-typesafe" % "3.0.7",
         "dev.zio"                       %% "zio-schema-protobuf" % "0.3.1",
