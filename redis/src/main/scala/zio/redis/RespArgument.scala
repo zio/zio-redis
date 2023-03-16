@@ -18,6 +18,7 @@ package zio.redis
 
 import zio.Chunk
 import zio.redis.RespValue.BulkString
+import zio.redis.codecs.CRC16
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
@@ -48,6 +49,12 @@ object RespArgument {
 
   final case class Key(bytes: Chunk[Byte]) extends RespArgument {
     lazy val value: BulkString = RespValue.BulkString(bytes)
+
+    lazy val asCRC16: Int = {
+      val betweenBraces = bytes.dropWhile(b => b != '{').drop(1).takeWhile(b => b != '}')
+      val key           = if (betweenBraces.isEmpty) bytes else betweenBraces
+      CRC16.get(key)
+    }
   }
 
   object Key {

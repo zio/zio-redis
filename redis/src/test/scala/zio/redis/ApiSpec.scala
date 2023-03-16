@@ -51,8 +51,8 @@ object ApiSpec
       sortedSetsSuite,
       hyperLogLogSuite,
       geoSuite,
-      streamsSuite @@ clusterExecutorUnsupported,
-      scriptingSpec @@ clusterExecutorUnsupported,
+      streamsSuite,
+      scriptingSpec,
       clusterSpec
     ).provideShared(
       ClusterExecutor.layer,
