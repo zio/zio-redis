@@ -4,8 +4,6 @@ import redis.embedded.RedisServer
 import zio._
 import zio.redis.RedisConfig
 
-import scala.jdk.CollectionConverters._
-
 import java.io.IOException
 import java.net.ServerSocket
 

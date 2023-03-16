@@ -2,10 +2,10 @@ package zio.redis.embedded
 
 import zio._
 import zio.redis._
-import zio.schema.{DeriveSchema, Schema}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test._
+import zio.schema.{DeriveSchema, Schema}
 import zio.test.Assertion._
+import zio.test._
 
 import java.util.UUID
 
