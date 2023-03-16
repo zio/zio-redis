@@ -6,8 +6,6 @@ sidebar_label: "ZIO Redis"
 
 [ZIO Redis](https://github.com/zio/zio-redis) is a ZIO native Redis client.
 
-> The client is still a work-in-progress. Watch this space!
-
 @PROJECT_BADGES@
 
 ## Introduction
