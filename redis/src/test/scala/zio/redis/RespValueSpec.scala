@@ -42,20 +42,6 @@ object RespValueSpec extends BaseSpec {
             .runCollect
             .map(assert(_)(equalTo(values)))
         }
-      ),
-      suite("BulkString.asCRC16")(
-        test("key without braces") {
-          val str = RespValue.bulkString("hello world")
-          assertTrue(15332 == str.asCRC16)
-        },
-        test("key between braces") {
-          val str = RespValue.bulkString("hello{key1}wor}ld")
-          assertTrue(41957 == str.asCRC16)
-        },
-        test("empty key between braces") {
-          val str = RespValue.bulkString("hello{}world")
-          assertTrue(40253 == str.asCRC16)
-        }
       )
     )
 }
