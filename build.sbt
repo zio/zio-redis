@@ -33,7 +33,7 @@ lazy val root =
   project
     .in(file("."))
     .settings(publish / skip := true)
-    .aggregate(redis, benchmarks, example, docs)
+    .aggregate(redis, embedded, benchmarks, example, docs)
 
 lazy val redis =
   project
@@ -54,6 +54,26 @@ lazy val redis =
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
+
+lazy val embedded =
+  project
+    .in(file("embedded"))
+    .enablePlugins(BuildInfoPlugin)
+    .settings(buildInfoSettings("zio.redis.embedded"))
+    .settings(scala3Settings)
+    .settings(stdSettings("zio-redis-embedded"))
+    .settings(
+      libraryDependencies ++= List(
+        "dev.zio"          %% "zio"                 % "2.0.8",
+        "com.github.kstyrc" % "embedded-redis"      % "0.6",
+        "dev.zio"          %% "zio-schema"          % "0.3.1" % Test,
+        "dev.zio"          %% "zio-schema-protobuf" % "0.3.1" % Test,
+        "dev.zio"          %% "zio-test"            % "2.0.8" % Test,
+        "dev.zio"          %% "zio-test-sbt"        % "2.0.8" % Test
+      ),
+      testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
+    )
+    .dependsOn(redis)
 
 lazy val benchmarks =
   project
