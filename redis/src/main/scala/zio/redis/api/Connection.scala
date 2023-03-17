@@ -37,9 +37,9 @@ trait Connection extends RedisEnvironment {
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
   final def auth(password: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(Auth, Tuple2(StringInput, OptionalInput(StringInput)), UnitOutput, codec, executor)
+    val command = RedisCommand(Auth, Tuple2(OptionalInput(StringInput), StringInput), UnitOutput, codec, executor)
 
-    command.run((password, None))
+    command.run((None, password))
   }
 
   /**
@@ -54,9 +54,9 @@ trait Connection extends RedisEnvironment {
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
   final def auth(password: String, username: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(Auth, Tuple2(StringInput, OptionalInput(StringInput)), UnitOutput, codec, executor)
+    val command = RedisCommand(Auth, Tuple2(OptionalInput(StringInput), StringInput), UnitOutput, codec, executor)
 
-    command.run((password, Some(username)))
+    command.run((Some(username), password))
   }
 
   /**
