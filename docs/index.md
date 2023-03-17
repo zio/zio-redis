@@ -4,25 +4,20 @@ title: "Introduction to ZIO Redis"
 sidebar_label: "ZIO Redis"
 ---
 
-[ZIO Redis](https://github.com/zio/zio-redis) is a ZIO native Redis client.
-
 @PROJECT_BADGES@
 
 ## Introduction
 
-ZIO Redis is in the experimental phase of development, but its goals are:
-
-- **Type Safety**
-- **Performance**
-- **Minimum Dependency**
-- **ZIO Native**
+[ZIO Redis](https://github.com/zio/zio-redis) is a ZIO-native Redis client.
+It aims to provide a **type-safe** and **performant** API for accessing Redis
+instances.
 
 ## Installation
 
-Since the ZIO Redis is in the experimental phase, it is not released yet, but we can use snapshots:
+To use ZIO Redis, add the following line to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "<version>"
+libraryDependencies += "dev.zio" %% "zio-redis" % "@VERSION@"
 ```
 
 ## Example
@@ -37,7 +32,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "<version>",
+  "dev.zio" %% "zio-redis" % "@VERSION@",
   "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
 )
 ```
@@ -71,7 +66,9 @@ object ZIORedisExample extends ZIOAppDefault {
 
 To test you can use the embedded redis instance by adding to your build:
 
-```libraryDependencies := "dev.zio" %% "zio-redis-embedded" % <version>```
+```scala
+libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "@VERSION@"
+```
 
 Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
 
