@@ -10,6 +10,14 @@ import java.net.InetAddress
 trait ConnectionSpec extends BaseSpec {
   def connectionSuite: Spec[Redis, RedisError] =
     suite("connection")(
+      suite("authenticating")(
+        test("auth with 'default' username") {
+          for {
+            redis <- ZIO.service[Redis]
+            res   <- redis.auth("default", "password")
+          } yield assert(res)(isUnit)
+        }
+      ),
       suite("clientCaching")(
         test("track keys") {
           for {
