@@ -6,8 +6,6 @@ sidebar_label: "ZIO Redis"
 
 [ZIO Redis](https://github.com/zio/zio-redis) is a ZIO native Redis client.
 
-> The client is still a work-in-progress. Watch this space!
-
 @PROJECT_BADGES@
 
 ## Introduction
@@ -24,7 +22,7 @@ ZIO Redis is in the experimental phase of development, but its goals are:
 Since the ZIO Redis is in the experimental phase, it is not released yet, but we can use snapshots:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "@VERSION@"
+libraryDependencies += "dev.zio" %% "zio-redis" % "<version>"
 ```
 
 ## Example
@@ -39,7 +37,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "@VERSION@",
+  "dev.zio" %% "zio-redis" % "<version>",
   "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
 )
 ```
@@ -66,6 +64,45 @@ object ZIORedisExample extends ZIOAppDefault {
     ZLayer.succeed(RedisConfig.Default),
     ZLayer.succeed[BinaryCodec](ProtobufCodec)
   )
+}
+```
+
+## Testing
+
+To test you can use the embedded redis instance by adding to your build:
+
+```libraryDependencies := "dev.zio" %% "zio-redis-embedded" % <version>```
+
+Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
+
+```scala
+import zio._
+import zio.redis._
+import zio.schema.{DeriveSchema, Schema}
+import zio.schema.codec.{BinaryCodec, ProtobufCodec}
+import zio.test._
+import zio.test.Assertion._
+import java.util.UUID
+object EmbeddedRedisSpec extends ZIOSpecDefault {
+  final case class Item private (id: UUID, name: String, quantity: Int)
+  object Item {
+    implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
+  }
+  def spec = suite("EmbeddedRedis should")(
+    test("set and get values") {
+      for {
+        redis <- ZIO.service[Redis]
+        item   = Item(UUID.randomUUID, "foo", 2)
+        _     <- redis.set(s"item.${item.id.toString}", item)
+        found <- redis.get(s"item.${item.id.toString}").returning[Item]
+      } yield assert(found)(isSome(equalTo(item)))
+    }
+  ).provideShared(
+    EmbeddedRedis.layer.orDie,
+    RedisExecutor.layer.orDie,
+    ZLayer.succeed[BinaryCodec](ProtobufCodec),
+    Redis.layer
+  ) @@ TestAspect.silentLogging
 }
 ```
 

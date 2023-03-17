@@ -58,7 +58,7 @@ trait Cluster extends RedisEnvironment {
    */
   final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
     val command =
-      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryInput[String]()), UnitOutput, codec, executor)
+      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, codec, executor)
     command.run((slot.number, Stable.stringify))
   }
 
@@ -76,7 +76,7 @@ trait Cluster extends RedisEnvironment {
   final def setSlotMigrating(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
+      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput,
       codec,
       executor
@@ -98,7 +98,7 @@ trait Cluster extends RedisEnvironment {
   final def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
+      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput,
       codec,
       executor
@@ -120,7 +120,7 @@ trait Cluster extends RedisEnvironment {
   final def setSlotNode(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryInput[String](), ArbitraryInput[String]()),
+      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput,
       codec,
       executor
