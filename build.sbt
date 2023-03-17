@@ -64,7 +64,7 @@ lazy val embedded =
     .settings(stdSettings("zio-redis-embedded"))
     .settings(
       libraryDependencies ++= List(
-        "dev.zio"          %% "zio"                 % "2.0.8",
+        "dev.zio"          %% "zio"                 % "2.0.10",
         "com.github.kstyrc" % "embedded-redis"      % "0.6",
         "dev.zio"          %% "zio-schema"          % "0.3.1" % Test,
         "dev.zio"          %% "zio-schema-protobuf" % "0.3.1" % Test,
