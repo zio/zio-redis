@@ -32,8 +32,6 @@ trait Keys {
 
   sealed case class Auth(username: Option[String], password: String)
 
-  sealed case class By(pattern: String)
-
   case object Copy {
     private[redis] def stringify: String = "COPY"
   }
