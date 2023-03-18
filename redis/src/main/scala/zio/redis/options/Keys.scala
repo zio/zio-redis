@@ -30,9 +30,7 @@ trait Keys {
 
   type Alpha = Alpha.type
 
-  sealed case class Auth(password: String)
-
-  sealed case class By(pattern: String)
+  sealed case class Auth(username: Option[String], password: String)
 
   case object Copy {
     private[redis] def stringify: String = "COPY"

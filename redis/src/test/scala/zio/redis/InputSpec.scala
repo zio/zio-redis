@@ -62,13 +62,18 @@ object InputSpec extends BaseSpec {
       suite("Auth")(
         test("with empty password") {
           for {
-            result <- ZIO.attempt(AuthInput.encode(Auth("")))
-          } yield assert(result)(equalTo(RespCommand(Literal("AUTH"), Value(""))))
+            result <- ZIO.attempt(AuthInput.encode(Auth(None, "")))
+          } yield assert(result)(equalTo(RespCommand(Value(""))))
         },
         test("with non-empty password") {
           for {
-            result <- ZIO.attempt(AuthInput.encode(Auth("pass")))
-          } yield assert(result)(equalTo(RespCommand(Literal("AUTH"), Value("pass"))))
+            result <- ZIO.attempt(AuthInput.encode(Auth(None, "pass")))
+          } yield assert(result)(equalTo(RespCommand(Value("pass"))))
+        },
+        test("with both username and password") {
+          for {
+            result <- ZIO.attempt(AuthInput.encode(Auth(Some("user"), "pass")))
+          } yield assert(result)(equalTo(RespCommand(Value("user"), Value("pass"))))
         }
       ),
       suite("Bool")(
