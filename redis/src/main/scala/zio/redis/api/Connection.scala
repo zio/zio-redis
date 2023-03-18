@@ -22,7 +22,7 @@ import zio.redis.Output._
 import zio.redis._
 
 trait Connection extends RedisEnvironment {
-  import Connection._
+  import Connection.{Auth => _, _}
 
   /**
    * Authenticates the current connection to the server in two cases:
@@ -37,9 +37,26 @@ trait Connection extends RedisEnvironment {
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
   final def auth(password: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(Auth, StringInput, UnitOutput, codec, executor)
+    val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput, codec, executor)
 
-    command.run(password)
+    command.run(Auth(None, password))
+  }
+
+  /**
+   * Authenticates the current connection to the server using username and password.
+   *
+   * @param username
+   *   the username used to authenticate the connection
+   * @param password
+   *   the password used to authenticate the connection
+   * @return
+   *   if the password provided via AUTH matches the password in the configuration file, the Unit value is returned and
+   *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
+   */
+  final def auth(username: String, password: String): IO[RedisError, Unit] = {
+    val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput, codec, executor)
+
+    command.run(Auth(Some(username), password))
   }
 
   /**
