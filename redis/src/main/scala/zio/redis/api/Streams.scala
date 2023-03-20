@@ -203,10 +203,13 @@ trait Streams extends commands.Streams {
     force: Boolean = false
   )(id: I, ids: I*): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
-      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] =
+      def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
+        val withForce = if (force) Some(WithForce) else None
+
         _xClaim[SK, SG, SC, I, RK, RV].run(
-          (key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, Option.when(force)(WithForce))
+          (key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, withForce)
         )
+      }
     }
 
   /**
@@ -247,7 +250,9 @@ trait Streams extends commands.Streams {
     force: Boolean = false
   )(id: I, ids: I*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] =
+      def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
+        val withForce = if (force) Some(WithForce) else None
+
         _xClaimWithJustId[SK, SG, SC, I, R].run(
           (
             key,
@@ -258,10 +263,11 @@ trait Streams extends commands.Streams {
             idle,
             time,
             retryCount,
-            Option.when(force)(WithForce),
+            withForce,
             WithJustId
           )
         )
+      }
     }
 
   /**
