@@ -14,10 +14,14 @@ trait RedisTransactionSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             result <-
-              redis.sAdd(key, "hello").zip(redis.sAdd(key, "world").zip(redis.sMembers(key).returning[String])).commit
+              redis
+                .sAdd(key, "hello")
+                .zip(redis.sAdd(key, "world"))
+                .zip(redis.sMembers(key).returning[String])
+                .commit
           } yield assert(result._1)(equalTo(1L)) &&
-            assert(result._2._1)(equalTo(1L)) &&
-            assert(result._2._2)(hasSameElements(Chunk("hello", "world")))
+            assert(result._2)(equalTo(1L)) &&
+            assert(result._3)(hasSameElements(Chunk("hello", "world")))
         )
       ),
       suite("zipLeft")(
