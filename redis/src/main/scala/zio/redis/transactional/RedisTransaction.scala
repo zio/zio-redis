@@ -20,7 +20,7 @@ import zio.redis.Output.QueuedOutput
 import zio.redis.{Output, RedisCommand, RedisError}
 import zio.{ZIO, Zippable}
 
-private[transactional] trait RedisTransaction[+Out] { self =>
+sealed trait RedisTransaction[+Out] { self =>
   import RedisTransaction._
 
   def commit: ZIO[Redis, RedisError, Out] =
@@ -46,21 +46,20 @@ private[transactional] trait RedisTransaction[+Out] { self =>
   def zipRight[A](that: RedisTransaction[A]): RedisTransaction[A] =
     ZipRight(this, that)
 
-  def run: ZIO[Redis, RedisError, Output[Out]]
+  def map[A](f: Out => A): RedisTransaction[A] = Map(self, f)
 
-  def map[A](f: Out => A): RedisTransaction[A] =
-    new RedisTransaction[A] {
-      def run: ZIO[Redis, RedisError, Output[A]] = self.run.map(output => output.map(out => f(out)))
-    }
-
+  private[transactional] def run: ZIO[Redis, RedisError, Output[Out]]
 }
 
-private[transactional] object RedisTransaction {
+object RedisTransaction {
   final def single[In, Out](command: RedisCommand[In, Out], in: In): RedisTransaction[Out] =
     Single(command, in)
 
-  final case class Single[In, Out](command: RedisCommand[In, Out], in: In) extends RedisTransaction[Out] {
-    def run: ZIO[Any, RedisError, Output[Out]] =
+  private[transactional] final case class Single[In, Out](
+    command: RedisCommand[In, Out],
+    in: In
+  ) extends RedisTransaction[Out] {
+    def run: ZIO[Redis, RedisError, Output[Out]] =
       command.executor
         .execute(command.resp(in))
         .flatMap(out => ZIO.attempt(QueuedOutput.unsafeDecode(out)(command.codec)))
@@ -68,18 +67,35 @@ private[transactional] object RedisTransaction {
         .as(command.output)
   }
 
-  final case class Zip[A, B](left: RedisTransaction[A], right: RedisTransaction[B]) extends RedisTransaction[(A, B)] {
+  private[transactional] final case class Zip[A, B](
+    left: RedisTransaction[A],
+    right: RedisTransaction[B]
+  ) extends RedisTransaction[(A, B)] {
     def run: ZIO[Redis, RedisError, Output[(A, B)]] =
       left.run.zip(right.run).map(outputs => Output.Zip(outputs._1, outputs._2))
   }
 
-  final case class ZipLeft[A, B](left: RedisTransaction[A], right: RedisTransaction[B]) extends RedisTransaction[A] {
+  private[transactional] final case class ZipLeft[A, B](
+    left: RedisTransaction[A],
+    right: RedisTransaction[B]
+  ) extends RedisTransaction[A] {
     def run: ZIO[Redis, RedisError, Output[A]] =
       left.run.zip(right.run).map(outputs => Output.ZipLeft(outputs._1, outputs._2))
   }
 
-  final case class ZipRight[A, B](left: RedisTransaction[A], right: RedisTransaction[B]) extends RedisTransaction[B] {
+  private[transactional] final case class ZipRight[A, B](
+    left: RedisTransaction[A],
+    right: RedisTransaction[B]
+  ) extends RedisTransaction[B] {
     def run: ZIO[Redis, RedisError, Output[B]] =
       left.run.zip(right.run).map(outputs => Output.ZipRight(outputs._1, outputs._2))
+  }
+
+  private[transactional] final case class Map[A, B](
+    transaction: RedisTransaction[A],
+    f: A => B
+  ) extends RedisTransaction[B] {
+    def run: ZIO[Redis, RedisError, Output[B]] =
+      transaction.run.map(output => output.map(out => f(out)))
   }
 }
