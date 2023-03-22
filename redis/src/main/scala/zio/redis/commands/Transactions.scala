@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.commands
 
-import zio.schema.codec.BinaryCodec
+import zio.redis.Input._
+import zio.redis.Output._
+import zio.redis._
 
-private[redis] trait RedisEnvironment {
-  def codec: BinaryCodec
-  def executor: RedisExecutor
+private[redis] trait Transactions extends RedisEnvironment {
+  import Transactions._
+
+  final val _multi: RedisCommand[Unit, Unit] = RedisCommand(Multi, NoInput, UnitOutput, codec, executor)
+
+  final def _exec[Out](output: Output[Out]): RedisCommand[Unit, Out] =
+    RedisCommand(Exec, NoInput, output, codec, executor)
+}
+
+private object Transactions {
+  final val Multi = "Multi"
+  final val Exec  = "Exec"
 }

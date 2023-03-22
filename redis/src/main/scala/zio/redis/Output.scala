@@ -17,13 +17,12 @@
 package zio.redis
 
 import zio._
+import zio.redis.Output.TransactionOutput
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
-sealed trait Output[+A] {
-  self =>
-
+sealed trait Output[+A] { self =>
   private[redis] final def unsafeDecode(respValue: RespValue)(implicit codec: BinaryCodec): A =
     respValue match {
       case error: RespValue.Error => throw error.toRedisError
@@ -32,9 +31,17 @@ sealed trait Output[+A] {
 
   protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): A
 
-  final def map[B](f: A => B): Output[B] =
+  def map[B](f: A => B): Output[B] =
     new Output[B] {
       protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): B = f(self.tryDecode(respValue))
+
+      override protected def count: Int = self.count
+    }
+
+  protected def count: Int =
+    self match {
+      case value: TransactionOutput[_, _, _] => value.count
+      case _                                 => 1
     }
 
 }
@@ -369,7 +376,7 @@ object Output {
   }
 
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamGroupsInfo] =
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamGroupsInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
@@ -408,7 +415,7 @@ object Output {
   }
 
   case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamConsumersInfo] =
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamConsumersInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
@@ -446,7 +453,7 @@ object Output {
 
   final case class StreamInfoFullOutput[I: Schema, K: Schema, V: Schema]()
       extends Output[StreamInfoWithFull.FullStreamInfo[I, K, V]] {
-    override protected def tryDecode(
+    protected def tryDecode(
       respValue: RespValue
     )(implicit codec: BinaryCodec): StreamInfoWithFull.FullStreamInfo[I, K, V] = {
       var streamInfoFull: StreamInfoWithFull.FullStreamInfo[I, K, V] = StreamInfoWithFull.FullStreamInfo.empty
@@ -825,6 +832,74 @@ object Output {
           val nodeId = MultiStringOutput.unsafeDecode(values(2))
           Node(nodeId, RedisUri(host, port.toInt))
         case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object QueuedOutput extends Output[Unit] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Unit =
+      respValue match {
+        case RespValue.SimpleString("QUEUED") => ()
+        case other                            => throw ProtocolError(s"$other isn't queued")
+      }
+  }
+
+  trait TransactionOutput[A, B, Out] extends Output[Out] { self =>
+    def left: Output[A]
+    def right: Output[B]
+
+    override final def map[C](f: Out => C): Output[C] =
+      new TransactionOutput[A, B, C] {
+        def left: Output[A]  = self.left
+        def right: Output[B] = self.right
+
+        protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): C = f(self.tryDecode(respValue))
+      }
+
+    override def count: Int = left.count + right.count
+  }
+
+  final case class Zip[A, B](left: Output[A], right: Output[B]) extends TransactionOutput[A, B, (A, B)] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): (A, B) =
+      respValue match {
+        case RespValue.Array(values) =>
+          (left, right) match {
+            case (left: TransactionOutput[_, _, _], right: TransactionOutput[_, _, _]) =>
+              (
+                left.tryDecode(RespValue.Array(values.take(left.count))),
+                right.tryDecode(RespValue.Array(values.drop(left.count).take(right.count)))
+              )
+            case (_, right: TransactionOutput[_, _, _]) =>
+              (left.tryDecode(values.head), right.tryDecode(RespValue.Array(values.tail)))
+            case (left: TransactionOutput[_, _, _], _) =>
+              (left.tryDecode(RespValue.Array(values.init)), right.tryDecode(values.last))
+            case _ =>
+              (left.tryDecode(values.head), right.tryDecode(values.last))
+          }
+        case other => throw ProtocolError(s"$other is not an array")
+      }
+  }
+
+  final case class ZipLeft[A, B](left: Output[A], right: Output[B]) extends TransactionOutput[A, B, A] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): A =
+      respValue match {
+        case RespValue.Array(values) =>
+          left match {
+            case _: TransactionOutput[_, _, _] => left.tryDecode(RespValue.Array(values.take(left.count)))
+            case _                             => left.tryDecode(values.head)
+          }
+        case other => throw ProtocolError(s"$other is not an array")
+      }
+  }
+
+  final case class ZipRight[A, B](left: Output[A], right: Output[B]) extends TransactionOutput[A, B, B] {
+    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): B =
+      respValue match {
+        case RespValue.Array(values) =>
+          left match {
+            case _: TransactionOutput[_, _, _] => right.tryDecode(RespValue.Array(values.drop(left.count)))
+            case _                             => right.tryDecode(values.last)
+          }
+        case other => throw ProtocolError(s"$other is not an array")
       }
   }
 }

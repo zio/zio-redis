@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package zio.redis.api
+package zio.redis.transactional.api
 
 import zio._
-import zio.redis.ResultBuilder._
 import zio.redis._
+import zio.redis.transactional.RedisTransaction
+import zio.redis.transactional.RedisTransaction.single
+import zio.redis.transactional.ResultBuilder._
 import zio.schema.Schema
 
 trait Sets extends commands.Sets {
@@ -36,8 +38,8 @@ trait Sets extends commands.Sets {
    *   Returns the number of elements that were added to the set, not including all the elements already present into
    *   the set.
    */
-  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] =
-    _sAdd[K, M].run((key, (member, members.toList)))
+  final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): RedisTransaction[Long] =
+    single(_sAdd[K, M], (key, (member, members.toList)))
 
   /**
    * Get the number of members in a set.
@@ -47,7 +49,7 @@ trait Sets extends commands.Sets {
    * @return
    *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
-  final def sCard[K: Schema](key: K): IO[RedisError, Long] = _sCard[K].run(key)
+  final def sCard[K: Schema](key: K): RedisTransaction[Long] = single(_sCard[K], key)
 
   /**
    * Subtract multiple sets.
@@ -61,7 +63,7 @@ trait Sets extends commands.Sets {
    */
   final def sDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sDiff[K, R].run((key, keys.toList))
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sDiff[K, R], (key, keys.toList))
     }
 
   /**
@@ -76,8 +78,8 @@ trait Sets extends commands.Sets {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] =
-    _sDiffStore[D, K].run((destination, (key, keys.toList)))
+  final def sDiffStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): RedisTransaction[Long] =
+    single(_sDiffStore[D, K], (destination, (key, keys.toList)))
 
   /**
    * Intersect multiple sets and store the resulting set in a key.
@@ -91,7 +93,8 @@ trait Sets extends commands.Sets {
    */
   final def sInter[K: Schema](destination: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sInter[K, R].run((destination, keys.toList))
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] =
+        single(_sInter[K, R], (destination, keys.toList))
     }
 
   /**
@@ -106,8 +109,8 @@ trait Sets extends commands.Sets {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sInterStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] =
-    _sInterStore[D, K].run((destination, (key, keys.toList)))
+  final def sInterStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): RedisTransaction[Long] =
+    single(_sInterStore[D, K], (destination, (key, keys.toList)))
 
   /**
    * Determine if a given value is a member of a set.
@@ -120,8 +123,8 @@ trait Sets extends commands.Sets {
    *   Returns 1 if the element is a member of the set. 0 if the element is not a member of the set, or if key does not
    *   exist.
    */
-  final def sIsMember[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Boolean] =
-    _sIsMember[K, M].run((key, member))
+  final def sIsMember[K: Schema, M: Schema](key: K, member: M): RedisTransaction[Boolean] =
+    single(_sIsMember[K, M], (key, member))
 
   /**
    * Get all the members in a set.
@@ -133,7 +136,7 @@ trait Sets extends commands.Sets {
    */
   final def sMembers[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sMembers[K, R].run(key)
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sMembers[K, R], key)
     }
 
   /**
@@ -148,8 +151,8 @@ trait Sets extends commands.Sets {
    * @return
    *   Returns 1 if the element was moved. 0 if it was not found.
    */
-  final def sMove[S: Schema, D: Schema, M: Schema](source: S, destination: D, member: M): IO[RedisError, Boolean] =
-    _sMove[S, D, M].run((source, destination, member))
+  final def sMove[S: Schema, D: Schema, M: Schema](source: S, destination: D, member: M): RedisTransaction[Boolean] =
+    single(_sMove[S, D, M], (source, destination, member))
 
   /**
    * Remove and return one or multiple random members from a set.
@@ -163,7 +166,7 @@ trait Sets extends commands.Sets {
    */
   final def sPop[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sPop[K, R].run((key, count))
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sPop[K, R], (key, count))
     }
 
   /**
@@ -178,7 +181,7 @@ trait Sets extends commands.Sets {
    */
   final def sRandMember[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sRandMember[K, R].run((key, count))
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sRandMember[K, R], (key, count))
     }
 
   /**
@@ -193,8 +196,8 @@ trait Sets extends commands.Sets {
    * @return
    *   Returns the number of members that were removed from the set, not including non existing members.
    */
-  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] =
-    _sRem[K, M].run((key, (member, members.toList)))
+  final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): RedisTransaction[Long] =
+    single(_sRem[K, M], (key, (member, members.toList)))
 
   /**
    * Incrementally iterate Set elements.
@@ -220,8 +223,8 @@ trait Sets extends commands.Sets {
     count: Option[Count] = None
   ): ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] =
     new ResultBuilder1[({ type lambda[x] = (Long, Chunk[x]) })#lambda] {
-      def returning[R: Schema]: IO[RedisError, (Long, Chunk[R])] =
-        _sScan[K, R].run((key, cursor, pattern.map(Pattern(_)), count))
+      def returning[R: Schema]: RedisTransaction[(Long, Chunk[R])] =
+        single(_sScan[K, R], (key, cursor, pattern.map(Pattern(_)), count))
     }
 
   /**
@@ -236,7 +239,7 @@ trait Sets extends commands.Sets {
    */
   final def sUnion[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
-      def returning[R: Schema]: IO[RedisError, Chunk[R]] = _sUnion[K, R].run((key, keys.toList))
+      def returning[R: Schema]: RedisTransaction[Chunk[R]] = single(_sUnion[K, R], (key, keys.toList))
     }
 
   /**
@@ -251,6 +254,6 @@ trait Sets extends commands.Sets {
    * @return
    *   Returns the number of elements in the resulting set.
    */
-  final def sUnionStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): IO[RedisError, Long] =
-    _sUnionStore[D, K].run((destination, (key, keys.toList)))
+  final def sUnionStore[D: Schema, K: Schema](destination: D, key: K, keys: K*): RedisTransaction[Long] =
+    single(_sUnionStore[D, K], (destination, (key, keys.toList)))
 }

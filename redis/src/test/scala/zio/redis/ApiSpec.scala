@@ -1,6 +1,7 @@
 package zio.redis
 
 import zio._
+import zio.redis.transactional.RedisTransactionSpec
 import zio.test.TestAspect._
 import zio.test._
 
@@ -16,7 +17,8 @@ object ApiSpec
     with HashSpec
     with StreamsSpec
     with ScriptingSpec
-    with ClusterSpec {
+    with ClusterSpec
+    with RedisTransactionSpec {
 
   def spec: Spec[TestEnvironment, Any] =
     suite("Redis commands")(clusterSuite, singleNodeSuite) @@ sequential @@ withLiveEnvironment
@@ -33,11 +35,13 @@ object ApiSpec
       hyperLogLogSuite,
       hashSuite,
       streamsSuite,
-      scriptingSpec
+      scriptingSpec,
+      transactionsSuite
     ).provideShared(
       RedisExecutor.local,
       Redis.layer,
-      ZLayer.succeed(codec)
+      ZLayer.succeed(codec),
+      transactional.Redis.layer
     )
 
   private val clusterSuite =

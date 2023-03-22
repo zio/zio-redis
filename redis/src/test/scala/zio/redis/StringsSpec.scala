@@ -317,11 +317,11 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
       ),
-      suite("Stralgo")(
+      suite("StrAlgo")(
         test("get LCS from 2 strings") {
           val str1 = "foo"
           val str2 = "fao"
-          assertZIO(ZIO.serviceWithZIO[Redis](_.stralgoLcs(StralgoLCS.Strings, str1, str2)))(
+          assertZIO(ZIO.serviceWithZIO[Redis](_.strAlgoLcs(StralgoLCS.Strings, str1, str2)))(
             equalTo(LcsOutput.Lcs("fo"))
           )
         },
@@ -335,7 +335,7 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- redis.set(key2, str2, None, None, None)
-            result <- redis.stralgoLcs(StralgoLCS.Keys, key1, key2)
+            result <- redis.strAlgoLcs(StralgoLCS.Keys, key1, key2)
           } yield assert(result)(equalTo(LcsOutput.Lcs("fo")))
         },
         test("get LCS from unknown keys") {
@@ -348,14 +348,14 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- redis.set(key2, str2, None, None, None)
-            result <- redis.stralgoLcs(StralgoLCS.Keys, "unknown", "unknown")
+            result <- redis.strAlgoLcs(StralgoLCS.Keys, "unknown", "unknown")
           } yield assert(result)(equalTo(LcsOutput.Lcs("")))
         },
         test("Get length of LCS for strings") {
           val str1 = "foo"
           val str2 = "fao"
           assertZIO(
-            ZIO.serviceWithZIO[Redis](_.stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Len)))
+            ZIO.serviceWithZIO[Redis](_.strAlgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Len)))
           )(
             equalTo(LcsOutput.Length(2))
           )
@@ -370,7 +370,7 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- redis.set(key2, str2, None, None, None)
-            result <- redis.stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Len))
+            result <- redis.strAlgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Len))
           } yield assert(result)(equalTo(LcsOutput.Length(2)))
         },
         test("get length of LCS for unknown keys") {
@@ -383,7 +383,7 @@ trait StringsSpec extends BaseSpec {
             _     <- redis.set(key1, str1, None, None, None)
             key2  <- uuid
             _     <- redis.set(key2, str2, None, None, None)
-            result <- redis.stralgoLcs(
+            result <- redis.strAlgoLcs(
                         StralgoLCS.Keys,
                         "unknown",
                         "unknown",
@@ -395,7 +395,7 @@ trait StringsSpec extends BaseSpec {
           val str1 = "ohmytext"
           val str2 = "mynewtext"
           assertZIO(
-            ZIO.serviceWithZIO[Redis](_.stralgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Idx())))
+            ZIO.serviceWithZIO[Redis](_.strAlgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Idx())))
           )(
             equalTo(
               LcsOutput.Matches(
@@ -418,7 +418,7 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1)
             key2   <- uuid
             _      <- redis.set(key2, str2)
-            result <- redis.stralgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Idx()))
+            result <- redis.strAlgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Idx()))
           } yield {
             assert(result)(
               equalTo(
@@ -444,7 +444,7 @@ trait StringsSpec extends BaseSpec {
             _     <- redis.set(key1, str1)
             key2  <- uuid
             _     <- redis.set(key2, str2)
-            result <- redis.stralgoLcs(
+            result <- redis.strAlgoLcs(
                         StralgoLCS.Keys,
                         key1,
                         key2,
@@ -474,7 +474,7 @@ trait StringsSpec extends BaseSpec {
             _     <- redis.set(key1, str1)
             key2  <- uuid
             _     <- redis.set(key2, str2)
-            result <- redis.stralgoLcs(
+            result <- redis.strAlgoLcs(
                         StralgoLCS.Keys,
                         key1,
                         key2,
@@ -505,7 +505,7 @@ trait StringsSpec extends BaseSpec {
             _     <- redis.set(key1, str1)
             key2  <- uuid
             _     <- redis.set(key2, str2)
-            result <- redis.stralgoLcs(
+            result <- redis.strAlgoLcs(
                         StralgoLCS.Keys,
                         key1,
                         key2,
