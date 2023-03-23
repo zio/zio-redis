@@ -46,8 +46,8 @@ lazy val redis =
       libraryDependencies ++= List(
         "dev.zio"                %% "zio-streams"             % "2.0.10",
         "dev.zio"                %% "zio-logging"             % "2.1.11",
-        "dev.zio"                %% "zio-schema"              % "0.3.1",
-        "dev.zio"                %% "zio-schema-protobuf"     % "0.3.1"  % Test,
+        "dev.zio"                %% "zio-schema"              % "0.4.9",
+        "dev.zio"                %% "zio-schema-protobuf"     % "0.4.9"  % Test,
         "dev.zio"                %% "zio-test"                % "2.0.10" % Test,
         "dev.zio"                %% "zio-test-sbt"            % "2.0.10" % Test,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0"
@@ -66,8 +66,8 @@ lazy val embedded =
       libraryDependencies ++= List(
         "dev.zio"          %% "zio"                 % "2.0.10",
         "com.github.kstyrc" % "embedded-redis"      % "0.6",
-        "dev.zio"          %% "zio-schema"          % "0.3.1" % Test,
-        "dev.zio"          %% "zio-schema-protobuf" % "0.3.1" % Test,
+        "dev.zio"          %% "zio-schema"          % "0.4.9" % Test,
+        "dev.zio"          %% "zio-schema-protobuf" % "0.4.9" % Test,
         "dev.zio"          %% "zio-test"            % "2.0.8" % Test,
         "dev.zio"          %% "zio-test-sbt"        % "2.0.8" % Test
       ),
@@ -88,7 +88,7 @@ lazy val benchmarks =
         "dev.profunktor"    %% "redis4cats-effects"  % "1.4.0",
         "io.chrisdavenport" %% "rediculous"          % "0.4.0",
         "io.laserdisc"      %% "laserdisc-fs2"       % "0.6.0",
-        "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
+        "dev.zio"           %% "zio-schema-protobuf" % "0.4.9"
       )
     )
 
@@ -105,7 +105,7 @@ lazy val example =
         "dev.zio"                       %% "zio-streams"         % "2.0.10",
         "dev.zio"                       %% "zio-config-magnolia" % "3.0.7",
         "dev.zio"                       %% "zio-config-typesafe" % "3.0.7",
-        "dev.zio"                       %% "zio-schema-protobuf" % "0.3.1",
+        "dev.zio"                       %% "zio-schema-protobuf" % "0.4.9",
         "dev.zio"                       %% "zio-json"            % "0.5.0",
         "io.d11"                        %% "zhttp"               % "2.0.0-RC11"
       )
@@ -123,7 +123,7 @@ lazy val docs = project
     projectStage                               := ProjectStage.Development,
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
     docsPublishBranch                          := "master",
-    libraryDependencies += "dev.zio"           %% "zio-schema-protobuf" % "0.3.1"
+    libraryDependencies += "dev.zio"           %% "zio-schema-protobuf" % "0.4.9"
   )
   .dependsOn(redis)
   .enablePlugins(WebsitePlugin)
