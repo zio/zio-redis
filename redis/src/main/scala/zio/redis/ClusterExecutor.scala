@@ -19,9 +19,7 @@ package zio.redis
 import zio._
 import zio.redis.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
-import zio.redis.codecs.StringUtf8Codec
 import zio.redis.options.Cluster._
-import zio.schema.codec.BinaryCodec
 
 import java.io.IOException
 
@@ -42,7 +40,7 @@ final case class ClusterExecutor(
     def executeAsk(address: RedisUri) =
       for {
         executor <- executor(address)
-        _        <- executor.execute(AskingCommand(StringUtf8Codec, this).resp(()))
+        _        <- executor.execute(AskingCommand(this).resp(()))
         res      <- executor.execute(command)
       } yield res
 
@@ -151,7 +149,7 @@ object ClusterExecutor {
 
   private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
-    val codecLayer    = ZLayer.succeed[BinaryCodec](StringUtf8Codec)
+    val codecLayer    = ZLayer.succeed[CodecSupplier](StringCodecSupplier)
     val redisLayer    = executorLayer ++ codecLayer >>> Redis.layer
     for {
       closableScope <- Scope.make
