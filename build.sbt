@@ -123,7 +123,10 @@ lazy val docs = project
     projectStage                               := ProjectStage.Development,
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis),
     docsPublishBranch                          := "master",
-    libraryDependencies += "dev.zio"           %% "zio-schema-protobuf" % zioSchemaVersion
+    libraryDependencies ++= List(
+      "dev.zio" %% "zio-schema-protobuf" % zioSchemaVersion,
+      "dev.zio" %% "zio-test"            % zioVersion
+    )
   )
-  .dependsOn(redis)
+  .dependsOn(redis, embedded)
   .enablePlugins(WebsitePlugin)

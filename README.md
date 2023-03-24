@@ -81,16 +81,23 @@ Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're
 ```scala
 import zio._
 import zio.redis._
+import zio.redis.embedded.EmbeddedRedis
 import zio.schema.{DeriveSchema, Schema}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import zio.test._
 import zio.test.Assertion._
 import java.util.UUID
+
 object EmbeddedRedisSpec extends ZIOSpecDefault {
+  object ProtobufCodecSupplier extends CodecSupplier {
+    implicit def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+  }
+  
   final case class Item private (id: UUID, name: String, quantity: Int)
   object Item {
     implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
   }
+  
   def spec = suite("EmbeddedRedis should")(
     test("set and get values") {
       for {
@@ -103,7 +110,7 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
   ).provideShared(
     EmbeddedRedis.layer.orDie,
     RedisExecutor.layer.orDie,
-    ZLayer.succeed[BinaryCodec](ProtobufCodec),
+    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
     Redis.layer
   ) @@ TestAspect.silentLogging
 }
