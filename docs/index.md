@@ -33,7 +33,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 ```scala
 libraryDependencies ++= Seq(
   "dev.zio" %% "zio-redis" % "@VERSION@",
-  "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
+  "dev.zio" %% "zio-schema-protobuf" % "0.4.9"
 )
 ```
 
