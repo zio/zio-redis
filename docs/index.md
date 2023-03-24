@@ -40,9 +40,15 @@ libraryDependencies ++= Seq(
 ```scala mdoc:compile-only
 import zio._
 import zio.redis._
+import zio.schema._
 import zio.schema.codec._
 
 object ZIORedisExample extends ZIOAppDefault {
+  
+  object ProtobufCodecSupplier extends CodecSupplier {
+    implicit def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+  }
+  
   val myApp: ZIO[Redis, RedisError, Unit] = for {
     redis <- ZIO.service[Redis]
     _     <- redis.set("myKey", 8L, Some(1.minutes))
@@ -57,7 +63,7 @@ object ZIORedisExample extends ZIOAppDefault {
     Redis.layer,
     RedisExecutor.layer,
     ZLayer.succeed(RedisConfig.Default),
-    ZLayer.succeed[BinaryCodec](ProtobufCodec)
+    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier)
   )
 }
 ```
