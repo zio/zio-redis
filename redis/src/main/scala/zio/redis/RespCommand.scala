@@ -16,16 +16,21 @@
 
 package zio.redis
 
-import zio.{IO, ZLayer}
+import zio.Chunk
 
-trait RedisExecutor {
-  def execute(command: RespCommand): IO[RedisError, RespValue]
+final case class RespCommand(args: Chunk[RespArgument]) {
+  def ++(that: RespCommand): RespCommand = RespCommand(this.args ++ that.args)
+
+  def mapArguments(f: RespArgument => RespArgument): RespCommand = RespCommand(args.map(f(_)))
 }
 
-object RedisExecutor {
-  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.layer.fresh >>> SingleNodeExecutor.layer
+object RespCommand {
 
-  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.default.fresh >>> SingleNodeExecutor.layer
+  def empty: RespCommand = new RespCommand(Chunk.empty)
+
+  def apply(args: Chunk[RespArgument]): RespCommand = new RespCommand(args)
+
+  def apply(args: RespArgument*): RespCommand = new RespCommand(Chunk.fromIterable(args))
+
+  def apply(arg: RespArgument): RespCommand = new RespCommand(Chunk.single(arg))
 }

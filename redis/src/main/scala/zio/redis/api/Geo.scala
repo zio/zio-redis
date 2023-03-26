@@ -44,7 +44,7 @@ trait Geo extends RedisEnvironment {
   ): IO[RedisError, Long] = {
     val command = RedisCommand(
       GeoAdd,
-      Tuple2(ArbitraryInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryInput[M]()))),
+      Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryValueInput[M]()))),
       LongOutput,
       codec,
       executor
@@ -74,7 +74,12 @@ trait Geo extends RedisEnvironment {
   ): IO[RedisError, Option[Double]] = {
     val command = RedisCommand(
       GeoDist,
-      Tuple4(ArbitraryInput[K](), ArbitraryInput[M](), ArbitraryInput[M](), OptionalInput(RadiusUnitInput)),
+      Tuple4(
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[M](),
+        ArbitraryValueInput[M](),
+        OptionalInput(RadiusUnitInput)
+      ),
       OptionalOutput(DoubleOutput),
       codec,
       executor
@@ -102,7 +107,7 @@ trait Geo extends RedisEnvironment {
   ): IO[RedisError, Chunk[Option[String]]] = {
     val command = RedisCommand(
       GeoHash,
-      Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())),
+      Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
       ChunkOutput(OptionalOutput(MultiStringOutput)),
       codec,
       executor
@@ -129,7 +134,13 @@ trait Geo extends RedisEnvironment {
     members: M*
   ): IO[RedisError, Chunk[Option[LongLat]]] = {
     val command =
-      RedisCommand(GeoPos, Tuple2(ArbitraryInput[K](), NonEmptyList(ArbitraryInput[M]())), GeoOutput, codec, executor)
+      RedisCommand(
+        GeoPos,
+        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
+        GeoOutput,
+        codec,
+        executor
+      )
     command.run((key, (member, members.toList)))
   }
 
@@ -172,7 +183,7 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoRadius,
       Tuple9(
-        ArbitraryInput[K](),
+        ArbitraryKeyInput[K](),
         LongLatInput,
         DoubleInput,
         RadiusUnitInput,
@@ -235,7 +246,7 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoRadius,
       Tuple11(
-        ArbitraryInput[K](),
+        ArbitraryKeyInput[K](),
         LongLatInput,
         DoubleInput,
         RadiusUnitInput,
@@ -295,8 +306,8 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoRadiusByMember,
       Tuple9(
-        ArbitraryInput[K](),
-        ArbitraryInput[M](),
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[M](),
         DoubleInput,
         RadiusUnitInput,
         OptionalInput(WithCoordInput),
@@ -358,8 +369,8 @@ trait Geo extends RedisEnvironment {
     val command = RedisCommand(
       GeoRadiusByMember,
       Tuple11(
-        ArbitraryInput[K](),
-        ArbitraryInput[M](),
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[M](),
         DoubleInput,
         RadiusUnitInput,
         OptionalInput(WithCoordInput),

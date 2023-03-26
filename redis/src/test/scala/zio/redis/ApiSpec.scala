@@ -1,8 +1,8 @@
 package zio.redis
 
+import zio._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{ZLayer, _}
 
 object ApiSpec
     extends ConnectionSpec
@@ -34,11 +34,9 @@ object ApiSpec
       hyperLogLogSuite,
       hashSuite,
       streamsSuite,
-      scriptingSpec,
-      pubSubSuite
+      scriptingSpec
     ).provideShared(
       RedisExecutor.local,
-      RedisPubSub.local,
       Redis.layer,
       ZLayer.succeed(codec)
     )
@@ -54,17 +52,14 @@ object ApiSpec
       sortedSetsSuite,
       hyperLogLogSuite,
       geoSuite,
-      streamsSuite @@ clusterExecutorUnsupported,
-      scriptingSpec @@ clusterExecutorUnsupported,
-      clusterSpec,
-      pubSubSuite
+      streamsSuite,
+      scriptingSpec,
+      clusterSpec
     ).provideShared(
       ClusterExecutor.layer,
-      RedisPubSub.layer,
       Redis.layer,
       ZLayer.succeed(codec),
-      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000)))),
-      ZLayer.succeed(RedisConfig("localhost", 5000))
+      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
       .getOrElse(Spec.empty)
 }
