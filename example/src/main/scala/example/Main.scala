@@ -36,7 +36,7 @@ object Main extends ZIOAppDefault {
         RedisExecutor.layer,
         Redis.layer,
         ZLayer.succeed[CodecSupplier](new CodecSupplier {
-          def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+          def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
         })
       )
       .exitCode

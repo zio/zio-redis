@@ -23,5 +23,5 @@ private[redis] trait RedisEnvironment {
   protected def codec: CodecSupplier
   protected def executor: RedisExecutor
 
-  implicit def summonCodec[A: Schema]: BinaryCodec[A] = codec.codec
+  implicit def summonCodec[A: Schema]: BinaryCodec[A] = codec.get
 }
