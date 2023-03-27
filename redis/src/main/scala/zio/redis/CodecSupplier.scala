@@ -21,9 +21,11 @@ import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
 trait CodecSupplier {
-  implicit def codec[A: Schema]: BinaryCodec[A]
+  def codec[A: Schema]: BinaryCodec[A]
 }
 
-private[redis] object StringCodecSupplier extends CodecSupplier {
-  implicit def codec[A: Schema]: BinaryCodec[A] = StringUtf8Codec.codec
+object CodecSupplier {
+  def utf8string: CodecSupplier = new CodecSupplier {
+    def codec[A: Schema]: BinaryCodec[A] = StringUtf8Codec.codec
+  }
 }

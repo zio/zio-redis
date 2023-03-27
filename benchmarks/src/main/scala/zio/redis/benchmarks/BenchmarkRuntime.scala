@@ -37,7 +37,7 @@ object BenchmarkRuntime {
     ZLayer.make[Redis](
       RedisExecutor.local,
       ZLayer.succeed[CodecSupplier](new CodecSupplier {
-        implicit def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+        def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
       }),
       Redis.layer
     )

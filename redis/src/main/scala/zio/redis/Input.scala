@@ -32,8 +32,6 @@ sealed trait Input[-A] {
   }
 }
 
-abstract class ArbitraryInput[-A] extends Input[A] {}
-
 object Input {
 
   def apply[A](implicit input: Input[A]): Input[A] = input
@@ -341,12 +339,12 @@ object Input {
       RespCommand(RespArgument.CommandName(data))
   }
 
-  final case class ArbitraryValueInput[A: BinaryCodec]() extends ArbitraryInput[A] {
+  final case class ArbitraryValueInput[A: BinaryCodec]() extends Input[A] {
     def encode(data: A): RespCommand =
       RespCommand(RespArgument.Value(data))
   }
 
-  final case class ArbitraryKeyInput[A: BinaryCodec]() extends ArbitraryInput[A] {
+  final case class ArbitraryKeyInput[A: BinaryCodec]() extends Input[A] {
     def encode(data: A): RespCommand =
       RespCommand(RespArgument.Key(data))
   }
