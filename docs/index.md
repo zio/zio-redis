@@ -46,7 +46,7 @@ import zio.schema.codec._
 object ZIORedisExample extends ZIOAppDefault {
   
   object ProtobufCodecSupplier extends CodecSupplier {
-    def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
   }
   
   val myApp: ZIO[Redis, RedisError, Unit] = for {
@@ -90,7 +90,7 @@ import java.util.UUID
 
 object EmbeddedRedisSpec extends ZIOSpecDefault {
   object ProtobufCodecSupplier extends CodecSupplier {
-    def codec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
   }
   
   final case class Item private (id: UUID, name: String, quantity: Int)
