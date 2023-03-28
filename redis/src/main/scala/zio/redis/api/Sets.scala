@@ -41,13 +41,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sAdd[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
     val command =
-      RedisCommand(
-        SAdd,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
-        LongOutput,
-        codec,
-        executor
-      )
+      RedisCommand(SAdd, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), LongOutput, executor)
     command.run((key, (member, members.toList)))
   }
 
@@ -60,7 +54,7 @@ trait Sets extends RedisEnvironment {
    *   Returns the cardinality (number of elements) of the set, or 0 if key does not exist.
    */
   final def sCard[K: Schema](key: K): IO[RedisError, Long] = {
-    val command = RedisCommand(SCard, ArbitraryKeyInput[K](), LongOutput, codec, executor)
+    val command = RedisCommand(SCard, ArbitraryKeyInput[K](), LongOutput, executor)
     command.run(key)
   }
 
@@ -77,7 +71,7 @@ trait Sets extends RedisEnvironment {
   final def sDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SDiff, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor)
+        RedisCommand(SDiff, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), executor)
           .run((key, keys.toList))
     }
 
@@ -98,7 +92,6 @@ trait Sets extends RedisEnvironment {
       SDiffStore,
       Tuple2(ArbitraryValueInput[D](), NonEmptyList(ArbitraryKeyInput[K]())),
       LongOutput,
-      codec,
       executor
     )
     command.run((destination, (key, keys.toList)))
@@ -117,7 +110,7 @@ trait Sets extends RedisEnvironment {
   final def sInter[K: Schema](destination: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SInter, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor)
+        RedisCommand(SInter, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), executor)
           .run((destination, keys.toList))
     }
 
@@ -142,7 +135,6 @@ trait Sets extends RedisEnvironment {
       SInterStore,
       Tuple2(ArbitraryValueInput[D](), NonEmptyList(ArbitraryKeyInput[K]())),
       LongOutput,
-      codec,
       executor
     )
     command.run((destination, (key, keys.toList)))
@@ -161,7 +153,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sIsMember[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Boolean] = {
     val command =
-      RedisCommand(SIsMember, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()), BoolOutput, codec, executor)
+      RedisCommand(SIsMember, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()), BoolOutput, executor)
     command.run((key, member))
   }
 
@@ -176,7 +168,7 @@ trait Sets extends RedisEnvironment {
   final def sMembers[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SMembers, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[R]()), codec, executor).run(key)
+        RedisCommand(SMembers, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[R]()), executor).run(key)
     }
 
   /**
@@ -200,7 +192,6 @@ trait Sets extends RedisEnvironment {
       SMove,
       Tuple3(ArbitraryValueInput[S](), ArbitraryValueInput[D](), ArbitraryValueInput[M]()),
       BoolOutput,
-      codec,
       executor
     )
     command.run((source, destination, member))
@@ -223,7 +214,6 @@ trait Sets extends RedisEnvironment {
           SPop,
           Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
           MultiStringChunkOutput(ArbitraryOutput[R]()),
-          codec,
           executor
         )
         command.run((key, count))
@@ -247,7 +237,6 @@ trait Sets extends RedisEnvironment {
           SRandMember,
           Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
           MultiStringChunkOutput(ArbitraryOutput[R]()),
-          codec,
           executor
         )
         command.run((key, count))
@@ -268,13 +257,7 @@ trait Sets extends RedisEnvironment {
    */
   final def sRem[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
     val command =
-      RedisCommand(
-        SRem,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
-        LongOutput,
-        codec,
-        executor
-      )
+      RedisCommand(SRem, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), LongOutput, executor)
     command.run((key, (member, members.toList)))
   }
 
@@ -307,7 +290,6 @@ trait Sets extends RedisEnvironment {
           SScan,
           Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(MultiStringOutput.map(_.toLong), ChunkOutput(ArbitraryOutput[R]())),
-          codec,
           executor
         )
         command.run((key, cursor, pattern.map(Pattern(_)), count))
@@ -327,7 +309,7 @@ trait Sets extends RedisEnvironment {
   final def sUnion[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: IO[RedisError, Chunk[R]] =
-        RedisCommand(SUnion, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), codec, executor)
+        RedisCommand(SUnion, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(ArbitraryOutput[R]()), executor)
           .run((key, keys.toList))
     }
 
@@ -352,7 +334,6 @@ trait Sets extends RedisEnvironment {
       SUnionStore,
       Tuple2(ArbitraryValueInput[D](), NonEmptyList(ArbitraryKeyInput[K]())),
       LongOutput,
-      codec,
       executor
     )
     command.run((destination, (key, keys.toList)))

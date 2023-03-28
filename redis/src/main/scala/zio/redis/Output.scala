@@ -24,17 +24,17 @@ import zio.schema.codec.BinaryCodec
 sealed trait Output[+A] {
   self =>
 
-  private[redis] final def unsafeDecode(respValue: RespValue)(implicit codec: BinaryCodec): A =
+  private[redis] final def unsafeDecode(respValue: RespValue): A =
     respValue match {
       case error: RespValue.Error => throw error.toRedisError
       case success                => tryDecode(success)
     }
 
-  protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): A
+  protected def tryDecode(respValue: RespValue): A
 
   final def map[B](f: A => B): Output[B] =
     new Output[B] {
-      protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): B = f(self.tryDecode(respValue))
+      protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
     }
 
 }
@@ -46,11 +46,11 @@ object Output {
   def apply[A](implicit output: Output[A]): Output[A] = output
 
   case object RespValueOutput extends Output[RespValue] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): RespValue = respValue
+    protected def tryDecode(respValue: RespValue): RespValue = respValue
   }
 
   case object BoolOutput extends Output[Boolean] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Boolean =
+    protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
         case RespValue.Integer(0) => false
         case RespValue.Integer(1) => true
@@ -59,7 +59,7 @@ object Output {
   }
 
   final case class ChunkOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[A] =
+    protected def tryDecode(respValue: RespValue): Chunk[A] =
       respValue match {
         case RespValue.NullArray     => Chunk.empty
         case RespValue.Array(values) => values.map(output.tryDecode)
@@ -68,7 +68,7 @@ object Output {
   }
 
   final case class ZRandMemberOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[A] =
+    protected def tryDecode(respValue: RespValue): Chunk[A] =
       respValue match {
         case RespValue.NullBulkString => Chunk.empty
         case RespValue.NullArray      => Chunk.empty
@@ -78,7 +78,7 @@ object Output {
   }
 
   final case class ChunkTuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[Chunk[(A, B)]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[(A, B)] =
+    protected def tryDecode(respValue: RespValue): Chunk[(A, B)] =
       respValue match {
         case RespValue.NullArray =>
           Chunk.empty
@@ -92,7 +92,7 @@ object Output {
   }
 
   final case class ZRandMemberTuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[Chunk[(A, B)]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[(A, B)] =
+    protected def tryDecode(respValue: RespValue): Chunk[(A, B)] =
       respValue match {
         case RespValue.NullBulkString => Chunk.empty
         case RespValue.NullArray      => Chunk.empty
@@ -106,7 +106,7 @@ object Output {
   }
 
   case object DoubleOutput extends Output[Double] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Double =
+    protected def tryDecode(respValue: RespValue): Double =
       respValue match {
         case RespValue.BulkString(bytes) => decodeDouble(bytes)
         case other                       => throw ProtocolError(s"$other isn't a double.")
@@ -114,7 +114,7 @@ object Output {
   }
 
   private object DurationOutput extends Output[Long] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Long =
+    protected def tryDecode(respValue: RespValue): Long =
       respValue match {
         case RespValue.Integer(-2L) => throw ProtocolError("Key not found.")
         case RespValue.Integer(-1L) => throw ProtocolError("Key has no expire.")
@@ -128,7 +128,7 @@ object Output {
   final val DurationSecondsOutput: Output[Duration] = DurationOutput.map(_.seconds)
 
   case object LongOutput extends Output[Long] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Long =
+    protected def tryDecode(respValue: RespValue): Long =
       respValue match {
         case RespValue.Integer(v) => v
         case other                => throw ProtocolError(s"$other isn't an integer")
@@ -136,7 +136,7 @@ object Output {
   }
 
   final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Option[A] =
+    protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {
         case RespValue.NullBulkString | RespValue.NullArray => None
         case RespValue.BulkString(value) if value.isEmpty   => None
@@ -145,7 +145,7 @@ object Output {
   }
 
   final case class ScanOutput[+A](output: Output[A]) extends Output[(Long, Chunk[A])] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): (Long, Chunk[A]) =
+    protected def tryDecode(respValue: RespValue): (Long, Chunk[A]) =
       respValue match {
         case RespValue.ArrayValues(cursor @ RespValue.BulkString(_), RespValue.Array(items)) =>
           (cursor.asLong, items.map(output.tryDecode))
@@ -155,7 +155,7 @@ object Output {
   }
 
   case object KeyElemOutput extends Output[Option[(String, String)]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Option[(String, String)] =
+    protected def tryDecode(respValue: RespValue): Option[(String, String)] =
       respValue match {
         case RespValue.NullArray =>
           None
@@ -166,7 +166,7 @@ object Output {
   }
 
   case object StringOutput extends Output[String] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): String =
+    protected def tryDecode(respValue: RespValue): String =
       respValue match {
         case RespValue.SimpleString(s) => s
         case other                     => throw ProtocolError(s"$other isn't a simple string")
@@ -174,7 +174,7 @@ object Output {
   }
 
   case object MultiStringOutput extends Output[String] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): String =
+    protected def tryDecode(respValue: RespValue): String =
       respValue match {
         case s @ RespValue.BulkString(_) => s.asString
         case other                       => throw ProtocolError(s"$other isn't a bulk string")
@@ -182,23 +182,23 @@ object Output {
   }
 
   case object BulkStringOutput extends Output[Chunk[Byte]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[Byte] =
+    protected def tryDecode(respValue: RespValue): Chunk[Byte] =
       respValue match {
         case RespValue.BulkString(value) => value
         case other                       => throw ProtocolError(s"$other isn't a bulk string")
       }
   }
 
-  final case class ArbitraryOutput[A]()(implicit schema: Schema[A]) extends Output[A] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): A =
+  final case class ArbitraryOutput[A]()(implicit codec: BinaryCodec[A]) extends Output[A] {
+    protected def tryDecode(respValue: RespValue): A =
       respValue match {
-        case RespValue.BulkString(s) => codec.decode(schema)(s).fold(e => throw CodecError(e.message), identity)
+        case RespValue.BulkString(s) => codec.decode(s).fold(e => throw CodecError(e.message), identity)
         case other                   => throw ProtocolError(s"$other isn't a bulk string")
       }
   }
 
   final case class Tuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[(A, B)] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): (A, B) =
+    protected def tryDecode(respValue: RespValue): (A, B) =
       respValue match {
         case RespValue.ArrayValues(a: RespValue, b: RespValue) => (_1.tryDecode(a), _2.tryDecode(b))
         case other                                             => throw ProtocolError(s"$other isn't a tuple2")
@@ -206,7 +206,7 @@ object Output {
   }
 
   final case class Tuple3Output[+A, +B, +C](_1: Output[A], _2: Output[B], _3: Output[C]) extends Output[(A, B, C)] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): (A, B, C) =
+    protected def tryDecode(respValue: RespValue): (A, B, C) =
       respValue match {
         case RespValue.ArrayValues(a: RespValue, b: RespValue, c: RespValue) =>
           (_1.tryDecode(a), _2.tryDecode(b), _3.tryDecode(c))
@@ -215,7 +215,7 @@ object Output {
   }
 
   case object SingleOrMultiStringOutput extends Output[String] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): String =
+    protected def tryDecode(respValue: RespValue): String =
       respValue match {
         case RespValue.SimpleString(s)   => s
         case s @ RespValue.BulkString(_) => s.asString
@@ -224,7 +224,7 @@ object Output {
   }
 
   final case class MultiStringChunkOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[A] =
+    protected def tryDecode(respValue: RespValue): Chunk[A] =
       respValue match {
         case RespValue.NullBulkString    => Chunk.empty
         case s @ RespValue.BulkString(_) => Chunk.single(output.tryDecode(s))
@@ -234,7 +234,7 @@ object Output {
   }
 
   case object TypeOutput extends Output[RedisType] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): RedisType =
+    protected def tryDecode(respValue: RespValue): RedisType =
       respValue match {
         case RespValue.SimpleString("string") => RedisType.String
         case RespValue.SimpleString("list")   => RedisType.List
@@ -247,7 +247,7 @@ object Output {
   }
 
   case object UnitOutput extends Output[Unit] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Unit =
+    protected def tryDecode(respValue: RespValue): Unit =
       respValue match {
         case RespValue.SimpleString("OK") => ()
         case other                        => throw ProtocolError(s"$other isn't unit.")
@@ -255,7 +255,7 @@ object Output {
   }
 
   case object ResetOutput extends Output[Unit] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Unit =
+    protected def tryDecode(respValue: RespValue): Unit =
       respValue match {
         case RespValue.SimpleString("RESET") => ()
         case other                           => throw ProtocolError(s"$other isn't unit.")
@@ -263,7 +263,7 @@ object Output {
   }
 
   case object GeoOutput extends Output[Chunk[Option[LongLat]]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[Option[LongLat]] =
+    protected def tryDecode(respValue: RespValue): Chunk[Option[LongLat]] =
       respValue match {
         case RespValue.NullArray =>
           Chunk.empty
@@ -281,7 +281,7 @@ object Output {
   }
 
   case object GeoRadiusOutput extends Output[Chunk[GeoView]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[GeoView] =
+    protected def tryDecode(respValue: RespValue): Chunk[GeoView] =
       respValue match {
         case RespValue.Array(elements) =>
           elements.map {
@@ -307,7 +307,7 @@ object Output {
   }
 
   final case class KeyValueOutput[K, V](outK: Output[K], outV: Output[V]) extends Output[Map[K, V]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Map[K, V] =
+    protected def tryDecode(respValue: RespValue): Map[K, V] =
       respValue match {
         case RespValue.NullArray =>
           Map.empty[K, V]
@@ -331,12 +331,12 @@ object Output {
       }
   }
 
-  final case class StreamEntryOutput[I, K, V]()(implicit
+  final case class StreamEntryOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
     idSchema: Schema[I],
     keySchema: Schema[K],
     valueSchema: Schema[V]
   ) extends Output[StreamEntry[I, K, V]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): StreamEntry[I, K, V] =
+    protected def tryDecode(respValue: RespValue): StreamEntry[I, K, V] =
       respValue match {
         case RespValue.Array(Seq(id @ RespValue.BulkString(_), value)) =>
           val entryId = ArbitraryOutput[I]().unsafeDecode(id)
@@ -347,29 +347,29 @@ object Output {
       }
   }
 
-  final case class StreamEntriesOutput[I, K, V]()(implicit
+  final case class StreamEntriesOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
     idSchema: Schema[I],
     keySchema: Schema[K],
     valueSchema: Schema[V]
   ) extends Output[Chunk[StreamEntry[I, K, V]]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamEntry[I, K, V]] =
+    protected def tryDecode(respValue: RespValue): Chunk[StreamEntry[I, K, V]] =
       ChunkOutput(StreamEntryOutput[I, K, V]()).unsafeDecode(respValue)
   }
 
-  final case class StreamOutput[N, I, K, V]()(implicit
+  final case class StreamOutput[N: BinaryCodec, I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
     nameSchema: Schema[N],
     idSchema: Schema[I],
     keySchema: Schema[K],
     valueSchema: Schema[V]
   ) extends Output[StreamChunk[N, I, K, V]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): StreamChunk[N, I, K, V] = {
+    protected def tryDecode(respValue: RespValue): StreamChunk[N, I, K, V] = {
       val (name, entries) = Tuple2Output(ArbitraryOutput[N](), StreamEntriesOutput[I, K, V]()).unsafeDecode(respValue)
       StreamChunk(name, entries)
     }
   }
 
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamGroupsInfo] =
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamGroupsInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
@@ -408,7 +408,7 @@ object Output {
   }
 
   case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[StreamConsumersInfo] =
+    override protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
@@ -444,11 +444,11 @@ object Output {
       }
   }
 
-  final case class StreamInfoFullOutput[I: Schema, K: Schema, V: Schema]()
+  final case class StreamInfoFullOutput[I: Schema: BinaryCodec, K: Schema: BinaryCodec, V: Schema: BinaryCodec]()
       extends Output[StreamInfoWithFull.FullStreamInfo[I, K, V]] {
     override protected def tryDecode(
       respValue: RespValue
-    )(implicit codec: BinaryCodec): StreamInfoWithFull.FullStreamInfo[I, K, V] = {
+    ): StreamInfoWithFull.FullStreamInfo[I, K, V] = {
       var streamInfoFull: StreamInfoWithFull.FullStreamInfo[I, K, V] = StreamInfoWithFull.FullStreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
@@ -583,8 +583,9 @@ object Output {
     }
   }
 
-  final case class StreamInfoOutput[I: Schema, K: Schema, V: Schema]() extends Output[StreamInfo[I, K, V]] {
-    override protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): StreamInfo[I, K, V] = {
+  final case class StreamInfoOutput[I: Schema: BinaryCodec, K: Schema: BinaryCodec, V: Schema: BinaryCodec]()
+      extends Output[StreamInfo[I, K, V]] {
+    override protected def tryDecode(respValue: RespValue): StreamInfo[I, K, V] = {
       var streamInfo: StreamInfo[I, K, V] = StreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
@@ -625,7 +626,7 @@ object Output {
   }
 
   case object XPendingOutput extends Output[PendingInfo] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): PendingInfo =
+    protected def tryDecode(respValue: RespValue): PendingInfo =
       respValue match {
         case RespValue.Array(Seq(RespValue.Integer(total), f, l, ps)) =>
           val first = OptionalOutput(MultiStringOutput).unsafeDecode(f)
@@ -657,7 +658,7 @@ object Output {
   }
 
   case object PendingMessagesOutput extends Output[Chunk[PendingMessage]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[PendingMessage] =
+    protected def tryDecode(respValue: RespValue): Chunk[PendingMessage] =
       respValue match {
         case RespValue.Array(messages) =>
           messages.collect {
@@ -680,7 +681,7 @@ object Output {
   }
 
   case object SetOutput extends Output[Boolean] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Boolean =
+    protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
         case RespValue.NullBulkString  => false
         case RespValue.SimpleString(_) => true
@@ -689,7 +690,7 @@ object Output {
   }
 
   case object StrAlgoLcsOutput extends Output[LcsOutput] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): LcsOutput =
+    protected def tryDecode(respValue: RespValue): LcsOutput =
       respValue match {
         case result @ RespValue.BulkString(_) => LcsOutput.Lcs(result.asString)
         case RespValue.Integer(length)        => LcsOutput.Length(length)
@@ -728,7 +729,7 @@ object Output {
   }
 
   case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): ClientTrackingInfo =
+    protected def tryDecode(respValue: RespValue): ClientTrackingInfo =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) if values.length % 2 == 0 =>
@@ -792,7 +793,7 @@ object Output {
   }
 
   case object ClientTrackingRedirectOutput extends Output[ClientTrackingRedirect] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): ClientTrackingRedirect =
+    protected def tryDecode(respValue: RespValue): ClientTrackingRedirect =
       respValue match {
         case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
         case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
@@ -802,7 +803,7 @@ object Output {
   }
 
   case object ClusterPartitionOutput extends Output[Partition] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Partition =
+    protected def tryDecode(respValue: RespValue): Partition =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
@@ -816,7 +817,7 @@ object Output {
   }
 
   case object ClusterPartitionNodeOutput extends Output[Node] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Node =
+    protected def tryDecode(respValue: RespValue): Node =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>

@@ -30,6 +30,9 @@ object BuildHelper {
   val Scala213 = versions("2.13")
   val Scala3   = versions("3")
 
+  val zioVersion       = "2.0.10"
+  val zioSchemaVersion = "0.4.9"
+
   def buildInfoSettings(packageName: String) =
     List(
       buildInfoKeys    := List[BuildInfoKey](name, version, scalaVersion, sbtVersion, isSnapshot),

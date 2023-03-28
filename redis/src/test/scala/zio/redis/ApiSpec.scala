@@ -1,6 +1,7 @@
 package zio.redis
 
 import zio._
+import zio.redis.codecs.ProtobufCodecSupplier
 import zio.test.TestAspect._
 import zio.test._
 
@@ -37,7 +38,7 @@ object ApiSpec
     ).provideShared(
       RedisExecutor.local,
       Redis.layer,
-      ZLayer.succeed(codec)
+      ZLayer.succeed(ProtobufCodecSupplier)
     )
 
   private val clusterSuite =
@@ -57,7 +58,7 @@ object ApiSpec
     ).provideShared(
       ClusterExecutor.layer,
       Redis.layer,
-      ZLayer.succeed(codec),
+      ZLayer.succeed(ProtobufCodecSupplier),
       ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
       .getOrElse(Spec.empty)
