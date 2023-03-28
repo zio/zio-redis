@@ -46,7 +46,6 @@ trait Geo extends RedisEnvironment {
       GeoAdd,
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryValueInput[M]()))),
       LongOutput,
-      codec,
       executor
     )
     command.run((key, (item, items.toList)))
@@ -81,7 +80,6 @@ trait Geo extends RedisEnvironment {
         OptionalInput(RadiusUnitInput)
       ),
       OptionalOutput(DoubleOutput),
-      codec,
       executor
     )
     command.run((key, member1, member2, radiusUnit))
@@ -109,7 +107,6 @@ trait Geo extends RedisEnvironment {
       GeoHash,
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
       ChunkOutput(OptionalOutput(MultiStringOutput)),
-      codec,
       executor
     )
     command.run((key, (member, members.toList)))
@@ -134,13 +131,7 @@ trait Geo extends RedisEnvironment {
     members: M*
   ): IO[RedisError, Chunk[Option[LongLat]]] = {
     val command =
-      RedisCommand(
-        GeoPos,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
-        GeoOutput,
-        codec,
-        executor
-      )
+      RedisCommand(GeoPos, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), GeoOutput, executor)
     command.run((key, (member, members.toList)))
   }
 
@@ -194,7 +185,6 @@ trait Geo extends RedisEnvironment {
         OptionalInput(OrderInput)
       ),
       GeoRadiusOutput,
-      codec,
       executor
     )
     command.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
@@ -259,7 +249,6 @@ trait Geo extends RedisEnvironment {
         OptionalInput(StoreDistInput)
       ),
       LongOutput,
-      codec,
       executor
     )
     command.run(
@@ -317,7 +306,6 @@ trait Geo extends RedisEnvironment {
         OptionalInput(OrderInput)
       ),
       GeoRadiusOutput,
-      codec,
       executor
     )
     command.run((key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
@@ -382,7 +370,6 @@ trait Geo extends RedisEnvironment {
         OptionalInput(StoreDistInput)
       ),
       LongOutput,
-      codec,
       executor
     )
     command.run(
