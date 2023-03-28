@@ -19,7 +19,6 @@ package zio.redis
 import zio.Chunk
 import zio.redis.RespValue.BulkString
 import zio.redis.codecs.CRC16
-import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
 import java.nio.charset.StandardCharsets
@@ -35,8 +34,8 @@ object RespArgument {
   }
 
   object Unknown {
-    def apply(str: String): Unknown                                                = Unknown(Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8)))
-    def apply[A](data: A)(implicit codec: BinaryCodec, schema: Schema[A]): Unknown = Unknown(codec.encode(schema)(data))
+    def apply(str: String): Unknown                                = Unknown(Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8)))
+    def apply[A](data: A)(implicit codec: BinaryCodec[A]): Unknown = Unknown(codec.encode(data))
   }
 
   final case class CommandName(str: String) extends RespArgument {
@@ -58,7 +57,7 @@ object RespArgument {
   }
 
   object Key {
-    def apply[A](data: A)(implicit codec: BinaryCodec, schema: Schema[A]): Key = Key(codec.encode(schema)(data))
+    def apply[A](data: A)(implicit codec: BinaryCodec[A]): Key = Key(codec.encode(data))
   }
 
   final case class Value(bytes: Chunk[Byte]) extends RespArgument {
@@ -66,6 +65,6 @@ object RespArgument {
   }
 
   object Value {
-    def apply[A](data: A)(implicit codec: BinaryCodec, schema: Schema[A]): Value = Value(codec.encode(schema)(data))
+    def apply[A](data: A)(implicit codec: BinaryCodec[A]): Value = Value(codec.encode(data))
   }
 }

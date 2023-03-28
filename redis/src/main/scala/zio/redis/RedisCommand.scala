@@ -18,24 +18,22 @@ package zio.redis
 
 import zio._
 import zio.redis.Input.{CommandNameInput, Varargs}
-import zio.schema.codec.BinaryCodec
 
 final class RedisCommand[-In, +Out] private (
   val name: String,
   val input: Input[In],
   val output: Output[Out],
-  val codec: BinaryCodec,
   val executor: RedisExecutor
 ) {
 
   private[redis] def run(in: In): IO[RedisError, Out] =
     executor
       .execute(resp(in))
-      .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)(codec)))
+      .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)))
       .refineToOrDie[RedisError]
 
   private[redis] def resp(in: In): RespCommand =
-    Varargs(CommandNameInput).encode(name.split(" "))(codec) ++ input.encode(in)(codec)
+    Varargs(CommandNameInput).encode(name.split(" ")) ++ input.encode(in)
 }
 
 object RedisCommand {
@@ -43,8 +41,7 @@ object RedisCommand {
     name: String,
     input: Input[In],
     output: Output[Out],
-    codec: BinaryCodec,
     executor: RedisExecutor
   ): RedisCommand[In, Out] =
-    new RedisCommand(name, input, output, codec, executor)
+    new RedisCommand(name, input, output, executor)
 }

@@ -22,7 +22,6 @@ import zio.redis._
 import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
-import zio.schema.codec.BinaryCodec
 import zio.{Chunk, IO}
 
 trait Cluster extends RedisEnvironment {
@@ -35,7 +34,7 @@ trait Cluster extends RedisEnvironment {
    *   the Unit value.
    */
   final def asking: IO[RedisError, Unit] =
-    AskingCommand(codec, executor).run(())
+    AskingCommand(executor).run(())
 
   /**
    * Returns details about which cluster slots map to which Redis instances.
@@ -44,7 +43,7 @@ trait Cluster extends RedisEnvironment {
    *   details about which cluster
    */
   final def slots: IO[RedisError, Chunk[Partition]] = {
-    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), codec, executor)
+    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), executor)
     command.run(())
   }
 
@@ -58,7 +57,7 @@ trait Cluster extends RedisEnvironment {
    */
   final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
     val command =
-      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, codec, executor)
+      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, executor)
     command.run((slot.number, Stable.stringify))
   }
 
@@ -78,7 +77,6 @@ trait Cluster extends RedisEnvironment {
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput,
-      codec,
       executor
     )
     command.run((slot.number, Migrating.stringify, nodeId))
@@ -100,7 +98,6 @@ trait Cluster extends RedisEnvironment {
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput,
-      codec,
       executor
     )
     command.run((slot.number, Importing.stringify, nodeId))
@@ -122,7 +119,6 @@ trait Cluster extends RedisEnvironment {
       ClusterSetSlots,
       Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput,
-      codec,
       executor
     )
     command.run((slot.number, Node.stringify, nodeId))
@@ -134,6 +130,6 @@ private[redis] object Cluster {
   final val ClusterSlots    = "CLUSTER SLOTS"
   final val ClusterSetSlots = "CLUSTER SETSLOT"
 
-  final val AskingCommand: (BinaryCodec, RedisExecutor) => RedisCommand[Unit, Unit] =
-    RedisCommand(Asking, NoInput, UnitOutput, _, _)
+  final val AskingCommand: (RedisExecutor) => RedisCommand[Unit, Unit] =
+    (executor: RedisExecutor) => RedisCommand(Asking, NoInput, UnitOutput, executor)
 }

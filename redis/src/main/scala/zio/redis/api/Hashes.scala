@@ -40,13 +40,7 @@ trait Hashes extends RedisEnvironment {
    */
   final def hDel[K: Schema, F: Schema](key: K, field: F, fields: F*): IO[RedisError, Long] = {
     val command =
-      RedisCommand(
-        HDel,
-        Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[F]())),
-        LongOutput,
-        codec,
-        executor
-      )
+      RedisCommand(HDel, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[F]())), LongOutput, executor)
     command.run((key, (field, fields.toList)))
   }
 
@@ -62,7 +56,7 @@ trait Hashes extends RedisEnvironment {
    */
   final def hExists[K: Schema, F: Schema](key: K, field: F): IO[RedisError, Boolean] = {
     val command =
-      RedisCommand(HExists, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()), BoolOutput, codec, executor)
+      RedisCommand(HExists, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()), BoolOutput, executor)
     command.run((key, field))
   }
 
@@ -83,7 +77,6 @@ trait Hashes extends RedisEnvironment {
           HGet,
           Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()),
           OptionalOutput(ArbitraryOutput[V]()),
-          codec,
           executor
         )
           .run((key, field))
@@ -104,7 +97,6 @@ trait Hashes extends RedisEnvironment {
           HGetAll,
           ArbitraryKeyInput[K](),
           KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]()),
-          codec,
           executor
         )
       command.run(key)
@@ -126,13 +118,7 @@ trait Hashes extends RedisEnvironment {
    */
   final def hIncrBy[K: Schema, F: Schema](key: K, field: F, increment: Long): IO[RedisError, Long] = {
     val command =
-      RedisCommand(
-        HIncrBy,
-        Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), LongInput),
-        LongOutput,
-        codec,
-        executor
-      )
+      RedisCommand(HIncrBy, Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), LongInput), LongOutput, executor)
     command.run((key, field, increment))
   }
 
@@ -159,7 +145,6 @@ trait Hashes extends RedisEnvironment {
         HIncrByFloat,
         Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), DoubleInput),
         DoubleOutput,
-        codec,
         executor
       )
     command.run((key, field, increment))
@@ -176,7 +161,7 @@ trait Hashes extends RedisEnvironment {
   final def hKeys[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[F: Schema]: IO[RedisError, Chunk[F]] =
-        RedisCommand(HKeys, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[F]()), codec, executor).run(key)
+        RedisCommand(HKeys, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[F]()), executor).run(key)
     }
 
   /**
@@ -188,7 +173,7 @@ trait Hashes extends RedisEnvironment {
    *   number of fields.
    */
   final def hLen[K: Schema](key: K): IO[RedisError, Long] = {
-    val command = RedisCommand(HLen, ArbitraryKeyInput[K](), LongOutput, codec, executor)
+    val command = RedisCommand(HLen, ArbitraryKeyInput[K](), LongOutput, executor)
     command.run(key)
   }
 
@@ -215,7 +200,6 @@ trait Hashes extends RedisEnvironment {
           HmGet,
           Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[F]())),
           ChunkOutput(OptionalOutput(ArbitraryOutput[V]())),
-          codec,
           executor
         )
         command.run((key, (field, fields.toList)))
@@ -244,7 +228,6 @@ trait Hashes extends RedisEnvironment {
       HmSet,
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(ArbitraryValueInput[F](), ArbitraryValueInput[V]()))),
       UnitOutput,
-      codec,
       executor
     )
     command.run((key, (pair, pairs.toList)))
@@ -276,7 +259,6 @@ trait Hashes extends RedisEnvironment {
           HScan,
           Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]())),
-          codec,
           executor
         )
         command.run((key, cursor, pattern.map(Pattern(_)), count))
@@ -304,7 +286,6 @@ trait Hashes extends RedisEnvironment {
       HSet,
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(ArbitraryValueInput[F](), ArbitraryValueInput[V]()))),
       LongOutput,
-      codec,
       executor
     )
     command.run((key, (pair, pairs.toList)))
@@ -332,7 +313,6 @@ trait Hashes extends RedisEnvironment {
         HSetNx,
         Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), ArbitraryValueInput[V]()),
         BoolOutput,
-        codec,
         executor
       )
     command.run((key, field, value))
@@ -350,7 +330,7 @@ trait Hashes extends RedisEnvironment {
    */
   final def hStrLen[K: Schema, F: Schema](key: K, field: F): IO[RedisError, Long] = {
     val command =
-      RedisCommand(HStrLen, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()), LongOutput, codec, executor)
+      RedisCommand(HStrLen, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()), LongOutput, executor)
     command.run((key, field))
   }
 
@@ -365,7 +345,7 @@ trait Hashes extends RedisEnvironment {
   final def hVals[K: Schema](key: K): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[V: Schema]: IO[RedisError, Chunk[V]] =
-        RedisCommand(HVals, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[V]()), codec, executor).run(key)
+        RedisCommand(HVals, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[V]()), executor).run(key)
     }
 
   /**
@@ -379,7 +359,7 @@ trait Hashes extends RedisEnvironment {
   final def hRandField[K: Schema](key: K): ResultBuilder1[Option] =
     new ResultBuilder1[Option] {
       def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(HRandField, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]()), codec, executor).run(key)
+        RedisCommand(HRandField, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]()), executor).run(key)
     }
 
   /**
@@ -403,7 +383,6 @@ trait Hashes extends RedisEnvironment {
           HRandField,
           Tuple3(ArbitraryKeyInput[K](), LongInput, OptionalInput(StringInput)),
           ChunkOutput(ArbitraryOutput[V]()),
-          codec,
           executor
         )
         command.run((key, count, if (withValues) Some("WITHVALUES") else None))

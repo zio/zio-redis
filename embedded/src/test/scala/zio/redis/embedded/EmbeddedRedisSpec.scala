@@ -44,7 +44,9 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
   ).provideShared(
     EmbeddedRedis.layer.orDie,
     RedisExecutor.layer.orDie,
-    ZLayer.succeed[BinaryCodec](ProtobufCodec),
+    ZLayer.succeed[CodecSupplier](new CodecSupplier {
+      def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+    }),
     Redis.layer
   ) @@ TestAspect.silentLogging
 

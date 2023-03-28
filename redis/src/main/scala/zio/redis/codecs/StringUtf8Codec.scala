@@ -19,46 +19,38 @@ package zio.redis.codecs
 import zio.redis.RedisError.CodecError
 import zio.schema.Schema
 import zio.schema.StandardType.{DoubleType, IntType, LongType}
-import zio.schema.codec.BinaryCodec.{BinaryDecoder, BinaryEncoder, BinaryStreamDecoder, BinaryStreamEncoder}
+import zio.schema.codec.BinaryCodec.{BinaryStreamDecoder, BinaryStreamEncoder}
 import zio.schema.codec.{BinaryCodec, DecodeError}
 import zio.stream.ZPipeline
 import zio.{Cause, Chunk, ZIO}
 
 import java.nio.charset.StandardCharsets
 
-private[redis] object StringUtf8Codec extends BinaryCodec {
+private[redis] object StringUtf8Codec {
 
-  def encoderFor[A](schema: Schema[A]): BinaryEncoder[A] =
-    new BinaryEncoder[A] {
-
-      override def encode(value: A): Chunk[Byte] =
-        schema match {
-          case Schema.Primitive(_, _) => Chunk.fromArray(value.toString.getBytes(StandardCharsets.UTF_8))
-          case _                      => throw CodecError("the codec support only primitives")
-        }
-
-      override def streamEncoder: BinaryStreamEncoder[A] =
-        ZPipeline.mapChunks(_.flatMap(encode))
-
-    }
-
-  def decoderFor[A](schema: Schema[A]): BinaryDecoder[A] =
-    new BinaryDecoder[A] {
-
-      override def decode(chunk: Chunk[Byte]): Either[DecodeError, A] = {
-        def utf8String = new String(chunk.toArray, StandardCharsets.UTF_8)
-
-        schema match {
-          case Schema.Primitive(IntType, _)    => Right(utf8String.toInt.asInstanceOf[A])
-          case Schema.Primitive(LongType, _)   => Right(utf8String.toLong.asInstanceOf[A])
-          case Schema.Primitive(DoubleType, _) => Right(utf8String.toDouble.asInstanceOf[A])
-          case Schema.Primitive(_, _)          => Right(utf8String.asInstanceOf[A])
-          case _                               => Left(DecodeError.ReadError(Cause.empty, "the codec support only primitives"))
-        }
+  implicit def codec[A](implicit schema: Schema[A]): BinaryCodec[A] = new BinaryCodec[A] {
+    override def encode(value: A): Chunk[Byte] =
+      schema match {
+        case Schema.Primitive(_, _) => Chunk.fromArray(value.toString.getBytes(StandardCharsets.UTF_8))
+        case _                      => throw CodecError("the codec support only primitives")
       }
 
-      override def streamDecoder: BinaryStreamDecoder[A] =
-        ZPipeline.mapChunksZIO(chunk => ZIO.fromEither(decode(chunk).map(Chunk(_))))
+    override def streamEncoder: BinaryStreamEncoder[A] =
+      ZPipeline.mapChunks(_.flatMap(encode))
 
+    override def decode(chunk: Chunk[Byte]): Either[DecodeError, A] = {
+      def utf8String = new String(chunk.toArray, StandardCharsets.UTF_8)
+
+      schema match {
+        case Schema.Primitive(IntType, _)    => Right(utf8String.toInt.asInstanceOf[A])
+        case Schema.Primitive(LongType, _)   => Right(utf8String.toLong.asInstanceOf[A])
+        case Schema.Primitive(DoubleType, _) => Right(utf8String.toDouble.asInstanceOf[A])
+        case Schema.Primitive(_, _)          => Right(utf8String.asInstanceOf[A])
+        case _                               => Left(DecodeError.ReadError(Cause.empty, "the codec support only primitives"))
+      }
     }
+
+    override def streamDecoder: BinaryStreamDecoder[A] =
+      ZPipeline.mapChunksZIO(chunk => ZIO.fromEither(decode(chunk).map(Chunk(_))))
+  }
 }
