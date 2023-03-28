@@ -52,7 +52,6 @@ trait Streams extends RedisEnvironment {
       XAck,
       Tuple3(ArbitraryKeyInput[SK](), ArbitraryValueInput[G](), NonEmptyList(ArbitraryValueInput[I]())),
       LongOutput,
-      codec,
       executor
     )
     command.run((key, group, (id, ids.toList)))
@@ -89,7 +88,6 @@ trait Streams extends RedisEnvironment {
             NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
           ),
           ArbitraryOutput[R](),
-          codec,
           executor
         )
         command.run((key, None, id, (pair, pairs.toList)))
@@ -108,7 +106,7 @@ trait Streams extends RedisEnvironment {
     key: SK
   ): ResultBuilder3[StreamInfo] = new ResultBuilder3[StreamInfo] {
     def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, StreamInfo[RI, RK, RV]] = {
-      val command = RedisCommand(XInfoStream, ArbitraryKeyInput[SK](), StreamInfoOutput[RI, RK, RV](), codec, executor)
+      val command = RedisCommand(XInfoStream, ArbitraryKeyInput[SK](), StreamInfoOutput[RI, RK, RV](), executor)
       command.run(key)
     }
   }
@@ -129,7 +127,6 @@ trait Streams extends RedisEnvironment {
         XInfoStream,
         Tuple2(ArbitraryKeyInput[SK](), ArbitraryValueInput[String]()),
         StreamInfoFullOutput[RI, RK, RV](),
-        codec,
         executor
       )
       command.run((key, "FULL"))
@@ -155,7 +152,6 @@ trait Streams extends RedisEnvironment {
         XInfoStream,
         Tuple3(ArbitraryKeyInput[SK](), ArbitraryValueInput[String](), CountInput),
         StreamInfoFullOutput[RI, RK, RV](),
-        codec,
         executor
       )
       command.run((key, "FULL", Count(count)))
@@ -171,7 +167,7 @@ trait Streams extends RedisEnvironment {
    *   List of consumer groups associated with the stream stored at the specified key.
    */
   final def xInfoGroups[SK: Schema](key: SK): IO[RedisError, Chunk[StreamGroupsInfo]] = {
-    val command = RedisCommand(XInfoGroups, ArbitraryKeyInput[SK](), StreamGroupsInfoOutput, codec, executor)
+    val command = RedisCommand(XInfoGroups, ArbitraryKeyInput[SK](), StreamGroupsInfoOutput, executor)
     command.run(key)
   }
 
@@ -194,7 +190,6 @@ trait Streams extends RedisEnvironment {
         XInfoConsumers,
         Tuple2(ArbitraryKeyInput[SK](), ArbitraryValueInput[SG]()),
         StreamConsumersInfoOutput,
-        codec,
         executor
       )
     command.run((key, group))
@@ -238,7 +233,6 @@ trait Streams extends RedisEnvironment {
             NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
           ),
           ArbitraryOutput[R](),
-          codec,
           executor
         )
         command.run((key, Some(StreamMaxLen(approximate, count)), id, (pair, pairs.toList)))
@@ -298,7 +292,6 @@ trait Streams extends RedisEnvironment {
             OptionalInput(WithForceInput)
           ),
           StreamEntriesOutput[I, RK, RV](),
-          codec,
           executor
         )
         val forceOpt = if (force) Some(WithForce) else None
@@ -360,7 +353,6 @@ trait Streams extends RedisEnvironment {
             WithJustIdInput
           ),
           ChunkOutput(ArbitraryOutput[R]()),
-          codec,
           executor
         )
         val forceOpt = if (force) Some(WithForce) else None
@@ -382,13 +374,7 @@ trait Streams extends RedisEnvironment {
    */
   final def xDel[SK: Schema, I: Schema](key: SK, id: I, ids: I*): IO[RedisError, Long] = {
     val command =
-      RedisCommand(
-        XDel,
-        Tuple2(ArbitraryKeyInput[SK](), NonEmptyList(ArbitraryValueInput[I]())),
-        LongOutput,
-        codec,
-        executor
-      )
+      RedisCommand(XDel, Tuple2(ArbitraryKeyInput[SK](), NonEmptyList(ArbitraryValueInput[I]())), LongOutput, executor)
     command.run((key, (id, ids.toList)))
   }
 
@@ -410,7 +396,7 @@ trait Streams extends RedisEnvironment {
     id: I,
     mkStream: Boolean = false
   ): IO[RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupCreateInput[SK, SG, I](), UnitOutput, codec, executor)
+    val command = RedisCommand(XGroup, XGroupCreateInput[SK, SG, I](), UnitOutput, executor)
     command.run(Create(key, group, id, mkStream))
   }
 
@@ -429,7 +415,7 @@ trait Streams extends RedisEnvironment {
     group: SG,
     id: I
   ): IO[RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput, codec, executor)
+    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput, executor)
     command.run(SetId(key, group, id))
   }
 
@@ -444,7 +430,7 @@ trait Streams extends RedisEnvironment {
    *   flag that indicates if the deletion was successful.
    */
   final def xGroupDestroy[SK: Schema, SG: Schema](key: SK, group: SG): IO[RedisError, Boolean] =
-    RedisCommand(XGroup, XGroupDestroyInput[SK, SG](), BoolOutput, codec, executor).run(Destroy(key, group))
+    RedisCommand(XGroup, XGroupDestroyInput[SK, SG](), BoolOutput, executor).run(Destroy(key, group))
 
   /**
    * Create a new consumer associated with a consumer group.
@@ -463,7 +449,7 @@ trait Streams extends RedisEnvironment {
     group: SG,
     consumer: SC
   ): IO[RedisError, Boolean] = {
-    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), BoolOutput, codec, executor)
+    val command = RedisCommand(XGroup, XGroupCreateConsumerInput[SK, SG, SC](), BoolOutput, executor)
     command.run(CreateConsumer(key, group, consumer))
   }
 
@@ -484,7 +470,7 @@ trait Streams extends RedisEnvironment {
     group: SG,
     consumer: SC
   ): IO[RedisError, Long] = {
-    val command = RedisCommand(XGroup, XGroupDelConsumerInput[SK, SG, SC](), LongOutput, codec, executor)
+    val command = RedisCommand(XGroup, XGroupDelConsumerInput[SK, SG, SC](), LongOutput, executor)
     command.run(DelConsumer(key, group, consumer))
   }
 
@@ -497,7 +483,7 @@ trait Streams extends RedisEnvironment {
    *   the number of entries inside a stream.
    */
   final def xLen[SK: Schema](key: SK): IO[RedisError, Long] = {
-    val command = RedisCommand(XLen, ArbitraryKeyInput[SK](), LongOutput, codec, executor)
+    val command = RedisCommand(XLen, ArbitraryKeyInput[SK](), LongOutput, executor)
     command.run(key)
   }
 
@@ -516,7 +502,6 @@ trait Streams extends RedisEnvironment {
       XPending,
       Tuple3(ArbitraryKeyInput[SK](), ArbitraryValueInput[SG](), OptionalInput(IdleInput)),
       XPendingOutput,
-      codec,
       executor
     )
     command.run((key, group, None))
@@ -563,7 +548,6 @@ trait Streams extends RedisEnvironment {
         OptionalInput(ArbitraryValueInput[SC]())
       ),
       PendingMessagesOutput,
-      codec,
       executor
     )
     command.run((key, group, idle, start, end, count, consumer))
@@ -597,7 +581,6 @@ trait Streams extends RedisEnvironment {
             OptionalInput(CountInput)
           ),
           StreamEntriesOutput[I, RK, RV](),
-          codec,
           executor
         )
         command.run((key, start, end, None))
@@ -635,7 +618,6 @@ trait Streams extends RedisEnvironment {
             OptionalInput(CountInput)
           ),
           StreamEntriesOutput[I, RK, RV](),
-          codec,
           executor
         )
         command.run((key, start, end, Some(Count(count))))
@@ -669,7 +651,6 @@ trait Streams extends RedisEnvironment {
           XRead,
           Tuple3(OptionalInput(CountInput), OptionalInput(BlockInput), StreamsInput[SK, I]()),
           ChunkOutput(StreamOutput[SK, I, RK, RV]()),
-          codec,
           executor
         )
         command.run((count.map(Count(_)), block, (stream, Chunk.fromIterable(streams))))
@@ -719,7 +700,6 @@ trait Streams extends RedisEnvironment {
             StreamsInput[SK, I]()
           ),
           ChunkOutput(StreamOutput[SK, I, RK, RV]()),
-          codec,
           executor
         )
         val noAckOpt = if (noAck) Some(NoAck) else None
@@ -755,7 +735,6 @@ trait Streams extends RedisEnvironment {
             OptionalInput(CountInput)
           ),
           StreamEntriesOutput[I, RK, RV](),
-          codec,
           executor
         )
         command.run((key, end, start, None))
@@ -793,7 +772,6 @@ trait Streams extends RedisEnvironment {
             OptionalInput(CountInput)
           ),
           StreamEntriesOutput[I, RK, RV](),
-          codec,
           executor
         )
         command.run((key, end, start, Some(Count(count))))
@@ -817,7 +795,7 @@ trait Streams extends RedisEnvironment {
     count: Long,
     approximate: Boolean = false
   ): IO[RedisError, Long] = {
-    val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), StreamMaxLenInput), LongOutput, codec, executor)
+    val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), StreamMaxLenInput), LongOutput, executor)
     command.run((key, StreamMaxLen(approximate, count)))
   }
 }

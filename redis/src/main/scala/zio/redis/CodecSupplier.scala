@@ -16,30 +16,16 @@
 
 package zio.redis
 
-import zio._
+import zio.redis.codecs.StringUtf8Codec
+import zio.schema.Schema
+import zio.schema.codec.BinaryCodec
 
-trait Redis
-    extends api.Connection
-    with api.Geo
-    with api.Hashes
-    with api.HyperLogLog
-    with api.Keys
-    with api.Lists
-    with api.Sets
-    with api.Strings
-    with api.SortedSets
-    with api.Streams
-    with api.Scripting
-    with api.Cluster
+trait CodecSupplier {
+  def get[A: Schema]: BinaryCodec[A]
+}
 
-object Redis {
-  lazy val layer: URLayer[RedisExecutor with CodecSupplier, Redis] =
-    ZLayer {
-      for {
-        executor <- ZIO.service[RedisExecutor]
-        codec    <- ZIO.service[CodecSupplier]
-      } yield Live(codec, executor)
-    }
-
-  private final case class Live(codec: CodecSupplier, executor: RedisExecutor) extends Redis
+object CodecSupplier {
+  def utf8string: CodecSupplier = new CodecSupplier {
+    def get[A: Schema]: BinaryCodec[A] = StringUtf8Codec.codec
+  }
 }

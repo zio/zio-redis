@@ -33,16 +33,22 @@ To run this example we should put following dependencies in our `build.sbt` file
 ```scala
 libraryDependencies ++= Seq(
   "dev.zio" %% "zio-redis" % "@VERSION@",
-  "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
+  "dev.zio" %% "zio-schema-protobuf" % "0.4.9"
 )
 ```
 
 ```scala mdoc:compile-only
 import zio._
 import zio.redis._
+import zio.schema._
 import zio.schema.codec._
 
 object ZIORedisExample extends ZIOAppDefault {
+  
+  object ProtobufCodecSupplier extends CodecSupplier {
+    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+  }
+  
   val myApp: ZIO[Redis, RedisError, Unit] = for {
     redis <- ZIO.service[Redis]
     _     <- redis.set("myKey", 8L, Some(1.minutes))
@@ -57,7 +63,7 @@ object ZIORedisExample extends ZIOAppDefault {
     Redis.layer,
     RedisExecutor.layer,
     ZLayer.succeed(RedisConfig.Default),
-    ZLayer.succeed[BinaryCodec](ProtobufCodec)
+    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier)
   )
 }
 ```
@@ -72,19 +78,26 @@ libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "@VERSION@"
 
 Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
 
-```scala
+```scala mdoc:compile-only
 import zio._
 import zio.redis._
+import zio.redis.embedded.EmbeddedRedis
 import zio.schema.{DeriveSchema, Schema}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import zio.test._
 import zio.test.Assertion._
 import java.util.UUID
+
 object EmbeddedRedisSpec extends ZIOSpecDefault {
+  object ProtobufCodecSupplier extends CodecSupplier {
+    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+  }
+  
   final case class Item private (id: UUID, name: String, quantity: Int)
   object Item {
     implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
   }
+  
   def spec = suite("EmbeddedRedis should")(
     test("set and get values") {
       for {
@@ -97,7 +110,7 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
   ).provideShared(
     EmbeddedRedis.layer.orDie,
     RedisExecutor.layer.orDie,
-    ZLayer.succeed[BinaryCodec](ProtobufCodec),
+    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
     Redis.layer
   ) @@ TestAspect.silentLogging
 }
