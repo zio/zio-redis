@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package zio.redis.codecs
+package zio.redis
 
 import zio.redis.RedisError.CodecError
 import zio.schema.Schema
@@ -26,7 +26,7 @@ import zio.{Cause, Chunk, ZIO}
 
 import java.nio.charset.StandardCharsets
 
-private[redis] object StringUtf8Codec {
+private[redis] object Utf8Codec {
 
   implicit def codec[A](implicit schema: Schema[A]): BinaryCodec[A] = new BinaryCodec[A] {
     override def encode(value: A): Chunk[Byte] =

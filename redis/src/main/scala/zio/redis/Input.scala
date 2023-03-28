@@ -17,11 +17,11 @@
 package zio.redis
 
 import zio._
+import zio.redis.Utf8Codec
 import zio.schema.codec.BinaryCodec
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 sealed trait Input[-A] {
   self =>
 
@@ -57,7 +57,7 @@ object Input {
   }
 
   case object AuthInput extends Input[Auth] {
-    import zio.redis.codecs.StringUtf8Codec.codec
+    import Utf8Codec.codec
 
     def encode(data: Auth): RespCommand =
       data.username match {

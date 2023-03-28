@@ -1,10 +1,9 @@
 package zio.redis
 
-import zio.redis.codecs.{CRC16, ProtobufCodecSupplier}
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
+import zio.redis.{CRC16, ProtobufCodecSupplier, RedisClusterConfig}
 import zio.test._
 import zio.{Chunk, Layer, ZIO, ZLayer, durationInt}
-
 object ClusterExecutorSpec extends BaseSpec {
   def spec: Spec[TestEnvironment, Any] =
     suite("cluster executor")(

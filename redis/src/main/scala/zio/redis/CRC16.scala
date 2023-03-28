@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package zio.redis.codecs
+package zio.redis
 
 import zio.Chunk
 

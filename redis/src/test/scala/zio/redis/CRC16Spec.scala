@@ -1,12 +1,11 @@
-package zio.redis.codecs
+package zio.redis
 
 import zio.Chunk
-import zio.redis.BaseSpec
+import zio.redis.{BaseSpec, CRC16}
 import zio.test.Assertion._
 import zio.test._
 
 import java.nio.charset.StandardCharsets
-
 object CRC16Spec extends BaseSpec {
   override def spec: Spec[Environment, Any] =
     suite("CRC16")(

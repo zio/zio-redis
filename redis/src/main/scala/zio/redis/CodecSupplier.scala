@@ -16,7 +16,6 @@
 
 package zio.redis
 
-import zio.redis.codecs.StringUtf8Codec
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
@@ -25,7 +24,7 @@ trait CodecSupplier {
 }
 
 object CodecSupplier {
-  def utf8string: CodecSupplier = new CodecSupplier {
-    def get[A: Schema]: BinaryCodec[A] = StringUtf8Codec.codec
+  def utf8: CodecSupplier = new CodecSupplier {
+    def get[A: Schema]: BinaryCodec[A] = Utf8Codec.codec
   }
 }

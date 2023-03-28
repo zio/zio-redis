@@ -18,7 +18,6 @@ package zio.redis
 
 import zio.Chunk
 import zio.redis.RespValue.BulkString
-import zio.redis.codecs.CRC16
 import zio.schema.codec.BinaryCodec
 
 import java.nio.charset.StandardCharsets

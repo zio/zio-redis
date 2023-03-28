@@ -18,11 +18,11 @@ package zio.redis
 
 import zio._
 import zio.redis.ClusterExecutor._
+import zio.redis.RedisClusterConfig
 import zio.redis.api.Cluster.AskingCommand
 import zio.redis.options.Cluster._
 
 import java.io.IOException
-
 final case class ClusterExecutor(
   clusterConnectionRef: Ref.Synchronized[ClusterConnection],
   config: RedisClusterConfig,
@@ -149,7 +149,7 @@ object ClusterExecutor {
 
   private def redis(address: RedisUri) = {
     val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
-    val codecLayer    = ZLayer.succeed[CodecSupplier](CodecSupplier.utf8string)
+    val codecLayer    = ZLayer.succeed[CodecSupplier](CodecSupplier.utf8)
     val redisLayer    = executorLayer ++ codecLayer >>> Redis.layer
     for {
       closableScope <- Scope.make

@@ -1,4 +1,4 @@
-package zio.redis.codecs
+package zio.redis
 
 import zio.redis.CodecSupplier
 import zio.schema.Schema
