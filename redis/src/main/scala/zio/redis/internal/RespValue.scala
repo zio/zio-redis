@@ -51,7 +51,7 @@ private[redis] object RespValue {
   final case class SimpleString(value: String) extends RespValue
 
   final case class Error(value: String) extends RespValue {
-    def toRedisError: RedisError =
+    def asRedisError: RedisError =
       if (value.startsWith("ERR")) RedisError.ProtocolError(value.drop(3).trim)
       else if (value.startsWith("WRONGTYPE")) RedisError.WrongType(value.drop(9).trim)
       else if (value.startsWith("BUSYGROUP")) RedisError.BusyGroup(value.drop(9).trim)

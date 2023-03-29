@@ -23,7 +23,7 @@ import scala.util.control.NoStackTrace
 sealed trait ApiError extends NoStackTrace { self =>
   import ApiError._
 
-  final def toResponse: Response =
+  final def asResponse: Response =
     self match {
       case CorruptedData | GithubUnreachable => Response.fromHttpError(HttpError.InternalServerError())
       case CacheMiss(key)                    => Response.fromHttpError(HttpError.NotFound((Path.empty / key).encode))
