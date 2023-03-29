@@ -72,9 +72,9 @@ private[redis] object RespValue {
   final case class Integer(value: Long) extends RespValue
 
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
-    private[redis] def asString: String = decode(value)
-
     private[redis] def asLong: Long = internal.unsafeReadLong(asString, 0)
+
+    private[redis] def asString: String = decode(value)
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue
