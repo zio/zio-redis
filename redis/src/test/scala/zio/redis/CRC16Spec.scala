@@ -1,7 +1,6 @@
 package zio.redis
 
 import zio.Chunk
-import zio.redis.{BaseSpec, CRC16}
 import zio.test.Assertion._
 import zio.test._
 

@@ -1,7 +1,6 @@
 package zio.redis
 
 import zio._
-import zio.redis.{ProtobufCodecSupplier, RedisClusterConfig}
 import zio.test.TestAspect._
 import zio.test._
 object ApiSpec

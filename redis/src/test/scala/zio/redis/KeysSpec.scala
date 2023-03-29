@@ -1,7 +1,6 @@
 package zio.redis
 
 import zio._
-import zio.redis.ProtobufCodecSupplier
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{restore => _, _}
