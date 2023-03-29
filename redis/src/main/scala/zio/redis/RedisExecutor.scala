@@ -19,7 +19,7 @@ package zio.redis
 import zio.{IO, ZLayer}
 
 trait RedisExecutor {
-  def execute(command: RespCommand): IO[RedisError, RespValue]
+  private[redis] def execute(command: RespCommand): IO[RedisError, RespValue]
 }
 
 object RedisExecutor {

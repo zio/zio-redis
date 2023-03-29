@@ -22,7 +22,7 @@ import zio.stream._
 
 import java.nio.charset.StandardCharsets
 
-sealed trait RespValue extends Product with Serializable { self =>
+private[redis] sealed trait RespValue extends Product with Serializable { self =>
   import RespValue._
   import RespValue.internal.{CrLf, Headers, NullArrayEncoded, NullStringEncoded}
 
@@ -46,7 +46,7 @@ sealed trait RespValue extends Product with Serializable { self =>
     Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
 }
 
-object RespValue {
+private[redis] object RespValue {
   final case class SimpleString(value: String) extends RespValue
 
   final case class Error(value: String) extends RespValue {

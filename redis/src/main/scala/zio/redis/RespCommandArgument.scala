@@ -22,13 +22,13 @@ import zio.schema.codec.BinaryCodec
 
 import java.nio.charset.StandardCharsets
 
-sealed trait RespArgument {
+private[redis] sealed trait RespCommandArgument {
   def value: RespValue.BulkString
 }
 
-object RespArgument {
+private[redis] object RespCommandArgument {
 
-  final case class Unknown(bytes: Chunk[Byte]) extends RespArgument {
+  final case class Unknown(bytes: Chunk[Byte]) extends RespCommandArgument {
     lazy val value: BulkString = RespValue.BulkString(bytes)
   }
 
@@ -37,15 +37,15 @@ object RespArgument {
     def apply[A](data: A)(implicit codec: BinaryCodec[A]): Unknown = Unknown(codec.encode(data))
   }
 
-  final case class CommandName(str: String) extends RespArgument {
+  final case class CommandName(str: String) extends RespCommandArgument {
     lazy val value: BulkString = RespValue.bulkString(str)
   }
 
-  final case class Literal(str: String) extends RespArgument {
+  final case class Literal(str: String) extends RespCommandArgument {
     lazy val value: BulkString = RespValue.bulkString(str)
   }
 
-  final case class Key(bytes: Chunk[Byte]) extends RespArgument {
+  final case class Key(bytes: Chunk[Byte]) extends RespCommandArgument {
     lazy val value: BulkString = RespValue.BulkString(bytes)
 
     lazy val asCRC16: Int = {
@@ -59,7 +59,7 @@ object RespArgument {
     def apply[A](data: A)(implicit codec: BinaryCodec[A]): Key = Key(codec.encode(data))
   }
 
-  final case class Value(bytes: Chunk[Byte]) extends RespArgument {
+  final case class Value(bytes: Chunk[Byte]) extends RespCommandArgument {
     lazy val value: BulkString = RespValue.BulkString(bytes)
   }
 

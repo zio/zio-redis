@@ -23,6 +23,7 @@ import zio.redis.api.Cluster.AskingCommand
 import zio.redis.options.Cluster._
 
 import java.io.IOException
+
 final case class ClusterExecutor(
   clusterConnectionRef: Ref.Synchronized[ClusterConnection],
   config: RedisClusterConfig,
@@ -56,7 +57,7 @@ final case class ClusterExecutor(
     }
 
     for {
-      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespArgument.Key => key })
+      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespCommandArgument.Key => key })
       keySlot = keyOpt.fold(Slot.Default)(key => Slot((key.asCRC16 & (SlotsAmount - 1)).toLong))
       result <- executeSafe(keySlot)
     } yield result
