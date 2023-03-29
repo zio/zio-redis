@@ -35,7 +35,7 @@ trait BenchmarkRuntime {
 object BenchmarkRuntime {
   private final val Layer =
     ZLayer.make[Redis](
-      RedisExecutor.local,
+      SingleNodeExecutor.local,
       ZLayer.succeed[CodecSupplier](new CodecSupplier {
         def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
       }),

@@ -61,8 +61,7 @@ object ZIORedisExample extends ZIOAppDefault {
 
   override def run = myApp.provide(
     Redis.layer,
-    RedisExecutor.layer,
-    ZLayer.succeed(RedisConfig.Default),
+    SingleNodeExecutor.local,
     ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier)
   )
 }
@@ -108,8 +107,8 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
       } yield assert(found)(isSome(equalTo(item)))
     }
   ).provideShared(
-    EmbeddedRedis.layer.orDie,
-    RedisExecutor.layer.orDie,
+    EmbeddedRedis.layer,
+    SingleNodeExecutor.layer,
     ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
     Redis.layer
   ) @@ TestAspect.silentLogging

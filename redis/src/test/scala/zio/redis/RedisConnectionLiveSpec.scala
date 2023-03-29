@@ -17,5 +17,5 @@ object RedisConnectionLiveSpec extends BaseSpec {
           res    <- stream.read.runHead
         } yield assert(res)(isSome(equalTo('*'.toByte)))
       }
-    ).provideLayer(RedisConnectionLive.default.orDie)
+    ).provideLayer(RedisConnectionLive.local.orDie)
 }

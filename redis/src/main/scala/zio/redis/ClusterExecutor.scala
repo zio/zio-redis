@@ -149,7 +149,7 @@ object ClusterExecutor {
     } yield ExecutorScope(executor, closableScope)
 
   private def redis(address: RedisUri) = {
-    val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
+    val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> SingleNodeExecutor.layer
     val codecLayer    = ZLayer.succeed[CodecSupplier](CodecSupplier.utf8)
     val redisLayer    = executorLayer ++ codecLayer >>> Redis.layer
     for {

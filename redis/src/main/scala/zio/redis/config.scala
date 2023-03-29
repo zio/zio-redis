@@ -21,7 +21,7 @@ import zio.{Chunk, Duration, durationInt}
 final case class RedisConfig(host: String, port: Int)
 
 object RedisConfig {
-  lazy val Default: RedisConfig = RedisConfig("localhost", 6379)
+  lazy val Local: RedisConfig = RedisConfig("localhost", 6379)
 }
 
 final case class RedisClusterConfig(addresses: Chunk[RedisUri], retry: RetryClusterConfig = RetryClusterConfig.Default)

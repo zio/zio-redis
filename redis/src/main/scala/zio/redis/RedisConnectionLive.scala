@@ -78,8 +78,8 @@ private[redis] object RedisConnectionLive {
       } yield service
     }
 
-  lazy val default: ZLayer[Any, RedisError.IOError, RedisConnection] =
-    ZLayer.succeed(RedisConfig.Default) >>> layer
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisConnection] =
+    ZLayer.succeed(RedisConfig.Local) >>> layer
 
   private[redis] def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
     connect(new InetSocketAddress(uri.host, uri.port))

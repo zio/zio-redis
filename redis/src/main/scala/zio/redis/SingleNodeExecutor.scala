@@ -75,14 +75,11 @@ final class SingleNodeExecutor(
 }
 
 object SingleNodeExecutor {
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
+    RedisConnectionLive.layer >>> makeLayer
 
-  lazy val layer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
-    ZLayer.scoped {
-      for {
-        connection <- ZIO.service[RedisConnection]
-        executor   <- create(connection)
-      } yield executor
-    }
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
+    RedisConnectionLive.local >>> makeLayer
 
   final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
@@ -99,4 +96,6 @@ object SingleNodeExecutor {
       _        <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor
 
+  private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
+    ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))
 }

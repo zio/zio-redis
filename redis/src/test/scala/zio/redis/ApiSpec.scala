@@ -35,7 +35,7 @@ object ApiSpec
       streamsSuite,
       scriptingSpec
     ).provideShared(
-      RedisExecutor.local,
+      SingleNodeExecutor.local,
       Redis.layer,
       ZLayer.succeed(ProtobufCodecSupplier)
     )

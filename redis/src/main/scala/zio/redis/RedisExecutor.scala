@@ -16,16 +16,8 @@
 
 package zio.redis
 
-import zio.{IO, ZLayer}
+import zio.IO
 
 trait RedisExecutor {
   private[redis] def execute(command: RespCommand): IO[RedisError, RespValue]
-}
-
-object RedisExecutor {
-  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.layer >>> SingleNodeExecutor.layer
-
-  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.default >>> SingleNodeExecutor.layer
 }

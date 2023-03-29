@@ -42,6 +42,7 @@ private[redis] object ResultBuilder {
     def returning[R1: Schema, R2: Schema, R3: Schema]: IO[RedisError, F[R1, R2, R3]]
   }
 
+  @annotation.nowarn
   trait ResultOutputBuilder extends ResultBuilder {
     def returning[R: Output]: IO[RedisError, R]
   }
