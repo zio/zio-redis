@@ -1,9 +1,10 @@
 package zio.redis
 
+import zio._
 import zio.redis.internal.CRC16
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test._
-import zio.{Chunk, Layer, ZIO, ZLayer, durationInt}
+
 object ClusterExecutorSpec extends BaseSpec {
   def spec: Spec[TestEnvironment, Any] =
     suite("cluster executor")(

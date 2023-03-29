@@ -17,7 +17,6 @@
 package zio.redis.options
 
 trait Keys {
-
   case object AbsTtl {
     private[redis] def asString: String = "ABSTTL"
   }

@@ -19,7 +19,6 @@ package zio.redis.options
 import zio._
 
 trait Streams {
-
   case object WithForce {
     private[redis] def asString = "FORCE"
   }

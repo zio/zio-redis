@@ -17,9 +17,7 @@
 package zio.redis.options
 
 trait Strings {
-
-  sealed trait StrAlgoLCS {
-    self =>
+  sealed trait StrAlgoLCS { self =>
     private[redis] final def asString: String =
       self match {
         case StralgoLCS.Strings => "STRINGS"
