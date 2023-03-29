@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio._
+import zio.redis._
 import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}

@@ -3,9 +3,9 @@ package zio.redis
 import zio._
 import zio.redis.Output._
 import zio.redis.RedisError._
+import zio.redis.internal.RespValue
 import zio.test.Assertion._
 import zio.test._
-
 object OutputSpec extends BaseSpec {
   def spec: Spec[Any, Throwable] =
     suite("Output decoders")(

@@ -20,13 +20,13 @@ import zio.IO
 import zio.redis.ResultBuilder.NeedsReturnType
 import zio.schema.Schema
 
-private[redis] sealed trait ResultBuilder {
+sealed trait ResultBuilder {
   final def map(f: Nothing => Any)(implicit nrt: NeedsReturnType): IO[Nothing, Nothing] = ???
 
   final def flatMap(f: Nothing => Any)(implicit nrt: NeedsReturnType): IO[Nothing, Nothing] = ???
 }
 
-private[redis] object ResultBuilder {
+object ResultBuilder {
   @annotation.implicitNotFound("Use `returning[A]` to specify method's return type")
   final abstract class NeedsReturnType
 
@@ -42,7 +42,6 @@ private[redis] object ResultBuilder {
     def returning[R1: Schema, R2: Schema, R3: Schema]: IO[RedisError, F[R1, R2, R3]]
   }
 
-  @annotation.nowarn
   trait ResultOutputBuilder extends ResultBuilder {
     def returning[R: Output]: IO[RedisError, R]
   }

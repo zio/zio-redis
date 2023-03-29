@@ -17,13 +17,15 @@
 package zio.redis
 
 import zio._
+import zio.redis._
+import zio.redis.internal.{RespCommand, RespCommandArgument}
 import zio.schema.codec.BinaryCodec
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-private[redis] sealed trait Input[-A] { self =>
-  def encode(data: A): RespCommand
+sealed trait Input[-A] { self =>
+  private[redis] def encode(data: A): RespCommand
 
   final def contramap[B](f: B => A): Input[B] =
     new Input[B] {
@@ -31,8 +33,7 @@ private[redis] sealed trait Input[-A] { self =>
     }
 }
 
-private[redis] object Input {
-
+object Input {
   def apply[A](implicit input: Input[A]): Input[A] = input
 
   case object AbsTtlInput extends Input[AbsTtl] {

@@ -1,6 +1,8 @@
-package zio.redis
+package zio.redis.internal
 
 import zio.Chunk
+import zio.redis._
+import zio.redis.internal.RespValue
 import zio.test.Assertion._
 import zio.test._
 

@@ -20,6 +20,7 @@ import zio._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
+import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
 trait Geo extends RedisEnvironment {

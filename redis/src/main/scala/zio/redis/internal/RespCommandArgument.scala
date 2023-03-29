@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio.Chunk
-import zio.redis.RespValue.BulkString
+import zio.redis.internal.CRC16
 import zio.schema.codec.BinaryCodec
 
 import java.nio.charset.StandardCharsets
-
 private[redis] sealed trait RespCommandArgument {
   def value: RespValue.BulkString
 }
@@ -29,7 +28,7 @@ private[redis] sealed trait RespCommandArgument {
 private[redis] object RespCommandArgument {
 
   final case class Unknown(bytes: Chunk[Byte]) extends RespCommandArgument {
-    lazy val value: BulkString = RespValue.BulkString(bytes)
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
   }
 
   object Unknown {
@@ -38,15 +37,15 @@ private[redis] object RespCommandArgument {
   }
 
   final case class CommandName(str: String) extends RespCommandArgument {
-    lazy val value: BulkString = RespValue.bulkString(str)
+    lazy val value: RespValue.BulkString = RespValue.bulkString(str)
   }
 
   final case class Literal(str: String) extends RespCommandArgument {
-    lazy val value: BulkString = RespValue.bulkString(str)
+    lazy val value: RespValue.BulkString = RespValue.bulkString(str)
   }
 
   final case class Key(bytes: Chunk[Byte]) extends RespCommandArgument {
-    lazy val value: BulkString = RespValue.BulkString(bytes)
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
 
     lazy val asCRC16: Int = {
       val betweenBraces = bytes.dropWhile(b => b != '{').drop(1).takeWhile(b => b != '}')
@@ -60,7 +59,7 @@ private[redis] object RespCommandArgument {
   }
 
   final case class Value(bytes: Chunk[Byte]) extends RespCommandArgument {
-    lazy val value: BulkString = RespValue.BulkString(bytes)
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
   }
 
   object Value {

@@ -1,5 +1,7 @@
-package zio.redis
+package zio.redis.internal
 
+import zio.redis._
+import zio.redis.internal.RespCommandArgument
 import zio.test._
 
 object RespCommandArgumentSpec extends BaseSpec {

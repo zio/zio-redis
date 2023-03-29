@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
+import zio.redis.{CodecSupplier, RedisExecutor}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 

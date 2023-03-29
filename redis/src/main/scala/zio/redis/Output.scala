@@ -17,11 +17,12 @@
 package zio.redis
 
 import zio._
+import zio.redis.internal.RespValue
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
-private[redis] sealed trait Output[+A] { self =>
+sealed trait Output[+A] { self =>
   protected def tryDecode(respValue: RespValue): A
 
   final def map[B](f: A => B): Output[B] =
@@ -29,14 +30,14 @@ private[redis] sealed trait Output[+A] { self =>
       protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
     }
 
-  final def unsafeDecode(respValue: RespValue): A =
+  private[redis] final def unsafeDecode(respValue: RespValue): A =
     respValue match {
       case error: RespValue.Error => throw error.toRedisError
       case success                => tryDecode(success)
     }
 }
 
-private[redis] object Output {
+object Output {
   import RedisError._
 
   def apply[A](implicit output: Output[A]): Output[A] = output

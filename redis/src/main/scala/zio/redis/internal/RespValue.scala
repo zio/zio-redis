@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio._
 import zio.redis.options.Cluster.Slot
+import zio.redis.{RedisError, RedisUri}
 import zio.stream._
 
 import java.nio.charset.StandardCharsets

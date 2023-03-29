@@ -19,6 +19,7 @@ package zio.redis
 import zio._
 import zio.redis.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
+import zio.redis.internal.{RedisConnection, RespCommand, RespCommandArgument, RespValue}
 import zio.redis.options.Cluster._
 
 import java.io.IOException

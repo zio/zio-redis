@@ -20,6 +20,7 @@ import zio.redis.Input._
 import zio.redis.Output.{ChunkOutput, ClusterPartitionOutput, UnitOutput}
 import zio.redis._
 import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
+import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
 import zio.{Chunk, IO}

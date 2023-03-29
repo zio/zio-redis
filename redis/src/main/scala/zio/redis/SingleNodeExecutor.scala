@@ -18,7 +18,7 @@ package zio.redis
 
 import zio._
 import zio.redis.SingleNodeExecutor._
-
+import zio.redis.internal.{RedisConnection, RespCommand, RespValue}
 final class SingleNodeExecutor(
   reqQueue: Queue[Request],
   resQueue: Queue[Promise[RedisError, RespValue]],
