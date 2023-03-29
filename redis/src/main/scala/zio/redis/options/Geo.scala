@@ -16,15 +16,13 @@
 
 package zio.redis.options
 
-trait Geo {
-  this: Shared =>
-
+trait Geo { this: Shared =>
   sealed case class LongLat(longitude: Double, latitude: Double)
 
   sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
 
   sealed trait RadiusUnit { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case RadiusUnit.Meters     => "m"
         case RadiusUnit.Kilometers => "km"
@@ -44,35 +42,38 @@ trait Geo {
     def store: Option[Store]
     def storeDist: Option[StoreDist]
   }
+
   case class StoreResults(results: Store) extends StoreOptions {
-    override def store: Option[Store]         = Some(results)
-    override def storeDist: Option[StoreDist] = None
+    def store: Option[Store]         = Some(results)
+    def storeDist: Option[StoreDist] = None
   }
+
   case class StoreDistances(distances: StoreDist) extends StoreOptions {
-    override def store: Option[Store]         = None
-    override def storeDist: Option[StoreDist] = Some(distances)
+    def store: Option[Store]         = None
+    def storeDist: Option[StoreDist] = Some(distances)
   }
+
   case class StoreBoth(results: Store, distances: StoreDist) extends StoreOptions {
-    override def store: Option[Store]         = Some(results)
-    override def storeDist: Option[StoreDist] = Some(distances)
+    def store: Option[Store]         = Some(results)
+    def storeDist: Option[StoreDist] = Some(distances)
   }
 
   sealed case class StoreDist(key: String)
 
   case object WithCoord {
-    private[redis] def stringify: String = "WITHCOORD"
+    private[redis] def asString: String = "WITHCOORD"
   }
 
   type WithCoord = WithCoord.type
 
   case object WithDist {
-    private[redis] def stringify: String = "WITHDIST"
+    private[redis] def asString: String = "WITHDIST"
   }
 
   type WithDist = WithDist.type
 
   case object WithHash {
-    private[redis] def stringify: String = "WITHHASH"
+    private[redis] def asString: String = "WITHHASH"
   }
 
   type WithHash = WithHash.type

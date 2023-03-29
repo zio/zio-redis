@@ -1,7 +1,7 @@
-package zio.redis.codecs
+package zio.redis.internal
 
 import zio.Chunk
-import zio.redis.BaseSpec
+import zio.redis._
 import zio.test.Assertion._
 import zio.test._
 

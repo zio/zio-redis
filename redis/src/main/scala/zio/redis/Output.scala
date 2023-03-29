@@ -17,19 +17,12 @@
 package zio.redis
 
 import zio._
+import zio.redis.internal.RespValue
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
-sealed trait Output[+A] {
-  self =>
-
-  private[redis] final def unsafeDecode(respValue: RespValue): A =
-    respValue match {
-      case error: RespValue.Error => throw error.toRedisError
-      case success                => tryDecode(success)
-    }
-
+sealed trait Output[+A] { self =>
   protected def tryDecode(respValue: RespValue): A
 
   final def map[B](f: A => B): Output[B] =
@@ -37,10 +30,14 @@ sealed trait Output[+A] {
       protected def tryDecode(respValue: RespValue): B = f(self.tryDecode(respValue))
     }
 
+  private[redis] final def unsafeDecode(respValue: RespValue): A =
+    respValue match {
+      case error: RespValue.Error => throw error.toRedisError
+      case success                => tryDecode(success)
+    }
 }
 
 object Output {
-
   import RedisError._
 
   def apply[A](implicit output: Output[A]): Output[A] = output
@@ -369,7 +366,7 @@ object Output {
   }
 
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
-    override protected def tryDecode(respValue: RespValue): Chunk[StreamGroupsInfo] =
+    protected def tryDecode(respValue: RespValue): Chunk[StreamGroupsInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
@@ -408,7 +405,7 @@ object Output {
   }
 
   case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
-    override protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
+    protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
       respValue match {
         case RespValue.NullArray => Chunk.empty
         case RespValue.Array(messages) =>
@@ -446,7 +443,7 @@ object Output {
 
   final case class StreamInfoFullOutput[I: Schema: BinaryCodec, K: Schema: BinaryCodec, V: Schema: BinaryCodec]()
       extends Output[StreamInfoWithFull.FullStreamInfo[I, K, V]] {
-    override protected def tryDecode(
+    protected def tryDecode(
       respValue: RespValue
     ): StreamInfoWithFull.FullStreamInfo[I, K, V] = {
       var streamInfoFull: StreamInfoWithFull.FullStreamInfo[I, K, V] = StreamInfoWithFull.FullStreamInfo.empty
@@ -585,7 +582,7 @@ object Output {
 
   final case class StreamInfoOutput[I: Schema: BinaryCodec, K: Schema: BinaryCodec, V: Schema: BinaryCodec]()
       extends Output[StreamInfo[I, K, V]] {
-    override protected def tryDecode(respValue: RespValue): StreamInfo[I, K, V] = {
+    protected def tryDecode(respValue: RespValue): StreamInfo[I, K, V] = {
       var streamInfo: StreamInfo[I, K, V] = StreamInfo.empty
       respValue match {
         // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo

@@ -21,6 +21,7 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder._
 import zio.redis._
+import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
 trait SortedSets extends RedisEnvironment {
@@ -262,7 +263,7 @@ trait SortedSets extends RedisEnvironment {
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((inputKeysNum, (key, keys.toList), WithScores.stringify))
+        command.run((inputKeysNum, (key, keys.toList), WithScores.asString))
       }
     }
 
@@ -398,7 +399,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.stringify))
+        command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.asString))
       }
     }
 
@@ -458,7 +459,7 @@ trait SortedSets extends RedisEnvironment {
       LongOutput,
       executor
     )
-    command.run((key, lexRange.min.stringify, lexRange.max.stringify))
+    command.run((key, lexRange.min.asString, lexRange.max.asString))
   }
 
   /**
@@ -561,7 +562,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, range, WithScores.stringify))
+        command.run((key, range, WithScores.asString))
       }
     }
 
@@ -596,7 +597,7 @@ trait SortedSets extends RedisEnvironment {
           ChunkOutput(ArbitraryOutput[M]()),
           executor
         )
-        command.run((key, lexRange.min.stringify, lexRange.max.stringify, limit))
+        command.run((key, lexRange.min.asString, lexRange.max.asString, limit))
       }
     }
 
@@ -631,7 +632,7 @@ trait SortedSets extends RedisEnvironment {
           ChunkOutput(ArbitraryOutput[M]()),
           executor
         )
-        command.run((key, scoreRange.min.stringify, scoreRange.max.stringify, limit))
+        command.run((key, scoreRange.min.asString, scoreRange.max.asString, limit))
       }
     }
 
@@ -668,7 +669,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, scoreRange.min.stringify, scoreRange.max.stringify, WithScores.stringify, limit))
+        command.run((key, scoreRange.min.asString, scoreRange.max.asString, WithScores.asString, limit))
       }
     }
 
@@ -732,7 +733,7 @@ trait SortedSets extends RedisEnvironment {
       LongOutput,
       executor
     )
-    command.run((key, lexRange.min.stringify, lexRange.max.stringify))
+    command.run((key, lexRange.min.asString, lexRange.max.asString))
   }
 
   /**
@@ -767,7 +768,7 @@ trait SortedSets extends RedisEnvironment {
       LongOutput,
       executor
     )
-    command.run((key, scoreRange.min.stringify, scoreRange.max.stringify))
+    command.run((key, scoreRange.min.asString, scoreRange.max.asString))
   }
 
   /**
@@ -816,7 +817,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, range, WithScores.stringify))
+        command.run((key, range, WithScores.asString))
       }
     }
 
@@ -851,7 +852,7 @@ trait SortedSets extends RedisEnvironment {
           ChunkOutput(ArbitraryOutput[M]()),
           executor
         )
-        command.run((key, lexRange.max.stringify, lexRange.min.stringify, limit))
+        command.run((key, lexRange.max.asString, lexRange.min.asString, limit))
       }
     }
 
@@ -886,7 +887,7 @@ trait SortedSets extends RedisEnvironment {
           ChunkOutput(ArbitraryOutput[M]()),
           executor
         )
-        command.run((key, scoreRange.max.stringify, scoreRange.min.stringify, limit))
+        command.run((key, scoreRange.max.asString, scoreRange.min.asString, limit))
       }
     }
 
@@ -923,7 +924,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, scoreRange.max.stringify, scoreRange.min.stringify, WithScores.stringify, limit))
+        command.run((key, scoreRange.max.asString, scoreRange.min.asString, WithScores.asString, limit))
       }
     }
 
@@ -1079,7 +1080,7 @@ trait SortedSets extends RedisEnvironment {
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.stringify))
+        command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.asString))
       }
     }
 
@@ -1207,7 +1208,7 @@ trait SortedSets extends RedisEnvironment {
           executor
         )
 
-        command.run((key, count, WithScores.stringify))
+        command.run((key, count, WithScores.asString))
       }
     }
 }

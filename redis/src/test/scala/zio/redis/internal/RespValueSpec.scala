@@ -1,6 +1,7 @@
-package zio.redis
+package zio.redis.internal
 
 import zio.Chunk
+import zio.redis._
 import zio.test.Assertion._
 import zio.test._
 
@@ -35,7 +36,7 @@ object RespValueSpec extends BaseSpec {
           zio.stream.ZStream
             .fromChunk(values)
             .mapConcat(_.serialize)
-            .via(RespValue.decoder)
+            .via(RespValue.Decoder)
             .collect { case Some(value) =>
               value
             }

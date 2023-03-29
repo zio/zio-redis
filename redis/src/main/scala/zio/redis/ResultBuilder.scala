@@ -27,7 +27,6 @@ sealed trait ResultBuilder {
 }
 
 object ResultBuilder {
-
   @annotation.implicitNotFound("Use `returning[A]` to specify method's return type")
   final abstract class NeedsReturnType
 

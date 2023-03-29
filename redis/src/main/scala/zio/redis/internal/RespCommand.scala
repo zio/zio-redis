@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio.Chunk
 
-final case class RespCommand(args: Chunk[RespArgument]) {
+private[redis] final case class RespCommand(args: Chunk[RespCommandArgument]) extends AnyVal {
   def ++(that: RespCommand): RespCommand = RespCommand(this.args ++ that.args)
 
-  def mapArguments(f: RespArgument => RespArgument): RespCommand = RespCommand(args.map(f(_)))
+  def mapArguments(f: RespCommandArgument => RespCommandArgument): RespCommand = RespCommand(args.map(f(_)))
 }
 
-object RespCommand {
-
+private[redis] object RespCommand {
   def empty: RespCommand = new RespCommand(Chunk.empty)
 
-  def apply(args: Chunk[RespArgument]): RespCommand = new RespCommand(args)
+  def apply(args: Chunk[RespCommandArgument]): RespCommand = new RespCommand(args)
 
-  def apply(args: RespArgument*): RespCommand = new RespCommand(Chunk.fromIterable(args))
+  def apply(args: RespCommandArgument*): RespCommand = new RespCommand(Chunk.fromIterable(args))
 
-  def apply(arg: RespArgument): RespCommand = new RespCommand(Chunk.single(arg))
+  def apply(arg: RespCommandArgument): RespCommand = new RespCommand(Chunk.single(arg))
 }

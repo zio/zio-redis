@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
-import zio._
-import zio.stream.Stream
+import zio.redis.{CodecSupplier, RedisExecutor}
+import zio.schema.Schema
+import zio.schema.codec.BinaryCodec
 
-import java.io.IOException
+private[redis] trait RedisEnvironment {
+  protected def codecSupplier: CodecSupplier
+  protected def executor: RedisExecutor
 
-private[redis] trait RedisConnection {
-  def read: Stream[IOException, Byte]
-  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
+  protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }

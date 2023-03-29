@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio._
+import zio.redis._
 import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}
@@ -24,12 +25,12 @@ import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousSocketChannel, Channel, CompletionHandler}
 
-private[redis] final class RedisConnectionLive(
+private[redis] final class RedisConnection(
   readBuffer: ByteBuffer,
   writeBuffer: ByteBuffer,
   channel: AsynchronousSocketChannel
-) extends RedisConnection {
-  import RedisConnectionLive._
+) {
+  import RedisConnection._
 
   val read: Stream[IOException, Byte] =
     ZStream.repeatZIOChunkOption {
@@ -68,23 +69,17 @@ private[redis] final class RedisConnectionLive(
     }
 }
 
-private[redis] object RedisConnectionLive {
-
+private[redis] object RedisConnection {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisConnection] =
-    ZLayer.scoped {
-      for {
-        config  <- ZIO.service[RedisConfig]
-        service <- create(config)
-      } yield service
-    }
+    ZLayer.scoped(ZIO.serviceWithZIO[RedisConfig](create))
 
-  lazy val default: ZLayer[Any, RedisError.IOError, RedisConnection] =
-    ZLayer.succeed(RedisConfig.Default) >>> layer
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisConnection] =
+    ZLayer.succeed(RedisConfig.Local) >>> layer
 
-  private[redis] def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
+  def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
     connect(new InetSocketAddress(uri.host, uri.port))
 
-  private[redis] def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, RedisConnection] =
+  def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, RedisConnection] =
     (for {
       address     <- ZIO.succeed(address)
       makeBuffer   = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
@@ -92,7 +87,7 @@ private[redis] object RedisConnectionLive {
       writeBuffer <- makeBuffer
       channel     <- openChannel(address)
       _           <- logScopeFinalizer("Redis connection is closed")
-    } yield new RedisConnectionLive(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError(_))
+    } yield new RedisConnection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError(_))
 
   private final val ResponseBufferSize = 1024
 

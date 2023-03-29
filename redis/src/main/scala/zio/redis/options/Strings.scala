@@ -17,10 +17,8 @@
 package zio.redis.options
 
 trait Strings {
-
-  sealed trait StrAlgoLCS {
-    self =>
-    private[redis] final def stringify: String =
+  sealed trait StrAlgoLCS { self =>
+    private[redis] final def asString: String =
       self match {
         case StralgoLCS.Strings => "STRINGS"
         case StralgoLCS.Keys    => "KEYS"
@@ -60,7 +58,7 @@ trait Strings {
     sealed case class BitFieldIncr(`type`: BitFieldType, offset: Int, increment: Long) extends BitFieldCommand
 
     sealed trait BitFieldOverflow extends BitFieldCommand { self =>
-      private[redis] final def stringify: String =
+      private[redis] final def asString: String =
         self match {
           case BitFieldOverflow.Fail => "FAIL"
           case BitFieldOverflow.Sat  => "SAT"
@@ -76,7 +74,7 @@ trait Strings {
   }
 
   sealed trait BitFieldType { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case BitFieldType.UnsignedInt(size) => s"u$size"
         case BitFieldType.SignedInt(size)   => s"i$size"
@@ -89,7 +87,7 @@ trait Strings {
   }
 
   sealed trait BitOperation { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case BitOperation.AND => "AND"
         case BitOperation.OR  => "OR"
@@ -108,13 +106,13 @@ trait Strings {
   sealed case class BitPosRange(start: Long, end: Option[Long])
 
   case object KeepTtl {
-    private[redis] def stringify: String = "KEEPTTL"
+    private[redis] def asString: String = "KEEPTTL"
   }
 
   type KeepTtl = KeepTtl.type
 
   sealed trait Expire { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case Expire.SetExpireSeconds      => "EX"
         case Expire.SetExpireMilliseconds => "PX"
@@ -126,7 +124,7 @@ trait Strings {
   }
 
   sealed trait ExpiredAt { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case ExpiredAt.SetExpireAtSeconds      => "EXAT"
         case ExpiredAt.SetExpireAtMilliseconds => "PXAT"

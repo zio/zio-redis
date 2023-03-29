@@ -1,7 +1,6 @@
 package zio.redis
 
 import zio._
-import zio.redis.codecs.ProtobufCodecSupplier
 import zio.test.TestAspect._
 import zio.test._
 
@@ -36,7 +35,7 @@ object ApiSpec
       streamsSuite,
       scriptingSpec
     ).provideShared(
-      RedisExecutor.local,
+      SingleNodeExecutor.local,
       Redis.layer,
       ZLayer.succeed(ProtobufCodecSupplier)
     )

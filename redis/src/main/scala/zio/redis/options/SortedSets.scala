@@ -20,7 +20,7 @@ import zio.Chunk
 
 trait SortedSets {
   sealed trait Aggregate extends Product { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case Aggregate.Max => "MAX"
         case Aggregate.Min => "MIN"
@@ -35,19 +35,19 @@ trait SortedSets {
   }
 
   case object Changed {
-    private[redis] def stringify: String = "CH"
+    private[redis] def asString: String = "CH"
   }
 
   type Changed = Changed.type
 
   case object Increment {
-    private[redis] def stringify: String = "INCR"
+    private[redis] def asString: String = "INCR"
   }
 
   type Increment = Increment.type
 
   sealed trait LexMaximum { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case LexMaximum.Unbounded     => "+"
         case LexMaximum.Open(value)   => s"($value"
@@ -62,7 +62,7 @@ trait SortedSets {
   }
 
   sealed trait LexMinimum { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case LexMinimum.Unbounded     => "-"
         case LexMinimum.Open(value)   => s"($value"
@@ -83,7 +83,7 @@ trait SortedSets {
   type MemberScores[+M] = Chunk[MemberScore[M]]
 
   sealed trait ScoreMaximum { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case ScoreMaximum.Infinity      => "+inf"
         case ScoreMaximum.Open(value)   => s"($value"
@@ -98,7 +98,7 @@ trait SortedSets {
   }
 
   sealed trait ScoreMinimum { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case ScoreMinimum.Infinity      => "-inf"
         case ScoreMinimum.Open(value)   => s"($value"
@@ -115,7 +115,7 @@ trait SortedSets {
   sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
 
   case object WithScores {
-    private[redis] def stringify: String = "WITHSCORES"
+    private[redis] def asString: String = "WITHSCORES"
   }
 
   type WithScores = WithScores.type
