@@ -44,17 +44,20 @@ trait Geo {
     def store: Option[Store]
     def storeDist: Option[StoreDist]
   }
+
   case class StoreResults(results: Store) extends StoreOptions {
-    override def store: Option[Store]         = Some(results)
-    override def storeDist: Option[StoreDist] = None
+    def store: Option[Store]         = Some(results)
+    def storeDist: Option[StoreDist] = None
   }
+
   case class StoreDistances(distances: StoreDist) extends StoreOptions {
-    override def store: Option[Store]         = None
-    override def storeDist: Option[StoreDist] = Some(distances)
+    def store: Option[Store]         = None
+    def storeDist: Option[StoreDist] = Some(distances)
   }
+
   case class StoreBoth(results: Store, distances: StoreDist) extends StoreOptions {
-    override def store: Option[Store]         = Some(results)
-    override def storeDist: Option[StoreDist] = Some(distances)
+    def store: Option[Store]         = Some(results)
+    def storeDist: Option[StoreDist] = Some(distances)
   }
 
   sealed case class StoreDist(key: String)

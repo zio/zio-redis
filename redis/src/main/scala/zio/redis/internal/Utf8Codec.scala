@@ -51,7 +51,7 @@ private[redis] object Utf8Codec {
         }
       }
 
-      override def streamDecoder: BinaryStreamDecoder[A] =
+      def streamDecoder: BinaryStreamDecoder[A] =
         ZPipeline.mapChunksZIO(chunk => ZIO.fromEither(decode(chunk).map(Chunk(_))))
     }
 }
