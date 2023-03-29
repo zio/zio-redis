@@ -68,7 +68,7 @@ final class SingleNodeExecutor(
   private def receive: IO[RedisError, Unit] =
     connection.read
       .mapError(RedisError.IOError(_))
-      .via(RespValue.decoder)
+      .via(RespValue.Decoder)
       .collectSome
       .foreach(response => resQueue.take.flatMap(_.succeed(response)))
 

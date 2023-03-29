@@ -90,7 +90,7 @@ private[redis] object RespValue {
       }
   }
 
-  private[redis] final val decoder = {
+  final val Decoder: ZPipeline[Any, RedisError.ProtocolError, Byte, Option[RespValue]] = {
     import internal.State
 
     // ZSink fold will return a State.Start when contFn is false
@@ -107,11 +107,11 @@ private[redis] object RespValue {
       .andThen(ZPipeline.fromSink(lineProcessor))
   }
 
-  private[redis] def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
+  def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
 
-  private[redis] def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
+  def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
 
-  private[redis] def decode(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
+  def decode(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   private object internal {
     object Headers {
