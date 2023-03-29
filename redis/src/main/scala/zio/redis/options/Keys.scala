@@ -19,13 +19,13 @@ package zio.redis.options
 trait Keys {
 
   case object AbsTtl {
-    private[redis] def stringify: String = "ABSTTL"
+    private[redis] def asString: String = "ABSTTL"
   }
 
   type AbsTtl = AbsTtl.type
 
   case object Alpha {
-    private[redis] def stringify: String = "ALPHA"
+    private[redis] def asString: String = "ALPHA"
   }
 
   type Alpha = Alpha.type
@@ -33,7 +33,7 @@ trait Keys {
   sealed case class Auth(username: Option[String], password: String)
 
   case object Copy {
-    private[redis] def stringify: String = "COPY"
+    private[redis] def asString: String = "COPY"
   }
 
   type Copy = Copy.type
@@ -43,7 +43,7 @@ trait Keys {
   sealed case class Freq(frequency: String)
 
   sealed trait RedisType extends Product with Serializable { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case RedisType.String    => "string"
         case RedisType.List      => "list"
@@ -64,7 +64,7 @@ trait Keys {
   }
 
   case object Replace {
-    private[redis] def stringify: String = "REPLACE"
+    private[redis] def asString: String = "REPLACE"
   }
 
   type Replace = Replace.type

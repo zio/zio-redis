@@ -18,7 +18,7 @@ package zio.redis.options
 
 trait Scripting {
   sealed trait DebugMode { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case DebugMode.Yes  => "YES"
         case DebugMode.Sync => "SYNC"
@@ -33,7 +33,7 @@ trait Scripting {
   }
 
   sealed trait FlushMode { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case FlushMode.Async => "ASYNC"
         case FlushMode.Sync  => "SYNC"

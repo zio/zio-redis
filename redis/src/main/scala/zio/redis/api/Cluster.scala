@@ -58,7 +58,7 @@ trait Cluster extends RedisEnvironment {
   final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
     val command =
       RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, executor)
-    command.run((slot.number, Stable.stringify))
+    command.run((slot.number, Stable.asString))
   }
 
   /**
@@ -79,7 +79,7 @@ trait Cluster extends RedisEnvironment {
       UnitOutput,
       executor
     )
-    command.run((slot.number, Migrating.stringify, nodeId))
+    command.run((slot.number, Migrating.asString, nodeId))
   }
 
   /**
@@ -100,7 +100,7 @@ trait Cluster extends RedisEnvironment {
       UnitOutput,
       executor
     )
-    command.run((slot.number, Importing.stringify, nodeId))
+    command.run((slot.number, Importing.asString, nodeId))
   }
 
   /**
@@ -121,7 +121,7 @@ trait Cluster extends RedisEnvironment {
       UnitOutput,
       executor
     )
-    command.run((slot.number, Node.stringify, nodeId))
+    command.run((slot.number, Node.asString, nodeId))
   }
 }
 

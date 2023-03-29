@@ -24,7 +24,7 @@ trait Geo {
   sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
 
   sealed trait RadiusUnit { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case RadiusUnit.Meters     => "m"
         case RadiusUnit.Kilometers => "km"
@@ -60,19 +60,19 @@ trait Geo {
   sealed case class StoreDist(key: String)
 
   case object WithCoord {
-    private[redis] def stringify: String = "WITHCOORD"
+    private[redis] def asString: String = "WITHCOORD"
   }
 
   type WithCoord = WithCoord.type
 
   case object WithDist {
-    private[redis] def stringify: String = "WITHDIST"
+    private[redis] def asString: String = "WITHDIST"
   }
 
   type WithDist = WithDist.type
 
   case object WithHash {
-    private[redis] def stringify: String = "WITHHASH"
+    private[redis] def asString: String = "WITHHASH"
   }
 
   type WithHash = WithHash.type

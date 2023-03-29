@@ -54,7 +54,7 @@ object Cluster {
   }
 
   sealed trait SetSlotSubCommand extends Product { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case SetSlotSubCommand.Migrating => "MIGRATING"
         case SetSlotSubCommand.Importing => "IMPORTING"

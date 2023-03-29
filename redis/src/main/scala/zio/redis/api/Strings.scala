@@ -603,7 +603,7 @@ trait Strings extends RedisEnvironment {
       StrAlgoLcsOutput,
       executor
     )
-    redisCommand.run((command.stringify, keyA, keyB, lcsQueryType))
+    redisCommand.run((command.asString, keyA, keyB, lcsQueryType))
   }
 }
 

@@ -18,7 +18,7 @@ package zio.redis.options
 
 trait Lists {
   sealed trait Position { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case Position.Before => "BEFORE"
         case Position.After  => "AFTER"
@@ -31,7 +31,7 @@ trait Lists {
   }
 
   sealed trait Side { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case Side.Left  => "LEFT"
         case Side.Right => "RIGHT"

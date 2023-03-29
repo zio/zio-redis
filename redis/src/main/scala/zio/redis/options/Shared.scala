@@ -19,7 +19,7 @@ package zio.redis.options
 trait Shared {
 
   sealed trait Update { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case Update.SetExisting    => "XX"
         case Update.SetNew         => "NX"
@@ -38,7 +38,7 @@ trait Shared {
   sealed case class Count(count: Long)
 
   sealed trait Order { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case Order.Ascending  => "ASC"
         case Order.Descending => "DESC"

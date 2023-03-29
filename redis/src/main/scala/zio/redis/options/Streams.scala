@@ -21,13 +21,13 @@ import zio._
 trait Streams {
 
   case object WithForce {
-    private[redis] def stringify = "FORCE"
+    private[redis] def asString = "FORCE"
   }
 
   type WithForce = WithForce.type
 
   case object WithJustId {
-    private[redis] def stringify = "JUSTID"
+    private[redis] def asString = "JUSTID"
   }
 
   type WithJustId = WithJustId.type
@@ -43,7 +43,7 @@ trait Streams {
   }
 
   case object MkStream {
-    private[redis] def stringify = "MKSTREAM"
+    private[redis] def asString = "MKSTREAM"
   }
 
   type MkStream = MkStream.type
@@ -65,7 +65,7 @@ trait Streams {
   sealed case class Group[G, C](group: G, consumer: C)
 
   case object NoAck {
-    private[redis] def stringify: String = "NOACK"
+    private[redis] def asString: String = "NOACK"
   }
 
   type NoAck = NoAck.type

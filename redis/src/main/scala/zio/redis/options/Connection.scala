@@ -22,7 +22,7 @@ import java.net.InetAddress
 
 trait Connection {
   sealed case class Address(ip: InetAddress, port: Int) {
-    private[redis] final def stringify: String = s"${ip.getHostAddress}:$port"
+    private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
   }
 
   sealed case class ClientEvents(readable: Boolean = false, writable: Boolean = false)
@@ -91,10 +91,10 @@ trait Connection {
 
   object ClientKillFilter {
     sealed case class Address(ip: InetAddress, port: Int) extends ClientKillFilter {
-      private[redis] final def stringify: String = s"${ip.getHostAddress}:$port"
+      private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
     }
     sealed case class LocalAddress(ip: InetAddress, port: Int) extends ClientKillFilter {
-      private[redis] final def stringify: String = s"${ip.getHostAddress}:$port"
+      private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
     }
     sealed case class Id(id: Long)                 extends ClientKillFilter
     sealed case class Type(clientType: ClientType) extends ClientKillFilter
@@ -103,7 +103,7 @@ trait Connection {
   }
 
   sealed trait ClientPauseMode { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case ClientPauseMode.All   => "ALL"
         case ClientPauseMode.Write => "WRITE"
@@ -130,7 +130,7 @@ trait Connection {
   )
 
   sealed trait ClientTrackingMode { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case ClientTrackingMode.OptIn     => "OPTIN"
         case ClientTrackingMode.OptOut    => "OPTOUT"
@@ -154,7 +154,7 @@ trait Connection {
   }
 
   sealed trait ClientType { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case ClientType.Normal  => "normal"
         case ClientType.Master  => "master"
@@ -171,7 +171,7 @@ trait Connection {
   }
 
   sealed trait UnblockBehavior { self =>
-    private[redis] final def stringify: String =
+    private[redis] final def asString: String =
       self match {
         case UnblockBehavior.Timeout => "TIMEOUT"
         case UnblockBehavior.Error   => "ERROR"
