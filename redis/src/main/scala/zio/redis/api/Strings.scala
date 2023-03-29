@@ -21,6 +21,7 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder._
 import zio.redis._
+import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
 import java.time.Instant
@@ -603,7 +604,7 @@ trait Strings extends RedisEnvironment {
       StrAlgoLcsOutput,
       executor
     )
-    redisCommand.run((command.stringify, keyA, keyB, lcsQueryType))
+    redisCommand.run((command.asString, keyA, keyB, lcsQueryType))
   }
 }
 

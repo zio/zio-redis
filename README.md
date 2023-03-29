@@ -4,7 +4,7 @@
 
 # ZIO Redis
 
-[![Development](https://img.shields.io/badge/Project%20Stage-Development-green.svg)](https://github.com/zio/zio/wiki/Project-Stages) ![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) [![Sonatype Releases](https://img.shields.io/nexus/r/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Release)](https://oss.sonatype.org/content/repositories/releases/dev/zio/zio-redis_2.13/) [![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.13/) [![javadoc](https://javadoc.io/badge2/dev.zio/zio-redis-docs_2.13/javadoc.svg)](https://javadoc.io/doc/dev.zio/zio-redis-docs_2.13) [![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis)
+[![Development](https://img.shields.io/badge/Project%20Stage-Development-green.svg)](https://github.com/zio/zio/wiki/Project-Stages) ![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) [![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.13/) [![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis)
 
 ## Introduction
 
@@ -17,7 +17,7 @@ instances.
 To use ZIO Redis, add the following line to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "0.1.0"
+libraryDependencies += "dev.zio" %% "zio-redis" % "<version>"
 ```
 
 ## Example
@@ -32,7 +32,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "0.1.0",
+  "dev.zio" %% "zio-redis" % "<version>",
   "dev.zio" %% "zio-schema-protobuf" % "0.4.9"
 )
 ```
@@ -61,8 +61,7 @@ object ZIORedisExample extends ZIOAppDefault {
 
   override def run = myApp.provide(
     Redis.layer,
-    RedisExecutor.layer,
-    ZLayer.succeed(RedisConfig.Default),
+    SingleNodeExecutor.local,
     ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier)
   )
 }
@@ -73,7 +72,7 @@ object ZIORedisExample extends ZIOAppDefault {
 To test you can use the embedded redis instance by adding to your build:
 
 ```scala
-libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "0.1.0"
+libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "<version>"
 ```
 
 Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
@@ -108,8 +107,8 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
       } yield assert(found)(isSome(equalTo(item)))
     }
   ).provideShared(
-    EmbeddedRedis.layer.orDie,
-    RedisExecutor.layer.orDie,
+    EmbeddedRedis.layer,
+    SingleNodeExecutor.layer,
     ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
     Redis.layer
   ) @@ TestAspect.silentLogging

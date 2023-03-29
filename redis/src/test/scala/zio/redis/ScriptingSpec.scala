@@ -1,10 +1,11 @@
 package zio.redis
 
 import zio._
-import zio.redis.Input.{BoolInput, LongInput, StringInput, ValueInput}
+import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.RedisError._
 import zio.redis.ScriptingSpec._
+import zio.redis.internal.RespValue
 import zio.test.Assertion._
 import zio.test._
 

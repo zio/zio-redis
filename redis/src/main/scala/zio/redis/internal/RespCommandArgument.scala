@@ -14,23 +14,21 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio.Chunk
-import zio.redis.RespValue.BulkString
-import zio.redis.codecs.CRC16
 import zio.schema.codec.BinaryCodec
 
 import java.nio.charset.StandardCharsets
 
-sealed trait RespArgument {
+private[redis] sealed trait RespCommandArgument {
   def value: RespValue.BulkString
 }
 
-object RespArgument {
+private[redis] object RespCommandArgument {
 
-  final case class Unknown(bytes: Chunk[Byte]) extends RespArgument {
-    lazy val value: BulkString = RespValue.BulkString(bytes)
+  final case class Unknown(bytes: Chunk[Byte]) extends RespCommandArgument {
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
   }
 
   object Unknown {
@@ -38,16 +36,16 @@ object RespArgument {
     def apply[A](data: A)(implicit codec: BinaryCodec[A]): Unknown = Unknown(codec.encode(data))
   }
 
-  final case class CommandName(str: String) extends RespArgument {
-    lazy val value: BulkString = RespValue.bulkString(str)
+  final case class CommandName(str: String) extends RespCommandArgument {
+    lazy val value: RespValue.BulkString = RespValue.bulkString(str)
   }
 
-  final case class Literal(str: String) extends RespArgument {
-    lazy val value: BulkString = RespValue.bulkString(str)
+  final case class Literal(str: String) extends RespCommandArgument {
+    lazy val value: RespValue.BulkString = RespValue.bulkString(str)
   }
 
-  final case class Key(bytes: Chunk[Byte]) extends RespArgument {
-    lazy val value: BulkString = RespValue.BulkString(bytes)
+  final case class Key(bytes: Chunk[Byte]) extends RespCommandArgument {
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
 
     lazy val asCRC16: Int = {
       val betweenBraces = bytes.dropWhile(b => b != '{').drop(1).takeWhile(b => b != '}')
@@ -60,8 +58,8 @@ object RespArgument {
     def apply[A](data: A)(implicit codec: BinaryCodec[A]): Key = Key(codec.encode(data))
   }
 
-  final case class Value(bytes: Chunk[Byte]) extends RespArgument {
-    lazy val value: BulkString = RespValue.BulkString(bytes)
+  final case class Value(bytes: Chunk[Byte]) extends RespCommandArgument {
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
   }
 
   object Value {

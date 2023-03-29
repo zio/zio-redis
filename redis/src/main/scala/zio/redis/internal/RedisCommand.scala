@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio._
 import zio.redis.Input.{CommandNameInput, Varargs}
+import zio.redis._
 
-final class RedisCommand[-In, +Out] private (
+private[redis] final class RedisCommand[-In, +Out] private (
   val name: String,
   val input: Input[In],
   val output: Output[Out],
   val executor: RedisExecutor
 ) {
-
-  private[redis] def run(in: In): IO[RedisError, Out] =
+  def run(in: In): IO[RedisError, Out] =
     executor
       .execute(resp(in))
       .flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)))
       .refineToOrDie[RedisError]
 
-  private[redis] def resp(in: In): RespCommand =
+  def resp(in: In): RespCommand =
     Varargs(CommandNameInput).encode(name.split(" ")) ++ input.encode(in)
 }
 
-object RedisCommand {
-  private[redis] def apply[In, Out](
+private[redis] object RedisCommand {
+  def apply[In, Out](
     name: String,
     input: Input[In],
     output: Output[Out],

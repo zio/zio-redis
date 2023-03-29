@@ -19,12 +19,13 @@ package zio.redis
 import zio._
 import zio.redis.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
+import zio.redis.internal.{RedisConnection, RespCommand, RespCommandArgument, RespValue}
 import zio.redis.options.Cluster._
 
 import java.io.IOException
 
-final case class ClusterExecutor(
-  clusterConnectionRef: Ref.Synchronized[ClusterConnection],
+final class ClusterExecutor private (
+  clusterConnection: Ref.Synchronized[ClusterConnection],
   config: RedisClusterConfig,
   scope: Scope.Closeable
 ) extends RedisExecutor {
@@ -56,18 +57,18 @@ final case class ClusterExecutor(
     }
 
     for {
-      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespArgument.Key => key })
+      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespCommandArgument.Key => key })
       keySlot = keyOpt.fold(Slot.Default)(key => Slot((key.asCRC16 & (SlotsAmount - 1)).toLong))
       result <- executeSafe(keySlot)
     } yield result
   }
 
   private def executor(slot: Slot): IO[RedisError.IOError, RedisExecutor] =
-    clusterConnectionRef.get.map(_.executor(slot)).flatMap(ZIO.fromOption(_).orElseFail(CusterKeyExecutorError))
+    clusterConnection.get.map(_.executor(slot)).flatMap(ZIO.fromOption(_).orElseFail(CusterKeyExecutorError))
 
   // TODO introduce max connection amount
   private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor] =
-    clusterConnectionRef.modifyZIO { cc =>
+    clusterConnection.modifyZIO { cc =>
       val executorOpt = cc.executors.get(address).map(es => (es.executor, cc))
       val enrichedClusterIO =
         scope.extend[Any](connectToNode(address)).map(es => (es.executor, cc.addExecutor(address, es)))
@@ -75,7 +76,7 @@ final case class ClusterExecutor(
     }
 
   private def refreshConnect: IO[RedisError, Unit] =
-    clusterConnectionRef.updateZIO { connection =>
+    clusterConnection.updateZIO { connection =>
       val addresses = connection.partitions.flatMap(_.addresses)
       for {
         cluster <- scope.extend[Any](initConnectToCluster(addresses))
@@ -110,11 +111,11 @@ object ClusterExecutor {
     scope: Scope.Closeable
   ): ZIO[Scope, RedisError, ClusterExecutor] =
     for {
-      clusterConnection    <- initConnectToCluster(config.addresses)
-      clusterConnectionRef <- Ref.Synchronized.make(clusterConnection)
-      clusterExec           = ClusterExecutor(clusterConnectionRef, config, scope)
-      _                    <- logScopeFinalizer("Cluster executor is closed")
-    } yield clusterExec
+      connection <- initConnectToCluster(config.addresses)
+      ref        <- Ref.Synchronized.make(connection)
+      executor    = new ClusterExecutor(ref, config, scope)
+      _          <- logScopeFinalizer("Cluster executor is closed")
+    } yield executor
 
   private def initConnectToCluster(addresses: Chunk[RedisUri]): ZIO[Scope, RedisError, ClusterConnection] =
     ZIO
@@ -141,15 +142,15 @@ object ClusterExecutor {
   private def connectToNode(address: RedisUri) =
     for {
       closableScope <- Scope.make
-      connection    <- closableScope.extend[Any](RedisConnectionLive.create(RedisConfig(address.host, address.port)))
+      connection    <- closableScope.extend[Any](RedisConnection.create(RedisConfig(address.host, address.port)))
       executor      <- closableScope.extend[Any](SingleNodeExecutor.create(connection))
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
 
   private def redis(address: RedisUri) = {
-    val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> RedisExecutor.layer
-    val codecLayer    = ZLayer.succeed[CodecSupplier](CodecSupplier.utf8string)
+    val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> SingleNodeExecutor.layer
+    val codecLayer    = ZLayer.succeed[CodecSupplier](CodecSupplier.utf8)
     val redisLayer    = executorLayer ++ codecLayer >>> Redis.layer
     for {
       closableScope <- Scope.make

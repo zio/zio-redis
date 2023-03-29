@@ -1,9 +1,9 @@
 package zio.redis
 
-import zio.redis.codecs.{CRC16, ProtobufCodecSupplier}
+import zio._
+import zio.redis.internal.CRC16
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test._
-import zio.{Chunk, Layer, ZIO, ZLayer, durationInt}
 
 object ClusterExecutorSpec extends BaseSpec {
   def spec: Spec[TestEnvironment, Any] =
@@ -68,7 +68,7 @@ object ClusterExecutorSpec extends BaseSpec {
   private final def getRedisNodeLayer(uri: RedisUri): Layer[Any, Redis] =
     ZLayer.make[Redis](
       ZLayer.succeed(RedisConfig(uri.host, uri.port)),
-      RedisExecutor.layer,
+      SingleNodeExecutor.layer,
       ZLayer.succeed(ProtobufCodecSupplier),
       Redis.layer
     )

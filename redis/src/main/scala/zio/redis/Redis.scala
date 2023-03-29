@@ -36,10 +36,10 @@ object Redis {
   lazy val layer: URLayer[RedisExecutor with CodecSupplier, Redis] =
     ZLayer {
       for {
-        executor <- ZIO.service[RedisExecutor]
-        codec    <- ZIO.service[CodecSupplier]
-      } yield Live(codec, executor)
+        codecSupplier <- ZIO.service[CodecSupplier]
+        executor      <- ZIO.service[RedisExecutor]
+      } yield Live(codecSupplier, executor)
     }
 
-  private final case class Live(codec: CodecSupplier, executor: RedisExecutor) extends Redis
+  private final case class Live(codecSupplier: CodecSupplier, executor: RedisExecutor) extends Redis
 }

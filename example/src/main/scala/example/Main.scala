@@ -21,7 +21,7 @@ import example.config.AppConfig
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zhttp.service.Server
 import zio._
-import zio.redis.{CodecSupplier, Redis, RedisExecutor}
+import zio.redis._
 import zio.schema.Schema
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
@@ -33,8 +33,8 @@ object Main extends ZIOAppDefault {
         AppConfig.layer,
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
-        RedisExecutor.layer,
         Redis.layer,
+        SingleNodeExecutor.layer,
         ZLayer.succeed[CodecSupplier](new CodecSupplier {
           def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
         })

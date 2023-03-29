@@ -42,8 +42,8 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
       } yield assert(found)(isSome(equalTo(item)))
     }
   ).provideShared(
-    EmbeddedRedis.layer.orDie,
-    RedisExecutor.layer.orDie,
+    EmbeddedRedis.layer,
+    SingleNodeExecutor.layer,
     ZLayer.succeed[CodecSupplier](new CodecSupplier {
       def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
     }),

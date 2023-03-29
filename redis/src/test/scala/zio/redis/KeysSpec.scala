@@ -2,7 +2,6 @@ package zio.redis
 
 import zio._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.codecs.ProtobufCodecSupplier
 import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{restore => _, _}
 import zio.test._
@@ -482,7 +481,6 @@ object KeysSpec {
     ZLayer
       .make[Redis](
         ZLayer.succeed(RedisConfig("localhost", 6380)),
-        RedisConnectionLive.layer,
         SingleNodeExecutor.layer,
         ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
         Redis.layer
