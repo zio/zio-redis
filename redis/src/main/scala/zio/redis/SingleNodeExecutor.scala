@@ -36,7 +36,7 @@ final class SingleNodeExecutor(
    * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a
    * new connection. Only exits by interruption or defect.
    */
-  val run: IO[RedisError, AnyVal] =
+  private val run: IO[RedisError, AnyVal] =
     ZIO.logTrace(s"$this Executable sender and reader has been started") *>
       (send.repeat[Any, Long](Schedule.forever) race receive)
         .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e))
