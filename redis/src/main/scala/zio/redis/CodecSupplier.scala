@@ -16,6 +16,7 @@
 
 package zio.redis
 
+import zio.redis.internal.Utf8Codec
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 

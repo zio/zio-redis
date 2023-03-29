@@ -1,7 +1,6 @@
 package zio.redis.internal
 
 import zio.redis._
-import zio.redis.internal.RedisConnection
 import zio.test.Assertion.{equalTo, isSome}
 import zio.test.{Spec, assert}
 import zio.{Chunk, ZIO}

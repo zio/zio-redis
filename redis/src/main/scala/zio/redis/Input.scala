@@ -17,8 +17,7 @@
 package zio.redis
 
 import zio._
-import zio.redis._
-import zio.redis.internal.{RespCommand, RespCommandArgument}
+import zio.redis.internal.{RespCommand, RespCommandArgument, Utf8Codec}
 import zio.schema.codec.BinaryCodec
 
 import java.time.Instant
