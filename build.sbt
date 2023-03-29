@@ -37,7 +37,7 @@ lazy val root =
 
 lazy val redis =
   project
-    .in(file("redis"))
+    .in(file("modules/redis"))
     .enablePlugins(BuildInfoPlugin)
     .settings(buildInfoSettings("zio.redis"))
     .settings(scala3Settings)
@@ -57,7 +57,7 @@ lazy val redis =
 
 lazy val embedded =
   project
-    .in(file("embedded"))
+    .in(file("modules/embedded"))
     .enablePlugins(BuildInfoPlugin)
     .settings(buildInfoSettings("zio.redis.embedded"))
     .settings(scala3Settings)
@@ -77,7 +77,7 @@ lazy val embedded =
 
 lazy val benchmarks =
   project
-    .in(file("benchmarks"))
+    .in(file("modules/benchmarks"))
     .enablePlugins(JmhPlugin)
     .dependsOn(redis)
     .settings(stdSettings("benchmarks"))
@@ -94,7 +94,7 @@ lazy val benchmarks =
 
 lazy val example =
   project
-    .in(file("example"))
+    .in(file("modules/example"))
     .dependsOn(redis)
     .settings(stdSettings("example"))
     .settings(
