@@ -18,7 +18,6 @@ package zio.redis
 
 import zio._
 import zio.redis.ClusterExecutor._
-import zio.redis.RedisClusterConfig
 import zio.redis.api.Cluster.AskingCommand
 import zio.redis.options.Cluster._
 
@@ -142,7 +141,7 @@ object ClusterExecutor {
   private def connectToNode(address: RedisUri) =
     for {
       closableScope <- Scope.make
-      connection    <- closableScope.extend[Any](RedisConnectionLive.create(RedisConfig(address.host, address.port)))
+      connection    <- closableScope.extend[Any](RedisConnection.create(RedisConfig(address.host, address.port)))
       executor      <- closableScope.extend[Any](SingleNodeExecutor.create(connection))
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))

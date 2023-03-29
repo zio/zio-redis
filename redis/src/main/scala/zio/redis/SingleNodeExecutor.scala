@@ -76,10 +76,10 @@ final class SingleNodeExecutor(
 
 object SingleNodeExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.layer >>> makeLayer
+    RedisConnection.layer >>> makeLayer
 
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    RedisConnectionLive.local >>> makeLayer
+    RedisConnection.local >>> makeLayer
 
   final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
