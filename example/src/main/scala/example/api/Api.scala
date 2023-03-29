@@ -26,7 +26,7 @@ object Api {
     Http.collectZIO { case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
       ZIO
         .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
-        .mapBoth(_.toResponse, r => Response.json(r.toJson))
+        .mapBoth(_.asResponse, r => Response.json(r.toJson))
         .merge
     }
 }

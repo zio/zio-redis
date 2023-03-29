@@ -47,7 +47,7 @@ final class ClusterExecutor private (
 
     def executeSafe(keySlot: Slot) = {
       val recover = execute(keySlot).flatMap {
-        case e: RespValue.Error => ZIO.fail(e.toRedisError)
+        case e: RespValue.Error => ZIO.fail(e.asRedisError)
         case success            => ZIO.succeed(success)
       }.catchSome {
         case e: RedisError.Ask   => executeAsk(e.address)

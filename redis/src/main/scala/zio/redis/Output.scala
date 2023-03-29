@@ -32,7 +32,7 @@ sealed trait Output[+A] { self =>
 
   private[redis] final def unsafeDecode(respValue: RespValue): A =
     respValue match {
-      case error: RespValue.Error => throw error.toRedisError
+      case error: RespValue.Error => throw error.asRedisError
       case success                => tryDecode(success)
     }
 }

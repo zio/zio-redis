@@ -45,13 +45,13 @@ private[redis] object RespCommandArgument {
   }
 
   final case class Key(bytes: Chunk[Byte]) extends RespCommandArgument {
-    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
-
     lazy val asCRC16: Int = {
       val betweenBraces = bytes.dropWhile(b => b != '{').drop(1).takeWhile(b => b != '}')
       val key           = if (betweenBraces.isEmpty) bytes else betweenBraces
       CRC16.get(key)
     }
+
+    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
   }
 
   object Key {
