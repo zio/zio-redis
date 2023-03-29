@@ -20,17 +20,17 @@ import zio._
 import zio.redis.SingleNodeExecutor._
 import zio.redis.internal.{RedisConnection, RespCommand, RespValue}
 
-final class SingleNodeExecutor(
-  reqQueue: Queue[Request],
-  resQueue: Queue[Promise[RedisError, RespValue]],
-  connection: RedisConnection
+final class SingleNodeExecutor private (
+  connection: RedisConnection,
+  requests: Queue[Request],
+  responses: Queue[Promise[RedisError, RespValue]]
 ) extends RedisExecutor {
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
   def execute(command: RespCommand): IO[RedisError, RespValue] =
     Promise
       .make[RedisError, RespValue]
-      .flatMap(promise => reqQueue.offer(Request(command.args.map(_.value), promise)) *> promise.await)
+      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)) *> promise.await)
 
   /**
    * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a
@@ -43,10 +43,10 @@ final class SingleNodeExecutor(
         .retryWhile(True)
         .tapError(e => ZIO.logError(s"Executor exiting: $e"))
 
-  private def drainWith(e: RedisError): UIO[Unit] = resQueue.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
+  private def drainWith(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
   private def send: IO[RedisError.IOError, Option[Unit]] =
-    reqQueue.takeBetween(1, RequestQueueSize).flatMap { reqs =>
+    requests.takeBetween(1, RequestQueueSize).flatMap { reqs =>
       val buffer = ChunkBuilder.make[Byte]()
       val it     = reqs.iterator
 
@@ -62,7 +62,7 @@ final class SingleNodeExecutor(
         .mapError(RedisError.IOError(_))
         .tapBoth(
           e => ZIO.foreachDiscard(reqs)(_.promise.fail(e)),
-          _ => ZIO.foreachDiscard(reqs)(req => resQueue.offer(req.promise))
+          _ => ZIO.foreachDiscard(reqs)(req => responses.offer(req.promise))
         )
     }
 
@@ -71,7 +71,7 @@ final class SingleNodeExecutor(
       .mapError(RedisError.IOError(_))
       .via(RespValue.Decoder)
       .collectSome
-      .foreach(response => resQueue.take.flatMap(_.succeed(response)))
+      .foreach(response => responses.take.flatMap(_.succeed(response)))
 
 }
 
@@ -90,11 +90,11 @@ object SingleNodeExecutor {
 
   private[redis] def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
     for {
-      reqQueue <- Queue.bounded[Request](RequestQueueSize)
-      resQueue <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor  = new SingleNodeExecutor(reqQueue, resQueue, connection)
-      _        <- executor.run.forkScoped
-      _        <- logScopeFinalizer(s"$executor Node Executor is closed")
+      requests  <- Queue.bounded[Request](RequestQueueSize)
+      responses <- Queue.unbounded[Promise[RedisError, RespValue]]
+      executor   = new SingleNodeExecutor(connection, requests, responses)
+      _         <- executor.run.forkScoped
+      _         <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor
 
   private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
