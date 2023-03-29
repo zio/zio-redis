@@ -4,7 +4,7 @@
 
 # ZIO Redis
 
-[![Development](https://img.shields.io/badge/Project%20Stage-Development-green.svg)](https://github.com/zio/zio/wiki/Project-Stages) ![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) [![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.13/) [![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis)
+[![Development](https://img.shields.io/badge/Project%20Stage-Development-green.svg)](https://github.com/zio/zio/wiki/Project-Stages) ![CI Badge](https://github.com/zio/zio-redis/workflows/CI/badge.svg) [![Sonatype Releases](https://img.shields.io/nexus/r/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Release)](https://oss.sonatype.org/content/repositories/releases/dev/zio/zio-redis_2.13/) [![Sonatype Snapshots](https://img.shields.io/nexus/s/https/oss.sonatype.org/dev.zio/zio-redis_2.13.svg?label=Sonatype%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/dev/zio/zio-redis_2.13/) [![javadoc](https://javadoc.io/badge2/dev.zio/zio-redis-docs_2.13/javadoc.svg)](https://javadoc.io/doc/dev.zio/zio-redis-docs_2.13) [![ZIO Redis](https://img.shields.io/github/stars/zio/zio-redis?style=social)](https://github.com/zio/zio-redis)
 
 ## Introduction
 
@@ -17,7 +17,7 @@ instances.
 To use ZIO Redis, add the following line to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "<version>"
+libraryDependencies += "dev.zio" %% "zio-redis" % "0.2.0"
 ```
 
 ## Example
@@ -32,7 +32,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "<version>",
+  "dev.zio" %% "zio-redis" % "0.2.0",
   "dev.zio" %% "zio-schema-protobuf" % "0.4.9"
 )
 ```
@@ -72,7 +72,7 @@ object ZIORedisExample extends ZIOAppDefault {
 To test you can use the embedded redis instance by adding to your build:
 
 ```scala
-libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "<version>"
+libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "0.2.0"
 ```
 
 Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
