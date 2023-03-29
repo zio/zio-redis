@@ -82,7 +82,7 @@ object SingleNodeExecutor {
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     RedisConnection.local >>> makeLayer
 
-  final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
+  private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
   private final val True: Any => Boolean = _ => true
 
