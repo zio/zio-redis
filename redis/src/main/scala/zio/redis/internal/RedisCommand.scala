@@ -19,7 +19,6 @@ package zio.redis.internal
 import zio._
 import zio.redis.Input.{CommandNameInput, Varargs}
 import zio.redis._
-import zio.redis.internal.RespCommand
 
 private[redis] final class RedisCommand[-In, +Out] private (
   val name: String,

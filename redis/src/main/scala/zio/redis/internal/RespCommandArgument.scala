@@ -17,10 +17,10 @@
 package zio.redis.internal
 
 import zio.Chunk
-import zio.redis.internal.CRC16
 import zio.schema.codec.BinaryCodec
 
 import java.nio.charset.StandardCharsets
+
 private[redis] sealed trait RespCommandArgument {
   def value: RespValue.BulkString
 }
