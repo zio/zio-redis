@@ -34,10 +34,13 @@ object ApiSpec
       hyperLogLogSuite,
       hashSuite,
       streamsSuite,
-      scriptingSpec
+      scriptingSpec,
+      pubSubSuite
     ).provideShared(
       RedisExecutor.local,
+      SubscriptionExecutor.local,
       Redis.layer,
+      RedisSubscription.layer,
       ZLayer.succeed(codec)
     )
 

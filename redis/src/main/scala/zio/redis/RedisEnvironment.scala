@@ -21,5 +21,4 @@ import zio.schema.codec.BinaryCodec
 private[redis] trait RedisEnvironment {
   protected def codec: BinaryCodec
   protected def executor: RedisExecutor
-  protected def pubSub: RedisPubSub
 }

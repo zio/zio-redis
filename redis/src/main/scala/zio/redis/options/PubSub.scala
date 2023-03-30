@@ -1,9 +1,9 @@
 package zio.redis.options
 
-import zio.IO
-import zio.redis.{RedisError, RespValue}
-trait PubSub {
-  type PubSubCallback = (String, Long) => IO[RedisError, Unit]
+import zio.UIO
+import zio.redis.RespValue
+object PubSub {
+  type PubSubCallback = (String, Long) => UIO[Unit]
 
   sealed trait PushProtocol
 
@@ -15,8 +15,6 @@ trait PubSub {
     case class Message(channel: String, message: RespValue)                   extends PushProtocol
     case class PMessage(pattern: String, channel: String, message: RespValue) extends PushProtocol
   }
-}
 
-object PubSub {
   final case class NumberOfSubscribers(channel: String, subscriberCount: Long)
 }

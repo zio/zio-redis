@@ -21,7 +21,7 @@ import example.config.AppConfig
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zhttp.service.Server
 import zio._
-import zio.redis.{Redis, RedisExecutor, RedisPubSub}
+import zio.redis.{Redis, RedisExecutor, SubscriptionExecutor}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
 object Main extends ZIOAppDefault {
@@ -33,7 +33,7 @@ object Main extends ZIOAppDefault {
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
         RedisExecutor.layer,
-        RedisPubSub.layer,
+        SubscriptionExecutor.layer,
         Redis.layer,
         ZLayer.succeed[BinaryCodec](ProtobufCodec)
       )

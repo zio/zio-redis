@@ -3,6 +3,7 @@ package zio.redis
 import zio._
 import zio.redis.Output._
 import zio.redis.RedisError._
+import zio.redis.options.PubSub.PushProtocol
 import zio.test.Assertion._
 import zio.test._
 

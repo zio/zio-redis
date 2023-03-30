@@ -32,17 +32,16 @@ trait Redis
     with api.Streams
     with api.Scripting
     with api.Cluster
-    with api.PubSub
+    with api.Publishing
 
 object Redis {
-  lazy val layer: URLayer[RedisExecutor with RedisPubSub with BinaryCodec, Redis] =
+  lazy val layer: URLayer[RedisExecutor with BinaryCodec, Redis] =
     ZLayer {
       for {
         executor <- ZIO.service[RedisExecutor]
-        pubSub   <- ZIO.service[RedisPubSub]
         codec    <- ZIO.service[BinaryCodec]
-      } yield Live(codec, executor, pubSub)
+      } yield Live(codec, executor)
     }
 
-  private final case class Live(codec: BinaryCodec, executor: RedisExecutor, pubSub: RedisPubSub) extends Redis
+  private final case class Live(codec: BinaryCodec, executor: RedisExecutor) extends Redis
 }

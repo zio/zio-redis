@@ -18,7 +18,7 @@ package zio.redis
 
 import zio._
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
-import zio.redis.options.PubSub.NumberOfSubscribers
+import zio.redis.options.PubSub.{NumberOfSubscribers, PushProtocol}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
