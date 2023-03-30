@@ -7,13 +7,13 @@ import zio.schema.Schema
 import zio.stream.Stream
 import zio.{Chunk, IO, ZIO}
 
-trait Subscribe extends SubscribeEnvironment {
-  import Subscribe._
+trait Subscription extends SubscribeEnvironment {
+  import Subscription._
 
   final def subscribe(channel: String, channels: String*) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisPubSubCommand(codec, executor).subscribe(
+        RedisSubscriptionCommand(codec, executor).subscribe(
           Chunk.single(channel) ++ Chunk.fromIterable(channels),
           emptyCallback,
           emptyCallback
@@ -26,7 +26,7 @@ trait Subscribe extends SubscribeEnvironment {
   ) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisPubSubCommand(codec, executor).subscribe(
+        RedisSubscriptionCommand(codec, executor).subscribe(
           Chunk.single(channel) ++ Chunk.fromIterable(channels),
           onSubscribe,
           onUnsubscribe
@@ -36,7 +36,7 @@ trait Subscribe extends SubscribeEnvironment {
   final def pSubscribe(pattern: String, patterns: String*) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisPubSubCommand(codec, executor).pSubscribe(
+        RedisSubscriptionCommand(codec, executor).pSubscribe(
           Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
           emptyCallback,
           emptyCallback
@@ -49,7 +49,7 @@ trait Subscribe extends SubscribeEnvironment {
   )(onSubscribe: PubSubCallback, onUnsubscribe: PubSubCallback) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisPubSubCommand(codec, executor).pSubscribe(
+        RedisSubscriptionCommand(codec, executor).pSubscribe(
           Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
           onSubscribe,
           onUnsubscribe
@@ -57,14 +57,14 @@ trait Subscribe extends SubscribeEnvironment {
     }
 
   final def unsubscribe(channels: String*): IO[RedisError, Unit] =
-    RedisPubSubCommand(codec, executor).unsubscribe(Chunk.fromIterable(channels))
+    RedisSubscriptionCommand(codec, executor).unsubscribe(Chunk.fromIterable(channels))
 
   final def pUnsubscribe(patterns: String*): IO[RedisError, Unit] =
-    RedisPubSubCommand(codec, executor).unsubscribe(Chunk.fromIterable(patterns))
+    RedisSubscriptionCommand(codec, executor).pUnsubscribe(Chunk.fromIterable(patterns))
 
 }
 
-object Subscribe {
+object Subscription {
   private lazy val emptyCallback = (_: String, _: Long) => ZIO.unit
 
   final val Subscribe    = "SUBSCRIBE"

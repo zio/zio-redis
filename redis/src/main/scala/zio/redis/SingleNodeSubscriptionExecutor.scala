@@ -1,7 +1,7 @@
 package zio.redis
 
 import zio.redis.SingleNodeSubscriptionExecutor.{Request, RequestQueueSize, True}
-import zio.redis.api.Subscribe
+import zio.redis.api.Subscription
 import zio.stream._
 import zio.{Chunk, ChunkBuilder, Hub, IO, Promise, Queue, Ref, Schedule, ZIO}
 
@@ -18,10 +18,10 @@ final class SingleNodeSubscriptionExecutor(
                        .fromOption(command.args.collectFirst { case RespArgument.CommandName(name) => name })
                        .orElseFail(RedisError.CommandNameNotFound(command.args.toString()))
       stream <- commandName match {
-                  case Subscribe.Subscribe    => ZIO.succeed(subscribe(channelSubsRef, command))
-                  case Subscribe.PSubscribe   => ZIO.succeed(subscribe(patternSubsRef, command))
-                  case Subscribe.Unsubscribe  => ZIO.succeed(unsubscribe(channelSubsRef, command))
-                  case Subscribe.PUnsubscribe => ZIO.succeed(unsubscribe(patternSubsRef, command))
+                  case Subscription.Subscribe    => ZIO.succeed(subscribe(channelSubsRef, command))
+                  case Subscription.PSubscribe   => ZIO.succeed(subscribe(patternSubsRef, command))
+                  case Subscription.Unsubscribe  => ZIO.succeed(unsubscribe(channelSubsRef, command))
+                  case Subscription.PUnsubscribe => ZIO.succeed(unsubscribe(patternSubsRef, command))
                   case other               => ZIO.fail(RedisError.InvalidPubSubCommand(other))
                 }
     } yield stream
@@ -59,7 +59,7 @@ final class SingleNodeSubscriptionExecutor(
                  else
                    Set.empty
                )
-        } yield ZStream.fromHub(hub)
+        } yield ZStream.empty
       )
       .flatten
 
@@ -101,8 +101,8 @@ final class SingleNodeSubscriptionExecutor(
     for {
       channels <- channelSubsRef.get
       patterns <- patternSubsRef.get
-      commands = makeCommand(Subscribe.Subscribe, Chunk.fromIterable(channels)) ++
-                   makeCommand(Subscribe.PSubscribe, Chunk.fromIterable(patterns))
+      commands = makeCommand(Subscription.Subscribe, Chunk.fromIterable(channels)) ++
+                   makeCommand(Subscription.PSubscribe, Chunk.fromIterable(patterns))
       _ <- connection
              .write(commands)
              .when(commands.nonEmpty)

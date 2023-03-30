@@ -3,7 +3,7 @@ package zio.redis
 import zio.{URLayer, ZIO, ZLayer}
 import zio.schema.codec.BinaryCodec
 
-trait RedisSubscription extends api.Subscribe
+trait RedisSubscription extends api.Subscription
 
 object RedisSubscription {
   lazy val layer: URLayer[SubscriptionExecutor with BinaryCodec, RedisSubscription] =

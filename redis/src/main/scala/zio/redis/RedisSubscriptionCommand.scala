@@ -9,7 +9,7 @@ import zio.stream.ZStream.RefineToOrDieOps
 import zio.stream._
 import zio.{Chunk, IO, Promise, Ref, ZIO}
 
-private[redis] final case class RedisPubSubCommand(codec: BinaryCodec, executor: SubscriptionExecutor) extends {
+private[redis] final case class RedisSubscriptionCommand(codec: BinaryCodec, executor: SubscriptionExecutor) extends {
   import zio.redis.options.PubSub.PushProtocol._
 
   def subscribe[A: Schema](
@@ -17,7 +17,7 @@ private[redis] final case class RedisPubSubCommand(codec: BinaryCodec, executor:
     onSubscribe: PubSubCallback,
     onUnsubscribe: PubSubCallback
   ): IO[RedisError, Stream[RedisError, (String, A)]] = {
-    val command = CommandNameInput.encode(api.Subscribe.Subscribe)(codec) ++
+    val command = CommandNameInput.encode(api.Subscription.Subscribe)(codec) ++
       Varargs(ArbitraryKeyInput[String]()).encode(channels)(codec)
 
     val channelSet = channels.toSet
@@ -54,7 +54,7 @@ private[redis] final case class RedisPubSubCommand(codec: BinaryCodec, executor:
     onSubscribe: PubSubCallback,
     onUnsubscribe: PubSubCallback
   ): IO[RedisError, Stream[RedisError, (String, A)]] = {
-    val command = CommandNameInput.encode(api.Subscribe.PSubscribe)(codec) ++
+    val command = CommandNameInput.encode(api.Subscription.PSubscribe)(codec) ++
       Varargs(ArbitraryKeyInput[String]()).encode(patterns)(codec)
 
     val patternSet = patterns.toSet
@@ -87,20 +87,20 @@ private[redis] final case class RedisPubSubCommand(codec: BinaryCodec, executor:
   }
 
   def unsubscribe(channels: Chunk[String]): IO[RedisError, Unit] = {
-    val command = CommandNameInput.encode(api.Subscribe.Unsubscribe)(codec) ++
+    val command = CommandNameInput.encode(api.Subscription.Unsubscribe)(codec) ++
       Varargs(ArbitraryKeyInput[String]()).encode(channels)(codec)
 
     executor
       .execute(command)
-      .unit
+      .flatMap(_.runDrain)
   }
 
   def pUnsubscribe(patterns: Chunk[String]): IO[RedisError, Unit] = {
-    val command = CommandNameInput.encode(api.Subscribe.PUnsubscribe)(codec) ++
+    val command = CommandNameInput.encode(api.Subscription.PUnsubscribe)(codec) ++
       Varargs(ArbitraryKeyInput[String]()).encode(patterns)(codec)
 
     executor
       .execute(command)
-      .unit
+      .flatMap(_.runDrain)
   }
 }
