@@ -97,9 +97,9 @@ private[redis] object RespValue {
     // ZSink fold will return a State.Start when contFn is false
     val lineProcessor =
       ZSink.foldChunks[Byte, State](State.Start)(_.inProgress)(_ feed _).mapZIO {
-        case State.Done(value) => ZIO.succeed(Some(value))
+        case State.Done(value) => ZIO.some(value)
         case State.Failed      => ZIO.fail(RedisError.ProtocolError("Invalid data received."))
-        case State.Start       => ZIO.succeed(None)
+        case State.Start       => ZIO.none
         case other             => ZIO.dieMessage(s"Deserialization bug, should not get $other")
       }
 
