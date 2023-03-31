@@ -2,6 +2,7 @@ package zio.redis.api
 
 import zio.redis.ResultBuilder.ResultBuilder1
 import zio.redis._
+import zio.redis.internal.SubscribeEnvironment
 import zio.redis.options.PubSub.PubSubCallback
 import zio.schema.Schema
 import zio.stream.Stream
@@ -13,7 +14,7 @@ trait Subscription extends SubscribeEnvironment {
   final def subscribe(channel: String, channels: String*) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisSubscriptionCommand(codec, executor).subscribe(
+        RedisSubscriptionCommand(executor).subscribe(
           Chunk.single(channel) ++ Chunk.fromIterable(channels),
           emptyCallback,
           emptyCallback
@@ -26,7 +27,7 @@ trait Subscription extends SubscribeEnvironment {
   ) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisSubscriptionCommand(codec, executor).subscribe(
+        RedisSubscriptionCommand(executor).subscribe(
           Chunk.single(channel) ++ Chunk.fromIterable(channels),
           onSubscribe,
           onUnsubscribe
@@ -36,7 +37,7 @@ trait Subscription extends SubscribeEnvironment {
   final def pSubscribe(pattern: String, patterns: String*) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisSubscriptionCommand(codec, executor).pSubscribe(
+        RedisSubscriptionCommand(executor).pSubscribe(
           Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
           emptyCallback,
           emptyCallback
@@ -49,7 +50,7 @@ trait Subscription extends SubscribeEnvironment {
   )(onSubscribe: PubSubCallback, onUnsubscribe: PubSubCallback) =
     new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
       def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
-        RedisSubscriptionCommand(codec, executor).pSubscribe(
+        RedisSubscriptionCommand(executor).pSubscribe(
           Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
           onSubscribe,
           onUnsubscribe
@@ -57,10 +58,10 @@ trait Subscription extends SubscribeEnvironment {
     }
 
   final def unsubscribe(channels: String*): IO[RedisError, Unit] =
-    RedisSubscriptionCommand(codec, executor).unsubscribe(Chunk.fromIterable(channels))
+    RedisSubscriptionCommand(executor).unsubscribe(Chunk.fromIterable(channels))
 
   final def pUnsubscribe(patterns: String*): IO[RedisError, Unit] =
-    RedisSubscriptionCommand(codec, executor).pUnsubscribe(Chunk.fromIterable(patterns))
+    RedisSubscriptionCommand(executor).pUnsubscribe(Chunk.fromIterable(patterns))
 
 }
 

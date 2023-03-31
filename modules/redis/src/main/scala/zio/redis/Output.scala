@@ -828,7 +828,7 @@ object Output {
   }
 
   case object PushProtocolOutput extends Output[PushProtocol] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): PushProtocol =
+    protected def tryDecode(respValue: RespValue): PushProtocol =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
@@ -859,7 +859,7 @@ object Output {
   }
 
   case object NumSubResponseOutput extends Output[Chunk[NumberOfSubscribers]] {
-    protected def tryDecode(respValue: RespValue)(implicit codec: BinaryCodec): Chunk[NumberOfSubscribers] =
+    protected def tryDecode(respValue: RespValue): Chunk[NumberOfSubscribers] =
       respValue match {
         case RespValue.Array(values) =>
           Chunk.fromIterator(values.grouped(2).map { chunk =>
