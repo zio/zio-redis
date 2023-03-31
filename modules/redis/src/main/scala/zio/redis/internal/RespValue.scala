@@ -120,10 +120,10 @@ private[redis] object RespValue {
     }
 
     final val CrLf: Chunk[Byte]              = Chunk('\r', '\n')
-    final val NullArrayEncoded: Chunk[Byte]  = Chunk.fromArray("*-1\r\n".getBytes(StandardCharsets.US_ASCII))
-    final val NullArrayPrefix: Chunk[Byte]   = Chunk.fromArray("*-1".getBytes(StandardCharsets.US_ASCII))
-    final val NullStringEncoded: Chunk[Byte] = Chunk.fromArray("$-1\r\n".getBytes(StandardCharsets.US_ASCII))
-    final val NullStringPrefix: Chunk[Byte]  = Chunk.fromArray("$-1".getBytes(StandardCharsets.US_ASCII))
+    final val NullArrayEncoded: Chunk[Byte]  = Chunk('*', '-', '1', '\r', '\n')
+    final val NullArrayPrefix: Chunk[Byte]   = Chunk('*', '-', '1')
+    final val NullStringEncoded: Chunk[Byte] = Chunk('$', '-', '1', '\r', '\n')
+    final val NullStringPrefix: Chunk[Byte]  = Chunk('$', '-', '1')
 
     sealed trait State { self =>
       import State._
