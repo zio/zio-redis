@@ -2,6 +2,7 @@ package zio.redis
 
 import zio.redis.Input._
 import zio.redis.Output.{ArbitraryOutput, PushProtocolOutput}
+import zio.redis.api.Subscription
 import zio.redis.options.PubSub.PubSubCallback
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
@@ -16,17 +17,13 @@ private[redis] final case class RedisSubscriptionCommand(codec: BinaryCodec, exe
     channels: Chunk[String],
     onSubscribe: PubSubCallback,
     onUnsubscribe: PubSubCallback
-  ): IO[RedisError, Stream[RedisError, (String, A)]] = {
-    val command = CommandNameInput.encode(api.Subscription.Subscribe)(codec) ++
-      Varargs(ArbitraryKeyInput[String]()).encode(channels)(codec)
-
-    val channelSet = channels.toSet
-
+  ): IO[RedisError, Stream[RedisError, (String, A)]] =
     for {
       unsubscribedRef <- Ref.make(channels.map(_ -> false).toMap)
       promise         <- Promise.make[RedisError, Unit]
+      channelSet       = channels.toSet
       stream <- executor
-                  .execute(command)
+                  .execute(makeCommand(Subscription.Subscribe, channels))
                   .map(
                     _.mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)(codec))).mapZIO {
                       case Subscribe(channel, numOfSubscription) if channelSet contains channel =>
@@ -47,23 +44,18 @@ private[redis] final case class RedisSubscriptionCommand(codec: BinaryCodec, exe
                       .interruptWhen(promise)
                   )
     } yield stream
-  }
 
   def pSubscribe[A: Schema](
     patterns: Chunk[String],
     onSubscribe: PubSubCallback,
     onUnsubscribe: PubSubCallback
-  ): IO[RedisError, Stream[RedisError, (String, A)]] = {
-    val command = CommandNameInput.encode(api.Subscription.PSubscribe)(codec) ++
-      Varargs(ArbitraryKeyInput[String]()).encode(patterns)(codec)
-
-    val patternSet = patterns.toSet
-
+  ): IO[RedisError, Stream[RedisError, (String, A)]] =
     for {
       unsubscribedRef <- Ref.make(patterns.map(_ -> false).toMap)
       promise         <- Promise.make[RedisError, Unit]
+      patternSet       = patterns.toSet
       stream <- executor
-                  .execute(command)
+                  .execute(makeCommand(Subscription.PSubscribe, patterns))
                   .map(
                     _.mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)(codec))).mapZIO {
                       case PSubscribe(pattern, numOfSubscription) if patternSet contains pattern =>
@@ -84,23 +76,18 @@ private[redis] final case class RedisSubscriptionCommand(codec: BinaryCodec, exe
                       .interruptWhen(promise)
                   )
     } yield stream
-  }
 
-  def unsubscribe(channels: Chunk[String]): IO[RedisError, Unit] = {
-    val command = CommandNameInput.encode(api.Subscription.Unsubscribe)(codec) ++
-      Varargs(ArbitraryKeyInput[String]()).encode(channels)(codec)
-
+  def unsubscribe(channels: Chunk[String]): IO[RedisError, Unit] =
     executor
-      .execute(command)
+      .execute(makeCommand(Subscription.Unsubscribe, channels))
       .flatMap(_.runDrain)
-  }
 
-  def pUnsubscribe(patterns: Chunk[String]): IO[RedisError, Unit] = {
-    val command = CommandNameInput.encode(api.Subscription.PUnsubscribe)(codec) ++
-      Varargs(ArbitraryKeyInput[String]()).encode(patterns)(codec)
-
+  def pUnsubscribe(patterns: Chunk[String]): IO[RedisError, Unit] =
     executor
-      .execute(command)
+      .execute(makeCommand(Subscription.PUnsubscribe, patterns))
       .flatMap(_.runDrain)
-  }
+
+  private def makeCommand(commandName: String, keys: Chunk[String]) =
+    CommandNameInput.encode(commandName)(codec) ++
+      Varargs(ArbitraryKeyInput[String]()).encode(keys)(codec)
 }

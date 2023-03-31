@@ -5,9 +5,9 @@ import zio.redis.RespValue
 object PubSub {
   type PubSubCallback = (String, Long) => UIO[Unit]
 
-  sealed trait PushProtocol
+  private[redis] sealed trait PushProtocol
 
-  object PushProtocol {
+  private[redis] object PushProtocol {
     case class Subscribe(channel: String, numOfSubscription: Long)            extends PushProtocol
     case class PSubscribe(pattern: String, numOfSubscription: Long)           extends PushProtocol
     case class Unsubscribe(channel: String, numOfSubscription: Long)          extends PushProtocol
