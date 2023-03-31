@@ -29,22 +29,59 @@ private[redis] sealed trait RespValue extends Product with Serializable { self =
 
   final def asBytes: Chunk[Byte] =
     self match {
-      case NullBulkString  => NullStringEncoded
-      case NullArray       => NullArrayEncoded
-      case SimpleString(s) => Headers.SimpleString +: encode(s)
-      case Error(s)        => Headers.Error +: encode(s)
-      case Integer(i)      => Headers.Integer +: encode(i.toString)
+      case NullBulkString => NullStringEncoded
+      case NullArray      => NullArrayEncoded
+      case SimpleString(s) =>
+        val builder = new ChunkBuilder.Byte()
+
+        builder += Headers.SimpleString
+        builder ++= encode(s)
+        builder ++= CrLf
+
+        builder.result()
+
+      case Error(s) =>
+        val builder = new ChunkBuilder.Byte()
+
+        builder += Headers.Error
+        builder ++= encode(s)
+        builder ++= CrLf
+
+        builder.result()
+
+      case Integer(i) =>
+        val builder = new ChunkBuilder.Byte()
+
+        builder += Headers.Integer
+        builder ++= encode(i.toString)
+        builder ++= CrLf
+
+        builder.result()
 
       case BulkString(bytes) =>
-        Headers.BulkString +: (encode(bytes.length.toString) ++ bytes ++ CrLf)
+        val builder = new ChunkBuilder.Byte()
+
+        builder += Headers.BulkString
+        builder ++= encode(bytes.length.toString)
+        builder ++= CrLf
+        builder ++= bytes
+        builder ++= CrLf
+
+        builder.result()
 
       case Array(elements) =>
-        val data = elements.foldLeft(Chunk.empty[Byte])(_ ++ _.asBytes)
-        Headers.Array +: (encode(elements.size.toString) ++ data)
+        val builder = new ChunkBuilder.Byte()
+
+        builder += Headers.Array
+        builder ++= encode(elements.size.toString)
+        builder ++= CrLf
+
+        elements.foreach(builder ++= _.asBytes)
+
+        builder.result()
     }
 
-  private[this] def encode(s: String): Chunk[Byte] =
-    Chunk.fromArray(s.getBytes(StandardCharsets.US_ASCII)) ++ CrLf
+  private[this] def encode(s: String) = s.getBytes(StandardCharsets.US_ASCII)
 }
 
 private[redis] object RespValue {
