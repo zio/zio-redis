@@ -74,7 +74,7 @@ private[redis] object RespValue {
   final case class BulkString(value: Chunk[Byte]) extends RespValue {
     def asLong: Long = internal.unsafeReadLong(value, 0)
 
-    def asString: String = decode(value)
+    def asString: String = internal.decode(value)
   }
 
   final case class Array(values: Chunk[RespValue]) extends RespValue
@@ -109,8 +109,6 @@ private[redis] object RespValue {
   def array(values: RespValue*): Array = Array(Chunk.fromIterable(values))
 
   def bulkString(s: String): BulkString = BulkString(Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
-
-  def decode(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
   private object internal {
     object Headers {
@@ -193,6 +191,8 @@ private[redis] object RespValue {
 
       final case class Done(value: RespValue) extends State
     }
+
+    def decode(bytes: Chunk[Byte]): String = new String(bytes.toArray, StandardCharsets.UTF_8)
 
     def unsafeReadLong(bytes: Chunk[Byte], startFrom: Int): Long = {
       var pos = startFrom
