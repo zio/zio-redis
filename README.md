@@ -17,7 +17,7 @@ instances.
 To use ZIO Redis, add the following line to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "0.1.0"
+libraryDependencies += "dev.zio" %% "zio-redis" % "0.2.0"
 ```
 
 ## Example
@@ -32,17 +32,23 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "0.1.0",
-  "dev.zio" %% "zio-schema-protobuf" % "0.3.0"
+  "dev.zio" %% "zio-redis" % "0.2.0",
+  "dev.zio" %% "zio-schema-protobuf" % "0.4.9"
 )
 ```
 
 ```scala
 import zio._
 import zio.redis._
+import zio.schema._
 import zio.schema.codec._
 
 object ZIORedisExample extends ZIOAppDefault {
+  
+  object ProtobufCodecSupplier extends CodecSupplier {
+    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+  }
+  
   val myApp: ZIO[Redis, RedisError, Unit] = for {
     redis <- ZIO.service[Redis]
     _     <- redis.set("myKey", 8L, Some(1.minutes))
@@ -55,9 +61,8 @@ object ZIORedisExample extends ZIOAppDefault {
 
   override def run = myApp.provide(
     Redis.layer,
-    RedisExecutor.layer,
-    ZLayer.succeed(RedisConfig.Default),
-    ZLayer.succeed[BinaryCodec](ProtobufCodec)
+    SingleNodeExecutor.local,
+    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier)
   )
 }
 ```
@@ -67,7 +72,7 @@ object ZIORedisExample extends ZIOAppDefault {
 To test you can use the embedded redis instance by adding to your build:
 
 ```scala
-libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "0.1.0"
+libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "0.2.0"
 ```
 
 Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
@@ -75,16 +80,23 @@ Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're
 ```scala
 import zio._
 import zio.redis._
+import zio.redis.embedded.EmbeddedRedis
 import zio.schema.{DeriveSchema, Schema}
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 import zio.test._
 import zio.test.Assertion._
 import java.util.UUID
+
 object EmbeddedRedisSpec extends ZIOSpecDefault {
+  object ProtobufCodecSupplier extends CodecSupplier {
+    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
+  }
+  
   final case class Item private (id: UUID, name: String, quantity: Int)
   object Item {
     implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
   }
+  
   def spec = suite("EmbeddedRedis should")(
     test("set and get values") {
       for {
@@ -95,9 +107,9 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
       } yield assert(found)(isSome(equalTo(item)))
     }
   ).provideShared(
-    EmbeddedRedis.layer.orDie,
-    RedisExecutor.layer.orDie,
-    ZLayer.succeed[BinaryCodec](ProtobufCodec),
+    EmbeddedRedis.layer,
+    SingleNodeExecutor.layer,
+    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
     Redis.layer
   ) @@ TestAspect.silentLogging
 }
