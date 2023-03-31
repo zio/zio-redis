@@ -168,7 +168,7 @@ private[redis] object RespValue {
 
           case CollectingBulkString(rem, vals) =>
             if (bytes.length >= rem) {
-              vals ++= bytes.slice(0, rem)
+              vals ++= bytes.take(rem)
               Done(BulkString(vals.result()))
             } else {
               vals ++= bytes
