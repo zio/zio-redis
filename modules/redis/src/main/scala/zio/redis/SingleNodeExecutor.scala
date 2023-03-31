@@ -46,23 +46,18 @@ final class SingleNodeExecutor private (
   private def drainWith(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
   private def send: IO[RedisError.IOError, Option[Unit]] =
-    requests.takeBetween(1, RequestQueueSize).flatMap { reqs =>
-      val buffer = ChunkBuilder.make[Byte]()
-      val it     = reqs.iterator
-
-      while (it.hasNext) {
-        val req = it.next()
-        buffer ++= RespValue.Array(req.command).asBytes
-      }
-
-      val bytes = buffer.result()
+    requests.takeBetween(1, RequestQueueSize).flatMap { requests =>
+      val bytes =
+        requests
+          .foldLeft(ChunkBuilder.make[Byte]())((buffer, req) => buffer ++= RespValue.Array(req.command).asBytes)
+          .result()
 
       connection
         .write(bytes)
         .mapError(RedisError.IOError(_))
         .tapBoth(
-          e => ZIO.foreachDiscard(reqs)(_.promise.fail(e)),
-          _ => ZIO.foreachDiscard(reqs)(req => responses.offer(req.promise))
+          e => ZIO.foreachDiscard(requests)(_.promise.fail(e)),
+          _ => ZIO.foreachDiscard(requests)(req => responses.offer(req.promise))
         )
     }
 

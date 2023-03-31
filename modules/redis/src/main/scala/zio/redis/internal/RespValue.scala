@@ -39,7 +39,7 @@ private[redis] sealed trait RespValue extends Product with Serializable { self =
         Headers.BulkString +: (encode(bytes.length.toString) ++ bytes ++ CrLf)
 
       case Array(elements) =>
-        val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.asBytes)
+        val data = elements.foldLeft(Chunk.empty[Byte])(_ ++ _.asBytes)
         Headers.Array +: (encode(elements.size.toString) ++ data)
     }
 
