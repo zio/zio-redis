@@ -22,6 +22,8 @@ import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
+import java.nio.charset.StandardCharsets
+
 sealed trait Output[+A] { self =>
   protected def tryDecode(respValue: RespValue): A
 
@@ -718,7 +720,7 @@ object Output {
   }
 
   private def decodeDouble(bytes: Chunk[Byte]): Double = {
-    val text = RespValue.decode(bytes)
+    val text = new String(bytes.toArray, StandardCharsets.UTF_8)
     try text.toDouble
     catch {
       case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
