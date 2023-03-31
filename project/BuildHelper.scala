@@ -31,7 +31,7 @@ object BuildHelper {
   val Scala3   = versions("3")
 
   val zioVersion       = "2.0.10"
-  val zioSchemaVersion = "0.4.9"
+  val zioSchemaVersion = "0.4.10"
 
   def buildInfoSettings(packageName: String) =
     List(
