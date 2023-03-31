@@ -146,10 +146,10 @@ private[redis] object RespValue {
               case Headers.Error        => Done(Error(decode(bytes.tail)))
               case Headers.Integer      => Done(Integer(unsafeReadLong(bytes, 1)))
               case Headers.BulkString =>
-                val size = unsafeReadLong(bytes, 1).toInt
+                val size = unsafeReadSize(bytes)
                 CollectingBulkString(size, ChunkBuilder.make(size))
               case Headers.Array =>
-                val size = unsafeReadLong(bytes, 1).toInt
+                val size = unsafeReadSize(bytes)
 
                 if (size > 0)
                   CollectingArray(size, ChunkBuilder.make(size), Start.feed)
@@ -212,6 +212,19 @@ private[redis] object RespValue {
       }
 
       if (neg) -res else res
+    }
+
+    def unsafeReadSize(bytes: Chunk[Byte]): Int = {
+      var pos = 1
+      var res = 0
+      val len = bytes.length
+
+      while (pos < len) {
+        res = res * 10 + bytes(pos) - '0'
+        pos += 1
+      }
+
+      res
     }
   }
 }
