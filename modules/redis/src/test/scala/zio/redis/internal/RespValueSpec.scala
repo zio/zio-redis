@@ -26,7 +26,7 @@ object RespValueSpec extends BaseSpec {
 
         ZStream
           .fromChunk(values)
-          .mapConcat(_.serialize)
+          .mapConcat(_.asBytes)
           .via(RespValue.Decoder)
           .collectSome
           .runCollect

@@ -27,7 +27,7 @@ private[redis] sealed trait RespValue extends Product with Serializable { self =
   import RespValue._
   import RespValue.internal.{CrLf, Headers, NullArrayEncoded, NullStringEncoded}
 
-  final def serialize: Chunk[Byte] =
+  final def asBytes: Chunk[Byte] =
     self match {
       case NullBulkString  => NullStringEncoded
       case NullArray       => NullArrayEncoded
@@ -39,7 +39,7 @@ private[redis] sealed trait RespValue extends Product with Serializable { self =
         Headers.BulkString +: (encode(bytes.length.toString) ++ bytes ++ CrLf)
 
       case Array(elements) =>
-        val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.serialize)
+        val data = elements.foldLeft[Chunk[Byte]](Chunk.empty)(_ ++ _.asBytes)
         Headers.Array +: (encode(elements.size.toString) ++ data)
     }
 

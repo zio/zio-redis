@@ -52,7 +52,7 @@ final class SingleNodeExecutor private (
 
       while (it.hasNext) {
         val req = it.next()
-        buffer ++= RespValue.Array(req.command).serialize
+        buffer ++= RespValue.Array(req.command).asBytes
       }
 
       val bytes = buffer.result()
