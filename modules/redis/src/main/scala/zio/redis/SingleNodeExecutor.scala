@@ -49,7 +49,7 @@ final class SingleNodeExecutor private (
     requests.takeBetween(1, RequestQueueSize).flatMap { requests =>
       val bytes =
         requests
-          .foldLeft(new ChunkBuilder.Byte())((buffer, req) => buffer ++= RespValue.Array(req.command).asBytes)
+          .foldLeft(new ChunkBuilder.Byte())((builder, req) => builder ++= RespValue.Array(req.command).asBytes)
           .result()
 
       connection
