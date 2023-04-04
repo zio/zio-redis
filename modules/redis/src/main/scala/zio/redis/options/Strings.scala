@@ -118,6 +118,7 @@ trait Strings {
         case Expire.SetExpireMilliseconds => "PX"
       }
   }
+
   object Expire {
     case object SetExpireSeconds      extends Expire
     case object SetExpireMilliseconds extends Expire
@@ -130,8 +131,15 @@ trait Strings {
         case ExpiredAt.SetExpireAtMilliseconds => "PXAT"
       }
   }
+
   object ExpiredAt {
     case object SetExpireAtSeconds      extends ExpiredAt
     case object SetExpireAtMilliseconds extends ExpiredAt
   }
+
+  case object GetKeyword {
+    private[redis] def asString: String = "GET"
+  }
+
+  type GetKeyword = GetKeyword.type
 }
