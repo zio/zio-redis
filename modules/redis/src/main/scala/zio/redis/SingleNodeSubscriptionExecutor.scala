@@ -1,66 +1,81 @@
 package zio.redis
 
+import zio.redis.Input.{CommandNameInput, StringInput}
+import zio.redis.Output.PushProtocolOutput
 import zio.redis.SingleNodeSubscriptionExecutor.{Request, RequestQueueSize, True}
 import zio.redis.api.Subscription
 import zio.redis.internal.{RedisConnection, RespCommand, RespCommandArgument, RespValue}
+import zio.redis.options.PubSub.PushProtocol
 import zio.stream._
-import zio.{Chunk, ChunkBuilder, Hub, IO, Promise, Queue, Ref, Schedule, ZIO, redis}
+import zio.{Chunk, ChunkBuilder, IO, Promise, Queue, Ref, Schedule, ZIO}
 
 final class SingleNodeSubscriptionExecutor(
-  channelSubsRef: Ref[Set[RespCommandArgument.Key]],
-  patternSubsRef: Ref[Set[redis.internal.RespCommandArgument.Key]],
-  hub: Hub[RespValue],
+  channelSubsRef: Ref[Map[String, Chunk[Queue[Take[RedisError, PushProtocol]]]]],
+  patternSubsRef: Ref[Map[String, Chunk[Queue[Take[RedisError, PushProtocol]]]]],
   reqQueue: Queue[Request],
   connection: RedisConnection
 ) extends SubscriptionExecutor {
-  def execute(command: RespCommand): IO[RedisError, Stream[RedisError, RespValue]] =
-    for {
-      commandName <-
-        ZIO
-          .fromOption(command.args.collectFirst { case redis.internal.RespCommandArgument.CommandName(name) => name })
-          .orElseFail(RedisError.CommandNameNotFound(command.args.toString()))
-      stream <- commandName match {
-                  case Subscription.Subscribe    => ZIO.succeed(subscribe(channelSubsRef, command))
-                  case Subscription.PSubscribe   => ZIO.succeed(subscribe(patternSubsRef, command))
-                  case Subscription.Unsubscribe  => ZIO.succeed(unsubscribe(channelSubsRef, command))
-                  case Subscription.PUnsubscribe => ZIO.succeed(unsubscribe(patternSubsRef, command))
-                  case other                     => ZIO.fail(RedisError.InvalidPubSubCommand(other))
-                }
-    } yield stream
-
-  private def subscribe(
-    subscriptionRef: Ref[Set[redis.internal.RespCommandArgument.Key]],
-    command: RespCommand
-  ): Stream[RedisError, RespValue] =
+  def execute(command: RespCommand): Stream[RedisError, PushProtocol] =
     ZStream
       .fromZIO(
         for {
-          reqPromise <- Promise.make[RedisError, Unit]
-          _          <- reqQueue.offer(Request(command.args.map(_.value), reqPromise))
-          _          <- reqPromise.await
-          keys        = command.args.collect { case key: redis.internal.RespCommandArgument.Key => key }
-          _          <- subscriptionRef.update(_ ++ keys)
-        } yield ZStream.fromHub(hub)
+          commandName <-
+            ZIO
+              .fromOption(command.args.collectFirst { case RespCommandArgument.CommandName(name) => name })
+              .orElseFail(RedisError.CommandNameNotFound(command.args.toString()))
+          stream <- commandName match {
+                      case Subscription.Subscribe    => ZIO.succeed(subscribe(channelSubsRef, command))
+                      case Subscription.PSubscribe   => ZIO.succeed(subscribe(patternSubsRef, command))
+                      case Subscription.Unsubscribe  => ZIO.succeed(unsubscribe(command))
+                      case Subscription.PUnsubscribe => ZIO.succeed(unsubscribe(command))
+                      case other                     => ZIO.fail(RedisError.InvalidPubSubCommand(other))
+                    }
+        } yield stream
       )
       .flatten
 
-  private def unsubscribe(
-    subscriptionRef: Ref[Set[redis.internal.RespCommandArgument.Key]],
+  private def subscribe(
+    subscriptionRef: Ref[Map[String, Chunk[Queue[Take[RedisError, PushProtocol]]]]],
     command: RespCommand
-  ): Stream[RedisError, RespValue] =
+  ): Stream[RedisError, PushProtocol] =
     ZStream
       .fromZIO(
         for {
-          reqPromise <- Promise.make[RedisError, Unit]
-          _          <- reqQueue.offer(Request(command.args.map(_.value), reqPromise))
-          _          <- reqPromise.await
-          keys        = command.args.collect { case key: redis.internal.RespCommandArgument.Key => key }
-          _ <- subscriptionRef.update(subscribedSet =>
-                 if (keys.nonEmpty)
-                   subscribedSet -- keys
-                 else
-                   Set.empty
+          queues <- ZIO.foreach(command.args.collect { case key: RespCommandArgument.Key => key.value.asString })(key =>
+                      Queue
+                        .unbounded[Take[RedisError, PushProtocol]]
+                        .tap(queue =>
+                          subscriptionRef.update(
+                            _.updatedWith(key)(_.map(_ appended queue).orElse(Some(Chunk.single(queue))))
+                          )
+                        )
+                        .map(key -> _)
+                    )
+          promise <- Promise.make[RedisError, Unit]
+          _ <- reqQueue.offer(
+                 Request(
+                   command.args.map(_.value),
+                   promise
+                 )
                )
+          streams = queues.map { case (key, queue) =>
+                      ZStream
+                        .fromQueueWithShutdown(queue)
+                        .ensuring(subscriptionRef.update(_.updatedWith(key)(_.map(_.filterNot(_ == queue)))))
+                    }
+          _ <- promise.await.tapError(_ => ZIO.foreachDiscard(queues) { case (_, queue) => queue.shutdown })
+        } yield streams.fold(ZStream.empty)(_ merge _)
+      )
+      .flatten
+      .flattenTake
+
+  private def unsubscribe(command: RespCommand): Stream[RedisError, PushProtocol] =
+    ZStream
+      .fromZIO(
+        for {
+          promise <- Promise.make[RedisError, Unit]
+          _       <- reqQueue.offer(Request(command.args.map(_.value), promise))
+          _       <- promise.await
         } yield ZStream.empty
       )
       .flatten
@@ -86,25 +101,56 @@ final class SingleNodeSubscriptionExecutor(
         )
     }
 
-  private def receive: IO[RedisError, Unit] =
+  private def receive: IO[RedisError, Unit] = {
+    def offerMessage(
+      subscriptionRef: Ref[Map[String, Chunk[Queue[Take[RedisError, PushProtocol]]]]],
+      key: String,
+      msg: PushProtocol
+    ) = for {
+      subscription <- subscriptionRef.get
+      _ <- ZIO.foreachDiscard(subscription.get(key))(
+             ZIO.foreachDiscard(_)(queue => queue.offer(Take.single(msg)).unlessZIO(queue.isShutdown))
+           )
+    } yield ()
+
+    def releaseStream(subscriptionRef: Ref[Map[String, Chunk[Queue[Take[RedisError, PushProtocol]]]]], key: String) =
+      for {
+        subscription <- subscriptionRef.getAndUpdate(_ - key)
+        _ <- ZIO.foreachDiscard(subscription.get(key))(
+               ZIO.foreachDiscard(_)(queue => queue.offer(Take.end).unlessZIO(queue.isShutdown))
+             )
+      } yield ()
+
     connection.read
       .mapError(RedisError.IOError(_))
       .via(RespValue.Decoder)
       .collectSome
-      .foreach(hub.offer(_))
+      .mapZIO(resp => ZIO.attempt(PushProtocolOutput.unsafeDecode(resp)))
+      .refineToOrDie[RedisError]
+      .foreach {
+        case msg @ PushProtocol.Subscribe(channel, _) => offerMessage(channelSubsRef, channel, msg)
+        case msg @ PushProtocol.Unsubscribe(channel, _) =>
+          offerMessage(channelSubsRef, channel, msg) *> releaseStream(channelSubsRef, channel)
+        case msg @ PushProtocol.Message(channel, _)    => offerMessage(channelSubsRef, channel, msg)
+        case msg @ PushProtocol.PSubscribe(pattern, _) => offerMessage(patternSubsRef, pattern, msg)
+        case msg @ PushProtocol.PUnsubscribe(pattern, _) =>
+          offerMessage(patternSubsRef, pattern, msg) *> releaseStream(patternSubsRef, pattern)
+        case msg @ PushProtocol.PMessage(pattern, _, _) => offerMessage(patternSubsRef, pattern, msg)
+      }
+  }
 
   private def resubscribe: IO[RedisError, Unit] = {
-    def makeCommand(name: String, keys: Chunk[redis.internal.RespCommandArgument.Key]) =
+    def makeCommand(name: String, keys: Chunk[String]) =
       if (keys.isEmpty)
         Chunk.empty
       else
         RespValue
-          .Array((RespCommand(RespCommandArgument.CommandName(name)) ++ RespCommand(keys)).args.map(_.value))
+          .Array((CommandNameInput.encode(name) ++ Input.Varargs(StringInput).encode(keys)).args.map(_.value))
           .serialize
 
     for {
-      channels <- channelSubsRef.get
-      patterns <- patternSubsRef.get
+      channels <- channelSubsRef.get.map(_.keys)
+      patterns <- patternSubsRef.get.map(_.keys)
       commands = makeCommand(Subscription.Subscribe, Chunk.fromIterable(channels)) ++
                    makeCommand(Subscription.PSubscribe, Chunk.fromIterable(patterns))
       _ <- connection
@@ -139,11 +185,10 @@ object SingleNodeSubscriptionExecutor {
 
   def create(conn: RedisConnection) =
     for {
-      hub        <- Hub.unbounded[RespValue]
       reqQueue   <- Queue.bounded[Request](RequestQueueSize)
-      channelRef <- Ref.make(Set.empty[RespCommandArgument.Key])
-      patternRef <- Ref.make(Set.empty[RespCommandArgument.Key])
-      pubSub      = new SingleNodeSubscriptionExecutor(channelRef, patternRef, hub, reqQueue, conn)
+      channelRef <- Ref.make(Map.empty[String, Chunk[Queue[Take[RedisError, PushProtocol]]]])
+      patternRef <- Ref.make(Map.empty[String, Chunk[Queue[Take[RedisError, PushProtocol]]]])
+      pubSub      = new SingleNodeSubscriptionExecutor(channelRef, patternRef, reqQueue, conn)
       _          <- pubSub.run.forkScoped
       _          <- logScopeFinalizer(s"$pubSub Node PubSub is closed")
     } yield pubSub

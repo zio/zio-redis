@@ -1,11 +1,12 @@
 package zio.redis
 
-import zio.redis.internal.{RedisConnection, RespCommand, RespValue}
+import zio.redis.internal.{RedisConnection, RespCommand}
+import zio.redis.options.PubSub.PushProtocol
 import zio.stream._
-import zio.{IO, Layer, ZIO, ZLayer}
+import zio.{Layer, ZIO, ZLayer}
 
 trait SubscriptionExecutor {
-  private[redis] def execute(command: RespCommand): IO[RedisError, Stream[RedisError, RespValue]]
+  private[redis] def execute(command: RespCommand): Stream[RedisError, PushProtocol]
 }
 
 object SubscriptionExecutor {

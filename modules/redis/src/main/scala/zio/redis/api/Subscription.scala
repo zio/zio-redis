@@ -1,8 +1,8 @@
 package zio.redis.api
 
-import zio.redis.ResultBuilder.ResultBuilder1
+import zio.redis.ResultBuilder.ResultStreamBuilder1
 import zio.redis._
-import zio.redis.internal.SubscribeEnvironment
+import zio.redis.internal._
 import zio.redis.options.PubSub.PubSubCallback
 import zio.schema.Schema
 import zio.stream.Stream
@@ -11,9 +11,12 @@ import zio.{Chunk, IO, ZIO}
 trait Subscription extends SubscribeEnvironment {
   import Subscription._
 
-  final def subscribe(channel: String, channels: String*) =
-    new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
-      def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
+  final def subscribe(
+    channel: String,
+    channels: String*
+  ): ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] =
+    new ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] {
+      def returning[R: Schema]: Stream[RedisError, (String, R)] =
         RedisSubscriptionCommand(executor).subscribe(
           Chunk.single(channel) ++ Chunk.fromIterable(channels),
           emptyCallback,
@@ -24,9 +27,9 @@ trait Subscription extends SubscribeEnvironment {
   final def subscribeWithCallback(channel: String, channels: String*)(
     onSubscribe: PubSubCallback,
     onUnsubscribe: PubSubCallback
-  ) =
-    new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
-      def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
+  ): ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] =
+    new ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] {
+      def returning[R: Schema]: Stream[RedisError, (String, R)] =
         RedisSubscriptionCommand(executor).subscribe(
           Chunk.single(channel) ++ Chunk.fromIterable(channels),
           onSubscribe,
@@ -34,9 +37,12 @@ trait Subscription extends SubscribeEnvironment {
         )
     }
 
-  final def pSubscribe(pattern: String, patterns: String*) =
-    new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
-      def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
+  final def pSubscribe(
+    pattern: String,
+    patterns: String*
+  ): ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] =
+    new ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] {
+      def returning[R: Schema]: Stream[RedisError, (String, R)] =
         RedisSubscriptionCommand(executor).pSubscribe(
           Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
           emptyCallback,
@@ -47,9 +53,12 @@ trait Subscription extends SubscribeEnvironment {
   final def pSubscribeWithCallback(
     pattern: String,
     patterns: String*
-  )(onSubscribe: PubSubCallback, onUnsubscribe: PubSubCallback) =
-    new ResultBuilder1[({ type lambda[x] = Stream[RedisError, (String, x)] })#lambda] {
-      def returning[R: Schema]: IO[RedisError, Stream[RedisError, (String, R)]] =
+  )(
+    onSubscribe: PubSubCallback,
+    onUnsubscribe: PubSubCallback
+  ): ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] =
+    new ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] {
+      def returning[R: Schema]: Stream[RedisError, (String, R)] =
         RedisSubscriptionCommand(executor).pSubscribe(
           Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
           onSubscribe,

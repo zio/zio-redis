@@ -20,7 +20,7 @@ object ApiSpec
     with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("Redis commands")(singleNodeSuite) @@ sequential @@ withLiveEnvironment
+    suite("Redis commands")(singleNodeSuite, clusterSuite) @@ sequential @@ withLiveEnvironment
 
   private val singleNodeSuite =
     suite("Single node executor")(
@@ -44,25 +44,25 @@ object ApiSpec
       ZLayer.succeed(ProtobufCodecSupplier)
     )
 
-//  private val clusterSuite =
-//    suite("Cluster executor")(
-//      connectionSuite,
-//      keysSuite,
-//      listSuite,
-//      stringsSuite,
-//      hashSuite,
-//      setsSuite,
-//      sortedSetsSuite,
-//      hyperLogLogSuite,
-//      geoSuite,
-//      streamsSuite,
-//      scriptingSpec,
-//      clusterSpec
-//    ).provideShared(
-//      ClusterExecutor.layer,
-//      Redis.layer,
-//      ZLayer.succeed(ProtobufCodecSupplier),
-//      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
-//    ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
-//      .getOrElse(Spec.empty)
+  private val clusterSuite =
+    suite("Cluster executor")(
+      connectionSuite,
+      keysSuite,
+      listSuite,
+      stringsSuite,
+      hashSuite,
+      setsSuite,
+      sortedSetsSuite,
+      hyperLogLogSuite,
+      geoSuite,
+      streamsSuite,
+      scriptingSpec,
+      clusterSpec
+    ).provideShared(
+      ClusterExecutor.layer,
+      Redis.layer,
+      ZLayer.succeed(ProtobufCodecSupplier),
+      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
+    ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
+      .getOrElse(Spec.empty)
 }
