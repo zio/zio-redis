@@ -523,7 +523,23 @@ trait Strings extends RedisEnvironment {
     command.run((key, expiration, value))
   }
 
-  // TODO Add documentation
+  /**
+   * Set the string value of a key with a 'GET' option.
+   *
+   * @param key
+   *   Key of the string to set
+   * @param value
+   *   Value to set
+   * @param expireTime
+   *   Time until the string expires
+   * @param update
+   *   Update can be Update.SetExisting which only sets the key if it exists, or Update.SetNew which nly sets the key if
+   *   it does not exist
+   * @param keepTtl
+   *   When set any previously set expire time remains unchanged
+   * @return
+   *   the old value stored at key, or None if key did not exist
+   */
   final def setGet[K: Schema, V: Schema](
     key: K,
     value: V,
