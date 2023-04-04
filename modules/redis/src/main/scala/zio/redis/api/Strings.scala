@@ -524,6 +524,42 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
+   * Set the string value of a key with a 'GET' option.
+   *
+   * @param key
+   *   Key of the string to set
+   * @param value
+   *   Value to set
+   * @param expireTime
+   *   Time until the string expires
+   * @param update
+   *   Update can be Update.SetExisting which only sets the key if it exists, or Update.SetNew which nly sets the key if
+   *   it does not exist
+   * @param keepTtl
+   *   When set any previously set expire time remains unchanged
+   * @return
+   *   the old value stored at key, or None if key did not exist
+   */
+  final def setGet[K: Schema, V: Schema](
+    key: K,
+    value: V,
+    expireTime: Option[Duration] = None,
+    update: Option[Update] = None,
+    keepTtl: Option[KeepTtl] = None
+  ): IO[RedisError, Option[V]] = {
+    val input = Tuple6(
+      ArbitraryKeyInput[K](),
+      ArbitraryValueInput[V](),
+      OptionalInput(DurationTtlInput),
+      OptionalInput(UpdateInput),
+      OptionalInput(KeepTtlInput),
+      GetKeywordInput
+    )
+    val command = RedisCommand(Set, input, OptionalOutput(ArbitraryOutput[V]()), executor)
+    command.run((key, value, expireTime, update, keepTtl, GetKeyword))
+  }
+
+  /**
    * Set the value of a key, only if the key does not exist.
    *
    * @param key
@@ -543,7 +579,7 @@ trait Strings extends RedisEnvironment {
    * Overwrite part of a string at key starting at the specified offset.
    *
    * @param key
-   *   Key of the string to overwite
+   *   Key of the string to overwrite
    * @param offset
    *   Offset to start writing
    * @param value
