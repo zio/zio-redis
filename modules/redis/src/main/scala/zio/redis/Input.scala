@@ -260,6 +260,11 @@ object Input {
       RespCommand(RespCommandArgument.Literal("FREQ"), RespCommandArgument.Unknown(data.frequency))
   }
 
+  case object GetKeywordInput extends Input[GetKeyword] {
+    def encode(data: GetKeyword): RespCommand =
+      RespCommand(RespCommandArgument.Literal(data.asString))
+  }
+
   case object IdleTimeInput extends Input[IdleTime] {
     def encode(data: IdleTime): RespCommand =
       RespCommand(RespCommandArgument.Literal("IDLETIME"), RespCommandArgument.Unknown(data.seconds.toString))

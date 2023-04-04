@@ -450,6 +450,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("GET"), Unknown("mypattern_*"))))
         }
       ),
+      suite("GetKeyword")(
+        test("valid value") {
+          for {
+            result <- ZIO.attempt(GetKeywordInput.encode(GetKeyword))
+          } yield assert(result)(equalTo(RespCommand(Literal("GET"))))
+        }
+      ),
       suite("IdleTime")(
         test("0 seconds") {
           for {
