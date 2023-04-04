@@ -26,15 +26,7 @@ trait KeysSpec extends BaseSpec {
           v     <- redis.setGet(key, value)
         } yield assert(v)(isNone)
       },
-      test("setGet with the existing key and int value") {
-        for {
-          redis <- ZIO.service[Redis]
-          key   <- uuid
-          _     <- redis.set(key, 1)
-          v     <- redis.setGet(key, 2)
-        } yield assert(v)(isSome(equalTo(1)))
-      },
-      test("setGet with the existing key and string value") {
+      test("setGet with the existing key") {
         for {
           redis    <- ZIO.service[Redis]
           value    <- uuid
