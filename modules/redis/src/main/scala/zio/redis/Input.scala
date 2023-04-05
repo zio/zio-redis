@@ -274,11 +274,6 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
-  //  case object KeepTtlInput extends Input[KeepTtl] {
-  //    def encode(data: KeepTtl): RespCommand =
-  //      RespCommand(RespCommandArgument.Literal(data.asString))
-  //  }
-
   case object LimitInput extends Input[Limit] {
     def encode(data: Limit): RespCommand =
       RespCommand(
@@ -615,14 +610,6 @@ object Input {
   case object UpdateByScoreInput extends Input[UpdateByScore] {
     def encode(data: UpdateByScore): RespCommand =
       RespCommand(RespCommandArgument.Unknown(data.asString))
-  }
-
-  final case class GetExPersistInput[K: BinaryCodec]() extends Input[(K, Boolean)] {
-    def encode(data: (K, Boolean)): RespCommand =
-      RespCommand(
-        if (data._2) Chunk(RespCommandArgument.Key(data._1), RespCommandArgument.Literal("PERSIST"))
-        else Chunk(RespCommandArgument.Key(data._1))
-      )
   }
 
   case object SetExpireInput extends Input[SetExpire] {

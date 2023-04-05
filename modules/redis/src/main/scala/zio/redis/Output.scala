@@ -683,7 +683,7 @@ object Output {
     protected def tryDecode(respValue: RespValue): Boolean =
       respValue match {
         case RespValue.NullBulkString      => false
-        case RespValue.SimpleString(value) => println(value); true
+        case RespValue.SimpleString(value) => true
         case other                         => throw ProtocolError(s"$other isn't a valid set response")
       }
   }
