@@ -22,8 +22,8 @@ trait Shared {
       self match {
         case Update.SetExisting    => "XX"
         case Update.SetNew         => "NX"
-        case Update.SetLessThan    => "LT"
-        case Update.SetGreaterThan => "GT"
+        case Update.SetLessThan    => "LT" // TODO: Consider moving this out
+        case Update.SetGreaterThan => "GT" // TODO: Consider moving this out
       }
   }
 
