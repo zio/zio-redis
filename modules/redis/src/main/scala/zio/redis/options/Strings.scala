@@ -112,21 +112,21 @@ trait Strings {
   sealed trait SetExpire
 
   object SetExpire {
-    case object KeepTtl                                              extends SetExpire
-    final case class SetExpireMilliseconds(duration: Duration)       extends SetExpire
-    final case class SetExpireSeconds(duration: Duration)            extends SetExpire
-    final case class SetExpireUnixTimeMilliseconds(instant: Instant) extends SetExpire
-    final case class SetExpireUnixTimeSeconds(instant: Instant)      extends SetExpire
+    case object KeepTtl                                        extends SetExpire
+    case class SetExpireMilliseconds(duration: Duration)       extends SetExpire
+    case class SetExpireSeconds(duration: Duration)            extends SetExpire
+    case class SetExpireUnixTimeMilliseconds(instant: Instant) extends SetExpire
+    case class SetExpireUnixTimeSeconds(instant: Instant)      extends SetExpire
   }
 
   sealed trait GetExpire
 
   object GetExpire {
-    final case class GetExpireMilliseconds(duration: Duration)       extends GetExpire
-    final case class GetExpireSeconds(duration: Duration)            extends GetExpire
-    final case class GetExpireUnixTimeMilliseconds(instant: Instant) extends GetExpire
-    final case class GetExpireUnixTimeSeconds(instant: Instant)      extends GetExpire
-    case object Persist                                              extends GetExpire
+    case class GetExpireMilliseconds(duration: Duration)       extends GetExpire
+    case class GetExpireSeconds(duration: Duration)            extends GetExpire
+    case class GetExpireUnixTimeMilliseconds(instant: Instant) extends GetExpire
+    case class GetExpireUnixTimeSeconds(instant: Instant)      extends GetExpire
+    case object Persist                                        extends GetExpire
   }
 
   case object GetKeyword {

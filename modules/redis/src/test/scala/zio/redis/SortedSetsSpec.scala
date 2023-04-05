@@ -138,21 +138,27 @@ trait SortedSetsSpec extends BaseSpec {
         },
         test("LT - return number of new members") {
           for {
-            redis  <- ZIO.service[Redis]
-            key    <- uuid
-            _      <- redis.zAdd(key)(MemberScore(3d, "v1"))
-            _      <- redis.zAdd(key)(MemberScore(4d, "v2"))
-            added  <- redis.zAdd(key, update = Some(Update.SetLessThan))(MemberScore(1d, "v3"), MemberScore(2d, "v1"))
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _     <- redis.zAdd(key)(MemberScore(3d, "v1"))
+            _     <- redis.zAdd(key)(MemberScore(4d, "v2"))
+            added <- redis.zAdd(key, updateByScore = Some(UpdateByScore.SetLessThan))(
+                       MemberScore(1d, "v3"),
+                       MemberScore(2d, "v1")
+                     )
             result <- redis.zRange(key, 0 to -1).returning[String]
           } yield assert(added)(equalTo(1L)) && assert(result.toList)(equalTo(List("v3", "v1", "v2")))
         },
         test("GT - return number of new members") {
           for {
-            redis  <- ZIO.service[Redis]
-            key    <- uuid
-            _      <- redis.zAdd(key)(MemberScore(1d, "v1"))
-            _      <- redis.zAdd(key)(MemberScore(2d, "v2"))
-            added  <- redis.zAdd(key, update = Some(Update.SetGreaterThan))(MemberScore(1d, "v3"), MemberScore(3d, "v1"))
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _     <- redis.zAdd(key)(MemberScore(1d, "v1"))
+            _     <- redis.zAdd(key)(MemberScore(2d, "v2"))
+            added <- redis.zAdd(key, updateByScore = Some(UpdateByScore.SetGreaterThan))(
+                       MemberScore(1d, "v3"),
+                       MemberScore(3d, "v1")
+                     )
             result <- redis.zRange(key, 0 to -1).returning[String]
           } yield assert(added)(equalTo(1L)) && assert(result.toList)(equalTo(List("v3", "v2", "v1")))
         },
@@ -162,7 +168,7 @@ trait SortedSetsSpec extends BaseSpec {
             key   <- uuid
             _     <- redis.zAdd(key)(MemberScore(1d, "v1"))
             _     <- redis.zAdd(key)(MemberScore(2d, "v2"))
-            added <- redis.zAdd(key, update = Some(Update.SetGreaterThan), change = Some(Changed))(
+            added <- redis.zAdd(key, updateByScore = Some(UpdateByScore.SetGreaterThan), change = Some(Changed))(
                        MemberScore(1d, "v3"),
                        MemberScore(3d, "v1")
                      )
@@ -177,7 +183,7 @@ trait SortedSetsSpec extends BaseSpec {
             _        <- redis.zAdd(key)(MemberScore(2d, "v2"))
             newScore <- redis.zAddWithIncr(key)(Increment, MemberScore(3d, "v1"))
             result   <- redis.zRange(key, 0 to -1).returning[String]
-          } yield assert(newScore)(equalTo(Some(4.0))) && assert(result.toList)(equalTo(List("v2", "v1")))
+          } yield assert(newScore)(isSome(equalTo(4.0))) && assert(result.toList)(equalTo(List("v2", "v1")))
         }
       ),
       suite("zCard")(
@@ -1020,7 +1026,7 @@ trait SortedSetsSpec extends BaseSpec {
             key   <- uuid
             _     <- redis.zAdd(key)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
             rank  <- redis.zRank(key, "c")
-          } yield assert(rank)(equalTo(Some(2L)))
+          } yield assert(rank)(isSome(equalTo(2L)))
         },
         test("empty set") {
           for {
@@ -1336,7 +1342,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(50d, "Chennai")
                  )
             result <- redis.zRevRank(key, "Hyderabad")
-          } yield assert(result)(equalTo(Some(2L)))
+          } yield assert(result)(isSome(equalTo(2L)))
         },
         test("empty set") {
           for {
@@ -1428,7 +1434,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(50d, "Chennai")
                  )
             result <- redis.zScore(key, "Delhi")
-          } yield assert(result)(equalTo(Some(10.0)))
+          } yield assert(result)(isSome(equalTo(10.0)))
         },
         test("empty set") {
           for {

@@ -612,6 +612,11 @@ object Input {
       RespCommand(RespCommandArgument.Unknown(data.asString))
   }
 
+  case object UpdateByScoreInput extends Input[UpdateByScore] {
+    def encode(data: UpdateByScore): RespCommand =
+      RespCommand(RespCommandArgument.Unknown(data.asString))
+  }
+
   final case class GetExPersistInput[K: BinaryCodec]() extends Input[(K, Boolean)] {
     def encode(data: (K, Boolean)): RespCommand =
       RespCommand(
