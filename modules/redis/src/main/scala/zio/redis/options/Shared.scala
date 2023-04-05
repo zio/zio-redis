@@ -17,6 +17,27 @@
 package zio.redis.options
 
 trait Shared {
+  sealed case class Count(count: Long)
+
+  sealed case class Limit(offset: Long, count: Long)
+
+  sealed trait Order { self =>
+    private[redis] final def asString: String =
+      self match {
+        case Order.Ascending  => "ASC"
+        case Order.Descending => "DESC"
+      }
+  }
+
+  object Order {
+    case object Ascending  extends Order
+    case object Descending extends Order
+  }
+
+  sealed case class Pattern(pattern: String)
+
+  sealed case class Store(key: String)
+
   sealed trait Update { self =>
     private[redis] final def asString: String =
       self match {
@@ -34,24 +55,4 @@ trait Shared {
     case object SetGreaterThan extends Update
   }
 
-  sealed case class Count(count: Long)
-
-  sealed trait Order { self =>
-    private[redis] final def asString: String =
-      self match {
-        case Order.Ascending  => "ASC"
-        case Order.Descending => "DESC"
-      }
-  }
-
-  object Order {
-    case object Ascending  extends Order
-    case object Descending extends Order
-  }
-
-  sealed case class Limit(offset: Long, count: Long)
-
-  sealed case class Store(key: String)
-
-  sealed case class Pattern(pattern: String)
 }

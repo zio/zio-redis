@@ -431,9 +431,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             _       <- redis.zAdd(second)(MemberScore("b", 2d), MemberScore("b", 2d), MemberScore("d", 4d))
             _       <- redis.zAdd(third)(MemberScore("a", 1d), MemberScore("b", 2d), MemberScore("c", 3d))
             members <- redis.zInter(first, second, third)().returning[String]
-          } yield assert(members)(
-            equalTo(Chunk("b"))
-          )
+          } yield assert(members)(equalTo(Chunk("b")))
         },
         test("error when first parameter is not set") {
           for {

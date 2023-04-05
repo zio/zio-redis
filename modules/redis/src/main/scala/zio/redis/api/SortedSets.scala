@@ -110,6 +110,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    *   Key of set to add to
    * @param update
    *   Set existing and never add elements or always set new elements and don't update existing elements
+   * @param updateByScore
+   *   Set update existing elements if the new score is less than the current score or greater than the current score
    * @param change
    *   Modify the return value from the number of new elements added, to the total number of elements change
    * @param memberScore
@@ -144,6 +146,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    *   Key of set to add to.
    * @param update
    *   Set existing and never add elements or always set new elements and don't update existing elements
+   * @param updateByScore
+   *   Set update existing elements if the new score is less than the current score or greater than the current score
    * @param change
    *   Modify the return value from the number of new elements added, to the total number of elements change
    * @param increment

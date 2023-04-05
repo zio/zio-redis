@@ -414,13 +414,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Value("0"))))
         }
       ),
-      suite("KeepTtl")(
-        test("valid value") {
-          for {
-            result <- ZIO.attempt(KeepTtlInput.encode(KeepTtl))
-          } yield assert(result)(equalTo(RespCommand(Literal("KEEPTTL"))))
-        }
-      ),
       suite("LexRange")(
         test("with unbound min and unbound max") {
           for {
@@ -1294,42 +1287,29 @@ object InputSpec extends BaseSpec {
       suite("GetEx")(
         test("GetExInput - valid value") {
           for {
-            resultSeconds      <-
-              ZIO.attempt(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
-            resultMilliseconds <-
-              ZIO.attempt(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
-          } yield assert(resultSeconds)(equalTo(RespCommand(Key("key"), Literal("EX"), Value("1")))) && assert(
-            resultMilliseconds
-          )(
-            equalTo(RespCommand(Key("key"), Literal("PX"), Value("100")))
-          )
-        },
-        test("GetExAtInput - valid value") {
-          for {
-            resultSeconds      <-
+            resultSeconds              <-
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.GetExpireSeconds(1.second))))
+            resultMilliseconds         <-
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.GetExpireMilliseconds(100.millis))))
+            resultUnixTimeSeconds      <-
               ZIO.attempt(
-                GetExAtInput[String]().encode(
-                  scala.Tuple3("key", ExpiredAt.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))
+                GetExInput[String]().encode(
+                  scala.Tuple2("key", GetExpire.GetExpireUnixTimeSeconds(Instant.parse("2021-04-06T00:00:00Z")))
                 )
               )
-            resultMilliseconds <-
+            resultUnixTimeMilliseconds <-
               ZIO.attempt(
-                GetExAtInput[String]().encode(
-                  scala.Tuple3("key", ExpiredAt.SetExpireAtMilliseconds, Instant.parse("2021-04-06T00:00:00Z"))
+                GetExInput[String]().encode(
+                  scala.Tuple2("key", GetExpire.GetExpireUnixTimeMilliseconds(Instant.parse("2021-04-06T00:00:00Z")))
                 )
               )
-          } yield assert(resultSeconds)(
-            equalTo(RespCommand(Key("key"), Literal("EXAT"), Value("1617667200")))
-          ) && assert(resultMilliseconds)(
-            equalTo(RespCommand(Key("key"), Literal("PXAT"), Value("1617667200000")))
-          )
-        },
-        test("GetExPersistInput - valid value") {
-          for {
-            result              <- ZIO.attempt(GetExPersistInput[String]().encode("key" -> true))
-            resultWithoutOption <- ZIO.attempt(GetExPersistInput[String]().encode("key" -> false))
-          } yield assert(result)(equalTo(RespCommand(Key("key"), Literal("PERSIST")))) &&
-            assert(resultWithoutOption)(equalTo(RespCommand(Key("key"))))
+            resultPersist              <- ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Persist)))
+          } yield assert(resultSeconds)(equalTo(RespCommand(Key("key"), Literal("EX"), Value("1")))) &&
+            assert(resultMilliseconds)(equalTo(RespCommand(Key("key"), Literal("PX"), Value("100")))) &&
+            assert(resultUnixTimeSeconds)(equalTo(RespCommand(Key("key"), Literal("EXAT"), Value("1617667200")))) &&
+            assert(resultUnixTimeMilliseconds)(
+              equalTo(RespCommand(Key("key"), Literal("PXAT"), Value("1617667200000")))
+            ) && assert(resultPersist)(equalTo(RespCommand(Key("key"), Literal("PERSIST"))))
         }
       )
     )

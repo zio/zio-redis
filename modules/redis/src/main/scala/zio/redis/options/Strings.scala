@@ -16,6 +16,10 @@
 
 package zio.redis.options
 
+import zio.Duration
+
+import java.time.Instant
+
 trait Strings {
 
   sealed trait Lcs
@@ -93,36 +97,24 @@ trait Strings {
 
   sealed case class BitPosRange(start: Long, end: Option[Long])
 
-  case object KeepTtl {
-    private[redis] def asString: String = "KEEPTTL"
+  sealed trait SetExpire
+
+  object SetExpire {
+    case object KeepTtl                                        extends SetExpire
+    case class SetExpireMilliseconds(duration: Duration)       extends SetExpire
+    case class SetExpireSeconds(duration: Duration)            extends SetExpire
+    case class SetExpireUnixTimeMilliseconds(instant: Instant) extends SetExpire
+    case class SetExpireUnixTimeSeconds(instant: Instant)      extends SetExpire
   }
 
-  type KeepTtl = KeepTtl.type
+  sealed trait GetExpire
 
-  sealed trait Expire { self =>
-    private[redis] final def asString: String =
-      self match {
-        case Expire.SetExpireSeconds      => "EX"
-        case Expire.SetExpireMilliseconds => "PX"
-      }
-  }
-
-  object Expire {
-    case object SetExpireSeconds      extends Expire
-    case object SetExpireMilliseconds extends Expire
-  }
-
-  sealed trait ExpiredAt { self =>
-    private[redis] final def asString: String =
-      self match {
-        case ExpiredAt.SetExpireAtSeconds      => "EXAT"
-        case ExpiredAt.SetExpireAtMilliseconds => "PXAT"
-      }
-  }
-
-  object ExpiredAt {
-    case object SetExpireAtSeconds      extends ExpiredAt
-    case object SetExpireAtMilliseconds extends ExpiredAt
+  object GetExpire {
+    case class GetExpireMilliseconds(duration: Duration)       extends GetExpire
+    case class GetExpireSeconds(duration: Duration)            extends GetExpire
+    case class GetExpireUnixTimeMilliseconds(instant: Instant) extends GetExpire
+    case class GetExpireUnixTimeSeconds(instant: Instant)      extends GetExpire
+    case object Persist                                        extends GetExpire
   }
 
   case object GetKeyword {

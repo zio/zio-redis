@@ -40,7 +40,7 @@ object ContributorsCache {
       ZIO
         .fromOption(NonEmptyChunk.fromChunk(contributors))
         .map(Contributors(_).toJson)
-        .flatMap(data => redis.set(repository.key, data, Some(1.minute)).orDie)
+        .flatMap(data => redis.set(repository.key, data, expireAt = Some(SetExpire.SetExpireSeconds(1.minute))).orDie)
         .ignore
 
     private def read(repository: Repository): IO[ApiError, Contributors] =
