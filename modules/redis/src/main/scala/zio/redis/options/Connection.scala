@@ -156,10 +156,10 @@ trait Connection {
   sealed trait ClientType { self =>
     private[redis] final def asString: String =
       self match {
-        case ClientType.Normal  => "normal"
-        case ClientType.Master  => "master"
-        case ClientType.Replica => "replica"
-        case ClientType.PubSub  => "pubsub"
+        case ClientType.Normal  => "NORMAL"
+        case ClientType.Master  => "MASTER"
+        case ClientType.Replica => "REPLICA"
+        case ClientType.PubSub  => "PUBSUB"
       }
   }
 

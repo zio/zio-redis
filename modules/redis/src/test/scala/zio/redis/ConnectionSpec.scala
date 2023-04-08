@@ -45,8 +45,15 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(id)(isGreaterThan(0L))
         }
       ),
+      suite("clientInfo")(
+        test("get client info") {
+          for {
+            info <- ZIO.serviceWithZIO[Redis](_.clientInfo)
+          } yield assert(info)(isNonEmptyString)
+        }
+      ),
       suite("clientKill")(
-        test("error when a connection with the specifed address doesn't exist") {
+        test("error when a connection with the specified address doesn't exist") {
           for {
             error <- ZIO.serviceWithZIO[Redis](_.clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either)
           } yield assert(error)(isLeft)
@@ -63,6 +70,29 @@ trait ConnectionSpec extends BaseSpec {
             id            <- redis.clientId
             clientsKilled <- redis.clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
           } yield assert(clientsKilled)(equalTo(0L))
+        }
+      ),
+      suite("clientList")(
+        test("get clients' info") {
+          for {
+            info <- ZIO.serviceWithZIO[Redis](_.clientList())
+          } yield assert(info)(isNonEmptyString)
+        },
+        test("get clients' info filtered by type") {
+          for {
+            redis       <- ZIO.service[Redis]
+            infoNormal  <- redis.clientList(Some(ClientType.Normal))
+            infoReplica <- redis.clientList(Some(ClientType.Replica))
+          } yield assert(infoNormal)(isNonEmptyString) && assert(infoReplica)(isEmptyString)
+        },
+        test("get clients' info filtered by client IDs") {
+          for {
+            redis           <- ZIO.service[Redis]
+            id              <- redis.clientId
+            nonExistingId    = id + 1
+            info            <- ZIO.serviceWithZIO[Redis](_.clientList(clientIds = Some((id, Nil))))
+            infoNonExisting <- ZIO.serviceWithZIO[Redis](_.clientList(clientIds = Some((nonExistingId, Nil))))
+          } yield assert(info)(isNonEmptyString) && assert(infoNonExisting)(isEmptyString)
         }
       ),
       suite("clientGetRedir")(
