@@ -19,8 +19,6 @@ package zio.redis.internal
 import zio._
 import zio.redis._
 import zio.redis.api.Cluster.AskingCommand
-import zio.redis.internal.ClusterExecutor._
-import zio.redis.internal.RedisExecutor
 import zio.redis.options.Cluster._
 
 import java.io.IOException
@@ -30,6 +28,8 @@ private[redis] final class ClusterExecutor private (
   config: RedisClusterConfig,
   scope: Scope.Closeable
 ) extends RedisExecutor {
+
+  import ClusterExecutor._
 
   def execute(command: RespCommand): IO[RedisError, RespValue] = {
 
