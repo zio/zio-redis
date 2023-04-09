@@ -61,8 +61,6 @@ trait Streams {
     counter: Long
   )
 
-  sealed case class Group[G, C](group: G, consumer: C)
-
   case object NoAck {
     private[redis] def asString: String = "NOACK"
   }
