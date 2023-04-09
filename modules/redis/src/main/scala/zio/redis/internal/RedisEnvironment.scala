@@ -16,7 +16,7 @@
 
 package zio.redis.internal
 
-import zio.redis.{CodecSupplier, RedisExecutor}
+import zio.redis.{CodecSupplier}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 

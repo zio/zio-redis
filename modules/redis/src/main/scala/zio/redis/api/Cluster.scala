@@ -25,6 +25,8 @@ import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
 import zio.{Chunk, IO}
 
+import zio.redis.internal.RedisExecutor
+
 trait Cluster extends RedisEnvironment {
 
   /**

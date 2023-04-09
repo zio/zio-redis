@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio._
-import zio.redis.ClusterExecutor._
+import zio.redis._
+import zio.redis.internal.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
-import zio.redis.internal.{RedisConnection, RespCommand, RespCommandArgument, RespValue}
 import zio.redis.options.Cluster._
 
 import java.io.IOException
 
-final class ClusterExecutor private (
+import zio.redis.internal.RedisExecutor
+
+private[redis] final class ClusterExecutor private (
   clusterConnection: Ref.Synchronized[ClusterConnection],
   config: RedisClusterConfig,
   scope: Scope.Closeable
@@ -93,7 +95,7 @@ final class ClusterExecutor private (
       }
 }
 
-object ClusterExecutor {
+private[redis] object ClusterExecutor {
 
   lazy val layer: ZLayer[RedisClusterConfig, RedisError, RedisExecutor] =
     ZLayer.scoped {
@@ -106,7 +108,7 @@ object ClusterExecutor {
       } yield executor
     }
 
-  private[redis] def create(
+  def create(
     config: RedisClusterConfig,
     scope: Scope.Closeable
   ): ZIO[Scope, RedisError, ClusterExecutor] =
@@ -148,16 +150,15 @@ object ClusterExecutor {
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
 
-  private def redis(address: RedisUri) = {
-    val executorLayer = ZLayer.succeed(RedisConfig(address.host, address.port)) >>> SingleNodeExecutor.layer
-    val codecLayer    = ZLayer.succeed[CodecSupplier](CodecSupplier.utf8)
-    val redisLayer    = executorLayer ++ codecLayer >>> Redis.layer
+  private def redis(address: RedisUri) =
     for {
       closableScope <- Scope.make
+      configLayer    = ZLayer.succeed(RedisConfig(address.host, address.port))
+      supplierLayer  = ZLayer.succeed(CodecSupplier.utf8)
+      redisLayer     = ZLayer.make[Redis](configLayer, supplierLayer, Redis.singleNode)
       layer         <- closableScope.extend[Any](redisLayer.memoize)
       _             <- logScopeFinalizer("Temporary redis connection is closed")
     } yield (layer, closableScope)
-  }
 
   private def slotAddress(partitions: Chunk[Partition]) =
     partitions.flatMap { p =>
@@ -166,6 +167,7 @@ object ClusterExecutor {
 
   private final val CusterKeyExecutorError =
     RedisError.IOError(new IOException("Executor doesn't found. No way to dispatch this command to Redis Cluster"))
+
   private final val CusterConnectionError =
     RedisError.IOError(new IOException("The connection to cluster has been failed. Can't reach a single startup node."))
 }

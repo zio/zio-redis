@@ -1,6 +1,7 @@
-package zio.redis
+package zio.redis.internal
 
 import zio._
+import zio.redis._
 import zio.redis.internal.CRC16
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test._
@@ -68,19 +69,18 @@ object ClusterExecutorSpec extends BaseSpec {
   private final def getRedisNodeLayer(uri: RedisUri): Layer[Any, Redis] =
     ZLayer.make[Redis](
       ZLayer.succeed(RedisConfig(uri.host, uri.port)),
-      SingleNodeExecutor.layer,
       ZLayer.succeed(ProtobufCodecSupplier),
-      Redis.layer
+      Redis.singleNode
     )
 
   private val ClusterLayer: Layer[Any, Redis] = {
     val address1 = RedisUri("localhost", 5010)
     val address2 = RedisUri("localhost", 5000)
+
     ZLayer.make[Redis](
       ZLayer.succeed(RedisClusterConfig(Chunk(address1, address2))),
-      ClusterExecutor.layer.orDie,
       ZLayer.succeed(ProtobufCodecSupplier),
-      Redis.layer
+      Redis.cluster
     )
   }
 }

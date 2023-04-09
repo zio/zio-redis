@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio.IO
+import zio.redis.RedisError
 import zio.redis.internal.{RespCommand, RespValue}
 
-trait RedisExecutor {
-  private[redis] def execute(command: RespCommand): IO[RedisError, RespValue]
+private[redis] trait RedisExecutor {
+  def execute(command: RespCommand): IO[RedisError, RespValue]
 }

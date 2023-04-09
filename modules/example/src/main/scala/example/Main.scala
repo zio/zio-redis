@@ -33,8 +33,7 @@ object Main extends ZIOAppDefault {
         AppConfig.layer,
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
-        Redis.layer,
-        SingleNodeExecutor.layer,
+        Redis.singleNode,
         ZLayer.succeed[CodecSupplier](new CodecSupplier {
           def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
         })
