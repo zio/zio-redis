@@ -251,7 +251,7 @@ object InputSpec extends BaseSpec {
           for {
             clientType <- ZIO.succeed(ClientType.PubSub)
             result     <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
-          } yield assert(result)(equalTo(RespCommand(Literal("TYPE"), Literal("pubsub"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("TYPE"), Literal("PUBSUB"))))
         },
         test("user") {
           for {
@@ -1061,6 +1061,20 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(IdInput.encode(10))
           } yield assert(result)(equalTo(RespCommand(Literal("ID"), Unknown("10"))))
+        }
+      ),
+      suite("IDs")(
+        test("with a single element") {
+          for {
+            result <- ZIO.attempt(IdsInput.encode((1, Nil)))
+          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Unknown("1"))))
+        },
+        test("with multiple elements") {
+          for {
+            result <- ZIO.attempt(IdsInput.encode((1, List(2, 3, 4))))
+          } yield assert(result)(
+            equalTo(RespCommand(Literal("ID"), Unknown("1"), Unknown("2"), Unknown("3"), Unknown("4")))
+          )
         }
       ),
       suite("UnblockBehavior")(

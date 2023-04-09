@@ -795,7 +795,7 @@ trait SortedSetsSpec extends BaseSpec {
           redis  <- ZIO.service[Redis]
           key    <- uuid
           result <- redis.zPopMax(key).returning[String]
-        } yield assert(result.toList)(equalTo(Nil)))
+        } yield assert(result.toList)(isEmpty))
       ),
       suite("zPopMin")(
         test("non-empty set")(
@@ -828,7 +828,7 @@ trait SortedSetsSpec extends BaseSpec {
           redis  <- ZIO.service[Redis]
           key    <- uuid
           result <- redis.zPopMin(key).returning[String]
-        } yield assert(result.toList)(equalTo(Nil)))
+        } yield assert(result.toList)(isEmpty))
       ),
       suite("zRange")(
         test("non-empty set") {

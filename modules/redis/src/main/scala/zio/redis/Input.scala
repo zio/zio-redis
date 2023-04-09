@@ -161,6 +161,11 @@ object Input {
     }
   }
 
+  case object ClientTypeInput extends Input[ClientType] {
+    def encode(data: ClientType): RespCommand =
+      RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(data.asString))
+  }
+
   case object ClientPauseModeInput extends Input[ClientPauseMode] {
     def encode(data: ClientPauseMode): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))
@@ -650,6 +655,15 @@ object Input {
   case object IdInput extends Input[Long] {
     def encode(data: Long): RespCommand =
       RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Unknown(data.toString))
+  }
+
+  case object IdsInput extends Input[(Long, List[Long])] {
+    def encode(data: (Long, List[Long])): RespCommand =
+      RespCommand(
+        Chunk.fromIterable(
+          RespCommandArgument.Literal("ID") +: (data._1 :: data._2).map(id => RespCommandArgument.Unknown(id.toString))
+        )
+      )
   }
 
   case object UnblockBehaviorInput extends Input[UnblockBehavior] {
