@@ -2,7 +2,6 @@ package zio.redis.internal
 
 import zio._
 import zio.redis._
-import zio.redis.internal.CRC16
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test._
 
