@@ -18,7 +18,6 @@ package zio.redis.internal
 
 import zio.IO
 import zio.redis.RedisError
-import zio.redis.internal.{RespCommand, RespValue}
 
 private[redis] trait RedisExecutor {
   def execute(command: RespCommand): IO[RedisError, RespValue]
