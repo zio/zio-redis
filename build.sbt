@@ -44,13 +44,11 @@ lazy val redis =
     .settings(stdSettings("zio-redis"))
     .settings(
       libraryDependencies ++= List(
-        "dev.zio"                %% "zio-streams"             % zioVersion,
-        "dev.zio"                %% "zio-logging"             % "2.1.11",
-        "dev.zio"                %% "zio-schema"              % zioSchemaVersion,
-        "dev.zio"                %% "zio-schema-protobuf"     % zioSchemaVersion % Test,
-        "dev.zio"                %% "zio-test"                % zioVersion       % Test,
-        "dev.zio"                %% "zio-test-sbt"            % zioVersion       % Test,
-        "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0"
+        "dev.zio" %% "zio-streams"         % zioVersion,
+        "dev.zio" %% "zio-schema"          % zioSchemaVersion,
+        "dev.zio" %% "zio-schema-protobuf" % zioSchemaVersion % Test,
+        "dev.zio" %% "zio-test"            % zioVersion       % Test,
+        "dev.zio" %% "zio-test-sbt"        % zioVersion       % Test
       ),
       testFrameworks := List(new TestFramework("zio.test.sbt.ZTestFramework"))
     )
@@ -85,10 +83,9 @@ lazy val benchmarks =
       crossScalaVersions -= Scala3,
       publish / skip := true,
       libraryDependencies ++= List(
-        "dev.profunktor"    %% "redis4cats-effects"  % "1.4.1",
-        "io.chrisdavenport" %% "rediculous"          % "0.4.0",
-        "io.laserdisc"      %% "laserdisc-fs2"       % "0.6.0",
-        "dev.zio"           %% "zio-schema-protobuf" % zioSchemaVersion
+        "dev.profunktor" %% "redis4cats-effects"  % "1.4.1",
+        "dev.zio"        %% "zio-schema-protobuf" % zioSchemaVersion,
+        "org.typelevel"  %% "cats-effect"         % "3.4.8"
       )
     )
 
