@@ -29,9 +29,7 @@ object ClusterExecutorSpec extends BaseSpec {
           value2          <- redis.get(key).returning[String] // have to redirect without error ASK
           value3          <- redis.get(key).returning[String] // have to redirect without creating new connection
           _               <- ZIO.serviceWithZIO[Redis](_.setSlotStable(keySlot)).provideLayer(destMasterConn)
-        } yield {
-          assertTrue(value1 == value2) && assertTrue(value2 == value3)
-        }
+        } yield assertTrue(value1 == value2) && assertTrue(value2 == value3)
       } @@ TestAspect.flaky,
       test("check client responsiveness when Moved redirect happened") {
         for {
@@ -60,9 +58,7 @@ object ClusterExecutorSpec extends BaseSpec {
           _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
           value2 <- redis.get(key).returning[String] // have to refresh connection
           value3 <- redis.get(key).returning[String] // have to get value without refreshing connection
-        } yield {
-          assertTrue(value1 == value2) && assertTrue(value2 == value3)
-        }
+        } yield assertTrue(value1 == value2) && assertTrue(value2 == value3)
       }
     ).provideLayerShared(ClusterLayer)
 
