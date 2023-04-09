@@ -51,7 +51,7 @@ trait ConnectionSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             id    <- redis.clientId
             info  <- ZIO.serviceWithZIO[Redis](_.clientInfo)
-          } yield assert(info.id)(equalTo(id))
+          } yield assert(info.id)(equalTo(id)) && assert(info.name)(isNone)
         }
       ),
       suite("clientKill")(

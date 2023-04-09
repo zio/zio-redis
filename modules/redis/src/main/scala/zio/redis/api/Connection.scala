@@ -96,7 +96,7 @@ trait Connection extends RedisEnvironment {
    * format.
    *
    * @return
-   *   a unique string composed of 'property=value' fields separated by a space character.
+   *   information and statistics about the current client
    */
   final def clientInfo: IO[RedisError, ClientInfo] = {
     val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput, executor)
@@ -153,7 +153,7 @@ trait Connection extends RedisEnvironment {
    * @param clientIds
    *   filters the list by client IDs
    * @return
-   *   a unique string composed of 'property=value' fields separated by a space character
+   *   a list of information and statistics about clients
    */
   final def clientList(
     clientType: Option[ClientType] = None,
