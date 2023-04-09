@@ -16,13 +16,17 @@
 
 package zio.redis.internal
 
-import zio.redis.CodecSupplier
-import zio.schema.Schema
-import zio.schema.codec.BinaryCodec
+import zio._
+import zio.redis._
+import zio.redis.options.Cluster.{Partition, Slot}
 
-private[redis] trait RedisEnvironment {
-  protected def codecSupplier: CodecSupplier
-  protected def executor: RedisExecutor
+private[redis] final case class ClusterConnection(
+  partitions: Chunk[Partition],
+  executors: Map[RedisUri, ExecutorScope],
+  slots: Map[Slot, RedisUri]
+) {
+  def executor(slot: Slot): Option[RedisExecutor] = executors.get(slots(slot)).map(_.executor)
 
-  protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
+  def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
+    copy(executors = executors + (uri -> es))
 }
