@@ -85,10 +85,9 @@ lazy val benchmarks =
       crossScalaVersions -= Scala3,
       publish / skip := true,
       libraryDependencies ++= List(
-        "dev.profunktor"    %% "redis4cats-effects"  % "1.4.1",
-        "io.chrisdavenport" %% "rediculous"          % "0.4.0",
-        "io.laserdisc"      %% "laserdisc-fs2"       % "0.6.0",
-        "dev.zio"           %% "zio-schema-protobuf" % zioSchemaVersion
+        "dev.profunktor" %% "redis4cats-effects"  % "1.4.1",
+        "dev.zio"        %% "zio-schema-protobuf" % zioSchemaVersion,
+        "org.typelevel"  %% "cats-effect"         % "3.4.8"
       )
     )
 
