@@ -16,13 +16,13 @@
 
 package zio.redis
 
-import cats.effect.{IO => CIO}
-import dev.profunktor.redis4cats.RedisCommands
-import io.chrisdavenport.rediculous
-import laserdisc.fs2.RedisClient
+import cats.effect.{Deferred, IO, Resource}
 
 package object benchmarks {
-  type Redis4CatsClient[A] = RedisCommands[CIO, String, A]
-  type LaserDiscClient     = RedisClient[CIO]
-  type RediculousClient    = rediculous.RedisConnection[CIO]
+  private[benchmarks] def extractResource[A](resource: Resource[IO, A]): IO[(A, IO[Unit])] =
+    for {
+      da <- Deferred[IO, A]
+      f  <- resource.use(da.complete(_) >> IO.never).start
+      a  <- da.get
+    } yield a -> f.cancel
 }
