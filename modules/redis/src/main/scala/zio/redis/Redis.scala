@@ -17,7 +17,6 @@
 package zio.redis
 
 import zio._
-
 import zio.redis.internal._
 
 trait Redis
@@ -35,13 +34,13 @@ trait Redis
     with api.Cluster
 
 object Redis {
-  lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] = 
+  lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
     ClusterExecutor.layer >>> makeLayer
 
   lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis] =
     SingleNodeExecutor.local >>> makeLayer
 
-  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis] = 
+  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis] =
     SingleNodeExecutor.layer >>> makeLayer
 
   private def makeLayer: URLayer[CodecSupplier & RedisExecutor, Redis] =

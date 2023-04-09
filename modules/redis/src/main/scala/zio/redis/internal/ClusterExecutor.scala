@@ -18,13 +18,12 @@ package zio.redis.internal
 
 import zio._
 import zio.redis._
-import zio.redis.internal.ClusterExecutor._
 import zio.redis.api.Cluster.AskingCommand
+import zio.redis.internal.ClusterExecutor._
+import zio.redis.internal.RedisExecutor
 import zio.redis.options.Cluster._
 
 import java.io.IOException
-
-import zio.redis.internal.RedisExecutor
 
 private[redis] final class ClusterExecutor private (
   clusterConnection: Ref.Synchronized[ClusterConnection],

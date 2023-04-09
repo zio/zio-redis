@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package zio.redis.internal
 
 import zio._
-import zio.redis.RedisError
-import zio.redis.RedisConfig
 import zio.redis.internal.SingleNodeExecutor._
+import zio.redis.{RedisConfig, RedisError}
 
 private[redis] final class SingleNodeExecutor private (
   connection: RedisConnection,

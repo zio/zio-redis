@@ -16,8 +16,8 @@
 
 package zio.redis.options
 
-import zio.redis.{RedisUri}
 import zio.Chunk
+import zio.redis.RedisUri
 
 object Cluster {
   private[redis] final val SlotsAmount = 16384
