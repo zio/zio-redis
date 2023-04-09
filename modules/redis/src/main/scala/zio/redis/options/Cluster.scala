@@ -16,30 +16,16 @@
 
 package zio.redis.options
 
-import zio.redis.{RedisExecutor, RedisUri}
-import zio.{Chunk, Scope}
+import zio.Chunk
+import zio.redis.RedisUri
 
 object Cluster {
-
   private[redis] final val SlotsAmount = 16384
-
-  final case class ExecutorScope(executor: RedisExecutor, scope: Scope.Closeable)
-
-  final case class ClusterConnection(
-    partitions: Chunk[Partition],
-    executors: Map[RedisUri, ExecutorScope],
-    slots: Map[Slot, RedisUri]
-  ) {
-    def executor(slot: Slot): Option[RedisExecutor] = executors.get(slots(slot)).map(_.executor)
-
-    def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
-      copy(executors = executors + (uri -> es))
-  }
 
   final case class Slot(number: Long) extends AnyVal
 
   object Slot {
-    val Default: Slot = Slot(1)
+    final val Default: Slot = Slot(1)
   }
 
   final case class Node(id: String, address: RedisUri)

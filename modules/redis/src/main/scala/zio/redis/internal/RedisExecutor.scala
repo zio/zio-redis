@@ -16,13 +16,9 @@
 
 package zio.redis.internal
 
-import zio.redis.CodecSupplier
-import zio.schema.Schema
-import zio.schema.codec.BinaryCodec
+import zio.IO
+import zio.redis.RedisError
 
-private[redis] trait RedisEnvironment {
-  protected def codecSupplier: CodecSupplier
-  protected def executor: RedisExecutor
-
-  protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
+private[redis] trait RedisExecutor {
+  def execute(command: RespCommand): IO[RedisError, RespValue]
 }

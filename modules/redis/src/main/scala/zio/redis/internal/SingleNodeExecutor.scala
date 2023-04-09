@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
 import zio._
-import zio.redis.SingleNodeExecutor._
-import zio.redis.internal.{RedisConnection, RespCommand, RespValue}
+import zio.redis.internal.SingleNodeExecutor._
+import zio.redis.{RedisConfig, RedisError}
 
-final class SingleNodeExecutor private (
+private[redis] final class SingleNodeExecutor private (
   connection: RedisConnection,
   requests: Queue[Request],
   responses: Queue[Promise[RedisError, RespValue]]
@@ -70,20 +70,14 @@ final class SingleNodeExecutor private (
 
 }
 
-object SingleNodeExecutor {
+private[redis] object SingleNodeExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
     RedisConnection.layer >>> makeLayer
 
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     RedisConnection.local >>> makeLayer
 
-  private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
-
-  private final val True: Any => Boolean = _ => true
-
-  private final val RequestQueueSize = 16
-
-  private[redis] def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
+  def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
     for {
       requests  <- Queue.bounded[Request](RequestQueueSize)
       responses <- Queue.unbounded[Promise[RedisError, RespValue]]
@@ -91,6 +85,12 @@ object SingleNodeExecutor {
       _         <- executor.run.forkScoped
       _         <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor
+
+  private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
+
+  private final val True: Any => Boolean = _ => true
+
+  private final val RequestQueueSize = 16
 
   private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
     ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))

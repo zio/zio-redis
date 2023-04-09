@@ -34,11 +34,7 @@ object ApiSpec
       hashSuite,
       streamsSuite,
       scriptingSpec
-    ).provideShared(
-      SingleNodeExecutor.local,
-      Redis.layer,
-      ZLayer.succeed(ProtobufCodecSupplier)
-    )
+    ).provideShared(Redis.local, ZLayer.succeed(ProtobufCodecSupplier))
 
   private val clusterSuite =
     suite("Cluster executor")(
@@ -55,8 +51,7 @@ object ApiSpec
       scriptingSpec,
       clusterSpec
     ).provideShared(
-      ClusterExecutor.layer,
-      Redis.layer,
+      Redis.cluster,
       ZLayer.succeed(ProtobufCodecSupplier),
       ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))

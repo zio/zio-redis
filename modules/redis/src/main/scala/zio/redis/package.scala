@@ -28,13 +28,4 @@ package object redis
     with options.Scripting {
 
   type Id[+A] = A
-
-  private[redis] def logScopeFinalizer(msg: String): URIO[Scope, Unit] =
-    for {
-      scope <- ZIO.scope
-      _ <- scope.addFinalizerExit {
-             case Exit.Success(_)  => ZIO.logTrace(s"$msg with success")
-             case Exit.Failure(th) => ZIO.logTraceCause(s"$msg with failure", th)
-           }
-    } yield ()
 }
