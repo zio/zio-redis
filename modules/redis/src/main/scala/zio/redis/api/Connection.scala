@@ -92,6 +92,19 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
+   * The command returns information and statistics about the current client connection in a mostly human readable
+   * format.
+   *
+   * @return
+   *   a unique string composed of 'property=value' fields separated by a space character.
+   */
+  final def clientInfo: IO[RedisError, String] = {
+    val command = RedisCommand(ClientInfo, NoInput, MultiStringOutput, executor)
+
+    command.run(())
+  }
+
+  /**
    * Closes a given client connection with the specified address
    *
    * @param address
@@ -129,6 +142,32 @@ trait Connection extends RedisEnvironment {
     val command = RedisCommand(ClientKill, Varargs(ClientKillInput), LongOutput, executor)
 
     command.run(filters)
+  }
+
+  /**
+   * The command returns information and statistics about the client connections server in a mostly human readable
+   * format.
+   *
+   * @param clientType
+   *   filters the list by client's type
+   * @param clientIds
+   *   filters the list by client IDs
+   * @return
+   *   a unique string composed of 'property=value' fields separated by a space character
+   */
+  final def clientList(
+    clientType: Option[ClientType] = None,
+    clientIds: Option[(Long, List[Long])] = None
+  ): IO[RedisError, String] = {
+    val command =
+      RedisCommand(
+        ClientList,
+        Tuple2(OptionalInput(ClientTypeInput), OptionalInput(IdsInput)),
+        MultiStringOutput,
+        executor
+      )
+
+    command.run((clientType, clientIds))
   }
 
   /**
@@ -351,7 +390,9 @@ private[redis] object Connection {
   final val Auth               = "AUTH"
   final val ClientCaching      = "CLIENT CACHING"
   final val ClientId           = "CLIENT ID"
+  final val ClientInfo         = "CLIENT INFO"
   final val ClientKill         = "CLIENT KILL"
+  final val ClientList         = "CLIENT LIST"
   final val ClientGetName      = "CLIENT GETNAME"
   final val ClientGetRedir     = "CLIENT GETREDIR"
   final val ClientUnpause      = "CLIENT UNPAUSE"
