@@ -75,7 +75,7 @@ object Input {
   case object StralgoLcsQueryTypeInput extends Input[StrAlgoLcsQueryType] {
     def encode(data: StrAlgoLcsQueryType): RespCommand = data match {
       case StrAlgoLcsQueryType.Len => RespCommand(RespCommandArgument.Literal("LEN"))
-      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) => {
+      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) =>
         val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
         val min =
           if (minMatchLength > 1)
@@ -85,7 +85,6 @@ object Input {
           if (withMatchLength) Chunk.single(RespCommandArgument.Literal("WITHMATCHLEN"))
           else Chunk.empty[RespCommandArgument]
         RespCommand(Chunk(idx, min, length).flatten)
-      }
     }
   }
 
@@ -277,11 +276,6 @@ object Input {
 
   case object IncrementInput extends Input[Increment] {
     def encode(data: Increment): RespCommand =
-      RespCommand(RespCommandArgument.Literal(data.asString))
-  }
-
-  case object KeepTtlInput extends Input[KeepTtl] {
-    def encode(data: KeepTtl): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
@@ -618,37 +612,46 @@ object Input {
       RespCommand(RespCommandArgument.Unknown(data.asString))
   }
 
-  final case class GetExPersistInput[K: BinaryCodec]() extends Input[(K, Boolean)] {
-    def encode(data: (K, Boolean)): RespCommand =
-      RespCommand(
-        if (data._2) Chunk(RespCommandArgument.Key(data._1), RespCommandArgument.Literal("PERSIST"))
-        else Chunk(RespCommandArgument.Key(data._1))
-      )
+  case object UpdateByScoreInput extends Input[UpdateByScore] {
+    def encode(data: UpdateByScore): RespCommand =
+      RespCommand(RespCommandArgument.Unknown(data.asString))
   }
 
-  final case class GetExInput[K: BinaryCodec]() extends Input[(K, Expire, Duration)] {
-    def encode(data: (K, Expire, Duration)): RespCommand =
+  case object SetExpireInput extends Input[SetExpire] {
+    def encode(data: SetExpire): RespCommand =
       data match {
-        case (key, Expire.SetExpireSeconds, duration) =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EX")) ++ DurationSecondsInput.encode(
-            duration
-          )
-        case (key, Expire.SetExpireMilliseconds, duration) =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PX")) ++ DurationMillisecondsInput
-            .encode(duration)
+        case SetExpire.KeepTtl =>
+          RespCommand(RespCommandArgument.Literal("KEEPTTL"))
+        case SetExpire.SetExpireSeconds(duration) =>
+          RespCommand(RespCommandArgument.Literal("EX")) ++ DurationSecondsInput.encode(duration)
+        case SetExpire.SetExpireMilliseconds(duration) =>
+          RespCommand(RespCommandArgument.Literal("PX")) ++ DurationMillisecondsInput.encode(duration)
+        case SetExpire.SetExpireUnixTimeMilliseconds(instant) =>
+          RespCommand(RespCommandArgument.Literal("PXAT")) ++ TimeMillisecondsInput.encode(instant)
+        case SetExpire.SetExpireUnixTimeSeconds(instant) =>
+          RespCommand(RespCommandArgument.Literal("EXAT")) ++ TimeSecondsInput.encode(instant)
       }
   }
 
-  final case class GetExAtInput[K: BinaryCodec]() extends Input[(K, ExpiredAt, Instant)] {
-    def encode(data: (K, ExpiredAt, Instant)): RespCommand =
+  final case class GetExInput[K: BinaryCodec]() extends Input[(K, GetExpire)] {
+    def encode(data: (K, GetExpire)): RespCommand =
       data match {
-        case (key, ExpiredAt.SetExpireAtSeconds, instant) =>
+        case (key, GetExpire.GetExpireSeconds(duration)) =>
+          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EX")) ++ DurationSecondsInput.encode(
+            duration
+          )
+        case (key, GetExpire.GetExpireMilliseconds(duration)) =>
+          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PX")) ++ DurationMillisecondsInput
+            .encode(duration)
+        case (key, GetExpire.GetExpireUnixTimeMilliseconds(instant)) =>
+          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PXAT")) ++ TimeMillisecondsInput
+            .encode(instant)
+        case (key, GetExpire.GetExpireUnixTimeSeconds(instant)) =>
           RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EXAT")) ++ TimeSecondsInput.encode(
             instant
           )
-        case (key, ExpiredAt.SetExpireAtMilliseconds, instant) =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PXAT")) ++ TimeMillisecondsInput
-            .encode(instant)
+        case (key, GetExpire.Persist) =>
+          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PERSIST"))
       }
   }
 
@@ -679,7 +682,8 @@ object Input {
   final case class EvalInput[-K, -V](inputK: Input[K], inputV: Input[V]) extends Input[(String, Chunk[K], Chunk[V])] {
     def encode(data: (String, Chunk[K], Chunk[V])): RespCommand = {
       val (lua, keys, args) = data
-      val encodedScript     = RespCommand(RespCommandArgument.Unknown(lua), RespCommandArgument.Unknown(keys.size.toString))
+      val encodedScript =
+        RespCommand(RespCommandArgument.Unknown(lua), RespCommandArgument.Unknown(keys.size.toString))
       val encodedKeys = keys.foldLeft(RespCommand.empty)((acc, a) =>
         acc ++ inputK.encode(a).mapArguments(arg => RespCommandArgument.Key(arg.value.value))
       )
