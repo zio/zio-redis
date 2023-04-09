@@ -727,10 +727,26 @@ object Output {
     }
   }
 
+  case object ClientInfoOutput extends Output[ClientInfo] {
+    protected def tryDecode(respValue: RespValue): ClientInfo =
+      respValue match {
+        case RespValue.BulkString(s) => ClientInfo.from(s.asString)
+        case other                   => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
+
+  case object ClientsInfoOutput extends Output[ClientsInfo] {
+    protected def tryDecode(respValue: RespValue): ClientsInfo =
+      respValue match {
+        case RespValue.BulkString(s) => ClientInfo.from(s.asString.split("\r\n").filter(_.nonEmpty))
+        case other                   => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
+
   case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {
     protected def tryDecode(respValue: RespValue): ClientTrackingInfo =
       respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.NullArray => throw ProtocolError("Array must not be empty")
         case RespValue.Array(values) if values.length % 2 == 0 =>
           val fields = values.toList
             .grouped(2)

@@ -25,40 +25,34 @@ trait Connection {
     private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
   }
 
+  object Address {
+    private[redis] final def fromString(addr: String): Option[Address] =
+      addr.split(":").toList match {
+        case ip :: port :: Nil => Some(new Address(InetAddress.getByName(ip), port.toInt))
+        case _                 => None
+      }
+  }
+
   sealed case class ClientEvents(readable: Boolean = false, writable: Boolean = false)
 
   sealed trait ClientFlag
 
   object ClientFlag {
-    case object ToBeClosedAsap extends ClientFlag
-
-    case object Blocked extends ClientFlag
-
-    case object ToBeClosedAfterReply extends ClientFlag
-
-    case object WatchedKeysModified extends ClientFlag
-
-    case object IsMaster extends ClientFlag
-
-    case object MonitorMode extends ClientFlag
-
-    case object PubSub extends ClientFlag
-
-    case object ReadOnlyMode extends ClientFlag
-
-    case object Replica extends ClientFlag
-
-    case object Unblocked extends ClientFlag
-
-    case object UnixDomainSocket extends ClientFlag
-
-    case object MultiExecContext extends ClientFlag
-
-    case object KeysTrackingEnabled extends ClientFlag
-
+    case object Blocked                     extends ClientFlag
+    case object BroadcastTrackingMode       extends ClientFlag
+    case object IsMaster                    extends ClientFlag
+    case object KeysTrackingEnabled         extends ClientFlag
+    case object MonitorMode                 extends ClientFlag
+    case object MultiExecContext            extends ClientFlag
+    case object PubSub                      extends ClientFlag
+    case object ReadOnlyMode                extends ClientFlag
+    case object Replica                     extends ClientFlag
+    case object ToBeClosedAfterReply        extends ClientFlag
+    case object ToBeClosedAsap              extends ClientFlag
     case object TrackingTargetClientInvalid extends ClientFlag
-
-    case object BroadcastTrackingMode extends ClientFlag
+    case object Unblocked                   extends ClientFlag
+    case object UnixDomainSocket            extends ClientFlag
+    case object WatchedKeysModified         extends ClientFlag
   }
 
   sealed case class ClientInfo(
@@ -86,6 +80,65 @@ trait Connection {
     redirectionClientId: Option[Long] = None,
     user: Option[String] = None
   )
+
+  object ClientInfo {
+    private[redis] final def from(line: String): ClientInfo = {
+      def getFlags(flags: String): Set[ClientFlag] = {
+        def clientFlag(cf: Char): Option[ClientFlag] = cf match {
+          case 'A' => Some(ClientFlag.ToBeClosedAsap)
+          case 'b' => Some(ClientFlag.Blocked)
+          case 'B' => Some(ClientFlag.BroadcastTrackingMode)
+          case 'c' => Some(ClientFlag.ToBeClosedAfterReply)
+          case 'd' => Some(ClientFlag.WatchedKeysModified)
+          case 'M' => Some(ClientFlag.IsMaster)
+          case 'O' => Some(ClientFlag.MonitorMode)
+          case 'P' => Some(ClientFlag.PubSub)
+          case 'r' => Some(ClientFlag.ReadOnlyMode)
+          case 'R' => Some(ClientFlag.TrackingTargetClientInvalid)
+          case 'S' => Some(ClientFlag.Replica)
+          case 't' => Some(ClientFlag.KeysTrackingEnabled)
+          case 'u' => Some(ClientFlag.Unblocked)
+          case 'U' => Some(ClientFlag.UnixDomainSocket)
+          case 'x' => Some(ClientFlag.MultiExecContext)
+          case _   => None
+        }
+
+        flags.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ clientFlag(f))
+      }
+
+      val data   = line.trim.split(" ").map(_.split("=").toList).collect { case k :: v :: Nil => k -> v }.toMap
+      val events = data("events")
+      new ClientInfo(
+        id = data("id").toLong,
+        name = data.get("name"),
+        address = data.get("addr").flatMap(Address.fromString),
+        localAddress = data.get("laddr").flatMap(Address.fromString),
+        fileDescriptor = data.get("fd").map(_.toLong),
+        age = data.get("age").map(s => Duration.fromSeconds(s.toLong)),
+        idle = data.get("idle").map(s => Duration.fromSeconds(s.toLong)),
+        flags = data.get("flags").fold(Set.empty[ClientFlag])(getFlags),
+        databaseId = data.get("id").map(_.toLong),
+        subscriptions = data("sub").toInt,
+        patternSubscriptions = data("psub").toInt,
+        multiCommands = data("multi").toInt,
+        queryBufferLength = data.get("qbuf").map(_.toInt),
+        queryBufferFree = data.get("qbuf-free").map(_.toInt),
+        outputListLength = data.get("oll").map(_.toInt),
+        outputBufferMem = data.get("omem").map(_.toLong),
+        events = ClientEvents(readable = events.contains("r"), writable = events.contains("w")),
+        lastCommand = data.get("cmd"),
+        argvMemory = data.get("argv-mem").map(_.toLong),
+        totalMemory = data.get("total-mem").map(_.toLong),
+        redirectionClientId = data.get("redir").map(_.toLong),
+        user = data.get("user")
+      )
+    }
+
+    private[redis] final def from(lines: Array[String]): ClientsInfo =
+      lines.map(from).toList
+  }
+
+  type ClientsInfo = List[ClientInfo]
 
   sealed trait ClientKillFilter
 

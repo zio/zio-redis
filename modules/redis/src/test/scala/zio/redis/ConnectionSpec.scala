@@ -48,8 +48,10 @@ trait ConnectionSpec extends BaseSpec {
       suite("clientInfo")(
         test("get client info") {
           for {
-            info <- ZIO.serviceWithZIO[Redis](_.clientInfo)
-          } yield assert(info)(isNonEmptyString)
+            redis <- ZIO.service[Redis]
+            id    <- redis.clientId
+            info  <- ZIO.serviceWithZIO[Redis](_.clientInfo)
+          } yield assert(info.id)(equalTo(id))
         }
       ),
       suite("clientKill")(
@@ -76,23 +78,23 @@ trait ConnectionSpec extends BaseSpec {
         test("get clients' info") {
           for {
             info <- ZIO.serviceWithZIO[Redis](_.clientList())
-          } yield assert(info)(isNonEmptyString)
+          } yield assert(info)(isNonEmpty)
         },
         test("get clients' info filtered by type") {
           for {
             redis      <- ZIO.service[Redis]
             infoNormal <- redis.clientList(Some(ClientType.Normal))
             infoPubSub <- redis.clientList(Some(ClientType.PubSub))
-          } yield assert(infoNormal)(isNonEmptyString) && assert(infoPubSub)(isEmptyString)
+          } yield assert(infoNormal)(isNonEmpty) && assert(infoPubSub)(isEmpty)
         },
         test("get clients' info filtered by client IDs") {
           for {
             redis           <- ZIO.service[Redis]
             id              <- redis.clientId
             nonExistingId    = id + 1
-            info            <- ZIO.serviceWithZIO[Redis](_.clientList(clientIds = Some((id, Nil))))
-            infoNonExisting <- ZIO.serviceWithZIO[Redis](_.clientList(clientIds = Some((nonExistingId, Nil))))
-          } yield assert(info)(isNonEmptyString) && assert(infoNonExisting)(isEmptyString)
+            info            <- redis.clientList(clientIds = Some((id, Nil)))
+            infoNonExisting <- redis.clientList(clientIds = Some((nonExistingId, Nil)))
+          } yield assert(info)(isNonEmpty) && assert(info.head.id)(equalTo(id)) && assert(infoNonExisting)(isEmpty)
         }
       ),
       suite("clientGetRedir")(

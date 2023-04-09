@@ -98,8 +98,8 @@ trait Connection extends RedisEnvironment {
    * @return
    *   a unique string composed of 'property=value' fields separated by a space character.
    */
-  final def clientInfo: IO[RedisError, String] = {
-    val command = RedisCommand(ClientInfo, NoInput, MultiStringOutput, executor)
+  final def clientInfo: IO[RedisError, ClientInfo] = {
+    val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput, executor)
 
     command.run(())
   }
@@ -158,12 +158,12 @@ trait Connection extends RedisEnvironment {
   final def clientList(
     clientType: Option[ClientType] = None,
     clientIds: Option[(Long, List[Long])] = None
-  ): IO[RedisError, String] = {
+  ): IO[RedisError, ClientsInfo] = {
     val command =
       RedisCommand(
         ClientList,
         Tuple2(OptionalInput(ClientTypeInput), OptionalInput(IdsInput)),
-        MultiStringOutput,
+        ClientsInfoOutput,
         executor
       )
 
