@@ -80,10 +80,10 @@ trait ConnectionSpec extends BaseSpec {
         },
         test("get clients' info filtered by type") {
           for {
-            redis       <- ZIO.service[Redis]
-            infoNormal  <- redis.clientList(Some(ClientType.Normal))
-            infoReplica <- redis.clientList(Some(ClientType.Replica))
-          } yield assert(infoNormal)(isNonEmptyString) && assert(infoReplica)(isEmptyString)
+            redis      <- ZIO.service[Redis]
+            infoNormal <- redis.clientList(Some(ClientType.Normal))
+            infoPubSub <- redis.clientList(Some(ClientType.PubSub))
+          } yield assert(infoNormal)(isNonEmptyString) && assert(infoPubSub)(isEmptyString)
         },
         test("get clients' info filtered by client IDs") {
           for {
