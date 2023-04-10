@@ -153,17 +153,17 @@ trait Connection extends RedisEnvironment {
    * @param clientIds
    *   filters the list by client IDs
    * @return
-   *   a list of information and statistics about clients
+   *   a chunk of information and statistics about clients
    */
   final def clientList(
     clientType: Option[ClientType] = None,
     clientIds: Option[(Long, List[Long])] = None
-  ): IO[RedisError, ClientsInfo] = {
+  ): IO[RedisError, Chunk[ClientInfo]] = {
     val command =
       RedisCommand(
         ClientList,
         Tuple2(OptionalInput(ClientTypeInput), OptionalInput(IdsInput)),
-        ClientsInfoOutput,
+        ClientListOutput,
         executor
       )
 
