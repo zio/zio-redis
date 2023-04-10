@@ -55,23 +55,24 @@ trait Connection {
     case object UnixDomainSocket            extends ClientFlag
     case object WatchedKeysModified         extends ClientFlag
 
-    private[redis] lazy val flags = Map(
-      'A' -> ClientFlag.ToBeClosedAsap,
-      'b' -> ClientFlag.Blocked,
-      'B' -> ClientFlag.BroadcastTrackingMode,
-      'c' -> ClientFlag.ToBeClosedAfterReply,
-      'd' -> ClientFlag.WatchedKeysModified,
-      'M' -> ClientFlag.IsMaster,
-      'O' -> ClientFlag.MonitorMode,
-      'P' -> ClientFlag.PubSub,
-      'r' -> ClientFlag.ReadOnlyMode,
-      'R' -> ClientFlag.TrackingTargetClientInvalid,
-      'S' -> ClientFlag.Replica,
-      't' -> ClientFlag.KeysTrackingEnabled,
-      'u' -> ClientFlag.Unblocked,
-      'U' -> ClientFlag.UnixDomainSocket,
-      'x' -> ClientFlag.MultiExecContext
-    )
+    private[redis] lazy val Flags =
+      Map(
+        'A' -> ClientFlag.ToBeClosedAsap,
+        'b' -> ClientFlag.Blocked,
+        'B' -> ClientFlag.BroadcastTrackingMode,
+        'c' -> ClientFlag.ToBeClosedAfterReply,
+        'd' -> ClientFlag.WatchedKeysModified,
+        'M' -> ClientFlag.IsMaster,
+        'O' -> ClientFlag.MonitorMode,
+        'P' -> ClientFlag.PubSub,
+        'r' -> ClientFlag.ReadOnlyMode,
+        'R' -> ClientFlag.TrackingTargetClientInvalid,
+        'S' -> ClientFlag.Replica,
+        't' -> ClientFlag.KeysTrackingEnabled,
+        'u' -> ClientFlag.Unblocked,
+        'U' -> ClientFlag.UnixDomainSocket,
+        'x' -> ClientFlag.MultiExecContext
+      )
   }
 
   sealed case class ClientInfo(
@@ -114,7 +115,7 @@ trait Connection {
         idle = data.get("idle").flatMap(_.toLongOption).map(Duration.fromSeconds),
         flags = data
           .get("flags")
-          .fold(Set.empty[ClientFlag])(_.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ ClientFlag.flags.get(f))),
+          .fold(Set.empty[ClientFlag])(_.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ ClientFlag.Flags.get(f))),
         databaseId = data.get("id").flatMap(_.toLongOption),
         subscriptions = data.get("sub").flatMap(_.toIntOption),
         patternSubscriptions = data.get("psub").flatMap(_.toIntOption),
