@@ -32,8 +32,7 @@ private[redis] object RespCommandArgument {
   }
 
   object Unknown {
-    def apply(str: String): Unknown                                = Unknown(Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8)))
-    def apply[A](data: A)(implicit codec: BinaryCodec[A]): Unknown = Unknown(codec.encode(data))
+    def apply(str: String): Unknown = Unknown(Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8)))
   }
 
   final case class CommandName(str: String) extends RespCommandArgument {

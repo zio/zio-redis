@@ -75,7 +75,7 @@ object Input {
   case object StralgoLcsQueryTypeInput extends Input[StrAlgoLcsQueryType] {
     def encode(data: StrAlgoLcsQueryType): RespCommand = data match {
       case StrAlgoLcsQueryType.Len => RespCommand(RespCommandArgument.Literal("LEN"))
-      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) => {
+      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) =>
         val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
         val min =
           if (minMatchLength > 1)
@@ -85,7 +85,6 @@ object Input {
           if (withMatchLength) Chunk.single(RespCommandArgument.Literal("WITHMATCHLEN"))
           else Chunk.empty[RespCommandArgument]
         RespCommand(Chunk(idx, min, length).flatten)
-      }
     }
   }
 
@@ -421,8 +420,8 @@ object Input {
       val chunk = Chunk(
         RespCommandArgument.Literal("CREATE"),
         RespCommandArgument.Key(data.key),
-        RespCommandArgument.Unknown(data.group),
-        RespCommandArgument.Unknown(data.id)
+        RespCommandArgument.Value(data.group),
+        RespCommandArgument.Value(data.id)
       )
 
       RespCommand(if (data.mkStream) chunk :+ RespCommandArgument.Literal(MkStream.asString) else chunk)
@@ -435,8 +434,8 @@ object Input {
       RespCommand(
         RespCommandArgument.Literal("SETID"),
         RespCommandArgument.Key(data.key),
-        RespCommandArgument.Unknown(data.group),
-        RespCommandArgument.Unknown(data.id)
+        RespCommandArgument.Value(data.group),
+        RespCommandArgument.Value(data.id)
       )
   }
 
@@ -445,7 +444,7 @@ object Input {
       RespCommand(
         RespCommandArgument.Literal("DESTROY"),
         RespCommandArgument.Key(data.key),
-        RespCommandArgument.Unknown(data.group)
+        RespCommandArgument.Value(data.group)
       )
   }
 
@@ -455,8 +454,8 @@ object Input {
       RespCommand(
         RespCommandArgument.Literal("CREATECONSUMER"),
         RespCommandArgument.Key(data.key),
-        RespCommandArgument.Unknown(data.group),
-        RespCommandArgument.Unknown(data.consumer)
+        RespCommandArgument.Value(data.group),
+        RespCommandArgument.Value(data.consumer)
       )
   }
 
@@ -466,8 +465,8 @@ object Input {
       RespCommand(
         RespCommandArgument.Literal("DELCONSUMER"),
         RespCommandArgument.Key(data.key),
-        RespCommandArgument.Unknown(data.group),
-        RespCommandArgument.Unknown(data.consumer)
+        RespCommandArgument.Value(data.group),
+        RespCommandArgument.Value(data.consumer)
       )
   }
 
