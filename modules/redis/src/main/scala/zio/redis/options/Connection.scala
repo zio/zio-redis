@@ -76,7 +76,7 @@ trait Connection {
   }
 
   sealed case class ClientInfo(
-    id: Long,
+    id: Option[Long] = None,
     name: Option[String] = None,
     address: Option[Address] = None,
     localAddress: Option[Address] = None,
@@ -85,9 +85,9 @@ trait Connection {
     idle: Option[Duration] = None,
     flags: Set[ClientFlag] = Set.empty,
     databaseId: Option[Long] = None,
-    subscriptions: Int = 0,
-    patternSubscriptions: Int = 0,
-    multiCommands: Int = 0,
+    subscriptions: Option[Int] = None,
+    patternSubscriptions: Option[Int] = None,
+    multiCommands: Option[Int] = None,
     queryBufferLength: Option[Int] = None,
     queryBufferFree: Option[Int] = None,
     outputBufferLength: Option[Int] = None,
@@ -102,33 +102,47 @@ trait Connection {
   )
 
   object ClientInfo {
+    private def parseLong(str: String): Option[Long] =
+      try {
+        Some(str.toLong)
+      } catch {
+        case _: Throwable => None
+      }
+
+    private def parseInt(str: String): Option[Int] =
+      try {
+        Some(str.toInt)
+      } catch {
+        case _: Throwable => None
+      }
+
     private[redis] final def from(line: String): ClientInfo = {
       val data   = line.trim.split(" ").map(_.split("=").toList).collect { case k :: v :: Nil => k -> v }.toMap
       val events = data.get("events")
       new ClientInfo(
-        id = data("id").toLong,
+        id = data.get("id").flatMap(parseLong),
         name = data.get("name"),
         address = data.get("addr").flatMap(Address.fromString),
         localAddress = data.get("laddr").flatMap(Address.fromString),
-        fileDescriptor = data.get("fd").flatMap(_.toLongOption),
-        age = data.get("age").flatMap(_.toLongOption).map(Duration.fromSeconds),
-        idle = data.get("idle").flatMap(_.toLongOption).map(Duration.fromSeconds),
+        fileDescriptor = data.get("fd").flatMap(parseLong),
+        age = data.get("age").flatMap(parseLong).map(Duration.fromSeconds),
+        idle = data.get("idle").flatMap(parseLong).map(Duration.fromSeconds),
         flags = data
           .get("flags")
           .fold(Set.empty[ClientFlag])(_.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ ClientFlag.from(f))),
-        databaseId = data.get("id").flatMap(_.toLongOption),
-        subscriptions = data("sub").toInt,
-        patternSubscriptions = data("psub").toInt,
-        multiCommands = data("multi").toInt,
-        queryBufferLength = data.get("qbuf").flatMap(_.toIntOption),
-        queryBufferFree = data.get("qbuf-free").flatMap(_.toIntOption),
-        outputListLength = data.get("oll").flatMap(_.toIntOption),
-        outputBufferMem = data.get("omem").flatMap(_.toLongOption),
+        databaseId = data.get("id").flatMap(parseLong),
+        subscriptions = data.get("sub").flatMap(parseInt),
+        patternSubscriptions = data.get("psub").flatMap(parseInt),
+        multiCommands = data.get("multi").flatMap(parseInt),
+        queryBufferLength = data.get("qbuf").flatMap(parseInt),
+        queryBufferFree = data.get("qbuf-free").flatMap(parseInt),
+        outputListLength = data.get("oll").flatMap(parseInt),
+        outputBufferMem = data.get("omem").flatMap(parseLong),
         events = ClientEvents(readable = events.exists(_.contains("r")), writable = events.exists(_.contains("w"))),
         lastCommand = data.get("cmd"),
-        argvMemory = data.get("argv-mem").flatMap(_.toLongOption),
-        totalMemory = data.get("total-mem").flatMap(_.toLongOption),
-        redirectionClientId = data.get("redir").flatMap(_.toLongOption),
+        argvMemory = data.get("argv-mem").flatMap(parseLong),
+        totalMemory = data.get("total-mem").flatMap(parseLong),
+        redirectionClientId = data.get("redir").flatMap(parseLong),
         user = data.get("user")
       )
     }

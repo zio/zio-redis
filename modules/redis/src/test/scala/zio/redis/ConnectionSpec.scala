@@ -51,7 +51,7 @@ trait ConnectionSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             id    <- redis.clientId
             info  <- ZIO.serviceWithZIO[Redis](_.clientInfo)
-          } yield assert(info.id)(equalTo(id)) && assert(info.name)(isNone)
+          } yield assert(info.id)(isSome(equalTo(id))) && assert(info.name)(isNone)
         }
       ),
       suite("clientKill")(
@@ -94,7 +94,9 @@ trait ConnectionSpec extends BaseSpec {
             nonExistingId    = id + 1
             info            <- redis.clientList(clientIds = Some((id, Nil)))
             infoNonExisting <- redis.clientList(clientIds = Some((nonExistingId, Nil)))
-          } yield assert(info)(isNonEmpty) && assert(info.head.id)(equalTo(id)) && assert(infoNonExisting)(isEmpty)
+          } yield assert(info)(isNonEmpty) && assert(info.head.id)(isSome(equalTo(id))) && assert(infoNonExisting)(
+            isEmpty
+          )
         }
       ),
       suite("clientGetRedir")(
