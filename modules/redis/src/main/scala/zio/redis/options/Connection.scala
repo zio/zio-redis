@@ -53,6 +53,26 @@ trait Connection {
     case object Unblocked                   extends ClientFlag
     case object UnixDomainSocket            extends ClientFlag
     case object WatchedKeysModified         extends ClientFlag
+
+    private[redis] def from(char: Char): Option[ClientFlag] =
+      char match {
+        case 'A' => Some(ClientFlag.ToBeClosedAsap)
+        case 'b' => Some(ClientFlag.Blocked)
+        case 'B' => Some(ClientFlag.BroadcastTrackingMode)
+        case 'c' => Some(ClientFlag.ToBeClosedAfterReply)
+        case 'd' => Some(ClientFlag.WatchedKeysModified)
+        case 'M' => Some(ClientFlag.IsMaster)
+        case 'O' => Some(ClientFlag.MonitorMode)
+        case 'P' => Some(ClientFlag.PubSub)
+        case 'r' => Some(ClientFlag.ReadOnlyMode)
+        case 'R' => Some(ClientFlag.TrackingTargetClientInvalid)
+        case 'S' => Some(ClientFlag.Replica)
+        case 't' => Some(ClientFlag.KeysTrackingEnabled)
+        case 'u' => Some(ClientFlag.Unblocked)
+        case 'U' => Some(ClientFlag.UnixDomainSocket)
+        case 'x' => Some(ClientFlag.MultiExecContext)
+        case _   => None
+      }
   }
 
   sealed case class ClientInfo(
@@ -82,28 +102,6 @@ trait Connection {
   )
 
   object ClientInfo {
-    private def clientFlag(cf: Char): Option[ClientFlag] = cf match {
-      case 'A' => Some(ClientFlag.ToBeClosedAsap)
-      case 'b' => Some(ClientFlag.Blocked)
-      case 'B' => Some(ClientFlag.BroadcastTrackingMode)
-      case 'c' => Some(ClientFlag.ToBeClosedAfterReply)
-      case 'd' => Some(ClientFlag.WatchedKeysModified)
-      case 'M' => Some(ClientFlag.IsMaster)
-      case 'O' => Some(ClientFlag.MonitorMode)
-      case 'P' => Some(ClientFlag.PubSub)
-      case 'r' => Some(ClientFlag.ReadOnlyMode)
-      case 'R' => Some(ClientFlag.TrackingTargetClientInvalid)
-      case 'S' => Some(ClientFlag.Replica)
-      case 't' => Some(ClientFlag.KeysTrackingEnabled)
-      case 'u' => Some(ClientFlag.Unblocked)
-      case 'U' => Some(ClientFlag.UnixDomainSocket)
-      case 'x' => Some(ClientFlag.MultiExecContext)
-      case _   => None
-    }
-
-    private def getFlags(flags: String): Set[ClientFlag] =
-      flags.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ clientFlag(f))
-
     private[redis] final def from(line: String): ClientInfo = {
       val data   = line.trim.split(" ").map(_.split("=").toList).collect { case k :: v :: Nil => k -> v }.toMap
       val events = data.get("events")
@@ -115,7 +113,9 @@ trait Connection {
         fileDescriptor = data.get("fd").flatMap(_.toLongOption),
         age = data.get("age").flatMap(_.toLongOption).map(Duration.fromSeconds),
         idle = data.get("idle").flatMap(_.toLongOption).map(Duration.fromSeconds),
-        flags = data.get("flags").fold(Set.empty[ClientFlag])(getFlags),
+        flags = data
+          .get("flags")
+          .fold(Set.empty[ClientFlag])(_.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ ClientFlag.from(f))),
         databaseId = data.get("id").flatMap(_.toLongOption),
         subscriptions = data("sub").toInt,
         patternSubscriptions = data("psub").toInt,
