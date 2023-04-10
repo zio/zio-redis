@@ -91,27 +91,27 @@ object InputSpec extends BaseSpec {
       ),
       suite("Stralgocommand")(
         test("length option") {
-          assert(StralgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
+          assert(StrAlgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
             equalTo(RespCommand(Literal("LEN")))
           )
         },
         test("idx option default") {
-          assert(StralgoLcsQueryTypeInput.encode(Idx()))(
+          assert(StrAlgoLcsQueryTypeInput.encode(Idx()))(
             equalTo(RespCommand(Literal("IDX")))
           )
         },
         test("idx option with minmatchlength") {
-          assert(StralgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
+          assert(StrAlgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
             equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2")))
           )
         },
         test("idx option with withmatchlength") {
-          assert(StralgoLcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
+          assert(StrAlgoLcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
             equalTo(RespCommand(Literal("IDX"), Literal("WITHMATCHLEN")))
           )
         },
         test("idx option with minmatchlength and withmatchlength") {
-          assert(StralgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
+          assert(StrAlgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
             equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2"), Literal("WITHMATCHLEN")))
           )
         }
