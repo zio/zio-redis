@@ -44,6 +44,13 @@ private[benchmarks] object Redis4Cats {
     new Redis4Cats(client, finalizer)
   }
 
+  private def extractResource[A](resource: Resource[IO, A]): IO[(A, IO[Unit])] =
+    for {
+      da <- Deferred[IO, A]
+      f  <- resource.use(da.complete(_) >> IO.never).start
+      a  <- da.get
+    } yield a -> f.cancel
+
   private final val LongCodec = Codecs.derive(RedisCodec.Utf8, stringLongEpi)
   private final val RedisUri  = "redis://127.0.0.1:6379"
 }
