@@ -33,7 +33,7 @@ object InputSpec extends BaseSpec {
             ip     <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
             port   <- ZIO.succeed(42)
             result <- ZIO.attempt(AddressInput.encode(Address(ip, port)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("127.0.0.1:42"))))
+          } yield assert(result)(equalTo(RespCommand(Value("127.0.0.1:42"))))
         }
       ),
       suite("Aggregate")(
@@ -102,7 +102,7 @@ object InputSpec extends BaseSpec {
         },
         test("idx option with minmatchlength") {
           assert(StralgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
-            equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Unknown("2")))
+            equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2")))
           )
         },
         test("idx option with withmatchlength") {
@@ -112,7 +112,7 @@ object InputSpec extends BaseSpec {
         },
         test("idx option with minmatchlength and withmatchlength") {
           assert(StralgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
-            equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Unknown("2"), Literal("WITHMATCHLEN")))
+            equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2"), Literal("WITHMATCHLEN")))
           )
         }
       ),
@@ -120,47 +120,47 @@ object InputSpec extends BaseSpec {
         test("get with unsigned type and positive offset") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 2)))
-          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Unknown("u3"), Unknown("2"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Value("u3"), Value("2"))))
         },
         test("get with signed type and negative offset") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldGet(SignedInt(3), -2)))
-          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Unknown("i3"), Unknown("-2"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Value("i3"), Value("-2"))))
         },
         test("get with unsigned type and zero offset") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldGet(UnsignedInt(3), 0)))
-          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Unknown("u3"), Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Value("u3"), Value("0"))))
         },
         test("set with unsigned type, positive offset and positive value") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldSet(UnsignedInt(3), 2, 100L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("SET"), Unknown("u3"), Unknown("2"), Unknown("100"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("SET"), Value("u3"), Value("2"), Value("100"))))
         },
         test("set with signed type, negative offset and negative value") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldSet(SignedInt(3), -2, -100L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("SET"), Unknown("i3"), Unknown("-2"), Unknown("-100"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("SET"), Value("i3"), Value("-2"), Value("-100"))))
         },
         test("set with unsigned type, zero offset and zero value") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldSet(UnsignedInt(3), 0, 0L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("SET"), Unknown("u3"), Unknown("0"), Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("SET"), Value("u3"), Value("0"), Value("0"))))
         },
         test("incr with unsigned type, positive offset and positive value") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldIncr(UnsignedInt(3), 2, 100L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("INCRBY"), Unknown("u3"), Unknown("2"), Unknown("100"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("INCRBY"), Value("u3"), Value("2"), Value("100"))))
         },
         test("incr with signed type, negative offset and negative value") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldIncr(SignedInt(3), -2, -100L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("INCRBY"), Unknown("i3"), Unknown("-2"), Unknown("-100"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("INCRBY"), Value("i3"), Value("-2"), Value("-100"))))
         },
         test("incr with unsigned type, zero offset and zero value") {
           for {
             result <- ZIO.attempt(BitFieldCommandInput.encode(BitFieldIncr(UnsignedInt(3), 0, 0L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("INCRBY"), Unknown("u3"), Unknown("0"), Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("INCRBY"), Value("u3"), Value("0"), Value("0"))))
         },
         test("overflow sat") {
           for {
@@ -204,19 +204,19 @@ object InputSpec extends BaseSpec {
         test("with only start") {
           for {
             result <- ZIO.attempt(BitPosRangeInput.encode(BitPosRange(1.second.toMillis, None)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("1000"))))
+          } yield assert(result)(equalTo(RespCommand(Value("1000"))))
         },
         test("with start and the end") {
           for {
             result <- ZIO.attempt(BitPosRangeInput.encode(BitPosRange(0.second.toMillis, Some(1.second.toMillis))))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0"), Unknown("1000"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0"), Value("1000"))))
         }
       ),
       suite("By")(
         test("with a pattern") {
           for {
             result <- ZIO.attempt(ByInput.encode("mykey_*"))
-          } yield assert(result)(equalTo(RespCommand(Literal("BY"), Unknown("mykey_*"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("BY"), Value("mykey_*"))))
         }
       ),
       suite("Changed")(
@@ -232,20 +232,20 @@ object InputSpec extends BaseSpec {
             address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
             port    <- ZIO.succeed(42)
             result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ADDR"), Unknown("127.0.0.1:42"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("ADDR"), Value("127.0.0.1:42"))))
         },
         test("local address") {
           for {
             address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
             port    <- ZIO.succeed(42)
             result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
-          } yield assert(result)(equalTo(RespCommand(Literal("LADDR"), Unknown(s"127.0.0.1:42"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("LADDR"), Value(s"127.0.0.1:42"))))
         },
         test("client id") {
           for {
             id     <- ZIO.succeed(42L)
             result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Id(id)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Unknown("42"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Value("42"))))
         },
         test("type") {
           for {
@@ -257,7 +257,7 @@ object InputSpec extends BaseSpec {
           for {
             user   <- ZIO.succeed("Foo Bar")
             result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.User(user)))
-          } yield assert(result)(equalTo(RespCommand(Literal("USER"), Unknown("Foo Bar"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("USER"), Value("Foo Bar"))))
         },
         test("skip me") {
           for {
@@ -290,8 +290,8 @@ object InputSpec extends BaseSpec {
             result   <- ZIO.attempt(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
           } yield assert(result)(
             equalTo(
-              RespCommand(Literal("ON"), Literal("REDIRECT"), Unknown(clientId.toString)) ++ prefixes
-                .map(p => RespCommand(Literal("PREFIX"), Unknown(p)))
+              RespCommand(Literal("ON"), Literal("REDIRECT"), Value(clientId.toString)) ++ prefixes
+                .map(p => RespCommand(Literal("PREFIX"), Value(p)))
                 .fold(RespCommand.empty)(_ ++ _) ++ RespCommand(Literal("NOLOOP"))
             )
           )
@@ -316,17 +316,17 @@ object InputSpec extends BaseSpec {
         test("positive value") {
           for {
             result <- ZIO.attempt(CountInput.encode(Count(3L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("COUNT"), Unknown("3"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("COUNT"), Value("3"))))
         },
         test("negative value") {
           for {
             result <- ZIO.attempt(CountInput.encode(Count(-3L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("COUNT"), Unknown("-3"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("COUNT"), Value("-3"))))
         },
         test("zero value") {
           for {
             result <- ZIO.attempt(CountInput.encode(Count(0L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("COUNT"), Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("COUNT"), Value("0"))))
         }
       ),
       suite("Position")(
@@ -377,77 +377,77 @@ object InputSpec extends BaseSpec {
         test("positive value") {
           for {
             result <- ZIO.attempt(DoubleInput.encode(4.2d))
-          } yield assert(result)(equalTo(RespCommand(Unknown("4.2"))))
+          } yield assert(result)(equalTo(RespCommand(Value("4.2"))))
         },
         test("negative value") {
           for {
             result <- ZIO.attempt(DoubleInput.encode(-4.2d))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-4.2"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-4.2"))))
         },
         test("zero value") {
           for {
             result <- ZIO.attempt(DoubleInput.encode(0d))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0.0"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0.0"))))
         }
       ),
       suite("DurationMilliseconds")(
         test("1 second") {
           for {
             result <- ZIO.attempt(DurationMillisecondsInput.encode(1.second))
-          } yield assert(result)(equalTo(RespCommand(Unknown("1000"))))
+          } yield assert(result)(equalTo(RespCommand(Value("1000"))))
         },
         test("100 milliseconds") {
           for {
             result <- ZIO.attempt(DurationMillisecondsInput.encode(100.millis))
-          } yield assert(result)(equalTo(RespCommand(Unknown("100"))))
+          } yield assert(result)(equalTo(RespCommand(Value("100"))))
         }
       ),
       suite("DurationSeconds")(
         test("1 minute") {
           for {
             result <- ZIO.attempt(DurationSecondsInput.encode(1.minute))
-          } yield assert(result)(equalTo(RespCommand(Unknown("60"))))
+          } yield assert(result)(equalTo(RespCommand(Value("60"))))
         },
         test("1 second") {
           for {
             result <- ZIO.attempt(DurationSecondsInput.encode(1.second))
-          } yield assert(result)(equalTo(RespCommand(Unknown("1"))))
+          } yield assert(result)(equalTo(RespCommand(Value("1"))))
         },
         test("100 milliseconds") {
           for {
             result <- ZIO.attempt(DurationSecondsInput.encode(100.millis))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0"))))
         }
       ),
       suite("DurationTtl")(
         test("1 second") {
           for {
             result <- ZIO.attempt(DurationTtlInput.encode(1.second))
-          } yield assert(result)(equalTo(RespCommand(Literal("PX"), Unknown("1000"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("PX"), Value("1000"))))
         },
         test("100 milliseconds") {
           for {
             result <- ZIO.attempt(DurationTtlInput.encode(100.millis))
-          } yield assert(result)(equalTo(RespCommand(Literal("PX"), Unknown("100"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("PX"), Value("100"))))
         }
       ),
       suite("Freq")(
         test("empty string") {
           for {
             result <- ZIO.attempt(FreqInput.encode(Freq("")))
-          } yield assert(result)(equalTo(RespCommand(Literal("FREQ"), Unknown(""))))
+          } yield assert(result)(equalTo(RespCommand(Literal("FREQ"), Value(""))))
         },
         test("non-empty string") {
           for {
             result <- ZIO.attempt(FreqInput.encode(Freq("frequency")))
-          } yield assert(result)(equalTo(RespCommand(Literal("FREQ"), Unknown("frequency"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("FREQ"), Value("frequency"))))
         }
       ),
       suite("Get")(
         test("with a pattern") {
           for {
             result <- ZIO.attempt(GetInput.encode("mypattern_*"))
-          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Unknown("mypattern_*"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("GET"), Value("mypattern_*"))))
         }
       ),
       suite("GetKeyword")(
@@ -461,12 +461,12 @@ object InputSpec extends BaseSpec {
         test("0 seconds") {
           for {
             result <- ZIO.attempt(IdleTimeInput.encode(IdleTime(0)))
-          } yield assert(result)(equalTo(RespCommand(Literal("IDLETIME"), Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("IDLETIME"), Value("0"))))
         },
         test("5 seconds") {
           for {
             result <- ZIO.attempt(IdleTimeInput.encode(IdleTime(5)))
-          } yield assert(result)(equalTo(RespCommand(Literal("IDLETIME"), Unknown("5"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("IDLETIME"), Value("5"))))
         }
       ),
       suite("Increment")(
@@ -561,83 +561,83 @@ object InputSpec extends BaseSpec {
         test("with positive offset and positive count") {
           for {
             result <- ZIO.attempt(LimitInput.encode(Limit(4L, 5L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Unknown("4"), Unknown("5"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Value("4"), Value("5"))))
         },
         test("with negative offset and negative count") {
           for {
             result <- ZIO.attempt(LimitInput.encode(Limit(-4L, -5L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Unknown("-4"), Unknown("-5"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Value("-4"), Value("-5"))))
         },
         test("with zero offset and zero count") {
           for {
             result <- ZIO.attempt(LimitInput.encode(Limit(0L, 0L)))
-          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Unknown("0"), Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Value("0"), Value("0"))))
         }
       ),
       suite("Long")(
         test("positive value") {
           for {
             result <- ZIO.attempt(LongInput.encode(4L))
-          } yield assert(result)(equalTo(RespCommand(Unknown("4"))))
+          } yield assert(result)(equalTo(RespCommand(Value("4"))))
         },
         test("negative value") {
           for {
             result <- ZIO.attempt(LongInput.encode(-4L))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-4"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-4"))))
         },
         test("zero value") {
           for {
             result <- ZIO.attempt(LongInput.encode(0L))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0"))))
         }
       ),
       suite("LongLat")(
         test("positive longitude and latitude") {
           for {
             result <- ZIO.attempt(LongLatInput.encode(LongLat(4.2d, 5.2d)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("4.2"), Unknown("5.2"))))
+          } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("5.2"))))
         },
         test("negative longitude and latitude") {
           for {
             result <- ZIO.attempt(LongLatInput.encode(LongLat(-4.2d, -5.2d)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-4.2"), Unknown("-5.2"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value("-5.2"))))
         },
         test("zero longitude and latitude") {
           for {
             result <- ZIO.attempt(LongLatInput.encode(LongLat(0d, 0d)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0.0"), Unknown("0.0"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("0.0"))))
         }
       ),
       suite("MemberScore")(
         test("with positive score and empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("4.2"), Value(""))))
+          } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value(""))))
         },
         test("with negative score and empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-4.2"), Value(""))))
+          } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value(""))))
         },
         test("with zero score and empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0.0"), Value(""))))
+          } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value(""))))
         },
         test("with positive score and non-empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("4.2"), Value("member"))))
+          } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("member"))))
         },
         test("with negative score and non-empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-4.2"), Value("member"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value("member"))))
         },
         test("with zero score and non-empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0.0"), Value("member"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("member"))))
         }
       ),
       suite("NoInput")(
@@ -651,80 +651,80 @@ object InputSpec extends BaseSpec {
         test("with multiple elements") {
           for {
             result <- ZIO.attempt(NonEmptyList(StringInput).encode(("a", List("b", "c"))))
-          } yield assert(result)(equalTo(RespCommand(Unknown("a"), Unknown("b"), Unknown("c"))))
+          } yield assert(result)(equalTo(RespCommand(Value("a"), Value("b"), Value("c"))))
         },
         test("with one element") {
           for {
             result <- ZIO.attempt(NonEmptyList(StringInput).encode(("a", List.empty)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("a"))))
+          } yield assert(result)(equalTo(RespCommand(Value("a"))))
         }
       ),
       suite("Order")(
         test("ascending") {
           for {
             result <- ZIO.attempt(OrderInput.encode(Ascending))
-          } yield assert(result)(equalTo(RespCommand(Unknown("ASC"))))
+          } yield assert(result)(equalTo(RespCommand(Value("ASC"))))
         },
         test("descending") {
           for {
             result <- ZIO.attempt(OrderInput.encode(Descending))
-          } yield assert(result)(equalTo(RespCommand(Unknown("DESC"))))
+          } yield assert(result)(equalTo(RespCommand(Value("DESC"))))
         }
       ),
       suite("RadiusUnit")(
         test("meters") {
           for {
             result <- ZIO.attempt(RadiusUnitInput.encode(Meters))
-          } yield assert(result)(equalTo(RespCommand(Unknown("m"))))
+          } yield assert(result)(equalTo(RespCommand(Value("m"))))
         },
         test("kilometers") {
           for {
             result <- ZIO.attempt(RadiusUnitInput.encode(Kilometers))
-          } yield assert(result)(equalTo(RespCommand(Unknown("km"))))
+          } yield assert(result)(equalTo(RespCommand(Value("km"))))
         },
         test("feet") {
           for {
             result <- ZIO.attempt(RadiusUnitInput.encode(Feet))
-          } yield assert(result)(equalTo(RespCommand(Unknown("ft"))))
+          } yield assert(result)(equalTo(RespCommand(Value("ft"))))
         },
         test("miles") {
           for {
             result <- ZIO.attempt(RadiusUnitInput.encode(Miles))
-          } yield assert(result)(equalTo(RespCommand(Unknown("mi"))))
+          } yield assert(result)(equalTo(RespCommand(Value("mi"))))
         }
       ),
       suite("Range")(
         test("with positive start and positive end") {
           for {
             result <- ZIO.attempt(RangeInput.encode(Range(1, 5)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("1"), Unknown("5"))))
+          } yield assert(result)(equalTo(RespCommand(Value("1"), Value("5"))))
         },
         test("with negative start and positive end") {
           for {
             result <- ZIO.attempt(RangeInput.encode(Range(-1, 5)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-1"), Unknown("5"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-1"), Value("5"))))
         },
         test("with positive start and negative end") {
           for {
             result <- ZIO.attempt(RangeInput.encode(Range(1, -5)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("1"), Unknown("-5"))))
+          } yield assert(result)(equalTo(RespCommand(Value("1"), Value("-5"))))
         },
         test("with negative start and negative end") {
           for {
             result <- ZIO.attempt(RangeInput.encode(Range(-1, -5)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-1"), Unknown("-5"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-1"), Value("-5"))))
         }
       ),
       suite("Pattern")(
         test("with valid pattern") {
           for {
             result <- ZIO.attempt(PatternInput.encode(Pattern("*[ab]-*")))
-          } yield assert(result)(equalTo(RespCommand(Literal("MATCH"), Unknown("*[ab]-*"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("MATCH"), Value("*[ab]-*"))))
         },
         test("with empty pattern") {
           for {
             result <- ZIO.attempt(PatternInput.encode(Pattern("")))
-          } yield assert(result)(equalTo(RespCommand(Literal("MATCH"), Unknown(""))))
+          } yield assert(result)(equalTo(RespCommand(Literal("MATCH"), Value(""))))
         }
       ),
       suite("Replace")(
@@ -738,24 +738,24 @@ object InputSpec extends BaseSpec {
         test("with non-empty string") {
           for {
             result <- ZIO.attempt(StoreDistInput.encode(StoreDist("key")))
-          } yield assert(result)(equalTo(RespCommand(Literal("STOREDIST"), Unknown("key"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("STOREDIST"), Value("key"))))
         },
         test("with empty string") {
           for {
             result <- ZIO.attempt(StoreDistInput.encode(StoreDist("")))
-          } yield assert(result)(equalTo(RespCommand(Literal("STOREDIST"), Unknown(""))))
+          } yield assert(result)(equalTo(RespCommand(Literal("STOREDIST"), Value(""))))
         }
       ),
       suite("Store")(
         test("with non-empty string") {
           for {
             result <- ZIO.attempt(StoreInput.encode(Store("key")))
-          } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Unknown("key"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Value("key"))))
         },
         test("with empty string") {
           for {
             result <- ZIO.attempt(StoreInput.encode(Store("")))
-          } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Unknown(""))))
+          } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Value(""))))
         }
       ),
       suite("ScoreRange")(
@@ -865,12 +865,12 @@ object InputSpec extends BaseSpec {
         test("non-empty value") {
           for {
             result <- ZIO.attempt(StringInput.encode("non-empty"))
-          } yield assert(result)(equalTo(RespCommand(Unknown("non-empty"))))
+          } yield assert(result)(equalTo(RespCommand(Value("non-empty"))))
         },
         test("empty value") {
           for {
             result <- ZIO.attempt(StringInput.encode(""))
-          } yield assert(result)(equalTo(RespCommand(Unknown(""))))
+          } yield assert(result)(equalTo(RespCommand(Value(""))))
         }
       ),
       suite("Optional")(
@@ -882,62 +882,62 @@ object InputSpec extends BaseSpec {
         test("some") {
           for {
             result <- ZIO.attempt(OptionalInput(LongInput).encode(Some(2L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("2"))))
+          } yield assert(result)(equalTo(RespCommand(Value("2"))))
         }
       ),
       suite("TimeSeconds")(
         test("positiv value") {
           for {
             result <- ZIO.attempt(TimeSecondsInput.encode(Instant.ofEpochSecond(3L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("3"))))
+          } yield assert(result)(equalTo(RespCommand(Value("3"))))
         },
         test("zero value") {
           for {
             result <- ZIO.attempt(TimeSecondsInput.encode(Instant.ofEpochSecond(0L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0"))))
         },
         test("negative value") {
           for {
             result <- ZIO.attempt(TimeSecondsInput.encode(Instant.ofEpochSecond(-3L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-3"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-3"))))
         }
       ),
       suite("TimeMilliseconds")(
         test("positiv value") {
           for {
             result <- ZIO.attempt(TimeMillisecondsInput.encode(Instant.ofEpochSecond(3L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("3000"))))
+          } yield assert(result)(equalTo(RespCommand(Value("3000"))))
         },
         test("zero value") {
           for {
             result <- ZIO.attempt(TimeMillisecondsInput.encode(Instant.ofEpochSecond(0L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("0"))))
+          } yield assert(result)(equalTo(RespCommand(Value("0"))))
         },
         test("negative value") {
           for {
             result <- ZIO.attempt(TimeMillisecondsInput.encode(Instant.ofEpochSecond(-3L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("-3000"))))
+          } yield assert(result)(equalTo(RespCommand(Value("-3000"))))
         }
       ),
       suite("Tuple2")(
         test("valid value") {
           for {
             result <- ZIO.attempt(Tuple2(StringInput, LongInput).encode(("one", 2L)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("one"), Unknown("2"))))
+          } yield assert(result)(equalTo(RespCommand(Value("one"), Value("2"))))
         }
       ),
       suite("Tuple3")(
         test("valid value") {
           for {
             result <- ZIO.attempt(Tuple3(StringInput, LongInput, StringInput).encode(("one", 2, "three")))
-          } yield assert(result)(equalTo(RespCommand(Unknown("one"), Unknown("2"), Unknown("three"))))
+          } yield assert(result)(equalTo(RespCommand(Value("one"), Value("2"), Value("three"))))
         }
       ),
       suite("Tuple4")(
         test("valid value") {
           for {
             result <- ZIO.attempt(Tuple4(StringInput, LongInput, StringInput, LongInput).encode(("one", 2, "three", 4)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("one"), Unknown("2"), Unknown("three"), Unknown("4"))))
+          } yield assert(result)(equalTo(RespCommand(Value("one"), Value("2"), Value("three"), Value("4"))))
         }
       ),
       suite("Tuple5")(
@@ -948,7 +948,7 @@ object InputSpec extends BaseSpec {
                           .encode(("one", 2, "three", 4, "five"))
                       )
           } yield assert(result)(
-            equalTo(RespCommand(Unknown("one"), Unknown("2"), Unknown("three"), Unknown("4"), Unknown("five")))
+            equalTo(RespCommand(Value("one"), Value("2"), Value("three"), Value("4"), Value("five")))
           )
         }
       ),
@@ -962,13 +962,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               RespCommand(
-                Unknown("one"),
-                Unknown("2"),
-                Unknown("three"),
-                Unknown("4"),
-                Unknown("five"),
-                Unknown("6"),
-                Unknown("seven")
+                Value("one"),
+                Value("2"),
+                Value("three"),
+                Value("4"),
+                Value("five"),
+                Value("6"),
+                Value("seven")
               )
             )
           )
@@ -993,15 +993,15 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               RespCommand(
-                Unknown("one"),
-                Unknown("2"),
-                Unknown("three"),
-                Unknown("4"),
-                Unknown("five"),
-                Unknown("6"),
-                Unknown("seven"),
-                Unknown("8"),
-                Unknown("nine")
+                Value("one"),
+                Value("2"),
+                Value("three"),
+                Value("4"),
+                Value("five"),
+                Value("6"),
+                Value("seven"),
+                Value("8"),
+                Value("nine")
               )
             )
           )
@@ -1028,17 +1028,17 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(
             equalTo(
               RespCommand(
-                Unknown("one"),
-                Unknown("2"),
-                Unknown("three"),
-                Unknown("4"),
-                Unknown("five"),
-                Unknown("6"),
-                Unknown("seven"),
-                Unknown("8"),
-                Unknown("nine"),
-                Unknown("10"),
-                Unknown("eleven")
+                Value("one"),
+                Value("2"),
+                Value("three"),
+                Value("4"),
+                Value("five"),
+                Value("6"),
+                Value("seven"),
+                Value("8"),
+                Value("nine"),
+                Value("10"),
+                Value("eleven")
               )
             )
           )
@@ -1048,32 +1048,32 @@ object InputSpec extends BaseSpec {
         test("set existing") {
           for {
             result <- ZIO.attempt(UpdateInput.encode(Update.SetExisting))
-          } yield assert(result)(equalTo(RespCommand(Unknown("XX"))))
+          } yield assert(result)(equalTo(RespCommand(Value("XX"))))
         },
         test("set new") {
           for {
             result <- ZIO.attempt(UpdateInput.encode(Update.SetNew))
-          } yield assert(result)(equalTo(RespCommand(Unknown("NX"))))
+          } yield assert(result)(equalTo(RespCommand(Value("NX"))))
         }
       ),
       suite("Id")(
         test("valid value") {
           for {
             result <- ZIO.attempt(IdInput.encode(10))
-          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Unknown("10"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Value("10"))))
         }
       ),
       suite("IDs")(
         test("with a single element") {
           for {
             result <- ZIO.attempt(IdsInput.encode((1, Nil)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Unknown("1"))))
+          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Value("1"))))
         },
         test("with multiple elements") {
           for {
             result <- ZIO.attempt(IdsInput.encode((1, List(2, 3, 4))))
           } yield assert(result)(
-            equalTo(RespCommand(Literal("ID"), Unknown("1"), Unknown("2"), Unknown("3"), Unknown("4")))
+            equalTo(RespCommand(Literal("ID"), Value("1"), Value("2"), Value("3"), Value("4")))
           )
         }
       ),
@@ -1081,19 +1081,19 @@ object InputSpec extends BaseSpec {
         test("timeout") {
           for {
             result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Timeout))
-          } yield assert(result)(equalTo(RespCommand(Unknown("TIMEOUT"))))
+          } yield assert(result)(equalTo(RespCommand(Value("TIMEOUT"))))
         },
         test("error") {
           for {
             result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Error))
-          } yield assert(result)(equalTo(RespCommand(Unknown("ERROR"))))
+          } yield assert(result)(equalTo(RespCommand(Value("ERROR"))))
         }
       ),
       suite("Varargs")(
         test("with multiple elements") {
           for {
             result <- ZIO.attempt(Varargs(LongInput).encode(List(1, 2, 3)))
-          } yield assert(result)(equalTo(RespCommand(Unknown("1"), Unknown("2"), Unknown("3"))))
+          } yield assert(result)(equalTo(RespCommand(Value("1"), Value("2"), Value("3"))))
         },
         test("with no elements") {
           for {
@@ -1133,46 +1133,46 @@ object InputSpec extends BaseSpec {
         test("with 1 second") {
           ZIO
             .attempt(IdleInput.encode(1.second))
-            .map(assert(_)(equalTo(RespCommand(Literal("IDLE"), Unknown("1000")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("IDLE"), Value("1000")))))
         },
         test("with 100 milliseconds") {
           ZIO
             .attempt(IdleInput.encode(100.millis))
-            .map(assert(_)(equalTo(RespCommand(Literal("IDLE"), Unknown("100")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("IDLE"), Value("100")))))
         },
         test("with negative duration") {
           ZIO
             .attempt(IdleInput.encode((-1).second))
-            .map(assert(_)(equalTo(RespCommand(Literal("IDLE"), Unknown("-1000")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("IDLE"), Value("-1000")))))
         }
       ),
       suite("Time")(
         test("with 1 second") {
           ZIO
             .attempt(TimeInput.encode(1.second))
-            .map(assert(_)(equalTo(RespCommand(Literal("TIME"), Unknown("1000")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("TIME"), Value("1000")))))
         },
         test("with 100 milliseconds") {
           ZIO
             .attempt(TimeInput.encode(100.millis))
-            .map(assert(_)(equalTo(RespCommand(Literal("TIME"), Unknown("100")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("TIME"), Value("100")))))
         },
         test("with negative duration") {
           ZIO
             .attempt(TimeInput.encode((-1).second))
-            .map(assert(_)(equalTo(RespCommand(Literal("TIME"), Unknown("-1000")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("TIME"), Value("-1000")))))
         }
       ),
       suite("RetryCount")(
         test("with positive count") {
           ZIO
             .attempt(RetryCountInput.encode(100))
-            .map(assert(_)(equalTo(RespCommand(Literal("RETRYCOUNT"), Unknown("100")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("RETRYCOUNT"), Value("100")))))
         },
         test("with negative count") {
           ZIO
             .attempt(RetryCountInput.encode(-100))
-            .map(assert(_)(equalTo(RespCommand(Literal("RETRYCOUNT"), Unknown("-100")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("RETRYCOUNT"), Value("-100")))))
         }
       ),
       suite("XGroupCreate")(
@@ -1183,7 +1183,7 @@ object InputSpec extends BaseSpec {
                 XGroupCommand.Create("key", "group", "id", mkStream = false)
               )
             )
-            .map(assert(_)(equalTo(RespCommand(Literal("CREATE"), Key("key"), Unknown("group"), Unknown("id")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id")))))
         },
         test("with mkStream") {
           ZIO
@@ -1195,7 +1195,7 @@ object InputSpec extends BaseSpec {
             .map(
               assert(_)(
                 equalTo(
-                  RespCommand(Literal("CREATE"), Key("key"), Unknown("group"), Unknown("id"), Literal("MKSTREAM"))
+                  RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id"), Literal("MKSTREAM"))
                 )
               )
             )
@@ -1205,14 +1205,14 @@ object InputSpec extends BaseSpec {
         test("valid value") {
           ZIO
             .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
-            .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Unknown("group"), Unknown("id")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Value("group"), Value("id")))))
         }
       ),
       suite("XGroupDestroy")(
         test("valid value") {
           ZIO
             .attempt(XGroupDestroyInput[String, String]().encode(XGroupCommand.Destroy("key", "group")))
-            .map(assert(_)(equalTo(RespCommand(Literal("DESTROY"), Key("key"), Unknown("group")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("DESTROY"), Key("key"), Value("group")))))
         }
       ),
       suite("XGroupCreateConsumer")(
@@ -1225,7 +1225,7 @@ object InputSpec extends BaseSpec {
             )
             .map(
               assert(_)(
-                equalTo(RespCommand(Literal("CREATECONSUMER"), Key("key"), Unknown("group"), Unknown("consumer")))
+                equalTo(RespCommand(Literal("CREATECONSUMER"), Key("key"), Value("group"), Value("consumer")))
               )
             )
         }
@@ -1239,7 +1239,7 @@ object InputSpec extends BaseSpec {
               )
             )
             .map(
-              assert(_)(equalTo(RespCommand(Literal("DELCONSUMER"), Key("key"), Unknown("group"), Unknown("consumer"))))
+              assert(_)(equalTo(RespCommand(Literal("DELCONSUMER"), Key("key"), Value("group"), Value("consumer"))))
             )
         }
       ),
@@ -1247,17 +1247,17 @@ object InputSpec extends BaseSpec {
         test("with 1 second") {
           ZIO
             .attempt(BlockInput.encode(1.second))
-            .map(assert(_)(equalTo(RespCommand(Literal("BLOCK"), Unknown("1000")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("BLOCK"), Value("1000")))))
         },
         test("with 100 milliseconds") {
           ZIO
             .attempt(BlockInput.encode(100.millis))
-            .map(assert(_)(equalTo(RespCommand(Literal("BLOCK"), Unknown("100")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("BLOCK"), Value("100")))))
         },
         test("with negative duration") {
           ZIO
             .attempt(BlockInput.encode((-1).second))
-            .map(assert(_)(equalTo(RespCommand(Literal("BLOCK"), Unknown("-1000")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("BLOCK"), Value("-1000")))))
         }
       ),
       suite("Streams")(
@@ -1274,19 +1274,19 @@ object InputSpec extends BaseSpec {
       ),
       suite("NoAck")(
         test("valid value") {
-          ZIO.attempt(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(RespCommand(Unknown("NOACK")))))
+          ZIO.attempt(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(RespCommand(Value("NOACK")))))
         }
       ),
       suite("MaxLen")(
         test("with approximate") {
           ZIO
             .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
-            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Unknown("10")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10")))))
         },
         test("without approximate") {
           ZIO
             .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
-            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Unknown("10")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Value("10")))))
         }
       ),
       suite("WithForce")(
@@ -1315,12 +1315,12 @@ object InputSpec extends BaseSpec {
         test("valid value") {
           ZIO
             .attempt(ListMaxLenInput.encode(ListMaxLen(10L)))
-            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Unknown("10")))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Value("10")))))
         }
       ),
       suite("Rank")(
         test("valid value") {
-          ZIO.attempt(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(RespCommand(Literal("RANK"), Unknown("10")))))
+          ZIO.attempt(RankInput.encode(Rank(10L))).map(assert(_)(equalTo(RespCommand(Literal("RANK"), Value("10")))))
         }
       ),
       suite("GetEx")(
@@ -1330,10 +1330,10 @@ object InputSpec extends BaseSpec {
               ZIO.attempt(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
             resultMilliseconds <-
               ZIO.attempt(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
-          } yield assert(resultSeconds)(equalTo(RespCommand(Key("key"), Literal("EX"), Unknown("1")))) && assert(
+          } yield assert(resultSeconds)(equalTo(RespCommand(Key("key"), Literal("EX"), Value("1")))) && assert(
             resultMilliseconds
           )(
-            equalTo(RespCommand(Key("key"), Literal("PX"), Unknown("100")))
+            equalTo(RespCommand(Key("key"), Literal("PX"), Value("100")))
           )
         },
         test("GetExAtInput - valid value") {
@@ -1351,9 +1351,9 @@ object InputSpec extends BaseSpec {
                 )
               )
           } yield assert(resultSeconds)(
-            equalTo(RespCommand(Key("key"), Literal("EXAT"), Unknown("1617667200")))
+            equalTo(RespCommand(Key("key"), Literal("EXAT"), Value("1617667200")))
           ) && assert(resultMilliseconds)(
-            equalTo(RespCommand(Key("key"), Literal("PXAT"), Unknown("1617667200000")))
+            equalTo(RespCommand(Key("key"), Literal("PXAT"), Value("1617667200000")))
           )
         },
         test("GetExPersistInput - valid value") {

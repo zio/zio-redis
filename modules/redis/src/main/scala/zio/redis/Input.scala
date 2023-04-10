@@ -17,7 +17,7 @@
 package zio.redis
 
 import zio._
-import zio.redis.internal.{RespCommand, RespCommandArgument, Utf8Codec}
+import zio.redis.internal.{RespCommand, RespCommandArgument}
 import zio.schema.codec.BinaryCodec
 
 import java.time.Instant
@@ -42,7 +42,7 @@ object Input {
 
   case object AddressInput extends Input[Address] {
     def encode(data: Address): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.asString))
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   case object AggregateInput extends Input[Aggregate] {
@@ -56,7 +56,6 @@ object Input {
   }
 
   case object AuthInput extends Input[Auth] {
-    import Utf8Codec.codec
 
     def encode(data: Auth): RespCommand =
       data.username match {
@@ -79,7 +78,7 @@ object Input {
         val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
         val min =
           if (minMatchLength > 1)
-            Chunk(RespCommandArgument.Literal("MINMATCHLEN"), RespCommandArgument.Unknown(minMatchLength.toString))
+            Chunk(RespCommandArgument.Literal("MINMATCHLEN"), RespCommandArgument.Value(minMatchLength.toString))
           else Chunk.empty[RespCommandArgument]
         val length =
           if (withMatchLength) Chunk.single(RespCommandArgument.Literal("WITHMATCHLEN"))
@@ -96,22 +95,22 @@ object Input {
         case BitFieldGet(t, o) =>
           Chunk(
             RespCommandArgument.Literal("GET"),
-            RespCommandArgument.Unknown(t.asString),
-            RespCommandArgument.Unknown(o.toString)
+            RespCommandArgument.Value(t.asString),
+            RespCommandArgument.Value(o.toString)
           )
         case BitFieldSet(t, o, v) =>
           Chunk(
             RespCommandArgument.Literal("SET"),
-            RespCommandArgument.Unknown(t.asString),
-            RespCommandArgument.Unknown(o.toString),
-            RespCommandArgument.Unknown(v.toString)
+            RespCommandArgument.Value(t.asString),
+            RespCommandArgument.Value(o.toString),
+            RespCommandArgument.Value(v.toString)
           )
         case BitFieldIncr(t, o, i) =>
           Chunk(
             RespCommandArgument.Literal("INCRBY"),
-            RespCommandArgument.Unknown(t.asString),
-            RespCommandArgument.Unknown(o.toString),
-            RespCommandArgument.Unknown(i.toString)
+            RespCommandArgument.Value(t.asString),
+            RespCommandArgument.Value(o.toString),
+            RespCommandArgument.Value(i.toString)
           )
         case bfo: BitFieldOverflow =>
           Chunk(RespCommandArgument.Literal("OVERFLOW"), RespCommandArgument.Literal(bfo.asString))
@@ -127,15 +126,15 @@ object Input {
 
   case object BitPosRangeInput extends Input[BitPosRange] {
     def encode(data: BitPosRange): RespCommand = {
-      val start    = RespCommandArgument.Unknown(data.start.toString)
-      val respArgs = data.end.fold(Chunk.single(start))(end => Chunk(start, RespCommandArgument.Unknown(end.toString)))
+      val start    = RespCommandArgument.Value(data.start.toString)
+      val respArgs = data.end.fold(Chunk.single(start))(end => Chunk(start, RespCommandArgument.Value(end.toString)))
       RespCommand(respArgs)
     }
   }
 
   case object ByInput extends Input[String] {
     def encode(data: String): RespCommand =
-      RespCommand(RespCommandArgument.Literal("BY"), RespCommandArgument.Unknown(data))
+      RespCommand(RespCommandArgument.Literal("BY"), RespCommandArgument.Value(data))
   }
 
   case object ChangedInput extends Input[Changed] {
@@ -146,15 +145,15 @@ object Input {
   case object ClientKillInput extends Input[ClientKillFilter] {
     def encode(data: ClientKillFilter): RespCommand = data match {
       case addr: ClientKillFilter.Address =>
-        RespCommand(RespCommandArgument.Literal("ADDR"), RespCommandArgument.Unknown(addr.asString))
+        RespCommand(RespCommandArgument.Literal("ADDR"), RespCommandArgument.Value(addr.asString))
       case laddr: ClientKillFilter.LocalAddress =>
-        RespCommand(RespCommandArgument.Literal("LADDR"), RespCommandArgument.Unknown(laddr.asString))
+        RespCommand(RespCommandArgument.Literal("LADDR"), RespCommandArgument.Value(laddr.asString))
       case ClientKillFilter.Id(clientId) =>
-        RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Unknown(clientId.toString))
+        RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Value(clientId.toString))
       case ClientKillFilter.Type(clientType) =>
         RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(clientType.asString))
       case ClientKillFilter.User(username) =>
-        RespCommand(RespCommandArgument.Literal("USER"), RespCommandArgument.Unknown(username))
+        RespCommand(RespCommandArgument.Literal("USER"), RespCommandArgument.Value(username))
       case ClientKillFilter.SkipMe(skip) =>
         RespCommand(RespCommandArgument.Literal("SKIPME"), RespCommandArgument.Literal(if (skip) "YES" else "NO"))
     }
@@ -186,11 +185,11 @@ object Input {
           val loopChunk = if (noLoop) RespCommand(RespCommandArgument.Literal("NOLOOP")) else RespCommand.empty
           RespCommand(RespCommandArgument.Literal("ON")) ++
             clientRedir.fold(RespCommand.empty)(id =>
-              RespCommand(RespCommandArgument.Literal("REDIRECT"), RespCommandArgument.Unknown(id.toString))
+              RespCommand(RespCommandArgument.Literal("REDIRECT"), RespCommandArgument.Value(id.toString))
             ) ++
             RespCommand(
               prefixes.flatMap(prefix =>
-                Chunk(RespCommandArgument.Literal("PREFIX"), RespCommandArgument.Unknown(prefix))
+                Chunk(RespCommandArgument.Literal("PREFIX"), RespCommandArgument.Value(prefix))
               )
             ) ++
             modeChunk ++
@@ -207,7 +206,7 @@ object Input {
 
   case object CountInput extends Input[Count] {
     def encode(data: Count): RespCommand =
-      RespCommand(RespCommandArgument.Literal("COUNT"), RespCommandArgument.Unknown(data.count.toString))
+      RespCommand(RespCommandArgument.Literal("COUNT"), RespCommandArgument.Value(data.count.toString))
   }
 
   case object RedisTypeInput extends Input[RedisType] {
@@ -217,12 +216,12 @@ object Input {
 
   case object PatternInput extends Input[Pattern] {
     def encode(data: Pattern): RespCommand =
-      RespCommand(RespCommandArgument.Literal("MATCH"), RespCommandArgument.Unknown(data.pattern))
+      RespCommand(RespCommandArgument.Literal("MATCH"), RespCommandArgument.Value(data.pattern))
   }
 
   case object GetInput extends Input[String] {
     def encode(data: String): RespCommand =
-      RespCommand(RespCommandArgument.Literal("GET"), RespCommandArgument.Unknown(data))
+      RespCommand(RespCommandArgument.Literal("GET"), RespCommandArgument.Value(data))
   }
 
   case object PositionInput extends Input[Position] {
@@ -237,31 +236,31 @@ object Input {
 
   case object DoubleInput extends Input[Double] {
     def encode(data: Double): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.toString))
+      RespCommand(RespCommandArgument.Value(data.toString))
   }
 
   case object DurationMillisecondsInput extends Input[Duration] {
     def encode(data: Duration): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.toMillis.toString))
+      RespCommand(RespCommandArgument.Value(data.toMillis.toString))
   }
 
   case object DurationSecondsInput extends Input[Duration] {
     def encode(data: Duration): RespCommand = {
       val seconds = TimeUnit.MILLISECONDS.toSeconds(data.toMillis)
-      RespCommand(RespCommandArgument.Unknown(seconds.toString))
+      RespCommand(RespCommandArgument.Value(seconds.toString))
     }
   }
 
   case object DurationTtlInput extends Input[Duration] {
     def encode(data: Duration): RespCommand = {
       val milliseconds = data.toMillis
-      RespCommand(RespCommandArgument.Literal("PX"), RespCommandArgument.Unknown(milliseconds.toString))
+      RespCommand(RespCommandArgument.Literal("PX"), RespCommandArgument.Value(milliseconds.toString))
     }
   }
 
   case object FreqInput extends Input[Freq] {
     def encode(data: Freq): RespCommand =
-      RespCommand(RespCommandArgument.Literal("FREQ"), RespCommandArgument.Unknown(data.frequency))
+      RespCommand(RespCommandArgument.Literal("FREQ"), RespCommandArgument.Value(data.frequency))
   }
 
   case object GetKeywordInput extends Input[GetKeyword] {
@@ -271,7 +270,7 @@ object Input {
 
   case object IdleTimeInput extends Input[IdleTime] {
     def encode(data: IdleTime): RespCommand =
-      RespCommand(RespCommandArgument.Literal("IDLETIME"), RespCommandArgument.Unknown(data.seconds.toString))
+      RespCommand(RespCommandArgument.Literal("IDLETIME"), RespCommandArgument.Value(data.seconds.toString))
   }
 
   case object IncrementInput extends Input[Increment] {
@@ -288,27 +287,27 @@ object Input {
     def encode(data: Limit): RespCommand =
       RespCommand(
         RespCommandArgument.Literal("LIMIT"),
-        RespCommandArgument.Unknown(data.offset.toString),
-        RespCommandArgument.Unknown(data.count.toString)
+        RespCommandArgument.Value(data.offset.toString),
+        RespCommandArgument.Value(data.count.toString)
       )
   }
 
   case object LongInput extends Input[Long] {
     def encode(data: Long): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.toString))
+      RespCommand(RespCommandArgument.Value(data.toString))
   }
 
   case object LongLatInput extends Input[LongLat] {
     def encode(data: LongLat): RespCommand =
       RespCommand(
-        RespCommandArgument.Unknown(data.longitude.toString),
-        RespCommandArgument.Unknown(data.latitude.toString)
+        RespCommandArgument.Value(data.longitude.toString),
+        RespCommandArgument.Value(data.latitude.toString)
       )
   }
 
   final case class MemberScoreInput[M: BinaryCodec]() extends Input[MemberScore[M]] {
     def encode(data: MemberScore[M]): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.score.toString), RespCommandArgument.Value(data.member))
+      RespCommand(RespCommandArgument.Value(data.score.toString), RespCommandArgument.Value(data.member))
   }
 
   case object NoInput extends Input[Unit] {
@@ -322,17 +321,17 @@ object Input {
 
   case object OrderInput extends Input[Order] {
     def encode(data: Order): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.asString))
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   case object RadiusUnitInput extends Input[RadiusUnit] {
     def encode(data: RadiusUnit): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.asString))
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   case object RangeInput extends Input[Range] {
     def encode(data: Range): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.start.toString), RespCommandArgument.Unknown(data.end.toString))
+      RespCommand(RespCommandArgument.Value(data.start.toString), RespCommandArgument.Value(data.end.toString))
   }
 
   case object ReplaceInput extends Input[Replace] {
@@ -342,17 +341,17 @@ object Input {
 
   case object StoreDistInput extends Input[StoreDist] {
     def encode(data: StoreDist): RespCommand =
-      RespCommand(RespCommandArgument.Literal("STOREDIST"), RespCommandArgument.Unknown(data.key))
+      RespCommand(RespCommandArgument.Literal("STOREDIST"), RespCommandArgument.Value(data.key))
   }
 
   case object StoreInput extends Input[Store] {
     def encode(data: Store): RespCommand =
-      RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Unknown(data.key))
+      RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Value(data.key))
   }
 
   case object StringInput extends Input[String] {
     def encode(data: String): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data))
+      RespCommand(RespCommandArgument.Value(data))
   }
 
   case object CommandNameInput extends Input[String] {
@@ -382,18 +381,18 @@ object Input {
 
   case object TimeSecondsInput extends Input[Instant] {
     def encode(data: Instant): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.getEpochSecond.toString))
+      RespCommand(RespCommandArgument.Value(data.getEpochSecond.toString))
   }
 
   case object TimeMillisecondsInput extends Input[Instant] {
     def encode(data: Instant): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.toEpochMilli.toString))
+      RespCommand(RespCommandArgument.Value(data.toEpochMilli.toString))
   }
 
   case object WeightsInput extends Input[::[Double]] {
     def encode(data: ::[Double]): RespCommand = {
       val args = data.foldLeft(Chunk.single[RespCommandArgument](RespCommandArgument.Literal("WEIGHTS"))) { (acc, a) =>
-        acc ++ Chunk.single(RespCommandArgument.Unknown(a.toString))
+        acc ++ Chunk.single(RespCommandArgument.Value(a.toString))
       }
       RespCommand(args)
     }
@@ -401,17 +400,17 @@ object Input {
 
   case object IdleInput extends Input[Duration] {
     def encode(data: Duration): RespCommand =
-      RespCommand(RespCommandArgument.Literal("IDLE"), RespCommandArgument.Unknown(data.toMillis.toString))
+      RespCommand(RespCommandArgument.Literal("IDLE"), RespCommandArgument.Value(data.toMillis.toString))
   }
 
   case object TimeInput extends Input[Duration] {
     def encode(data: Duration): RespCommand =
-      RespCommand(RespCommandArgument.Literal("TIME"), RespCommandArgument.Unknown(data.toMillis.toString))
+      RespCommand(RespCommandArgument.Literal("TIME"), RespCommandArgument.Value(data.toMillis.toString))
   }
 
   case object RetryCountInput extends Input[Long] {
     def encode(data: Long): RespCommand =
-      RespCommand(RespCommandArgument.Literal("RETRYCOUNT"), RespCommandArgument.Unknown(data.toString))
+      RespCommand(RespCommandArgument.Literal("RETRYCOUNT"), RespCommandArgument.Value(data.toString))
   }
 
   final case class XGroupCreateInput[K: BinaryCodec, G: BinaryCodec, I: BinaryCodec]()
@@ -472,7 +471,7 @@ object Input {
 
   case object BlockInput extends Input[Duration] {
     def encode(data: Duration): RespCommand =
-      RespCommand(RespCommandArgument.Literal("BLOCK"), RespCommandArgument.Unknown(data.toMillis.toString))
+      RespCommand(RespCommandArgument.Literal("BLOCK"), RespCommandArgument.Value(data.toMillis.toString))
   }
 
   final case class StreamsInput[K: BinaryCodec, V: BinaryCodec]() extends Input[((K, V), Chunk[(K, V)])] {
@@ -487,7 +486,7 @@ object Input {
 
   case object NoAckInput extends Input[NoAck] {
     def encode(data: NoAck): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.asString))
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   case object StreamMaxLenInput extends Input[StreamMaxLen] {
@@ -496,18 +495,18 @@ object Input {
         if (data.approximate) Chunk(RespCommandArgument.Literal("MAXLEN"), RespCommandArgument.Literal("~"))
         else Chunk.single(RespCommandArgument.Literal("MAXLEN"))
 
-      RespCommand(chunk :+ RespCommandArgument.Unknown(data.count.toString))
+      RespCommand(chunk :+ RespCommandArgument.Value(data.count.toString))
     }
   }
 
   case object ListMaxLenInput extends Input[ListMaxLen] {
     def encode(data: ListMaxLen): RespCommand =
-      RespCommand(RespCommandArgument.Literal("MAXLEN"), RespCommandArgument.Unknown(data.count.toString))
+      RespCommand(RespCommandArgument.Literal("MAXLEN"), RespCommandArgument.Value(data.count.toString))
   }
 
   case object RankInput extends Input[Rank] {
     def encode(data: Rank): RespCommand =
-      RespCommand(RespCommandArgument.Literal("RANK"), RespCommandArgument.Unknown(data.rank.toString))
+      RespCommand(RespCommandArgument.Literal("RANK"), RespCommandArgument.Value(data.rank.toString))
   }
 
   final case class Tuple2[-A, -B](_1: Input[A], _2: Input[B]) extends Input[(A, B)] {
@@ -614,7 +613,7 @@ object Input {
 
   case object UpdateInput extends Input[Update] {
     def encode(data: Update): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.asString))
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   final case class GetExPersistInput[K: BinaryCodec]() extends Input[(K, Boolean)] {
@@ -653,21 +652,21 @@ object Input {
 
   case object IdInput extends Input[Long] {
     def encode(data: Long): RespCommand =
-      RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Unknown(data.toString))
+      RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Value(data.toString))
   }
 
   case object IdsInput extends Input[(Long, List[Long])] {
     def encode(data: (Long, List[Long])): RespCommand =
       RespCommand(
         Chunk.fromIterable(
-          RespCommandArgument.Literal("ID") +: (data._1 :: data._2).map(id => RespCommandArgument.Unknown(id.toString))
+          RespCommandArgument.Literal("ID") +: (data._1 :: data._2).map(id => RespCommandArgument.Value(id.toString))
         )
       )
   }
 
   case object UnblockBehaviorInput extends Input[UnblockBehavior] {
     def encode(data: UnblockBehavior): RespCommand =
-      RespCommand(RespCommandArgument.Unknown(data.asString))
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   final case class Varargs[-A](input: Input[A]) extends Input[Iterable[A]] {
@@ -678,7 +677,7 @@ object Input {
   final case class EvalInput[-K, -V](inputK: Input[K], inputV: Input[V]) extends Input[(String, Chunk[K], Chunk[V])] {
     def encode(data: (String, Chunk[K], Chunk[V])): RespCommand = {
       val (lua, keys, args) = data
-      val encodedScript     = RespCommand(RespCommandArgument.Unknown(lua), RespCommandArgument.Unknown(keys.size.toString))
+      val encodedScript     = RespCommand(RespCommandArgument.Value(lua), RespCommandArgument.Value(keys.size.toString))
       val encodedKeys = keys.foldLeft(RespCommand.empty)((acc, a) =>
         acc ++ inputK.encode(a).mapArguments(arg => RespCommandArgument.Key(arg.value.value))
       )
