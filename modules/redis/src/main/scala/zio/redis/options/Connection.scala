@@ -19,6 +19,7 @@ package zio.redis.options
 import zio.{Chunk, Duration}
 
 import java.net.InetAddress
+import scala.collection.compat._
 
 trait Connection {
   sealed case class Address(ip: InetAddress, port: Int) {
@@ -28,7 +29,7 @@ trait Connection {
   object Address {
     private[redis] final def fromString(addr: String): Option[Address] =
       addr.split(":").toList match {
-        case ip :: port :: Nil => Some(new Address(InetAddress.getByName(ip), port.toInt))
+        case ip :: port :: Nil => port.toIntOption.map(new Address(InetAddress.getByName(ip), _))
         case _                 => None
       }
   }
@@ -54,25 +55,23 @@ trait Connection {
     case object UnixDomainSocket            extends ClientFlag
     case object WatchedKeysModified         extends ClientFlag
 
-    private[redis] final def from(flag: Char): Option[ClientFlag] =
-      flag match {
-        case 'A' => Some(ClientFlag.ToBeClosedAsap)
-        case 'b' => Some(ClientFlag.Blocked)
-        case 'B' => Some(ClientFlag.BroadcastTrackingMode)
-        case 'c' => Some(ClientFlag.ToBeClosedAfterReply)
-        case 'd' => Some(ClientFlag.WatchedKeysModified)
-        case 'M' => Some(ClientFlag.IsMaster)
-        case 'O' => Some(ClientFlag.MonitorMode)
-        case 'P' => Some(ClientFlag.PubSub)
-        case 'r' => Some(ClientFlag.ReadOnlyMode)
-        case 'R' => Some(ClientFlag.TrackingTargetClientInvalid)
-        case 'S' => Some(ClientFlag.Replica)
-        case 't' => Some(ClientFlag.KeysTrackingEnabled)
-        case 'u' => Some(ClientFlag.Unblocked)
-        case 'U' => Some(ClientFlag.UnixDomainSocket)
-        case 'x' => Some(ClientFlag.MultiExecContext)
-        case _   => None
-      }
+    private[redis] lazy val flags = Map(
+      'A' -> ClientFlag.ToBeClosedAsap,
+      'b' -> ClientFlag.Blocked,
+      'B' -> ClientFlag.BroadcastTrackingMode,
+      'c' -> ClientFlag.ToBeClosedAfterReply,
+      'd' -> ClientFlag.WatchedKeysModified,
+      'M' -> ClientFlag.IsMaster,
+      'O' -> ClientFlag.MonitorMode,
+      'P' -> ClientFlag.PubSub,
+      'r' -> ClientFlag.ReadOnlyMode,
+      'R' -> ClientFlag.TrackingTargetClientInvalid,
+      'S' -> ClientFlag.Replica,
+      't' -> ClientFlag.KeysTrackingEnabled,
+      'u' -> ClientFlag.Unblocked,
+      'U' -> ClientFlag.UnixDomainSocket,
+      'x' -> ClientFlag.MultiExecContext
+    )
   }
 
   sealed case class ClientInfo(
@@ -102,47 +101,33 @@ trait Connection {
   )
 
   object ClientInfo {
-    private def parseLong(str: String): Option[Long] =
-      try {
-        Some(str.toLong)
-      } catch {
-        case _: Throwable => None
-      }
-
-    private def parseInt(str: String): Option[Int] =
-      try {
-        Some(str.toInt)
-      } catch {
-        case _: Throwable => None
-      }
-
     private[redis] final def from(line: String): ClientInfo = {
       val data   = line.trim.split(" ").map(_.split("=").toList).collect { case k :: v :: Nil => k -> v }.toMap
       val events = data.get("events")
       new ClientInfo(
-        id = data.get("id").flatMap(parseLong),
+        id = data.get("id").flatMap(_.toLongOption),
         name = data.get("name"),
         address = data.get("addr").flatMap(Address.fromString),
         localAddress = data.get("laddr").flatMap(Address.fromString),
-        fileDescriptor = data.get("fd").flatMap(parseLong),
-        age = data.get("age").flatMap(parseLong).map(Duration.fromSeconds),
-        idle = data.get("idle").flatMap(parseLong).map(Duration.fromSeconds),
+        fileDescriptor = data.get("fd").flatMap(_.toLongOption),
+        age = data.get("age").flatMap(_.toLongOption).map(Duration.fromSeconds),
+        idle = data.get("idle").flatMap(_.toLongOption).map(Duration.fromSeconds),
         flags = data
           .get("flags")
-          .fold(Set.empty[ClientFlag])(_.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ ClientFlag.from(f))),
-        databaseId = data.get("id").flatMap(parseLong),
-        subscriptions = data.get("sub").flatMap(parseInt),
-        patternSubscriptions = data.get("psub").flatMap(parseInt),
-        multiCommands = data.get("multi").flatMap(parseInt),
-        queryBufferLength = data.get("qbuf").flatMap(parseInt),
-        queryBufferFree = data.get("qbuf-free").flatMap(parseInt),
-        outputListLength = data.get("oll").flatMap(parseInt),
-        outputBufferMem = data.get("omem").flatMap(parseLong),
+          .fold(Set.empty[ClientFlag])(_.foldLeft(Set.empty[ClientFlag])((fs, f) => fs ++ ClientFlag.flags.get(f))),
+        databaseId = data.get("id").flatMap(_.toLongOption),
+        subscriptions = data.get("sub").flatMap(_.toIntOption),
+        patternSubscriptions = data.get("psub").flatMap(_.toIntOption),
+        multiCommands = data.get("multi").flatMap(_.toIntOption),
+        queryBufferLength = data.get("qbuf").flatMap(_.toIntOption),
+        queryBufferFree = data.get("qbuf-free").flatMap(_.toIntOption),
+        outputListLength = data.get("oll").flatMap(_.toIntOption),
+        outputBufferMem = data.get("omem").flatMap(_.toLongOption),
         events = ClientEvents(readable = events.exists(_.contains("r")), writable = events.exists(_.contains("w"))),
         lastCommand = data.get("cmd"),
-        argvMemory = data.get("argv-mem").flatMap(parseLong),
-        totalMemory = data.get("total-mem").flatMap(parseLong),
-        redirectionClientId = data.get("redir").flatMap(parseLong),
+        argvMemory = data.get("argv-mem").flatMap(_.toLongOption),
+        totalMemory = data.get("total-mem").flatMap(_.toLongOption),
+        redirectionClientId = data.get("redir").flatMap(_.toLongOption),
         user = data.get("user")
       )
     }
