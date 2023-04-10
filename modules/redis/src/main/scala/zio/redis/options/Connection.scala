@@ -54,8 +54,8 @@ trait Connection {
     case object UnixDomainSocket            extends ClientFlag
     case object WatchedKeysModified         extends ClientFlag
 
-    private[redis] def from(char: Char): Option[ClientFlag] =
-      char match {
+    private[redis] final def from(flag: Char): Option[ClientFlag] =
+      flag match {
         case 'A' => Some(ClientFlag.ToBeClosedAsap)
         case 'b' => Some(ClientFlag.Blocked)
         case 'B' => Some(ClientFlag.BroadcastTrackingMode)
