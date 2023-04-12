@@ -635,7 +635,7 @@ trait Strings extends RedisEnvironment {
         ArbitraryValueInput[String](),
         ArbitraryKeyInput[K](),
         ArbitraryKeyInput[K](),
-        OptionalInput(StralgoLcsQueryTypeInput)
+        OptionalInput(StrAlgoLcsQueryTypeInput)
       ),
       StrAlgoLcsOutput,
       executor
