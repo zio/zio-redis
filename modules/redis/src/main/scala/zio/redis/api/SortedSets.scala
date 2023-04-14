@@ -216,13 +216,13 @@ trait SortedSets extends RedisEnvironment {
           RedisCommand(
             ZDiff,
             Tuple2(
-              LongInput,
+              IntInput,
               NonEmptyList(ArbitraryKeyInput[K]())
             ),
             ChunkOutput(ArbitraryOutput[M]()),
             executor
           )
-        command.run((keys.size.toLong + 1, (key, keys.toList)))
+        command.run((keys.size + 1, (key, keys.toList)))
       }
     }
 
@@ -243,7 +243,7 @@ trait SortedSets extends RedisEnvironment {
           RedisCommand(
             ZDiff,
             Tuple3(
-              LongInput,
+              IntInput,
               NonEmptyList(ArbitraryKeyInput[K]()),
               ArbitraryValueInput[String]()
             ),
@@ -251,7 +251,7 @@ trait SortedSets extends RedisEnvironment {
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((keys.size.toLong + 1, (key, keys.toList), WithScores.asString))
+        command.run((keys.size + 1, (key, keys.toList), WithScores.asString))
       }
     }
 
@@ -273,13 +273,13 @@ trait SortedSets extends RedisEnvironment {
         ZDiffStore,
         Tuple3(
           ArbitraryValueInput[DK](),
-          LongInput,
+          IntInput,
           NonEmptyList(ArbitraryKeyInput[K]())
         ),
         LongOutput,
         executor
       )
-    command.run((destination, keys.size.toLong + 1, (key, keys.toList)))
+    command.run((destination, keys.size + 1, (key, keys.toList)))
   }
 
   /**
@@ -325,7 +325,7 @@ trait SortedSets extends RedisEnvironment {
         val command = RedisCommand(
           ZInter,
           Tuple4(
-            LongInput,
+            IntInput,
             NonEmptyList(ArbitraryKeyInput[K]()),
             OptionalInput(AggregateInput),
             OptionalInput(WeightsInput)
@@ -333,7 +333,7 @@ trait SortedSets extends RedisEnvironment {
           ChunkOutput(ArbitraryOutput[M]()),
           executor
         )
-        command.run((keys.size.toLong + 1, (key, keys.toList), aggregate, weights))
+        command.run((keys.size + 1, (key, keys.toList), aggregate, weights))
       }
     }
 
@@ -362,7 +362,7 @@ trait SortedSets extends RedisEnvironment {
         val command = RedisCommand(
           ZInter,
           Tuple5(
-            LongInput,
+            IntInput,
             NonEmptyList(ArbitraryKeyInput[K]()),
             OptionalInput(AggregateInput),
             OptionalInput(WeightsInput),
@@ -372,7 +372,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((keys.size.toLong + 1, (key, keys.toList), aggregate, weights, WithScores.asString))
+        command.run((keys.size + 1, (key, keys.toList), aggregate, weights, WithScores.asString))
       }
     }
 
@@ -402,7 +402,7 @@ trait SortedSets extends RedisEnvironment {
       ZInterStore,
       Tuple5(
         ArbitraryValueInput[DK](),
-        LongInput,
+        IntInput,
         NonEmptyList(ArbitraryKeyInput[K]()),
         OptionalInput(AggregateInput),
         OptionalInput(WeightsInput)
@@ -410,7 +410,7 @@ trait SortedSets extends RedisEnvironment {
       LongOutput,
       executor
     )
-    command.run((destination, keys.size.toLong + 1, (key, keys.toList), aggregate, weights))
+    command.run((destination, keys.size + 1, (key, keys.toList), aggregate, weights))
   }
 
   /**
@@ -1058,7 +1058,7 @@ trait SortedSets extends RedisEnvironment {
           RedisCommand(
             ZUnion,
             Tuple4(
-              LongInput,
+              IntInput,
               NonEmptyList(ArbitraryKeyInput[K]()),
               OptionalInput(WeightsInput),
               OptionalInput(AggregateInput)
@@ -1066,7 +1066,7 @@ trait SortedSets extends RedisEnvironment {
             ChunkOutput(ArbitraryOutput[M]()),
             executor
           )
-        command.run((keys.size.toLong + 1, (key, keys.toList), weights, aggregate))
+        command.run((keys.size + 1, (key, keys.toList), weights, aggregate))
       }
     }
 
@@ -1096,7 +1096,7 @@ trait SortedSets extends RedisEnvironment {
           RedisCommand(
             ZUnion,
             Tuple5(
-              LongInput,
+              IntInput,
               NonEmptyList(ArbitraryKeyInput[K]()),
               OptionalInput(WeightsInput),
               OptionalInput(AggregateInput),
@@ -1106,7 +1106,7 @@ trait SortedSets extends RedisEnvironment {
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((keys.size.toLong + 1, (key, keys.toList), weights, aggregate, WithScores.asString))
+        command.run((keys.size + 1, (key, keys.toList), weights, aggregate, WithScores.asString))
       }
     }
 
@@ -1115,8 +1115,6 @@ trait SortedSets extends RedisEnvironment {
    *
    * @param destination
    *   Key of the output
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -1130,7 +1128,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of elements in the resulting sorted set at destination.
    */
-  final def zUnionStore[DK: Schema, K: Schema](destination: DK, inputKeysNum: Long, key: K, keys: K*)(
+  final def zUnionStore[DK: Schema, K: Schema](destination: DK, key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
   ): IO[RedisError, Long] = {
@@ -1138,7 +1136,7 @@ trait SortedSets extends RedisEnvironment {
       ZUnionStore,
       Tuple5(
         ArbitraryValueInput[DK](),
-        LongInput,
+        IntInput,
         NonEmptyList(ArbitraryKeyInput[K]()),
         OptionalInput(WeightsInput),
         OptionalInput(AggregateInput)
@@ -1146,7 +1144,7 @@ trait SortedSets extends RedisEnvironment {
       LongOutput,
       executor
     )
-    command.run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
+    command.run((destination, keys.size + 1, (key, keys.toList), weights, aggregate))
   }
 }
 

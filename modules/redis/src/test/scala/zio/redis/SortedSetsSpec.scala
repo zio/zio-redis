@@ -1776,7 +1776,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <-
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _    <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            card <- redis.zUnionStore(dest, 2, first, second)()
+            card <- redis.zUnionStore(dest, first, second)()
           } yield assert(card)(equalTo(5L))
         },
         test("equal to the non-empty set when the other one is empty") {
@@ -1786,7 +1786,7 @@ trait SortedSetsSpec extends BaseSpec {
             empty    <- uuid
             dest     <- uuid
             _        <- redis.zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            card     <- redis.zUnionStore(dest, 2, nonEmpty, empty)()
+            card     <- redis.zUnionStore(dest, nonEmpty, empty)()
           } yield assert(card)(equalTo(2L))
         },
         test("empty when both sets are empty") {
@@ -1795,7 +1795,7 @@ trait SortedSetsSpec extends BaseSpec {
             first  <- uuid
             second <- uuid
             dest   <- uuid
-            card   <- redis.zUnionStore(dest, 2, first, second)()
+            card   <- redis.zUnionStore(dest, first, second)()
           } yield assert(card)(equalTo(0L))
         },
         test("non-empty set with multiple non-empty sets") {
@@ -1809,7 +1809,7 @@ trait SortedSetsSpec extends BaseSpec {
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _    <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
             _    <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            card <- redis.zUnionStore(dest, 3, first, second, third)()
+            card <- redis.zUnionStore(dest, first, second, third)()
           } yield assert(card)(equalTo(5L))
         },
         test("error when the first parameter is not set") {
@@ -1820,7 +1820,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             value  <- uuid
             _      <- redis.set(first, value)
-            card   <- redis.zUnionStore(dest, 2, first, second)().either
+            card   <- redis.zUnionStore(dest, first, second)().either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error when the first parameter is set and the second parameter is not set") {
@@ -1832,7 +1832,7 @@ trait SortedSetsSpec extends BaseSpec {
             value  <- uuid
             _      <- redis.zAdd(first)(MemberScore(1, "a"))
             _      <- redis.set(second, value)
-            card   <- redis.zUnionStore(dest, 2, first, second)().either
+            card   <- redis.zUnionStore(dest, first, second)().either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         test("parameter weights provided") {
@@ -1843,7 +1843,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zUnionStore(dest, 2, first, second)(Some(::(2, List(3))))
+            card   <- redis.zUnionStore(dest, first, second)(Some(::(2, List(3))))
           } yield assert(card)(equalTo(4L))
         },
         test("error when invalid weights provided ( less than sets number )") {
@@ -1854,7 +1854,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zUnionStore(dest, 2, first, second)(Some(::(2, Nil))).either
+            card   <- redis.zUnionStore(dest, first, second)(Some(::(2, Nil))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid weights provided ( more than sets number )") {
@@ -1865,7 +1865,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zUnionStore(dest, 2, first, second)(Some(::(2, List(3, 5)))).either
+            card   <- redis.zUnionStore(dest, first, second)(Some(::(2, List(3, 5)))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("set aggregate parameter MAX") {
@@ -1876,7 +1876,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zUnionStore(dest, 2, first, second)(aggregate = Some(Aggregate.Max))
+            card   <- redis.zUnionStore(dest, first, second)(aggregate = Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         },
         test("set aggregate parameter MIN") {
@@ -1887,7 +1887,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zUnionStore(dest, 2, first, second)(aggregate = Some(Aggregate.Min))
+            card   <- redis.zUnionStore(dest, first, second)(aggregate = Some(Aggregate.Min))
           } yield assert(card)(equalTo(4L))
         },
         test("parameter weights provided along with aggregate") {
@@ -1898,7 +1898,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zUnionStore(dest, 2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
+            card   <- redis.zUnionStore(dest, first, second)(Some(::(2, List(3))), Some(Aggregate.Max))
           } yield assert(card)(equalTo(4L))
         }
       ) @@ clusterExecutorUnsupported,
