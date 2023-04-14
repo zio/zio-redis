@@ -28,6 +28,105 @@ trait Lists extends RedisEnvironment {
   import Lists._
 
   /**
+   * BLMOVE is the blocking variant of LMOVE. When source contains elements, this command behaves exactly like LMOVE.
+   * When used inside a MULTI/EXEC block, this command behaves exactly like [[zio.redis.api.Lists#lMove]]. When source
+   * is empty, Redis will block the connection until another client pushes to it or until timeout is reached. A timeout
+   * of zero can be used to block indefinitely.
+   *
+   * @param source
+   *   the key where the element is removed
+   * @param destination
+   *   the key where the element is inserted
+   * @param sourceSide
+   *   the side where the element is removed
+   * @param destinationSide
+   *   the side where the element is inserted
+   * @param timeout
+   *   the timeout in seconds
+   * @return
+   *   the element which is moved or nil when the timeout is reached.
+   */
+  final def blMove[S: Schema, D: Schema](
+    source: S,
+    destination: D,
+    sourceSide: Side,
+    destinationSide: Side,
+    timeout: Duration
+  ): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[V: Schema]: IO[RedisError, Option[V]] = {
+        val command = RedisCommand(
+          BlMove,
+          Tuple5(ArbitraryValueInput[S](), ArbitraryValueInput[D](), SideInput, SideInput, DurationSecondsInput),
+          OptionalOutput(ArbitraryOutput[V]()),
+          executor
+        )
+
+        command.run((source, destination, sourceSide, destinationSide, timeout))
+      }
+    }
+
+  /**
+   * Removes and gets the first element in a list, or blocks until one is available. An element is popped from the head
+   * of the first list that is non-empty, with the given keys being checked in the order that they are given.
+   *
+   * @param key
+   *   the key identifier of the first list to be checked
+   * @param keys
+   *   the key identifiers of the rest of the lists
+   * @param timeout
+   *   the maximum time to wait until an element is available. A timeout of zero can be used to block indefinitely
+   * @return
+   *   a tuple with the first element being the name of the key where an element was popped and the second element being
+   *   the value of the popped element. An empty value is returned when no element could be popped and the timeout
+   *   expired.
+   */
+  final def blPop[K: Schema](key: K, keys: K*)(
+    timeout: Duration
+  ): ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] {
+      def returning[V: Schema]: IO[RedisError, Option[(K, V)]] = {
+        val command = RedisCommand(
+          BlPop,
+          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
+          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())),
+          executor
+        )
+        command.run(((key, keys.toList), timeout))
+      }
+    }
+
+  /**
+   * Removes and gets the last element in a list, or block until one is available. An element is popped from the tail of
+   * the first list that is non-empty, with the given keys being checked in the order that they are given.
+   *
+   * @param key
+   *   the key identifier of the first list to be checked
+   * @param keys
+   *   the key identifiers of the rest of the lists
+   * @param timeout
+   *   the maximum time to wait until an element is available. A timeout of zero can be used to block indefinitely
+   * @return
+   *   a tuple with the first element being the name of the key where an element was popped and the second element being
+   *   the value of the popped element. An empty value is returned when no element could be popped and the timeout
+   *   expired.
+   */
+  final def brPop[K: Schema](key: K, keys: K*)(
+    timeout: Duration
+  ): ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] =
+    new ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] {
+      def returning[V: Schema]: IO[RedisError, Option[(K, V)]] = {
+        val command = RedisCommand(
+          BrPop,
+          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
+          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())),
+          executor
+        )
+        command.run(((key, keys.toList), timeout))
+      }
+    }
+
+  /**
    * Pops an element from the list stored at source, pushes it to the list stored at destination; or block until one is
    * available. This is the blocking variant of [[zio.redis.api.Lists#rPopLPush]].
    *
@@ -78,6 +177,35 @@ trait Lists extends RedisEnvironment {
     }
 
   /**
+   * Inserts element in the list stored at key either before or after the reference value pivot.
+   *
+   * @param key
+   *   the key identifier
+   * @param position
+   *   the position in which the element will be inserted
+   * @param pivot
+   *   the reference value
+   * @param element
+   *   the value to be inserted
+   * @return
+   *   the length of the list after the insert operation, or -1 when the value pivot was not found.
+   */
+  final def lInsert[K: Schema, V: Schema](
+    key: K,
+    position: Position,
+    pivot: V,
+    element: V
+  ): IO[RedisError, Long] = {
+    val command = RedisCommand(
+      LInsert,
+      Tuple4(ArbitraryKeyInput[K](), PositionInput, ArbitraryValueInput[V](), ArbitraryValueInput[V]()),
+      LongOutput,
+      executor
+    )
+    command.run((key, position, pivot, element))
+  }
+
+  /**
    * Returns the length of the list stored at key.
    *
    * @param key
@@ -89,6 +217,40 @@ trait Lists extends RedisEnvironment {
     val command = RedisCommand(LLen, ArbitraryKeyInput[K](), LongOutput, executor)
     command.run(key)
   }
+
+  /**
+   * Atomically returns and removes the first/last element (head/tail depending on the wherefrom argument) of the list
+   * stored at source, and pushes the element at the first/last element (head/tail depending on the whereto argument) of
+   * the list stored at destination.
+   *
+   * @param source
+   *   the key where the element is removed
+   * @param destination
+   *   the key where the element is inserted
+   * @param sourceSide
+   *   the side where the element is removed
+   * @param destinationSide
+   *   the side where the element is inserted
+   * @return
+   *   the element which is moved or nil when the source is empty.
+   */
+  final def lMove[S: Schema, D: Schema](
+    source: S,
+    destination: D,
+    sourceSide: Side,
+    destinationSide: Side
+  ): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[V: Schema]: IO[RedisError, Option[V]] = {
+        val command = RedisCommand(
+          LMove,
+          Tuple4(ArbitraryValueInput[S](), ArbitraryValueInput[D](), SideInput, SideInput),
+          OptionalOutput(ArbitraryOutput[V]()),
+          executor
+        )
+        command.run((source, destination, sourceSide, destinationSide))
+      }
+    }
 
   /**
    * Removes and returns the first element of the list stored at key.
@@ -103,6 +265,84 @@ trait Lists extends RedisEnvironment {
       def returning[V: Schema]: IO[RedisError, Option[V]] =
         RedisCommand(LPop, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]()), executor).run(key)
     }
+
+  /**
+   * The command returns the index of matching elements inside a Redis list. By default, when no options are given, it
+   * will scan the list from head to tail, looking for the first match of "element". If the element is found, its index
+   * (the zero-based position in the list) is returned. Otherwise, if no match is found, NULL is returned.
+   *
+   * @param key
+   *   the key identifier
+   * @param element
+   *   the element to search for
+   * @param rank
+   *   the rank of the element
+   * @param maxLen
+   *   limit the number of performed comparisons
+   * @return
+   *   Either an integer or an array depending on the count option.
+   */
+  final def lPos[K: Schema, V: Schema](
+    key: K,
+    element: V,
+    rank: Option[Rank] = None,
+    maxLen: Option[ListMaxLen] = None
+  ): IO[RedisError, Option[Long]] = {
+    val command = RedisCommand(
+      LPos,
+      Tuple4(
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[V](),
+        OptionalInput(RankInput),
+        OptionalInput(ListMaxLenInput)
+      ),
+      OptionalOutput(LongOutput),
+      executor
+    )
+
+    command.run((key, element, rank, maxLen))
+  }
+
+  /**
+   * The command returns the index of matching elements inside a Redis list. By default, when no options are given, it
+   * will scan the list from head to tail, looking for the first match of "element". If the element is found, its index
+   * (the zero-based position in the list) is returned. Otherwise, if no match is found, NULL is returned.
+   *
+   * @param key
+   *   the key identifier
+   * @param element
+   *   the element to search for
+   * @param rank
+   *   the rank of the element
+   * @param count
+   *   return up count element indexes
+   * @param maxLen
+   *   limit the number of performed comparisons
+   * @return
+   *   Either an integer or an array depending on the count option.
+   */
+  final def lPosCount[K: Schema, V: Schema](
+    key: K,
+    element: V,
+    count: Count,
+    rank: Option[Rank] = None,
+    maxLen: Option[ListMaxLen] = None
+  ): IO[RedisError, Chunk[Long]] = {
+    val command = RedisCommand(
+      LPos,
+      Tuple5(
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[V](),
+        CountInput,
+        OptionalInput(RankInput),
+        OptionalInput(ListMaxLenInput)
+      ),
+      ChunkOutput(LongOutput),
+      executor
+    )
+
+    command.run((key, element, count, rank, maxLen))
+  }
 
   /**
    * Prepends one or multiple elements to the list stored at key. If key does not exist, it is created as empty list
@@ -292,253 +532,19 @@ trait Lists extends RedisEnvironment {
       RedisCommand(RPushX, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), LongOutput, executor)
     command.run((key, (element, elements.toList)))
   }
-
-  /**
-   * Removes and gets the first element in a list, or blocks until one is available. An element is popped from the head
-   * of the first list that is non-empty, with the given keys being checked in the order that they are given.
-   *
-   * @param key
-   *   the key identifier of the first list to be checked
-   * @param keys
-   *   the key identifiers of the rest of the lists
-   * @param timeout
-   *   the maximum time to wait until an element is available. A timeout of zero can be used to block indefinitely
-   * @return
-   *   a tuple with the first element being the name of the key where an element was popped and the second element being
-   *   the value of the popped element. An empty value is returned when no element could be popped and the timeout
-   *   expired.
-   */
-  final def blPop[K: Schema](key: K, keys: K*)(
-    timeout: Duration
-  ): ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] =
-    new ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] {
-      def returning[V: Schema]: IO[RedisError, Option[(K, V)]] = {
-        val command = RedisCommand(
-          BlPop,
-          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
-          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())),
-          executor
-        )
-        command.run(((key, keys.toList), timeout))
-      }
-    }
-
-  /**
-   * Removes and gets the last element in a list, or block until one is available. An element is popped from the tail of
-   * the first list that is non-empty, with the given keys being checked in the order that they are given.
-   *
-   * @param key
-   *   the key identifier of the first list to be checked
-   * @param keys
-   *   the key identifiers of the rest of the lists
-   * @param timeout
-   *   the maximum time to wait until an element is available. A timeout of zero can be used to block indefinitely
-   * @return
-   *   a tuple with the first element being the name of the key where an element was popped and the second element being
-   *   the value of the popped element. An empty value is returned when no element could be popped and the timeout
-   *   expired.
-   */
-  final def brPop[K: Schema](key: K, keys: K*)(
-    timeout: Duration
-  ): ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] =
-    new ResultBuilder1[({ type lambda[x] = Option[(K, x)] })#lambda] {
-      def returning[V: Schema]: IO[RedisError, Option[(K, V)]] = {
-        val command = RedisCommand(
-          BrPop,
-          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
-          OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]())),
-          executor
-        )
-        command.run(((key, keys.toList), timeout))
-      }
-    }
-
-  /**
-   * Inserts element in the list stored at key either before or after the reference value pivot.
-   *
-   * @param key
-   *   the key identifier
-   * @param position
-   *   the position in which the element will be inserted
-   * @param pivot
-   *   the reference value
-   * @param element
-   *   the value to be inserted
-   * @return
-   *   the length of the list after the insert operation, or -1 when the value pivot was not found.
-   */
-  final def lInsert[K: Schema, V: Schema](
-    key: K,
-    position: Position,
-    pivot: V,
-    element: V
-  ): IO[RedisError, Long] = {
-    val command = RedisCommand(
-      LInsert,
-      Tuple4(ArbitraryKeyInput[K](), PositionInput, ArbitraryValueInput[V](), ArbitraryValueInput[V]()),
-      LongOutput,
-      executor
-    )
-    command.run((key, position, pivot, element))
-  }
-
-  /**
-   * Atomically returns and removes the first/last element (head/tail depending on the wherefrom argument) of the list
-   * stored at source, and pushes the element at the first/last element (head/tail depending on the whereto argument) of
-   * the list stored at destination.
-   *
-   * @param source
-   *   the key where the element is removed
-   * @param destination
-   *   the key where the element is inserted
-   * @param sourceSide
-   *   the side where the element is removed
-   * @param destinationSide
-   *   the side where the element is inserted
-   * @return
-   *   the element which is moved or nil when the source is empty.
-   */
-  final def lMove[S: Schema, D: Schema](
-    source: S,
-    destination: D,
-    sourceSide: Side,
-    destinationSide: Side
-  ): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] = {
-        val command = RedisCommand(
-          LMove,
-          Tuple4(ArbitraryValueInput[S](), ArbitraryValueInput[D](), SideInput, SideInput),
-          OptionalOutput(ArbitraryOutput[V]()),
-          executor
-        )
-        command.run((source, destination, sourceSide, destinationSide))
-      }
-    }
-
-  /**
-   * BLMOVE is the blocking variant of LMOVE. When source contains elements, this command behaves exactly like LMOVE.
-   * When used inside a MULTI/EXEC block, this command behaves exactly like [[zio.redis.api.Lists#lMove]]. When source
-   * is empty, Redis will block the connection until another client pushes to it or until timeout is reached. A timeout
-   * of zero can be used to block indefinitely.
-   *
-   * @param source
-   *   the key where the element is removed
-   * @param destination
-   *   the key where the element is inserted
-   * @param sourceSide
-   *   the side where the element is removed
-   * @param destinationSide
-   *   the side where the element is inserted
-   * @param timeout
-   *   the timeout in seconds
-   * @return
-   *   the element which is moved or nil when the timeout is reached.
-   */
-  final def blMove[S: Schema, D: Schema](
-    source: S,
-    destination: D,
-    sourceSide: Side,
-    destinationSide: Side,
-    timeout: Duration
-  ): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] = {
-        val command = RedisCommand(
-          BlMove,
-          Tuple5(ArbitraryValueInput[S](), ArbitraryValueInput[D](), SideInput, SideInput, DurationSecondsInput),
-          OptionalOutput(ArbitraryOutput[V]()),
-          executor
-        )
-
-        command.run((source, destination, sourceSide, destinationSide, timeout))
-      }
-    }
-
-  /**
-   * The command returns the index of matching elements inside a Redis list. By default, when no options are given, it
-   * will scan the list from head to tail, looking for the first match of "element". If the element is found, its index
-   * (the zero-based position in the list) is returned. Otherwise, if no match is found, NULL is returned.
-   *
-   * @param key
-   *   the key identifier
-   * @param element
-   *   the element to search for
-   * @param rank
-   *   the rank of the element
-   * @param maxLen
-   *   limit the number of performed comparisons
-   * @return
-   *   Either an integer or an array depending on the count option.
-   */
-  final def lPos[K: Schema, V: Schema](
-    key: K,
-    element: V,
-    rank: Option[Rank] = None,
-    maxLen: Option[ListMaxLen] = None
-  ): IO[RedisError, Option[Long]] = {
-    val command = RedisCommand(
-      LPos,
-      Tuple4(
-        ArbitraryKeyInput[K](),
-        ArbitraryValueInput[V](),
-        OptionalInput(RankInput),
-        OptionalInput(ListMaxLenInput)
-      ),
-      OptionalOutput(LongOutput),
-      executor
-    )
-
-    command.run((key, element, rank, maxLen))
-  }
-
-  /**
-   * The command returns the index of matching elements inside a Redis list. By default, when no options are given, it
-   * will scan the list from head to tail, looking for the first match of "element". If the element is found, its index
-   * (the zero-based position in the list) is returned. Otherwise, if no match is found, NULL is returned.
-   *
-   * @param key
-   *   the key identifier
-   * @param element
-   *   the element to search for
-   * @param rank
-   *   the rank of the element
-   * @param count
-   *   return up count element indexes
-   * @param maxLen
-   *   limit the number of performed comparisons
-   * @return
-   *   Either an integer or an array depending on the count option.
-   */
-  final def lPosCount[K: Schema, V: Schema](
-    key: K,
-    element: V,
-    count: Count,
-    rank: Option[Rank] = None,
-    maxLen: Option[ListMaxLen] = None
-  ): IO[RedisError, Chunk[Long]] = {
-    val command = RedisCommand(
-      LPos,
-      Tuple5(
-        ArbitraryKeyInput[K](),
-        ArbitraryValueInput[V](),
-        CountInput,
-        OptionalInput(RankInput),
-        OptionalInput(ListMaxLenInput)
-      ),
-      ChunkOutput(LongOutput),
-      executor
-    )
-
-    command.run((key, element, count, rank, maxLen))
-  }
 }
 
 private[redis] object Lists {
+  final val BlMove     = "BLMOVE"
+  final val BlPop      = "BLPOP"
+  final val BrPop      = "BRPOP"
   final val BrPopLPush = "BRPOPLPUSH"
   final val LIndex     = "LINDEX"
+  final val LInsert    = "LINSERT"
   final val LLen       = "LLEN"
+  final val LMove      = "LMOVE"
   final val LPop       = "LPOP"
+  final val LPos       = "LPOS"
   final val LPush      = "LPUSH"
   final val LPushX     = "LPUSHX"
   final val LRange     = "LRANGE"
@@ -549,11 +555,4 @@ private[redis] object Lists {
   final val RPopLPush  = "RPOPLPUSH"
   final val RPush      = "RPUSH"
   final val RPushX     = "RPUSHX"
-  final val BlPop      = "BLPOP"
-  final val BrPop      = "BRPOP"
-  final val LInsert    = "LINSERT"
-  final val LMove      = "LMOVE"
-  final val BlMove     = "BLMOVE"
-  final val LPos       = "LPOS"
-  final val LPosCount  = "LPOS"
 }

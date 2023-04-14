@@ -76,6 +76,30 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
+   * Returns the name of the current connection as set by clientSetName
+   *
+   * @return
+   *   the connection name, or None if a name wasn't set.
+   */
+  final def clientGetName: IO[RedisError, Option[String]] = {
+    val command = RedisCommand(ClientGetName, NoInput, OptionalOutput(MultiStringOutput), executor)
+
+    command.run(())
+  }
+
+  /**
+   * Returns the client ID we are redirecting our tracking notifications to
+   *
+   * @return
+   *   the client ID if the tracking is enabled and the notifications are being redirected
+   */
+  final def clientGetRedir: IO[RedisError, ClientTrackingRedirect] = {
+    val command = RedisCommand(ClientGetRedir, NoInput, ClientTrackingRedirectOutput, executor)
+
+    command.run(())
+  }
+
+  /**
    * Returns the ID of the current connection. Every connection ID has certain guarantees:
    *   - It is never repeated, so if clientID returns the same number, the caller can be sure that the underlying client
    *     did not disconnect and reconnect the connection, but it is still the same connection.
@@ -171,41 +195,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Returns the name of the current connection as set by clientSetName
-   *
-   * @return
-   *   the connection name, or None if a name wasn't set.
-   */
-  final def clientGetName: IO[RedisError, Option[String]] = {
-    val command = RedisCommand(ClientGetName, NoInput, OptionalOutput(MultiStringOutput), executor)
-
-    command.run(())
-  }
-
-  /**
-   * Returns the client ID we are redirecting our tracking notifications to
-   *
-   * @return
-   *   the client ID if the tracking is enabled and the notifications are being redirected
-   */
-  final def clientGetRedir: IO[RedisError, ClientTrackingRedirect] = {
-    val command = RedisCommand(ClientGetRedir, NoInput, ClientTrackingRedirectOutput, executor)
-
-    command.run(())
-  }
-
-  /**
-   * Resumes command processing for all clients that were paused by clientPause
-   * @return
-   *   the Unit value.
-   */
-  final def clientUnpause: IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientUnpause, NoInput, UnitOutput, executor)
-
-    command.run(())
-  }
-
-  /**
    * Able to suspend all the Redis clients for the specified amount of time (in milliseconds). Currently supports two
    * modes:
    *   - All: This is the default mode. All client commands are blocked
@@ -247,6 +236,29 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
+   * Returns information about the current client connection's use of the server assisted client side caching feature
+   *
+   * @return
+   *   tracking information.
+   */
+  final def clientTrackingInfo: IO[RedisError, ClientTrackingInfo] = {
+    val command = RedisCommand(ClientTrackingInfo, NoInput, ClientTrackingInfoOutput, executor)
+
+    command.run(())
+  }
+
+  /**
+   * Disables the tracking feature of the Redis server, that is used for server assisted client side caching
+   *
+   * @return
+   *   the Unit value.
+   */
+  final def clientTrackingOff: IO[RedisError, Unit] = {
+    val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput, executor)
+    command.run(None)
+  }
+
+  /**
    * Enables the tracking feature of the Redis server, that is used for server assisted client side caching. The feature
    * will remain active in the current connection for all its life, unless tracking is turned off with clientTrackingOff
    *
@@ -272,29 +284,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Disables the tracking feature of the Redis server, that is used for server assisted client side caching
-   *
-   * @return
-   *   the Unit value.
-   */
-  final def clientTrackingOff: IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput, executor)
-    command.run(None)
-  }
-
-  /**
-   * Returns information about the current client connection's use of the server assisted client side caching feature
-   *
-   * @return
-   *   tracking information.
-   */
-  final def clientTrackingInfo: IO[RedisError, ClientTrackingInfo] = {
-    val command = RedisCommand(ClientTrackingInfo, NoInput, ClientTrackingInfoOutput, executor)
-
-    command.run(())
-  }
-
-  /**
    * Unblocks, from a different connection, a client blocked in a blocking operation
    *
    * @param clientId
@@ -312,6 +301,18 @@ trait Connection extends RedisEnvironment {
       RedisCommand(ClientUnblock, Tuple2(LongInput, OptionalInput(UnblockBehaviorInput)), BoolOutput, executor)
 
     command.run((clientId, error))
+  }
+
+  /**
+   * Resumes command processing for all clients that were paused by clientPause
+   *
+   * @return
+   *   the Unit value.
+   */
+  final def clientUnpause: IO[RedisError, Unit] = {
+    val command = RedisCommand(ClientUnpause, NoInput, UnitOutput, executor)
+
+    command.run(())
   }
 
   /**
@@ -389,18 +390,18 @@ trait Connection extends RedisEnvironment {
 private[redis] object Connection {
   final val Auth               = "AUTH"
   final val ClientCaching      = "CLIENT CACHING"
+  final val ClientGetName      = "CLIENT GETNAME"
+  final val ClientGetRedir     = "CLIENT GETREDIR"
   final val ClientId           = "CLIENT ID"
   final val ClientInfo         = "CLIENT INFO"
   final val ClientKill         = "CLIENT KILL"
   final val ClientList         = "CLIENT LIST"
-  final val ClientGetName      = "CLIENT GETNAME"
-  final val ClientGetRedir     = "CLIENT GETREDIR"
-  final val ClientUnpause      = "CLIENT UNPAUSE"
   final val ClientPause        = "CLIENT PAUSE"
   final val ClientSetName      = "CLIENT SETNAME"
   final val ClientTracking     = "CLIENT TRACKING"
   final val ClientTrackingInfo = "CLIENT TRACKINGINFO"
   final val ClientUnblock      = "CLIENT UNBLOCK"
+  final val ClientUnpause      = "CLIENT UNPAUSE"
   final val Echo               = "ECHO"
   final val Ping               = "PING"
   final val Quit               = "QUIT"

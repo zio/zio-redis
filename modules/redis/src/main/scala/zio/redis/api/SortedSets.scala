@@ -463,6 +463,22 @@ trait SortedSets extends RedisEnvironment {
   }
 
   /**
+   * Returns the scores associated with the specified members in the sorted set stored at key.
+   *
+   * @param key
+   *   Key of the set
+   * @param keys
+   *   Keys of the rest sets
+   * @return
+   *   List of scores or None associated with the specified member values (a double precision floating point number).
+   */
+  final def zMScore[K: Schema](key: K, keys: K*): IO[RedisError, Chunk[Option[Double]]] = {
+    val command =
+      RedisCommand(ZMScore, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)), executor)
+    command.run((key, keys.toList))
+  }
+
+  /**
    * Remove and return members with the highest scores in a sorted set.
    *
    * @param key
@@ -517,6 +533,79 @@ trait SortedSets extends RedisEnvironment {
           executor
         )
         command.run((key, count))
+      }
+    }
+
+  /**
+   * Return a random element from the sorted set value stored at key.
+   *
+   * @param key
+   *   Key of a sorted set
+   * @return
+   *   Return a random element from the sorted set value stored at key.
+   */
+  final def zRandMember[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(ZRandMember, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]()), executor)
+          .run(key)
+    }
+
+  /**
+   * Return random elements from the sorted set value stored at key.
+   *
+   * @param key
+   *   Key of a sorted set
+   * @param count
+   *   If the provided count argument is positive, return an array of distinct elements. The array's length is either
+   *   count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return
+   *   Return an array of elements from the sorted set value stored at key.
+   */
+  final def zRandMember[K: Schema](
+    key: K,
+    count: Long
+  ): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
+        val command = RedisCommand(
+          ZRandMember,
+          Tuple2(ArbitraryKeyInput[K](), LongInput),
+          ZRandMemberOutput(ArbitraryOutput[M]()),
+          executor
+        )
+        command.run((key, count))
+      }
+    }
+
+  /**
+   * Return random elements from the sorted set value stored at key.
+   *
+   * @param key
+   *   Key of a sorted set
+   * @param count
+   *   If the provided count argument is positive, return an array of distinct elements. The array's length is either
+   *   count or the sorted set's cardinality (ZCARD), whichever is lower
+   * @return
+   *   When the additional count argument is passed, the command returns an array of elements, or an empty array when
+   *   key does not exist. If the WITHSCORES modifier is used, the reply is a list elements and their scores from the
+   *   sorted set.
+   */
+  final def zRandMemberWithScores[K: Schema](
+    key: K,
+    count: Long
+  ): ResultBuilder1[MemberScores] =
+    new ResultBuilder1[MemberScores] {
+      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
+        val command = RedisCommand(
+          ZRandMember,
+          Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[String]()),
+          ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            .map(_.map { case (m, s) => MemberScore(s, m) }),
+          executor
+        )
+
+        command.run((key, count, WithScores.asString))
       }
     }
 
@@ -699,21 +788,17 @@ trait SortedSets extends RedisEnvironment {
    *
    * @param key
    *   Key of a sorted set
-   * @param firstMember
+   * @param member
    *   Member to be removed
-   * @param restMembers
+   * @param members
    *   Rest members to be removed
    * @return
    *   The number of members removed from the sorted set, not including non existing members.
    */
-  final def zRem[K: Schema, M: Schema](
-    key: K,
-    firstMember: M,
-    restMembers: M*
-  ): IO[RedisError, Long] = {
+  final def zRem[K: Schema, M: Schema](key: K, member: M, members: M*): IO[RedisError, Long] = {
     val command =
       RedisCommand(ZRem, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), LongOutput, executor)
-    command.run((key, (firstMember, restMembers.toList)))
+    command.run((key, (member, members.toList)))
   }
 
   /**
@@ -1122,95 +1207,6 @@ trait SortedSets extends RedisEnvironment {
     )
     command.run((destination, inputKeysNum, (key, keys.toList), weights, aggregate))
   }
-
-  /**
-   * Returns the scores associated with the specified members in the sorted set stored at key.
-   *
-   * @param key
-   *   Key of the set
-   * @param keys
-   *   Keys of the rest sets
-   * @return
-   *   List of scores or None associated with the specified member values (a double precision floating point number).
-   */
-  final def zMScore[K: Schema](key: K, keys: K*): IO[RedisError, Chunk[Option[Double]]] = {
-    val command =
-      RedisCommand(ZMScore, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)), executor)
-    command.run((key, keys.toList))
-  }
-
-  /**
-   * Return a random element from the sorted set value stored at key.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @return
-   *   Return a random element from the sorted set value stored at key.
-   */
-  final def zRandMember[K: Schema](key: K): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[R: Schema]: IO[RedisError, Option[R]] =
-        RedisCommand(ZRandMember, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]()), executor)
-          .run(key)
-    }
-
-  /**
-   * Return random elements from the sorted set value stored at key.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param count
-   *   If the provided count argument is positive, return an array of distinct elements. The array's length is either
-   *   count or the sorted set's cardinality (ZCARD), whichever is lower
-   * @return
-   *   Return an array of elements from the sorted set value stored at key.
-   */
-  final def zRandMember[K: Schema](
-    key: K,
-    count: Long
-  ): ResultBuilder1[Chunk] =
-    new ResultBuilder1[Chunk] {
-      def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
-        val command = RedisCommand(
-          ZRandMember,
-          Tuple2(ArbitraryKeyInput[K](), LongInput),
-          ZRandMemberOutput(ArbitraryOutput[M]()),
-          executor
-        )
-        command.run((key, count))
-      }
-    }
-
-  /**
-   * Return random elements from the sorted set value stored at key.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param count
-   *   If the provided count argument is positive, return an array of distinct elements. The array's length is either
-   *   count or the sorted set's cardinality (ZCARD), whichever is lower
-   * @return
-   *   When the additional count argument is passed, the command returns an array of elements, or an empty array when
-   *   key does not exist. If the WITHSCORES modifier is used, the reply is a list elements and their scores from the
-   *   sorted set.
-   */
-  final def zRandMemberWithScores[K: Schema](
-    key: K,
-    count: Long
-  ): ResultBuilder1[MemberScores] =
-    new ResultBuilder1[MemberScores] {
-      def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
-        val command = RedisCommand(
-          ZRandMember,
-          Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[String]()),
-          ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
-            .map(_.map { case (m, s) => MemberScore(s, m) }),
-          executor
-        )
-
-        command.run((key, count, WithScores.asString))
-      }
-    }
 }
 
 private[redis] object SortedSets {
@@ -1228,6 +1224,7 @@ private[redis] object SortedSets {
   final val ZMScore          = "ZMSCORE"
   final val ZPopMax          = "ZPOPMAX"
   final val ZPopMin          = "ZPOPMIN"
+  final val ZRandMember      = "ZRANDMEMBER"
   final val ZRange           = "ZRANGE"
   final val ZRangeByLex      = "ZRANGEBYLEX"
   final val ZRangeByScore    = "ZRANGEBYSCORE"
@@ -1244,5 +1241,4 @@ private[redis] object SortedSets {
   final val ZScore           = "ZSCORE"
   final val ZUnion           = "ZUNION"
   final val ZUnionStore      = "ZUNIONSTORE"
-  final val ZRandMember      = "ZRANDMEMBER"
 }

@@ -467,7 +467,7 @@ trait Keys extends RedisEnvironment {
     alpha: Option[Alpha] = None
   ): IO[RedisError, Long] = {
     val command = RedisCommand(
-      SortStore,
+      Sort,
       Tuple7(
         ArbitraryKeyInput[K](),
         OptionalInput(ByInput),
@@ -579,7 +579,6 @@ private[redis] object Keys {
   final val Restore   = "RESTORE"
   final val Scan      = "SCAN"
   final val Sort      = "SORT"
-  final val SortStore = "SORT"
   final val Touch     = "TOUCH"
   final val Ttl       = "TTL"
   final val TypeOf    = "TYPE"
