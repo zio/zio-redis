@@ -96,107 +96,6 @@ trait Streams extends RedisEnvironment {
     }
 
   /**
-   * An introspection command used in order to retrieve different information about the stream.
-   *
-   * @param key
-   *   ID of the stream
-   * @return
-   *   General information about the stream stored at the specified key.
-   */
-  final def xInfoStream[SK: Schema](
-    key: SK
-  ): ResultBuilder3[StreamInfo] = new ResultBuilder3[StreamInfo] {
-    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, StreamInfo[RI, RK, RV]] = {
-      val command = RedisCommand(XInfoStream, ArbitraryKeyInput[SK](), StreamInfoOutput[RI, RK, RV](), executor)
-      command.run(key)
-    }
-  }
-
-  /**
-   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
-   *
-   * @param key
-   *   ID of the stream
-   * @return
-   *   General information about the stream stored at the specified key.
-   */
-  final def xInfoStreamFull[SK: Schema](
-    key: SK
-  ): ResultBuilder3[FullStreamInfo] = new ResultBuilder3[FullStreamInfo] {
-    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, FullStreamInfo[RI, RK, RV]] = {
-      val command = RedisCommand(
-        XInfoStream,
-        Tuple2(ArbitraryKeyInput[SK](), ArbitraryValueInput[String]()),
-        StreamInfoFullOutput[RI, RK, RV](),
-        executor
-      )
-      command.run((key, "FULL"))
-    }
-  }
-
-  /**
-   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
-   *
-   * @param key
-   *   ID of the stream
-   * @param count
-   *   limit the amount of stream/PEL entries that are returned (The first <count> entries are returned)
-   * @return
-   *   General information about the stream stored at the specified key.
-   */
-  final def xInfoStreamFull[SK: Schema](
-    key: SK,
-    count: Long
-  ): ResultBuilder3[FullStreamInfo] = new ResultBuilder3[FullStreamInfo] {
-    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, FullStreamInfo[RI, RK, RV]] = {
-      val command = RedisCommand(
-        XInfoStream,
-        Tuple3(ArbitraryKeyInput[SK](), ArbitraryValueInput[String](), CountInput),
-        StreamInfoFullOutput[RI, RK, RV](),
-        executor
-      )
-      command.run((key, "FULL", Count(count)))
-    }
-  }
-
-  /**
-   * An introspection command used in order to retrieve different information about the group.
-   *
-   * @param key
-   *   ID of the stream
-   * @return
-   *   List of consumer groups associated with the stream stored at the specified key.
-   */
-  final def xInfoGroups[SK: Schema](key: SK): IO[RedisError, Chunk[StreamGroupsInfo]] = {
-    val command = RedisCommand(XInfoGroups, ArbitraryKeyInput[SK](), StreamGroupsInfoOutput, executor)
-    command.run(key)
-  }
-
-  /**
-   * An introspection command used in order to retrieve different information about the consumers.
-   *
-   * @param key
-   *   ID of the stream
-   * @param group
-   *   ID of the consumer group
-   * @return
-   *   List of every consumer in a specific consumer group.
-   */
-  final def xInfoConsumers[SK: Schema, SG: Schema](
-    key: SK,
-    group: SG
-  ): IO[RedisError, Chunk[StreamConsumersInfo]] = {
-    val command =
-      RedisCommand(
-        XInfoConsumers,
-        Tuple2(ArbitraryKeyInput[SK](), ArbitraryValueInput[SG]()),
-        StreamConsumersInfoOutput,
-        executor
-      )
-    command.run((key, group))
-  }
-
-  /**
    * Appends the specified stream entry to the stream at the specified key while limiting the size of the stream.
    *
    * @param key
@@ -402,38 +301,6 @@ trait Streams extends RedisEnvironment {
   }
 
   /**
-   * Set the consumer group last delivered ID to something else.
-   *
-   * @param key
-   *   ID of the stream
-   * @param group
-   *   ID of the consumer group
-   * @param id
-   *   last delivered ID to set
-   */
-  final def xGroupSetId[SK: Schema, SG: Schema, I: Schema](
-    key: SK,
-    group: SG,
-    id: I
-  ): IO[RedisError, Unit] = {
-    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput, executor)
-    command.run(SetId(key, group, id))
-  }
-
-  /**
-   * Destroy a consumer group.
-   *
-   * @param key
-   *   ID of the stream
-   * @param group
-   *   ID of the consumer group
-   * @return
-   *   flag that indicates if the deletion was successful.
-   */
-  final def xGroupDestroy[SK: Schema, SG: Schema](key: SK, group: SG): IO[RedisError, Boolean] =
-    RedisCommand(XGroup, XGroupDestroyInput[SK, SG](), BoolOutput, executor).run(Destroy(key, group))
-
-  /**
    * Create a new consumer associated with a consumer group.
    *
    * @param key
@@ -473,6 +340,139 @@ trait Streams extends RedisEnvironment {
   ): IO[RedisError, Long] = {
     val command = RedisCommand(XGroup, XGroupDelConsumerInput[SK, SG, SC](), LongOutput, executor)
     command.run(DelConsumer(key, group, consumer))
+  }
+
+  /**
+   * Destroy a consumer group.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @return
+   *   flag that indicates if the deletion was successful.
+   */
+  final def xGroupDestroy[SK: Schema, SG: Schema](key: SK, group: SG): IO[RedisError, Boolean] =
+    RedisCommand(XGroup, XGroupDestroyInput[SK, SG](), BoolOutput, executor).run(Destroy(key, group))
+
+  /**
+   * Set the consumer group last delivered ID to something else.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @param id
+   *   last delivered ID to set
+   */
+  final def xGroupSetId[SK: Schema, SG: Schema, I: Schema](
+    key: SK,
+    group: SG,
+    id: I
+  ): IO[RedisError, Unit] = {
+    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput, executor)
+    command.run(SetId(key, group, id))
+  }
+
+  /**
+   * An introspection command used in order to retrieve different information about the consumers.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @return
+   *   List of every consumer in a specific consumer group.
+   */
+  final def xInfoConsumers[SK: Schema, SG: Schema](
+    key: SK,
+    group: SG
+  ): IO[RedisError, Chunk[StreamConsumersInfo]] = {
+    val command =
+      RedisCommand(
+        XInfoConsumers,
+        Tuple2(ArbitraryKeyInput[SK](), ArbitraryValueInput[SG]()),
+        StreamConsumersInfoOutput,
+        executor
+      )
+    command.run((key, group))
+  }
+
+  /**
+   * An introspection command used in order to retrieve different information about the group.
+   *
+   * @param key
+   *   ID of the stream
+   * @return
+   *   List of consumer groups associated with the stream stored at the specified key.
+   */
+  final def xInfoGroups[SK: Schema](key: SK): IO[RedisError, Chunk[StreamGroupsInfo]] = {
+    val command = RedisCommand(XInfoGroups, ArbitraryKeyInput[SK](), StreamGroupsInfoOutput, executor)
+    command.run(key)
+  }
+
+  /**
+   * An introspection command used in order to retrieve different information about the stream.
+   *
+   * @param key
+   *   ID of the stream
+   * @return
+   *   General information about the stream stored at the specified key.
+   */
+  final def xInfoStream[SK: Schema](
+    key: SK
+  ): ResultBuilder3[StreamInfo] = new ResultBuilder3[StreamInfo] {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, StreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(XInfoStream, ArbitraryKeyInput[SK](), StreamInfoOutput[RI, RK, RV](), executor)
+      command.run(key)
+    }
+  }
+
+  /**
+   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
+   *
+   * @param key
+   *   ID of the stream
+   * @return
+   *   General information about the stream stored at the specified key.
+   */
+  final def xInfoStreamFull[SK: Schema](
+    key: SK
+  ): ResultBuilder3[FullStreamInfo] = new ResultBuilder3[FullStreamInfo] {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, FullStreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(
+        XInfoStream,
+        Tuple2(ArbitraryKeyInput[SK](), ArbitraryValueInput[String]()),
+        StreamInfoFullOutput[RI, RK, RV](),
+        executor
+      )
+      command.run((key, "FULL"))
+    }
+  }
+
+  /**
+   * Returns the entire state of the stream, including entries, groups, consumers and PELs.
+   *
+   * @param key
+   *   ID of the stream
+   * @param count
+   *   limit the amount of stream/PEL entries that are returned (The first <count> entries are returned)
+   * @return
+   *   General information about the stream stored at the specified key.
+   */
+  final def xInfoStreamFull[SK: Schema](
+    key: SK,
+    count: Long
+  ): ResultBuilder3[FullStreamInfo] = new ResultBuilder3[FullStreamInfo] {
+    def returning[RI: Schema, RK: Schema, RV: Schema]: IO[RedisError, FullStreamInfo[RI, RK, RV]] = {
+      val command = RedisCommand(
+        XInfoStream,
+        Tuple3(ArbitraryKeyInput[SK](), ArbitraryValueInput[String](), CountInput),
+        StreamInfoFullOutput[RI, RK, RV](),
+        executor
+      )
+      command.run((key, "FULL", Count(count)))
+    }
   }
 
   /**
@@ -807,9 +807,9 @@ private object Streams {
   final val XClaim         = "XCLAIM"
   final val XDel           = "XDEL"
   final val XGroup         = "XGROUP"
-  final val XInfoStream    = "XINFO STREAM"
-  final val XInfoGroups    = "XINFO GROUPS"
   final val XInfoConsumers = "XINFO CONSUMERS"
+  final val XInfoGroups    = "XINFO GROUPS"
+  final val XInfoStream    = "XINFO STREAM"
   final val XLen           = "XLEN"
   final val XPending       = "XPENDING"
   final val XRange         = "XRANGE"

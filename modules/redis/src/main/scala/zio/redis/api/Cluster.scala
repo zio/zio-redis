@@ -38,28 +38,24 @@ trait Cluster extends RedisEnvironment {
     AskingCommand(executor).run(())
 
   /**
-   * Returns details about which cluster slots map to which Redis instances.
-   *
-   * @return
-   *   details about which cluster
-   */
-  final def slots: IO[RedisError, Chunk[Partition]] = {
-    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), executor)
-    command.run(())
-  }
-
-  /**
-   * Clear any importing / migrating state from hash slot.
+   * Set a hash slot in importing state. Command should be executed on the node where hash slot will be migrated
+   * (destination node)
    *
    * @param slot
-   *   hash slot that will be cleared
+   *   hash slot that will be set in importing state
+   * @param nodeId
+   *   the source node Id from which hash slot will be imported
    * @return
    *   the Unit value.
    */
-  final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
-    val command =
-      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, executor)
-    command.run((slot.number, Stable.asString))
+  final def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
+    val command = RedisCommand(
+      ClusterSetSlots,
+      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
+      UnitOutput,
+      executor
+    )
+    command.run((slot.number, Importing.asString, nodeId))
   }
 
   /**
@@ -84,27 +80,6 @@ trait Cluster extends RedisEnvironment {
   }
 
   /**
-   * Set a hash slot in importing state. Command should be executed on the node where hash slot will be migrated
-   * (destination node)
-   *
-   * @param slot
-   *   hash slot that will be set in importing state
-   * @param nodeId
-   *   the source node Id from which hash slot will be imported
-   * @return
-   *   the Unit value.
-   */
-  final def setSlotImporting(slot: Slot, nodeId: String): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClusterSetSlots,
-      Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
-      UnitOutput,
-      executor
-    )
-    command.run((slot.number, Importing.asString, nodeId))
-  }
-
-  /**
    * Bind the hash slot to a different node. It associates the hash slot with the specified node, however the command
    * works only in specific situations and has different side effects depending on the slot state.
    *
@@ -124,13 +99,38 @@ trait Cluster extends RedisEnvironment {
     )
     command.run((slot.number, Node.asString, nodeId))
   }
+
+  /**
+   * Clear any importing / migrating state from hash slot.
+   *
+   * @param slot
+   *   hash slot that will be cleared
+   * @return
+   *   the Unit value.
+   */
+  final def setSlotStable(slot: Slot): IO[RedisError, Unit] = {
+    val command =
+      RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput, executor)
+    command.run((slot.number, Stable.asString))
+  }
+
+  /**
+   * Returns details about which cluster slots map to which Redis instances.
+   *
+   * @return
+   *   details about which cluster
+   */
+  final def slots: IO[RedisError, Chunk[Partition]] = {
+    val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput), executor)
+    command.run(())
+  }
 }
 
 private[redis] object Cluster {
   final val Asking          = "ASKING"
-  final val ClusterSlots    = "CLUSTER SLOTS"
   final val ClusterSetSlots = "CLUSTER SETSLOT"
+  final val ClusterSlots    = "CLUSTER SLOTS"
 
-  final val AskingCommand: (RedisExecutor) => RedisCommand[Unit, Unit] =
+  final val AskingCommand: RedisExecutor => RedisCommand[Unit, Unit] =
     (executor: RedisExecutor) => RedisCommand(Asking, NoInput, UnitOutput, executor)
 }

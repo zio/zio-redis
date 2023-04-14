@@ -202,50 +202,6 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
-   * Get a substring of the string stored at key.
-   *
-   * @param key
-   *   Key of the string to get a substring of
-   * @param range
-   *   Range of the substring
-   * @return
-   *   Returns the substring.
-   */
-  final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[R: Schema]: IO[RedisError, Option[R]] =
-        RedisCommand(
-          GetRange,
-          Tuple2(ArbitraryKeyInput[K](), RangeInput),
-          OptionalOutput(ArbitraryOutput[R]()),
-          executor
-        )
-          .run((key, range))
-    }
-
-  /**
-   * Set the string value of a key and return its old value.
-   *
-   * @param key
-   *   Key of string to set
-   * @param value
-   *   New value of the string
-   * @return
-   *   Returns the previous value of the string or None if it did not previously have a value.
-   */
-  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[R: Schema]: IO[RedisError, Option[R]] =
-        RedisCommand(
-          GetSet,
-          Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()),
-          OptionalOutput(ArbitraryOutput[R]()),
-          executor
-        )
-          .run((key, value))
-    }
-
-  /**
    * Get the string value of a key and delete it on success (if and only if the key's value type is a string).
    *
    * @param key
@@ -314,6 +270,50 @@ trait Strings extends RedisEnvironment {
       def returning[R: Schema]: IO[RedisError, Option[R]] =
         RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]()), executor)
           .run((key, persist))
+    }
+
+  /**
+   * Get a substring of the string stored at key.
+   *
+   * @param key
+   *   Key of the string to get a substring of
+   * @param range
+   *   Range of the substring
+   * @return
+   *   Returns the substring.
+   */
+  final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(
+          GetRange,
+          Tuple2(ArbitraryKeyInput[K](), RangeInput),
+          OptionalOutput(ArbitraryOutput[R]()),
+          executor
+        )
+          .run((key, range))
+    }
+
+  /**
+   * Set the string value of a key and return its old value.
+   *
+   * @param key
+   *   Key of string to set
+   * @param value
+   *   New value of the string
+   * @return
+   *   Returns the previous value of the string or None if it did not previously have a value.
+   */
+  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(
+          GetSet,
+          Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()),
+          OptionalOutput(ArbitraryOutput[R]()),
+          executor
+        )
+          .run((key, value))
     }
 
   /**
@@ -594,19 +594,6 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
-   * Get the length of a value stored in a key.
-   *
-   * @param key
-   *   Key of the string to get the length of
-   * @return
-   *   Returns the length of the string.
-   */
-  final def strLen[K: Schema](key: K): IO[RedisError, Long] = {
-    val command = RedisCommand(StrLen, ArbitraryKeyInput[K](), LongOutput, executor)
-    command.run(key)
-  }
-
-  /**
    * Get the longest common subsequence of values stored in the given keys.
    *
    * @param command
@@ -623,7 +610,7 @@ trait Strings extends RedisEnvironment {
    *   length and all the ranges in both the strings, start and end offset for each string, where there are matches.
    *   When withMatchLen is given each array representing a match will also have the length of the match (see examples).
    */
-  final def stralgoLcs[K: Schema](
+  final def strAlgoLcs[K: Schema](
     command: StrAlgoLCS,
     keyA: K,
     keyB: K,
@@ -642,6 +629,19 @@ trait Strings extends RedisEnvironment {
     )
     redisCommand.run((command.asString, keyA, keyB, lcsQueryType))
   }
+
+  /**
+   * Get the length of a value stored in a key.
+   *
+   * @param key
+   *   Key of the string to get the length of
+   * @return
+   *   Returns the length of the string.
+   */
+  final def strLen[K: Schema](key: K): IO[RedisError, Long] = {
+    val command = RedisCommand(StrLen, ArbitraryKeyInput[K](), LongOutput, executor)
+    command.run(key)
+  }
 }
 
 private[redis] object Strings {
@@ -654,6 +654,8 @@ private[redis] object Strings {
   final val DecrBy      = "DECRBY"
   final val Get         = "GET"
   final val GetBit      = "GETBIT"
+  final val GetDel      = "GETDEL"
+  final val GetEx       = "GETEX"
   final val GetRange    = "GETRANGE"
   final val GetSet      = "GETSET"
   final val Incr        = "INCR"
@@ -668,8 +670,6 @@ private[redis] object Strings {
   final val SetEx       = "SETEX"
   final val SetNx       = "SETNX"
   final val SetRange    = "SETRANGE"
-  final val StrLen      = "STRLEN"
   final val StrAlgoLcs  = "STRALGO LCS"
-  final val GetDel      = "GETDEL"
-  final val GetEx       = "GETEX"
+  final val StrLen      = "STRLEN"
 }
