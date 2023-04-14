@@ -177,7 +177,7 @@ trait SortedSetsSpec extends BaseSpec {
             _        <- redis.zAdd(key)(MemberScore(2d, "v2"))
             newScore <- redis.zAddWithIncr(key)(Increment, MemberScore(3d, "v1"))
             result   <- redis.zRange(key, 0 to -1).returning[String]
-          } yield assert(newScore)(equalTo(Some(4.0))) && assert(result.toList)(equalTo(List("v2", "v1")))
+          } yield assert(newScore)(isSome(equalTo(4.0))) && assert(result.toList)(equalTo(List("v2", "v1")))
         }
       ),
       suite("zCard")(
@@ -232,7 +232,7 @@ trait SortedSetsSpec extends BaseSpec {
             key1  <- uuid
             key2  <- uuid
             key3  <- uuid
-            diff  <- redis.zDiff(3, key1, key2, key3).returning[String]
+            diff  <- redis.zDiff(key1, key2, key3).returning[String]
           } yield assert(diff)(isEmpty)
         },
         test("non-empty set with empty set") {
@@ -241,7 +241,7 @@ trait SortedSetsSpec extends BaseSpec {
             key1  <- uuid
             key2  <- uuid
             _     <- redis.zAdd(key1)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            diff  <- redis.zDiff(2, key1, key2).returning[String]
+            diff  <- redis.zDiff(key1, key2).returning[String]
           } yield assert(diff)(hasSameElements(Chunk("a", "b")))
         },
         test("non-empty sets") {
@@ -251,7 +251,7 @@ trait SortedSetsSpec extends BaseSpec {
             key2  <- uuid
             _     <- redis.zAdd(key1)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
             _     <- redis.zAdd(key2)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            diff  <- redis.zDiff(2, key1, key2).returning[String]
+            diff  <- redis.zDiff(key1, key2).returning[String]
           } yield assert(diff)(hasSameElements(Chunk("c")))
         }
       ) @@ clusterExecutorUnsupported,
@@ -262,7 +262,7 @@ trait SortedSetsSpec extends BaseSpec {
             key1  <- uuid
             key2  <- uuid
             key3  <- uuid
-            diff  <- redis.zDiffWithScores(3, key1, key2, key3).returning[String]
+            diff  <- redis.zDiffWithScores(key1, key2, key3).returning[String]
           } yield assert(diff)(isEmpty)
         },
         test("non-empty set with empty set") {
@@ -271,7 +271,7 @@ trait SortedSetsSpec extends BaseSpec {
             key1  <- uuid
             key2  <- uuid
             _     <- redis.zAdd(key1)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            diff  <- redis.zDiffWithScores(2, key1, key2).returning[String]
+            diff  <- redis.zDiffWithScores(key1, key2).returning[String]
           } yield assert(diff)(hasSameElements(Chunk(MemberScore(1d, "a"), MemberScore(2d, "b"))))
         },
         test("non-empty sets") {
@@ -281,7 +281,7 @@ trait SortedSetsSpec extends BaseSpec {
             key2  <- uuid
             _     <- redis.zAdd(key1)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
             _     <- redis.zAdd(key2)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            diff  <- redis.zDiffWithScores(2, key1, key2).returning[String]
+            diff  <- redis.zDiffWithScores(key1, key2).returning[String]
           } yield assert(diff)(hasSameElements(Chunk(MemberScore(3d, "c"))))
         }
       ) @@ clusterExecutorUnsupported,
@@ -293,7 +293,7 @@ trait SortedSetsSpec extends BaseSpec {
             key1  <- uuid
             key2  <- uuid
             key3  <- uuid
-            card  <- redis.zDiffStore(dest, 3, key1, key2, key3)
+            card  <- redis.zDiffStore(dest, key1, key2, key3)
           } yield assert(card)(equalTo(0L))
         },
         test("non-empty set with empty set") {
@@ -306,7 +306,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(1d, "a"),
                    MemberScore(2d, "b")
                  )
-            card <- redis.zDiffStore(dest, 2, key1, key2)
+            card <- redis.zDiffStore(dest, key1, key2)
           } yield assert(card)(equalTo(2L))
         },
         test("non-empty sets") {
@@ -321,7 +321,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(3d, "c")
                  )
             _    <- redis.zAdd(key2)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            card <- redis.zDiffStore(dest, 2, key1, key2)
+            card <- redis.zDiffStore(dest, key1, key2)
           } yield assert(card)(equalTo(1L))
         }
       ) @@ clusterExecutorUnsupported,
@@ -359,7 +359,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <-
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- redis.zInter(2, first, second)().returning[String]
+            members <- redis.zInter(first, second)().returning[String]
           } yield assert(members)(equalTo(Chunk("a", "c")))
         },
         test("empty when one of the sets is empty") {
@@ -368,7 +368,7 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- redis.zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            members  <- redis.zInter(2, nonEmpty, empty)().returning[String]
+            members  <- redis.zInter(nonEmpty, empty)().returning[String]
           } yield assert(members)(isEmpty)
         },
         test("empty when both sets are empty") {
@@ -376,7 +376,7 @@ trait SortedSetsSpec extends BaseSpec {
             redis   <- ZIO.service[Redis]
             first   <- uuid
             second  <- uuid
-            members <- redis.zInter(2, first, second)().returning[String]
+            members <- redis.zInter(first, second)().returning[String]
           } yield assert(members)(isEmpty)
         },
         test("non-empty set with multiple non-empty sets") {
@@ -389,7 +389,7 @@ trait SortedSetsSpec extends BaseSpec {
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
-            members <- redis.zInter(3, first, second, third)().returning[String]
+            members <- redis.zInter(first, second, third)().returning[String]
           } yield assert(members)(
             equalTo(Chunk("b"))
           )
@@ -401,7 +401,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- redis.set(first, value)
-            members <- redis.zInter(2, first, second)().returning[String].either
+            members <- redis.zInter(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error with empty first set and second parameter is not set") {
@@ -411,7 +411,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- redis.set(second, value)
-            members <- redis.zInter(2, first, second)().returning[String].either
+            members <- redis.zInter(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error with non-empty first set and second parameter is not set") {
@@ -422,7 +422,7 @@ trait SortedSetsSpec extends BaseSpec {
             value   <- uuid
             _       <- redis.zAdd(first)(MemberScore(1d, "a"))
             _       <- redis.set(second, value)
-            members <- redis.zInter(2, first, second)().returning[String].either
+            members <- redis.zInter(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("parameter weights provided") {
@@ -432,7 +432,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInter(2, first, second)(weights = Some(::(2.0, 3.0 :: Nil))).returning[String]
+            members <- redis.zInter(first, second)(weights = Some(::(2.0, 3.0 :: Nil))).returning[String]
           } yield assert(members)(equalTo(Chunk("O", "N")))
         },
         test("error when invalid weights provided ( less than sets number )") {
@@ -442,7 +442,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInter(2, first, second)(weights = Some(::(2, Nil))).returning[String].either
+            members <- redis.zInter(first, second)(weights = Some(::(2, Nil))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid weights provided ( more than sets number )") {
@@ -452,7 +452,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInter(2, first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).returning[String].either
+            members <- redis.zInter(first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("set aggregate parameter MAX") {
@@ -462,7 +462,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInter(2, first, second)(Some(Aggregate.Max)).returning[String]
+            members <- redis.zInter(first, second)(Some(Aggregate.Max)).returning[String]
           } yield assert(members)(equalTo(Chunk("N", "O")))
         },
         test("set aggregate parameter MIN") {
@@ -472,7 +472,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInter(2, first, second)(Some(Aggregate.Min)).returning[String]
+            members <- redis.zInter(first, second)(Some(Aggregate.Min)).returning[String]
           } yield assert(members)(equalTo(Chunk("O", "N")))
         }
       ) @@ clusterExecutorUnsupported,
@@ -485,7 +485,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <-
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- redis.zInterWithScores(2, first, second)().returning[String]
+            members <- redis.zInterWithScores(first, second)().returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(2d, "a"), MemberScore(6d, "c"))))
         },
         test("empty when one of the sets is empty") {
@@ -494,7 +494,7 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- redis.zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            members  <- redis.zInterWithScores(2, nonEmpty, empty)().returning[String]
+            members  <- redis.zInterWithScores(nonEmpty, empty)().returning[String]
           } yield assert(members)(isEmpty)
         },
         test("empty when both sets are empty") {
@@ -502,7 +502,7 @@ trait SortedSetsSpec extends BaseSpec {
             redis   <- ZIO.service[Redis]
             first   <- uuid
             second  <- uuid
-            members <- redis.zInterWithScores(2, first, second)().returning[String]
+            members <- redis.zInterWithScores(first, second)().returning[String]
           } yield assert(members)(isEmpty)
         },
         test("non-empty set with multiple non-empty sets") {
@@ -515,7 +515,7 @@ trait SortedSetsSpec extends BaseSpec {
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
-            members <- redis.zInterWithScores(3, first, second, third)().returning[String]
+            members <- redis.zInterWithScores(first, second, third)().returning[String]
           } yield assert(members)(
             equalTo(Chunk(MemberScore(6d, "b")))
           )
@@ -527,7 +527,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- redis.set(first, value)
-            members <- redis.zInterWithScores(2, first, second)().returning[String].either
+            members <- redis.zInterWithScores(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error with empty first set and second parameter is not set") {
@@ -537,7 +537,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- redis.set(second, value)
-            members <- redis.zInterWithScores(2, first, second)().returning[String].either
+            members <- redis.zInterWithScores(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error with non-empty first set and second parameter is not set") {
@@ -548,7 +548,7 @@ trait SortedSetsSpec extends BaseSpec {
             value   <- uuid
             _       <- redis.zAdd(first)(MemberScore(1d, "a"))
             _       <- redis.set(second, value)
-            members <- redis.zInterWithScores(2, first, second)().returning[String].either
+            members <- redis.zInterWithScores(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("parameter weights provided") {
@@ -558,7 +558,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInterWithScores(2, first, second)(weights = Some(::(2.0, 3.0 :: Nil))).returning[String]
+            members <- redis.zInterWithScores(first, second)(weights = Some(::(2.0, 3.0 :: Nil))).returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(20d, "O"), MemberScore(21d, "N"))))
         },
         test("error when invalid weights provided ( less than sets number )") {
@@ -568,7 +568,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInterWithScores(2, first, second)(weights = Some(::(2, Nil))).returning[String].either
+            members <- redis.zInterWithScores(first, second)(weights = Some(::(2, Nil))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid weights provided ( more than sets number )") {
@@ -579,7 +579,7 @@ trait SortedSetsSpec extends BaseSpec {
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
             members <- redis
-                         .zInterWithScores(2, first, second)(weights = Some(::(2.0, List(3.0, 5.0))))
+                         .zInterWithScores(first, second)(weights = Some(::(2.0, List(3.0, 5.0))))
                          .returning[String]
                          .either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
@@ -591,7 +591,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInterWithScores(2, first, second)(Some(Aggregate.Max)).returning[String]
+            members <- redis.zInterWithScores(first, second)(Some(Aggregate.Max)).returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(6d, "N"), MemberScore(7d, "O"))))
         },
         test("set aggregate parameter MIN") {
@@ -601,7 +601,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zInterWithScores(2, first, second)(Some(Aggregate.Min)).returning[String]
+            members <- redis.zInterWithScores(first, second)(Some(Aggregate.Min)).returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(2d, "O"), MemberScore(3d, "N"))))
         }
       ) @@ clusterExecutorUnsupported,
@@ -615,7 +615,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <-
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _    <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            card <- redis.zInterStore(s"out_$dest", 2, first, second)()
+            card <- redis.zInterStore(s"out_$dest", first, second)()
           } yield assert(card)(equalTo(2L))
         },
         test("empty when one of the sets is empty") {
@@ -625,7 +625,7 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- redis.zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            card     <- redis.zInterStore(dest, 2, nonEmpty, empty)()
+            card     <- redis.zInterStore(dest, nonEmpty, empty)()
           } yield assert(card)(equalTo(0L))
         },
         test("empty when both sets are empty") {
@@ -634,7 +634,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             first  <- uuid
             second <- uuid
-            card   <- redis.zInterStore(dest, 2, first, second)()
+            card   <- redis.zInterStore(dest, first, second)()
           } yield assert(card)(equalTo(0L))
         },
         test("non-empty set with multiple non-empty sets") {
@@ -648,7 +648,7 @@ trait SortedSetsSpec extends BaseSpec {
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _    <- redis.zAdd(second)(MemberScore(2d, "b"), MemberScore(2d, "b"), MemberScore(4d, "d"))
             _    <- redis.zAdd(third)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
-            card <- redis.zInterStore(dest, 3, first, second, third)()
+            card <- redis.zInterStore(dest, first, second, third)()
           } yield assert(card)(equalTo(1L))
         },
         test("error when first parameter is not set") {
@@ -659,7 +659,7 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- redis.set(first, value)
-            card   <- redis.zInterStore(dest, 2, first, second)().either
+            card   <- redis.zInterStore(dest, first, second)().either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error with empty first set and second parameter is not set") {
@@ -670,7 +670,7 @@ trait SortedSetsSpec extends BaseSpec {
             second <- uuid
             value  <- uuid
             _      <- redis.set(second, value)
-            card   <- redis.zInterStore(dest, 2, first, second)().either
+            card   <- redis.zInterStore(dest, first, second)().either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error with non-empty first set and second parameter is not set") {
@@ -682,7 +682,7 @@ trait SortedSetsSpec extends BaseSpec {
             value  <- uuid
             _      <- redis.zAdd(first)(MemberScore(1d, "a"))
             _      <- redis.set(second, value)
-            card   <- redis.zInterStore(dest, 2, first, second)().either
+            card   <- redis.zInterStore(dest, first, second)().either
           } yield assert(card)(isLeft(isSubtype[WrongType](anything)))
         },
         test("parameter weights provided") {
@@ -693,7 +693,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zInterStore(dest, 2, first, second)(weights = Some(::(2.0, 3.0 :: Nil)))
+            card   <- redis.zInterStore(dest, first, second)(weights = Some(::(2.0, 3.0 :: Nil)))
           } yield assert(card)(equalTo(2L))
         },
         test("error when invalid weights provided ( less than sets number )") {
@@ -704,7 +704,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zInterStore(dest, 2, first, second)(weights = Some(::(2, Nil))).either
+            card   <- redis.zInterStore(dest, first, second)(weights = Some(::(2, Nil))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid weights provided ( more than sets number )") {
@@ -715,7 +715,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zInterStore(dest, 2, first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).either
+            card   <- redis.zInterStore(dest, first, second)(weights = Some(::(2.0, List(3.0, 5.0)))).either
           } yield assert(card)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("set aggregate parameter MAX") {
@@ -726,7 +726,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zInterStore(dest, 2, first, second)(Some(Aggregate.Max))
+            card   <- redis.zInterStore(dest, first, second)(Some(Aggregate.Max))
           } yield assert(card)(equalTo(2L))
         },
         test("set aggregate parameter MIN") {
@@ -737,7 +737,7 @@ trait SortedSetsSpec extends BaseSpec {
             dest   <- uuid
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            card   <- redis.zInterStore(dest, 2, first, second)(Some(Aggregate.Min))
+            card   <- redis.zInterStore(dest, first, second)(Some(Aggregate.Min))
           } yield assert(card)(equalTo(2L))
         }
       ) @@ clusterExecutorUnsupported,
@@ -1020,7 +1020,7 @@ trait SortedSetsSpec extends BaseSpec {
             key   <- uuid
             _     <- redis.zAdd(key)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
             rank  <- redis.zRank(key, "c")
-          } yield assert(rank)(equalTo(Some(2L)))
+          } yield assert(rank)(isSome(equalTo(2L)))
         },
         test("empty set") {
           for {
@@ -1336,7 +1336,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(50d, "Chennai")
                  )
             result <- redis.zRevRank(key, "Hyderabad")
-          } yield assert(result)(equalTo(Some(2L)))
+          } yield assert(result)(isSome(equalTo(2L)))
         },
         test("empty set") {
           for {
@@ -1428,7 +1428,7 @@ trait SortedSetsSpec extends BaseSpec {
                    MemberScore(50d, "Chennai")
                  )
             result <- redis.zScore(key, "Delhi")
-          } yield assert(result)(equalTo(Some(10.0)))
+          } yield assert(result)(isSome(equalTo(10.0)))
         },
         test("empty set") {
           for {
@@ -1470,7 +1470,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <-
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- redis.zUnion(2, first, second)().returning[String]
+            members <- redis.zUnion(first, second)().returning[String]
           } yield assert(members)(equalTo(Chunk("a", "b", "d", "e", "c")))
         },
         test("equal to the non-empty set when the other one is empty") {
@@ -1479,7 +1479,7 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- redis.zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            members  <- redis.zUnion(2, nonEmpty, empty)().returning[String]
+            members  <- redis.zUnion(nonEmpty, empty)().returning[String]
           } yield assert(members)(equalTo(Chunk("a", "b")))
         },
         test("empty when both sets are empty") {
@@ -1487,7 +1487,7 @@ trait SortedSetsSpec extends BaseSpec {
             redis   <- ZIO.service[Redis]
             first   <- uuid
             second  <- uuid
-            members <- redis.zUnion(2, first, second)().returning[String]
+            members <- redis.zUnion(first, second)().returning[String]
           } yield assert(members)(isEmpty)
         },
         test("non-empty set with multiple non-empty sets") {
@@ -1500,7 +1500,7 @@ trait SortedSetsSpec extends BaseSpec {
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- redis.zUnion(3, first, second, third)().returning[String]
+            members <- redis.zUnion(first, second, third)().returning[String]
           } yield assert(members)(equalTo(Chunk("a", "e", "b", "c", "d")))
         },
         test("error when the first parameter is not set") {
@@ -1510,7 +1510,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- redis.set(first, value)
-            members <- redis.zUnion(2, first, second)().returning[String].either
+            members <- redis.zUnion(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error when the first parameter is set and the second parameter is not set") {
@@ -1521,7 +1521,7 @@ trait SortedSetsSpec extends BaseSpec {
             value   <- uuid
             _       <- redis.zAdd(first)(MemberScore(1, "a"))
             _       <- redis.set(second, value)
-            members <- redis.zUnion(2, first, second)().returning[String].either
+            members <- redis.zUnion(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("parameter weights provided") {
@@ -1531,7 +1531,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnion(2, first, second)(Some(::(2, List(3)))).returning[String]
+            members <- redis.zUnion(first, second)(Some(::(2, List(3)))).returning[String]
           } yield assert(members)(equalTo(Chunk("M", "P", "O", "N")))
         },
         test("error when invalid weights provided ( less than sets number )") {
@@ -1541,7 +1541,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnion(2, first, second)(Some(::(2, Nil))).returning[String].either
+            members <- redis.zUnion(first, second)(Some(::(2, Nil))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid weights provided ( more than sets number )") {
@@ -1551,7 +1551,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnion(2, first, second)(Some(::(2, List(3, 5)))).returning[String].either
+            members <- redis.zUnion(first, second)(Some(::(2, List(3, 5)))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("set aggregate parameter MAX") {
@@ -1561,7 +1561,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnion(2, first, second)(aggregate = Some(Aggregate.Max)).returning[String]
+            members <- redis.zUnion(first, second)(aggregate = Some(Aggregate.Max)).returning[String]
           } yield assert(members)(equalTo(Chunk("P", "M", "N", "O")))
         },
         test("set aggregate parameter MIN") {
@@ -1571,7 +1571,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnion(2, first, second)(aggregate = Some(Aggregate.Min)).returning[String]
+            members <- redis.zUnion(first, second)(aggregate = Some(Aggregate.Min)).returning[String]
           } yield assert(members)(equalTo(Chunk("O", "N", "P", "M")))
         },
         test("parameter weights provided along with aggregate") {
@@ -1581,7 +1581,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnion(2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
+            members <- redis.zUnion(first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
           } yield assert(members)(equalTo(Chunk("M", "N", "P", "O")))
         }
       ) @@ clusterExecutorUnsupported,
@@ -1594,7 +1594,7 @@ trait SortedSetsSpec extends BaseSpec {
             _ <-
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(1d, "a"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- redis.zUnionWithScores(2, first, second)().returning[String]
+            members <- redis.zUnionWithScores(first, second)().returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1613,7 +1613,7 @@ trait SortedSetsSpec extends BaseSpec {
             nonEmpty <- uuid
             empty    <- uuid
             _        <- redis.zAdd(nonEmpty)(MemberScore(1d, "a"), MemberScore(2d, "b"))
-            members  <- redis.zUnionWithScores(2, nonEmpty, empty)().returning[String]
+            members  <- redis.zUnionWithScores(nonEmpty, empty)().returning[String]
           } yield assert(members)(equalTo(Chunk(MemberScore(1d, "a"), MemberScore(2d, "b"))))
         },
         test("empty when both sets are empty") {
@@ -1621,7 +1621,7 @@ trait SortedSetsSpec extends BaseSpec {
             redis   <- ZIO.service[Redis]
             first   <- uuid
             second  <- uuid
-            members <- redis.zUnionWithScores(2, first, second)().returning[String]
+            members <- redis.zUnionWithScores(first, second)().returning[String]
           } yield assert(members)(isEmpty)
         },
         test("non-empty set with multiple non-empty sets") {
@@ -1634,7 +1634,7 @@ trait SortedSetsSpec extends BaseSpec {
               redis.zAdd(first)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"), MemberScore(4d, "d"))
             _       <- redis.zAdd(second)(MemberScore(2, "b"), MemberScore(4d, "d"))
             _       <- redis.zAdd(third)(MemberScore(2, "b"), MemberScore(3d, "c"), MemberScore(5d, "e"))
-            members <- redis.zUnionWithScores(3, first, second, third)().returning[String]
+            members <- redis.zUnionWithScores(first, second, third)().returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1654,7 +1654,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             value   <- uuid
             _       <- redis.set(first, value)
-            members <- redis.zUnionWithScores(2, first, second)().returning[String].either
+            members <- redis.zUnionWithScores(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error when the first parameter is set and the second parameter is not set") {
@@ -1665,7 +1665,7 @@ trait SortedSetsSpec extends BaseSpec {
             value   <- uuid
             _       <- redis.zAdd(first)(MemberScore(1, "a"))
             _       <- redis.set(second, value)
-            members <- redis.zUnionWithScores(2, first, second)().returning[String].either
+            members <- redis.zUnionWithScores(first, second)().returning[String].either
           } yield assert(members)(isLeft(isSubtype[WrongType](anything)))
         },
         test("parameter weights provided") {
@@ -1675,7 +1675,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnionWithScores(2, first, second)(Some(::(2, List(3)))).returning[String]
+            members <- redis.zUnionWithScores(first, second)(Some(::(2, List(3)))).returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1694,7 +1694,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnionWithScores(2, first, second)(Some(::(2, Nil))).returning[String].either
+            members <- redis.zUnionWithScores(first, second)(Some(::(2, Nil))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid weights provided ( more than sets number )") {
@@ -1704,7 +1704,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnionWithScores(2, first, second)(Some(::(2, List(3, 5)))).returning[String].either
+            members <- redis.zUnionWithScores(first, second)(Some(::(2, List(3, 5)))).returning[String].either
           } yield assert(members)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("set aggregate parameter MAX") {
@@ -1714,7 +1714,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnionWithScores(2, first, second)(aggregate = Some(Aggregate.Max)).returning[String]
+            members <- redis.zUnionWithScores(first, second)(aggregate = Some(Aggregate.Max)).returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1733,7 +1733,7 @@ trait SortedSetsSpec extends BaseSpec {
             second  <- uuid
             _       <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _       <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
-            members <- redis.zUnionWithScores(2, first, second)(aggregate = Some(Aggregate.Min)).returning[String]
+            members <- redis.zUnionWithScores(first, second)(aggregate = Some(Aggregate.Min)).returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(
@@ -1753,7 +1753,7 @@ trait SortedSetsSpec extends BaseSpec {
             _      <- redis.zAdd(first)(MemberScore(5d, "M"), MemberScore(6d, "N"), MemberScore(7d, "O"))
             _      <- redis.zAdd(second)(MemberScore(3d, "N"), MemberScore(2d, "O"), MemberScore(4d, "P"))
             members <-
-              redis.zUnionWithScores(2, first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
+              redis.zUnionWithScores(first, second)(Some(::(2, List(3))), Some(Aggregate.Max)).returning[String]
           } yield assert(members)(
             equalTo(
               Chunk(

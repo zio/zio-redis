@@ -202,8 +202,6 @@ trait SortedSets extends RedisEnvironment {
   /**
    * Subtract multiple sorted sets and return members.
    *
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -211,11 +209,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of differences between the first and successive input sorted sets.
    */
-  final def zDiff[K: Schema](
-    inputKeysNum: Long,
-    key: K,
-    keys: K*
-  ): ResultBuilder1[Chunk] =
+  final def zDiff[K: Schema](key: K, keys: K*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
         val command =
@@ -228,15 +222,13 @@ trait SortedSets extends RedisEnvironment {
             ChunkOutput(ArbitraryOutput[M]()),
             executor
           )
-        command.run((inputKeysNum, (key, keys.toList)))
+        command.run((keys.size.toLong + 1, (key, keys.toList)))
       }
     }
 
   /**
    * Subtract multiple sorted sets and return members and their associated score.
    *
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -244,11 +236,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of differences and scores between the first and successive input sorted sets.
    */
-  final def zDiffWithScores[K: Schema](
-    inputKeysNum: Long,
-    key: K,
-    keys: K*
-  ): ResultBuilder1[MemberScores] =
+  final def zDiffWithScores[K: Schema](key: K, keys: K*): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command =
@@ -263,7 +251,7 @@ trait SortedSets extends RedisEnvironment {
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((inputKeysNum, (key, keys.toList), WithScores.asString))
+        command.run((keys.size.toLong + 1, (key, keys.toList), WithScores.asString))
       }
     }
 
@@ -272,8 +260,6 @@ trait SortedSets extends RedisEnvironment {
    *
    * @param destination
    *   Key of the output
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -281,12 +267,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of differences between the first and successive input sorted sets.
    */
-  final def zDiffStore[DK: Schema, K: Schema](
-    destination: DK,
-    inputKeysNum: Long,
-    key: K,
-    keys: K*
-  ): IO[RedisError, Long] = {
+  final def zDiffStore[DK: Schema, K: Schema](destination: DK, key: K, keys: K*): IO[RedisError, Long] = {
     val command =
       RedisCommand(
         ZDiffStore,
@@ -298,7 +279,7 @@ trait SortedSets extends RedisEnvironment {
         LongOutput,
         executor
       )
-    command.run((destination, inputKeysNum, (key, keys.toList)))
+    command.run((destination, keys.size.toLong + 1, (key, keys.toList)))
   }
 
   /**
@@ -313,11 +294,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The new score of member (a double precision floating point number).
    */
-  final def zIncrBy[K: Schema, M: Schema](
-    key: K,
-    increment: Long,
-    member: M
-  ): IO[RedisError, Double] = {
+  final def zIncrBy[K: Schema, M: Schema](key: K, increment: Long, member: M): IO[RedisError, Double] = {
     val command =
       RedisCommand(ZIncrBy, Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[M]()), DoubleOutput, executor)
     command.run((key, increment, member))
@@ -326,8 +303,6 @@ trait SortedSets extends RedisEnvironment {
   /**
    * Intersect multiple sorted sets and return members.
    *
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -341,7 +316,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk containing the intersection of members.
    */
-  final def zInter[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zInter[K: Schema](key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
   ): ResultBuilder1[Chunk] =
@@ -358,15 +333,13 @@ trait SortedSets extends RedisEnvironment {
           ChunkOutput(ArbitraryOutput[M]()),
           executor
         )
-        command.run((inputKeysNum, (key, keys.toList), aggregate, weights))
+        command.run((keys.size.toLong + 1, (key, keys.toList), aggregate, weights))
       }
     }
 
   /**
    * Intersect multiple sorted sets and return members and their associated score.
    *
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -380,7 +353,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk containing the intersection of members with their score.
    */
-  final def zInterWithScores[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zInterWithScores[K: Schema](key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
   ): ResultBuilder1[MemberScores] =
@@ -399,7 +372,7 @@ trait SortedSets extends RedisEnvironment {
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((inputKeysNum, (key, keys.toList), aggregate, weights, WithScores.asString))
+        command.run((keys.size.toLong + 1, (key, keys.toList), aggregate, weights, WithScores.asString))
       }
     }
 
@@ -408,8 +381,6 @@ trait SortedSets extends RedisEnvironment {
    *
    * @param destination
    *   Key of the output
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -423,7 +394,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   The number of elements in the resulting sorted set at destination.
    */
-  final def zInterStore[DK: Schema, K: Schema](destination: DK, inputKeysNum: Long, key: K, keys: K*)(
+  final def zInterStore[DK: Schema, K: Schema](destination: DK, key: K, keys: K*)(
     aggregate: Option[Aggregate] = None,
     weights: Option[::[Double]] = None
   ): IO[RedisError, Long] = {
@@ -439,7 +410,7 @@ trait SortedSets extends RedisEnvironment {
       LongOutput,
       executor
     )
-    command.run((destination, inputKeysNum, (key, keys.toList), aggregate, weights))
+    command.run((destination, keys.size.toLong + 1, (key, keys.toList), aggregate, weights))
   }
 
   /**
@@ -490,10 +461,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of popped elements and scores.
    */
-  final def zPopMax[K: Schema](
-    key: K,
-    count: Option[Long] = None
-  ): ResultBuilder1[MemberScores] =
+  final def zPopMax[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
@@ -519,10 +487,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of popped elements and scores.
    */
-  final def zPopMin[K: Schema](
-    key: K,
-    count: Option[Long] = None
-  ): ResultBuilder1[MemberScores] =
+  final def zPopMin[K: Schema](key: K, count: Option[Long] = None): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
@@ -562,10 +527,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Return an array of elements from the sorted set value stored at key.
    */
-  final def zRandMember[K: Schema](
-    key: K,
-    count: Long
-  ): ResultBuilder1[Chunk] =
+  final def zRandMember[K: Schema](key: K, count: Long): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
         val command = RedisCommand(
@@ -591,10 +553,7 @@ trait SortedSets extends RedisEnvironment {
    *   key does not exist. If the WITHSCORES modifier is used, the reply is a list elements and their scores from the
    *   sorted set.
    */
-  final def zRandMemberWithScores[K: Schema](
-    key: K,
-    count: Long
-  ): ResultBuilder1[MemberScores] =
+  final def zRandMemberWithScores[K: Schema](key: K, count: Long): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
@@ -638,10 +597,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRangeWithScores[K: Schema](
-    key: K,
-    range: Range
-  ): ResultBuilder1[MemberScores] =
+  final def zRangeWithScores[K: Schema](key: K, range: Range): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
@@ -668,11 +624,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  final def zRangeByLex[K: Schema](
-    key: K,
-    lexRange: LexRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk] =
+  final def zRangeByLex[K: Schema](key: K, lexRange: LexRange, limit: Option[Limit] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
         val command = RedisCommand(
@@ -889,10 +841,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  final def zRevRangeWithScores[K: Schema](
-    key: K,
-    range: Range
-  ): ResultBuilder1[MemberScores] =
+  final def zRevRangeWithScores[K: Schema](key: K, range: Range): ResultBuilder1[MemberScores] =
     new ResultBuilder1[MemberScores] {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
@@ -919,11 +868,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  final def zRevRangeByLex[K: Schema](
-    key: K,
-    lexRange: LexRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk] =
+  final def zRevRangeByLex[K: Schema](key: K, lexRange: LexRange, limit: Option[Limit] = None): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[M: Schema]: IO[RedisError, Chunk[M]] = {
         val command = RedisCommand(
@@ -1090,8 +1035,6 @@ trait SortedSets extends RedisEnvironment {
   /**
    * Add multiple sorted sets and return each member.
    *
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -1105,7 +1048,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of all members in each sorted set.
    */
-  final def zUnion[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zUnion[K: Schema](key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
   ): ResultBuilder1[Chunk] =
@@ -1123,15 +1066,13 @@ trait SortedSets extends RedisEnvironment {
             ChunkOutput(ArbitraryOutput[M]()),
             executor
           )
-        command.run((inputKeysNum, (key, keys.toList), weights, aggregate))
+        command.run((keys.size.toLong + 1, (key, keys.toList), weights, aggregate))
       }
     }
 
   /**
    * Add multiple sorted sets and return each member and associated score.
    *
-   * @param inputKeysNum
-   *   Number of input keys
    * @param key
    *   Key of a sorted set
    * @param keys
@@ -1145,7 +1086,7 @@ trait SortedSets extends RedisEnvironment {
    * @return
    *   Chunk of all members with their scores in each sorted set.
    */
-  final def zUnionWithScores[K: Schema](inputKeysNum: Long, key: K, keys: K*)(
+  final def zUnionWithScores[K: Schema](key: K, keys: K*)(
     weights: Option[::[Double]] = None,
     aggregate: Option[Aggregate] = None
   ): ResultBuilder1[MemberScores] =
@@ -1165,7 +1106,7 @@ trait SortedSets extends RedisEnvironment {
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((inputKeysNum, (key, keys.toList), weights, aggregate, WithScores.asString))
+        command.run((keys.size.toLong + 1, (key, keys.toList), weights, aggregate, WithScores.asString))
       }
     }
 
