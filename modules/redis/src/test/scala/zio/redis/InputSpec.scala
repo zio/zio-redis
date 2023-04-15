@@ -16,7 +16,7 @@ object InputSpec extends BaseSpec {
   import BitOperation._
   import Order._
   import RadiusUnit._
-  import StrAlgoLcsQueryType._
+  import LcsQueryType._
 
   def spec: Spec[Any, Throwable] =
     suite("Input encoders")(
@@ -89,29 +89,29 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("0"))))
         }
       ),
-      suite("Stralgocommand")(
+      suite("LcsQueryType")(
         test("length option") {
-          assert(StrAlgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
+          assert(LcsQueryTypeInput.encode(LcsQueryType.Len))(
             equalTo(RespCommand(Literal("LEN")))
           )
         },
         test("idx option default") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx()))(
+          assert(LcsQueryTypeInput.encode(Idx()))(
             equalTo(RespCommand(Literal("IDX")))
           )
         },
         test("idx option with minmatchlength") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
+          assert(LcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
             equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2")))
           )
         },
         test("idx option with withmatchlength") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
+          assert(LcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
             equalTo(RespCommand(Literal("IDX"), Literal("WITHMATCHLEN")))
           )
         },
         test("idx option with minmatchlength and withmatchlength") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
+          assert(LcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
             equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2"), Literal("WITHMATCHLEN")))
           )
         }
@@ -628,32 +628,32 @@ object InputSpec extends BaseSpec {
       suite("MemberScore")(
         test("with positive score and empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", 4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value(""))))
         },
         test("with negative score and empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", -4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value(""))))
         },
         test("with zero score and empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", 0d)))
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value(""))))
         },
         test("with positive score and non-empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", 4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("member"))))
         },
         test("with negative score and non-empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", -4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value("member"))))
         },
         test("with zero score and non-empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", 0d)))
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("member"))))
         }
       ),
@@ -1116,6 +1116,13 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(Varargs(LongInput).encode(List.empty))
           } yield assert(result.args)(isEmpty)
+        }
+      ),
+      suite("WithScore")(
+        test("valid value") {
+          for {
+            result <- ZIO.attempt(WithScoreInput.encode(WithScore))
+          } yield assert(result)(equalTo(RespCommand(Literal("WITHSCORE"))))
         }
       ),
       suite("WithScores")(

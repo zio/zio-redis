@@ -1,7 +1,7 @@
 version: '3.3'
 services:
   redis-cluster:
-    image: 'redis:6.2.7-alpine'
+    image: redis:7.2-rc1-alpine
     container_name: redis-cluster
     volumes:
       - ./redis-cluster.sh:/data/redis-cluster.sh
