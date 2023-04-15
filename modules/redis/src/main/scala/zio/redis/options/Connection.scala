@@ -165,20 +165,6 @@ trait Connection {
     case object Write extends ClientPauseMode
   }
 
-  sealed case class ClientTrackingFlags(
-    clientSideCaching: Boolean,
-    trackingMode: Option[ClientTrackingMode] = None,
-    noLoop: Boolean = false,
-    caching: Option[Boolean] = None,
-    brokenRedirect: Boolean = false
-  )
-
-  sealed case class ClientTrackingInfo(
-    flags: ClientTrackingFlags,
-    redirect: ClientTrackingRedirect,
-    prefixes: Set[String] = Set.empty
-  )
-
   sealed trait ClientTrackingMode { self =>
     private[redis] final def asString: String =
       self match {

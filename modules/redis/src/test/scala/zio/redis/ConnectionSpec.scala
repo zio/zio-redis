@@ -18,26 +18,6 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(res)(isUnit)
         }
       ),
-      suite("clientCaching")(
-        test("track keys") {
-          for {
-            redis        <- ZIO.service[Redis]
-            _            <- redis.clientTrackingOff
-            _            <- redis.clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn))
-            _            <- redis.clientCaching(true)
-            trackingInfo <- redis.clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isTrue))
-        },
-        test("don't track keys") {
-          for {
-            redis        <- ZIO.service[Redis]
-            _            <- redis.clientTrackingOff
-            _            <- redis.clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptOut))
-            _            <- redis.clientCaching(false)
-            trackingInfo <- redis.clientTrackingInfo
-          } yield assert(trackingInfo.flags.caching)(isSome(isFalse))
-        }
-      ),
       suite("clientId")(
         test("get client id") {
           for {
@@ -134,68 +114,6 @@ trait ConnectionSpec extends BaseSpec {
           name  <- redis.clientGetName
         } yield assert(name.getOrElse(""))(equalTo("foo"))
       } @@ clusterExecutorUnsupported,
-      suite("clientTracking")(
-        test("enable tracking in broadcast mode and with prefixes") {
-          for {
-            redis        <- ZIO.service[Redis]
-            _            <- redis.clientTrackingOff
-            _            <- redis.clientTrackingOn(None, Some(ClientTrackingMode.Broadcast), prefixes = Set("foo"))
-            trackingInfo <- redis.clientTrackingInfo
-          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotRedirected)) &&
-            assert(trackingInfo.flags)(
-              equalTo(ClientTrackingFlags(clientSideCaching = true, trackingMode = Some(ClientTrackingMode.Broadcast)))
-            ) &&
-            assert(trackingInfo.prefixes)(equalTo(Set("foo")))
-        },
-        test("disable tracking") {
-          for {
-            redis        <- ZIO.service[Redis]
-            _            <- redis.clientTrackingOff
-            trackingInfo <- redis.clientTrackingInfo
-          } yield assert(trackingInfo.redirect)(equalTo(ClientTrackingRedirect.NotEnabled)) &&
-            assert(trackingInfo.flags)(
-              equalTo(ClientTrackingFlags(clientSideCaching = false))
-            ) &&
-            assert(trackingInfo.prefixes)(equalTo(Set.empty[String]))
-        }
-      ),
-      suite("clientTrackingInfo")(
-        test("get tracking info when tracking is disabled") {
-          for {
-            redis        <- ZIO.service[Redis]
-            _            <- redis.clientTrackingOff
-            trackingInfo <- redis.clientTrackingInfo
-          } yield assert(trackingInfo)(
-            equalTo(
-              ClientTrackingInfo(
-                flags = ClientTrackingFlags(clientSideCaching = false),
-                redirect = ClientTrackingRedirect.NotEnabled
-              )
-            )
-          )
-        },
-        test("get tracking info when tracking is enabled in optin mode with noloop and caching on") {
-          for {
-            redis        <- ZIO.service[Redis]
-            _            <- redis.clientTrackingOff
-            _            <- redis.clientTrackingOn(trackingMode = Some(ClientTrackingMode.OptIn), noLoop = true)
-            _            <- redis.clientCaching(true)
-            trackingInfo <- redis.clientTrackingInfo
-          } yield assert(trackingInfo)(
-            equalTo(
-              ClientTrackingInfo(
-                flags = ClientTrackingFlags(
-                  clientSideCaching = true,
-                  trackingMode = Some(ClientTrackingMode.OptIn),
-                  caching = Some(true),
-                  noLoop = true
-                ),
-                redirect = ClientTrackingRedirect.NotRedirected
-              )
-            )
-          )
-        }
-      ),
       suite("clientUnblock")(
         test("unblock client that isn't blocked") {
           for {

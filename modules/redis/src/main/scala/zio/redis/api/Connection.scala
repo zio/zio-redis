@@ -236,18 +236,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Returns information about the current client connection's use of the server assisted client side caching feature
-   *
-   * @return
-   *   tracking information.
-   */
-  final def clientTrackingInfo: IO[RedisError, ClientTrackingInfo] = {
-    val command = RedisCommand(ClientTrackingInfo, NoInput, ClientTrackingInfoOutput, executor)
-
-    command.run(())
-  }
-
-  /**
    * Disables the tracking feature of the Redis server, that is used for server assisted client side caching
    *
    * @return
@@ -348,20 +336,19 @@ trait Connection extends RedisEnvironment {
 }
 
 private[redis] object Connection {
-  final val Auth               = "AUTH"
-  final val ClientCaching      = "CLIENT CACHING"
-  final val ClientGetName      = "CLIENT GETNAME"
-  final val ClientGetRedir     = "CLIENT GETREDIR"
-  final val ClientId           = "CLIENT ID"
-  final val ClientInfo         = "CLIENT INFO"
-  final val ClientKill         = "CLIENT KILL"
-  final val ClientList         = "CLIENT LIST"
-  final val ClientPause        = "CLIENT PAUSE"
-  final val ClientSetName      = "CLIENT SETNAME"
-  final val ClientTracking     = "CLIENT TRACKING"
-  final val ClientTrackingInfo = "CLIENT TRACKINGINFO"
-  final val ClientUnblock      = "CLIENT UNBLOCK"
-  final val ClientUnpause      = "CLIENT UNPAUSE"
-  final val Ping               = "PING"
-  final val Select             = "SELECT"
+  final val Auth           = "AUTH"
+  final val ClientCaching  = "CLIENT CACHING"
+  final val ClientGetName  = "CLIENT GETNAME"
+  final val ClientGetRedir = "CLIENT GETREDIR"
+  final val ClientId       = "CLIENT ID"
+  final val ClientInfo     = "CLIENT INFO"
+  final val ClientKill     = "CLIENT KILL"
+  final val ClientList     = "CLIENT LIST"
+  final val ClientPause    = "CLIENT PAUSE"
+  final val ClientSetName  = "CLIENT SETNAME"
+  final val ClientTracking = "CLIENT TRACKING"
+  final val ClientUnblock  = "CLIENT UNBLOCK"
+  final val ClientUnpause  = "CLIENT UNPAUSE"
+  final val Ping           = "PING"
+  final val Select         = "SELECT"
 }
