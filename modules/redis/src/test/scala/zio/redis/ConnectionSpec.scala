@@ -223,11 +223,6 @@ trait ConnectionSpec extends BaseSpec {
               .map(assert(_)(equalTo("Hello with a newline\r\nAnd another line\n")))
           )
         }
-      ),
-      test("reset") {
-        for {
-          unit <- ZIO.serviceWithZIO[Redis](_.reset)
-        } yield assert(unit)(isUnit)
-      } @@ clusterExecutorUnsupported
+      )
     ) @@ sequential
 }

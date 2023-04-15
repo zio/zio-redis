@@ -345,32 +345,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Ask the server to close the connection. The connection is closed as soon as all pending replies have been written
-   * to the client
-   *
-   * @return
-   *   the Unit value.
-   */
-  final def quit: IO[RedisError, Unit] = {
-    val command = RedisCommand(Quit, NoInput, UnitOutput, executor)
-
-    command.run(())
-  }
-
-  /**
-   * Performs a full reset of the connection's server-side context, mimicking the effects of disconnecting and
-   * reconnecting again
-   *
-   * @return
-   *   the Unit value.
-   */
-  final def reset: IO[RedisError, Unit] = {
-    val command = RedisCommand(Reset, NoInput, ResetOutput, executor)
-
-    command.run(())
-  }
-
-  /**
    * Changes the database for the current connection to the database having the specified numeric index. The currently
    * selected database is a property of the connection; clients should track the selected database and re-select it on
    * reconnection.
@@ -404,7 +378,5 @@ private[redis] object Connection {
   final val ClientUnpause      = "CLIENT UNPAUSE"
   final val Echo               = "ECHO"
   final val Ping               = "PING"
-  final val Quit               = "QUIT"
-  final val Reset              = "RESET"
   final val Select             = "SELECT"
 }
