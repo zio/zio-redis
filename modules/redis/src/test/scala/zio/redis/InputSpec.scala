@@ -476,6 +476,23 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("INCR"))))
         }
       ),
+      suite("Int")(
+        test("positive value") {
+          for {
+            result <- ZIO.attempt(IntInput.encode(4))
+          } yield assert(result)(equalTo(RespCommand(Value("4"))))
+        },
+        test("negative value") {
+          for {
+            result <- ZIO.attempt(IntInput.encode(-4))
+          } yield assert(result)(equalTo(RespCommand(Value("-4"))))
+        },
+        test("zero value") {
+          for {
+            result <- ZIO.attempt(IntInput.encode(0))
+          } yield assert(result)(equalTo(RespCommand(Value("0"))))
+        }
+      ),
       suite("KeepTtl")(
         test("valid value") {
           for {
