@@ -316,20 +316,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Echoes the given string.
-   *
-   * @param message
-   *   the message to be echoed
-   * @return
-   *   the message.
-   */
-  final def echo(message: String): IO[RedisError, String] = {
-    val command = RedisCommand(Echo, StringInput, MultiStringOutput, executor)
-
-    command.run(message)
-  }
-
-  /**
    * Pings the server.
    *
    * @param message
@@ -376,7 +362,6 @@ private[redis] object Connection {
   final val ClientTrackingInfo = "CLIENT TRACKINGINFO"
   final val ClientUnblock      = "CLIENT UNBLOCK"
   final val ClientUnpause      = "CLIENT UNPAUSE"
-  final val Echo               = "ECHO"
   final val Ping               = "PING"
   final val Select             = "SELECT"
 }
