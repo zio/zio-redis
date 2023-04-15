@@ -327,6 +327,11 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  case object IntInput extends Input[Int] {
+    def encode(data: Int): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.toString))
+  }
+
   case object KeepTtlInput extends Input[KeepTtl] {
     def encode(data: KeepTtl): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))
