@@ -628,32 +628,32 @@ object InputSpec extends BaseSpec {
       suite("MemberScore")(
         test("with positive score and empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", 4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value(""))))
         },
         test("with negative score and empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", -4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value(""))))
         },
         test("with zero score and empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", 0d)))
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value(""))))
         },
         test("with positive score and non-empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(4.2d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", 4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("member"))))
         },
         test("with negative score and non-empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(-4.2d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", -4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("-4.2"), Value("member"))))
         },
         test("with zero score and non-empty member") {
           for {
-            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore(0d, "member")))
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", 0d)))
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("member"))))
         }
       ),

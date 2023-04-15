@@ -78,11 +78,11 @@ trait SortedSets {
 
   sealed case class LexRange(min: LexMinimum, max: LexMaximum)
 
-  sealed case class MemberScore[+M](score: Double, member: M)
+  sealed case class MemberScore[+M](member: M, score: Double)
 
   type MemberScores[+M] = Chunk[MemberScore[M]]
 
-  sealed case class RankScore(score: Double, rank: Long)
+  sealed case class RankScore(rank: Long, score: Double)
 
   sealed trait ScoreMaximum { self =>
     private[redis] final def asString: String =
