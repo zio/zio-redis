@@ -361,6 +361,35 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
+   * Get the longest common subsequence of values stored in the given keys.
+   *
+   * @param keyA
+   *   first value that will contain subsequence
+   * @param keyB
+   *   second value that will contain subsequence
+   * @param lcsQueryType
+   *   modifier that will affect the output
+   * @return
+   *   Without modifiers returns the string representing the longest common substring. When LEN is given the command
+   *   returns the length of the longest common substring. When IDX is given the command returns an array with the LCS
+   *   length and all the ranges in both the strings, start and end offset for each string, where there are matches.
+   *   When withMatchLen is given each array representing a match will also have the length of the match (see examples).
+   */
+  final def lcs[K: Schema](keyA: K, keyB: K, lcsQueryType: Option[LcsQueryType] = None): IO[RedisError, Lcs] = {
+    val redisCommand = RedisCommand(
+      Lcs,
+      Tuple3(
+        ArbitraryKeyInput[K](),
+        ArbitraryKeyInput[K](),
+        OptionalInput(LcsQueryTypeInput)
+      ),
+      LcsOutput,
+      executor
+    )
+    redisCommand.run((keyA, keyB, lcsQueryType))
+  }
+
+  /**
    * Get all the values of the given keys.
    *
    * @param key
@@ -594,43 +623,6 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
-   * Get the longest common subsequence of values stored in the given keys.
-   *
-   * @param command
-   *   type of value it (possible values are Strings and Keys)
-   * @param keyA
-   *   first value that will contain subsequence
-   * @param keyB
-   *   second value that will contain subsequence
-   * @param lcsQueryType
-   *   modifier that will affect the output
-   * @return
-   *   Without modifiers returns the string representing the longest common substring. When LEN is given the command
-   *   returns the length of the longest common substring. When IDX is given the command returns an array with the LCS
-   *   length and all the ranges in both the strings, start and end offset for each string, where there are matches.
-   *   When withMatchLen is given each array representing a match will also have the length of the match (see examples).
-   */
-  final def strAlgoLcs[K: Schema](
-    command: StrAlgoLCS,
-    keyA: K,
-    keyB: K,
-    lcsQueryType: Option[StrAlgoLcsQueryType] = None
-  ): IO[RedisError, LcsOutput] = {
-    val redisCommand = RedisCommand(
-      StrAlgoLcs,
-      Tuple4(
-        ArbitraryValueInput[String](),
-        ArbitraryKeyInput[K](),
-        ArbitraryKeyInput[K](),
-        OptionalInput(StrAlgoLcsQueryTypeInput)
-      ),
-      StrAlgoLcsOutput,
-      executor
-    )
-    redisCommand.run((command.asString, keyA, keyB, lcsQueryType))
-  }
-
-  /**
    * Get the length of a value stored in a key.
    *
    * @param key
@@ -661,6 +653,7 @@ private[redis] object Strings {
   final val Incr        = "INCR"
   final val IncrBy      = "INCRBY"
   final val IncrByFloat = "INCRBYFLOAT"
+  final val Lcs         = "LCS"
   final val MGet        = "MGET"
   final val MSet        = "MSET"
   final val MSetNx      = "MSETNX"
@@ -670,6 +663,5 @@ private[redis] object Strings {
   final val SetEx       = "SETEX"
   final val SetNx       = "SETNX"
   final val SetRange    = "SETRANGE"
-  final val StrAlgoLcs  = "STRALGO LCS"
   final val StrLen      = "STRLEN"
 }

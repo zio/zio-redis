@@ -377,7 +377,7 @@ trait KeysSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
-            _     <- redis.zAdd(key)(MemberScore(1d, value))
+            _     <- redis.zAdd(key)(MemberScore(value, 1d))
             zset  <- redis.typeOf(key)
           } yield assert(zset)(equalTo(RedisType.SortedSet))
         },
