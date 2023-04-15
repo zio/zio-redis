@@ -82,6 +82,8 @@ trait SortedSets {
 
   type MemberScores[+M] = Chunk[MemberScore[M]]
 
+  sealed case class RankScore(score: Double, rank: Long)
+
   sealed trait ScoreMaximum { self =>
     private[redis] final def asString: String =
       self match {

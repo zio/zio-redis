@@ -715,14 +715,14 @@ trait SortedSets extends RedisEnvironment {
     }
 
   /**
-   * Determine the index of a member in a sorted set.
+   * Determine the index of a member in a sorted set, with scores ordered from low to high.
    *
    * @param key
    *   Key of a sorted set
    * @param member
    *   Member of sorted set
    * @return
-   *   The rank of member in the sorted set stored at key, with the scores ordered from low to high.
+   *   The rank of member in the sorted set stored at key.
    */
   final def zRank[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Long]] = {
     val command =
@@ -733,6 +733,27 @@ trait SortedSets extends RedisEnvironment {
         executor
       )
     command.run((key, member))
+  }
+
+  /**
+   * Determine the index and score of a member in a sorted set, with scores ordered from low to high.
+   *
+   * @param key
+   *   Key of a sorted set
+   * @param member
+   *   Member of sorted set
+   * @return
+   *   The rank of member along with the score in the sorted set stored at key.
+   */
+  final def zRankWithScore[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[RankScore]] = {
+    val command =
+      RedisCommand(
+        ZRank,
+        Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[M](), WithScoreInput),
+        OptionalOutput(Tuple2Output(LongOutput, DoubleOutput).map { case (r, s) => RankScore(s, r) }),
+        executor
+      )
+    command.run((key, member, WithScore))
   }
 
   /**
@@ -966,7 +987,7 @@ trait SortedSets extends RedisEnvironment {
    * @param member
    *   Member of sorted set
    * @return
-   *   The rank of member.
+   *   The rank of member in the sorted set stored at key.
    */
   final def zRevRank[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[Long]] = {
     val command = RedisCommand(
@@ -976,6 +997,26 @@ trait SortedSets extends RedisEnvironment {
       executor
     )
     command.run((key, member))
+  }
+
+  /**
+   * Determine the index and score of a member in a sorted set, with scores ordered from high to low.
+   *
+   * @param key
+   *   Key of a sorted set
+   * @param member
+   *   Member of sorted set
+   * @return
+   *   The rank of member along with the score in the sorted set stored at key.
+   */
+  final def zRevRankWithScore[K: Schema, M: Schema](key: K, member: M): IO[RedisError, Option[RankScore]] = {
+    val command = RedisCommand(
+      ZRevRank,
+      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[M](), WithScoreInput),
+      OptionalOutput(Tuple2Output(LongOutput, DoubleOutput).map { case (r, s) => RankScore(s, r) }),
+      executor
+    )
+    command.run((key, member, WithScore))
   }
 
   /**

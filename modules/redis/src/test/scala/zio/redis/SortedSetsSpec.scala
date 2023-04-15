@@ -1030,6 +1030,23 @@ trait SortedSetsSpec extends BaseSpec {
           } yield assert(rank)(isNone)
         }
       ),
+      suite("zRankWithScore")(
+        test("existing elements from non-empty set") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _     <- redis.zAdd(key)(MemberScore(1d, "a"), MemberScore(2d, "b"), MemberScore(3d, "c"))
+            rank  <- redis.zRankWithScore(key, "c")
+          } yield assert(rank)(isSome(equalTo(RankScore(3d, 2L))))
+        },
+        test("empty set") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            rank  <- redis.zRankWithScore(key, "c")
+          } yield assert(rank)(isNone)
+        }
+      ),
       suite("zRem")(
         test("existing elements from non-empty set") {
           for {
@@ -1343,6 +1360,29 @@ trait SortedSetsSpec extends BaseSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             result <- redis.zRevRank(key, "Hyderabad")
+          } yield assert(result)(isNone)
+        }
+      ),
+      suite("zRevRankWithScore")(
+        test("non-empty set") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _ <- redis.zAdd(key)(
+                   MemberScore(10d, "Delhi"),
+                   MemberScore(20d, "Mumbai"),
+                   MemberScore(30d, "Hyderabad"),
+                   MemberScore(40d, "Kolkata"),
+                   MemberScore(50d, "Chennai")
+                 )
+            result <- redis.zRevRankWithScore(key, "Kolkata")
+          } yield assert(result)(isSome(equalTo(RankScore(40d, 1L))))
+        },
+        test("empty set") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            result <- redis.zRevRankWithScore(key, "Hyderabad")
           } yield assert(result)(isNone)
         }
       ),
