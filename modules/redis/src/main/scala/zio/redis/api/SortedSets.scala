@@ -245,13 +245,13 @@ trait SortedSets extends RedisEnvironment {
             Tuple3(
               IntInput,
               NonEmptyList(ArbitraryKeyInput[K]()),
-              ArbitraryValueInput[String]()
+              WithScoresInput
             ),
             ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((keys.size + 1, (key, keys.toList), WithScores.asString))
+        command.run((keys.size + 1, (key, keys.toList), WithScores))
       }
     }
 
@@ -366,13 +366,13 @@ trait SortedSets extends RedisEnvironment {
             NonEmptyList(ArbitraryKeyInput[K]()),
             OptionalInput(AggregateInput),
             OptionalInput(WeightsInput),
-            ArbitraryValueInput[String]()
+            WithScoresInput
           ),
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((keys.size + 1, (key, keys.toList), aggregate, weights, WithScores.asString))
+        command.run((keys.size + 1, (key, keys.toList), aggregate, weights, WithScores))
       }
     }
 
@@ -558,13 +558,13 @@ trait SortedSets extends RedisEnvironment {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRandMember,
-          Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[String]()),
+          Tuple3(ArbitraryKeyInput[K](), LongInput, WithScoresInput),
           ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
 
-        command.run((key, count, WithScores.asString))
+        command.run((key, count, WithScores))
       }
     }
 
@@ -602,12 +602,12 @@ trait SortedSets extends RedisEnvironment {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRange,
-          Tuple3(ArbitraryKeyInput[K](), RangeInput, ArbitraryValueInput[String]()),
+          Tuple3(ArbitraryKeyInput[K](), RangeInput, WithScoresInput),
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, range, WithScores.asString))
+        command.run((key, range, WithScores))
       }
     }
 
@@ -703,14 +703,14 @@ trait SortedSets extends RedisEnvironment {
             ArbitraryKeyInput[K](),
             ArbitraryValueInput[String](),
             ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
+            WithScoresInput,
             OptionalInput(LimitInput)
           ),
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, scoreRange.min.asString, scoreRange.max.asString, WithScores.asString, limit))
+        command.run((key, scoreRange.min.asString, scoreRange.max.asString, WithScores, limit))
       }
     }
 
@@ -846,12 +846,12 @@ trait SortedSets extends RedisEnvironment {
       def returning[M: Schema]: IO[RedisError, Chunk[MemberScore[M]]] = {
         val command = RedisCommand(
           ZRevRange,
-          Tuple3(ArbitraryKeyInput[K](), RangeInput, ArbitraryValueInput[String]()),
+          Tuple3(ArbitraryKeyInput[K](), RangeInput, WithScoresInput),
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, range, WithScores.asString))
+        command.run((key, range, WithScores))
       }
     }
 
@@ -947,14 +947,14 @@ trait SortedSets extends RedisEnvironment {
             ArbitraryKeyInput[K](),
             ArbitraryValueInput[String](),
             ArbitraryValueInput[String](),
-            ArbitraryValueInput[String](),
+            WithScoresInput,
             OptionalInput(LimitInput)
           ),
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(s, m) }),
           executor
         )
-        command.run((key, scoreRange.max.asString, scoreRange.min.asString, WithScores.asString, limit))
+        command.run((key, scoreRange.max.asString, scoreRange.min.asString, WithScores, limit))
       }
     }
 
@@ -1100,13 +1100,13 @@ trait SortedSets extends RedisEnvironment {
               NonEmptyList(ArbitraryKeyInput[K]()),
               OptionalInput(WeightsInput),
               OptionalInput(AggregateInput),
-              ArbitraryValueInput[String]()
+              WithScoresInput
             ),
             ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
               .map(_.map { case (m, s) => MemberScore(s, m) }),
             executor
           )
-        command.run((keys.size + 1, (key, keys.toList), weights, aggregate, WithScores.asString))
+        command.run((keys.size + 1, (key, keys.toList), weights, aggregate, WithScores))
       }
     }
 
