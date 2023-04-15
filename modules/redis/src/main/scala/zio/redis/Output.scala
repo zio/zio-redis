@@ -92,22 +92,6 @@ object Output {
       }
   }
 
-  case object ClientInfoOutput extends Output[ClientInfo] {
-    protected def tryDecode(respValue: RespValue): ClientInfo =
-      respValue match {
-        case RespValue.BulkString(s) => ClientInfo.from(s.asString)
-        case other                   => throw ProtocolError(s"$other isn't a bulk string")
-      }
-  }
-
-  case object ClientListOutput extends Output[Chunk[ClientInfo]] {
-    protected def tryDecode(respValue: RespValue): Chunk[ClientInfo] =
-      respValue match {
-        case RespValue.BulkString(s) => ClientInfo.from(s.asString.split("\r\n").filter(_.nonEmpty))
-        case other                   => throw ProtocolError(s"$other isn't a bulk string")
-      }
-  }
-
   case object ClientTrackingRedirectOutput extends Output[ClientTrackingRedirect] {
     protected def tryDecode(respValue: RespValue): ClientTrackingRedirect =
       respValue match {

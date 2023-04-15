@@ -25,15 +25,6 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(id)(isGreaterThan(0L))
         }
       ),
-      suite("clientInfo")(
-        test("get client info") {
-          for {
-            redis <- ZIO.service[Redis]
-            id    <- redis.clientId
-            info  <- ZIO.serviceWithZIO[Redis](_.clientInfo)
-          } yield assert(info.id)(isSome(equalTo(id))) && assert(info.name)(isNone)
-        }
-      ),
       suite("clientKill")(
         test("error when a connection with the specified address doesn't exist") {
           for {
@@ -52,31 +43,6 @@ trait ConnectionSpec extends BaseSpec {
             id            <- redis.clientId
             clientsKilled <- redis.clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
           } yield assert(clientsKilled)(equalTo(0L))
-        }
-      ),
-      suite("clientList")(
-        test("get clients' info") {
-          for {
-            info <- ZIO.serviceWithZIO[Redis](_.clientList())
-          } yield assert(info)(isNonEmpty)
-        },
-        test("get clients' info filtered by type") {
-          for {
-            redis      <- ZIO.service[Redis]
-            infoNormal <- redis.clientList(Some(ClientType.Normal))
-            infoPubSub <- redis.clientList(Some(ClientType.PubSub))
-          } yield assert(infoNormal)(isNonEmpty) && assert(infoPubSub)(isEmpty)
-        },
-        test("get clients' info filtered by client IDs") {
-          for {
-            redis           <- ZIO.service[Redis]
-            id              <- redis.clientId
-            nonExistingId    = id + 1
-            info            <- redis.clientList(clientIds = Some((id, Nil)))
-            infoNonExisting <- redis.clientList(clientIds = Some((nonExistingId, Nil)))
-          } yield assert(info)(isNonEmpty) && assert(info.head.id)(isSome(equalTo(id))) && assert(infoNonExisting)(
-            isEmpty
-          )
         }
       ),
       suite("clientGetRedir")(

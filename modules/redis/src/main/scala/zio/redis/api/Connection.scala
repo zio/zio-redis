@@ -116,19 +116,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * The command returns information and statistics about the current client connection in a mostly human readable
-   * format.
-   *
-   * @return
-   *   information and statistics about the current client
-   */
-  final def clientInfo: IO[RedisError, ClientInfo] = {
-    val command = RedisCommand(ClientInfo, NoInput, ClientInfoOutput, executor)
-
-    command.run(())
-  }
-
-  /**
    * Closes a given client connection with the specified address
    *
    * @param address
@@ -169,32 +156,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * The command returns information and statistics about the client connections server in a mostly human readable
-   * format.
-   *
-   * @param clientType
-   *   filters the list by client's type
-   * @param clientIds
-   *   filters the list by client IDs
-   * @return
-   *   a chunk of information and statistics about clients
-   */
-  final def clientList(
-    clientType: Option[ClientType] = None,
-    clientIds: Option[(Long, List[Long])] = None
-  ): IO[RedisError, Chunk[ClientInfo]] = {
-    val command =
-      RedisCommand(
-        ClientList,
-        Tuple2(OptionalInput(ClientTypeInput), OptionalInput(IdsInput)),
-        ClientListOutput,
-        executor
-      )
-
-    command.run((clientType, clientIds))
-  }
-
-  /**
    * Able to suspend all the Redis clients for the specified amount of time (in milliseconds). Currently supports two
    * modes:
    *   - All: This is the default mode. All client commands are blocked
@@ -207,10 +168,7 @@ trait Connection extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def clientPause(
-    timeout: Duration,
-    mode: Option[ClientPauseMode] = None
-  ): IO[RedisError, Unit] = {
+  final def clientPause(timeout: Duration, mode: Option[ClientPauseMode] = None): IO[RedisError, Unit] = {
     val command = RedisCommand(
       ClientPause,
       Tuple2(DurationMillisecondsInput, OptionalInput(ClientPauseModeInput)),
@@ -281,10 +239,7 @@ trait Connection extends RedisEnvironment {
    * @return
    *   true if the client was unblocked successfully, or false if the client wasn't unblocked.
    */
-  final def clientUnblock(
-    clientId: Long,
-    error: Option[UnblockBehavior] = None
-  ): IO[RedisError, Boolean] = {
+  final def clientUnblock(clientId: Long, error: Option[UnblockBehavior] = None): IO[RedisError, Boolean] = {
     val command =
       RedisCommand(ClientUnblock, Tuple2(LongInput, OptionalInput(UnblockBehaviorInput)), BoolOutput, executor)
 
@@ -341,9 +296,7 @@ private[redis] object Connection {
   final val ClientGetName  = "CLIENT GETNAME"
   final val ClientGetRedir = "CLIENT GETREDIR"
   final val ClientId       = "CLIENT ID"
-  final val ClientInfo     = "CLIENT INFO"
   final val ClientKill     = "CLIENT KILL"
-  final val ClientList     = "CLIENT LIST"
   final val ClientPause    = "CLIENT PAUSE"
   final val ClientSetName  = "CLIENT SETNAME"
   final val ClientTracking = "CLIENT TRACKING"
