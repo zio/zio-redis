@@ -670,6 +670,11 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  case object WithScoreInput extends Input[WithScore] {
+    def encode(data: WithScore): RespCommand =
+      RespCommand(RespCommandArgument.Literal(data.asString))
+  }
+
   case object WithScoresInput extends Input[WithScores] {
     def encode(data: WithScores): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))

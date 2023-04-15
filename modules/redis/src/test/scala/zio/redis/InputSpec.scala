@@ -1118,6 +1118,13 @@ object InputSpec extends BaseSpec {
           } yield assert(result.args)(isEmpty)
         }
       ),
+      suite("WithScore")(
+        test("valid value") {
+          for {
+            result <- ZIO.attempt(WithScoreInput.encode(WithScore))
+          } yield assert(result)(equalTo(RespCommand(Literal("WITHSCORE"))))
+        }
+      ),
       suite("WithScores")(
         test("valid value") {
           for {

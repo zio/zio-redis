@@ -114,6 +114,12 @@ trait SortedSets {
 
   sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum)
 
+  case object WithScore {
+    private[redis] def asString: String = "WITHSCORE"
+  }
+
+  type WithScore = WithScore.type
+
   case object WithScores {
     private[redis] def asString: String = "WITHSCORES"
   }
