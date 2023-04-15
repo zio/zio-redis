@@ -337,6 +337,22 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  case object LcsQueryTypeInput extends Input[LcsQueryType] {
+    def encode(data: LcsQueryType): RespCommand = data match {
+      case LcsQueryType.Len => RespCommand(RespCommandArgument.Literal("LEN"))
+      case LcsQueryType.Idx(minMatchLength, withMatchLength) =>
+        val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
+        val min =
+          if (minMatchLength > 1)
+            Chunk(RespCommandArgument.Literal("MINMATCHLEN"), RespCommandArgument.Value(minMatchLength.toString))
+          else Chunk.empty[RespCommandArgument]
+        val length =
+          if (withMatchLength) Chunk.single(RespCommandArgument.Literal("WITHMATCHLEN"))
+          else Chunk.empty[RespCommandArgument]
+        RespCommand(Chunk(idx, min, length).flatten)
+    }
+  }
+
   case object LimitInput extends Input[Limit] {
     def encode(data: Limit): RespCommand =
       RespCommand(
@@ -456,22 +472,6 @@ object Input {
   case object StoreInput extends Input[Store] {
     def encode(data: Store): RespCommand =
       RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Value(data.key))
-  }
-
-  case object StrAlgoLcsQueryTypeInput extends Input[StrAlgoLcsQueryType] {
-    def encode(data: StrAlgoLcsQueryType): RespCommand = data match {
-      case StrAlgoLcsQueryType.Len => RespCommand(RespCommandArgument.Literal("LEN"))
-      case StrAlgoLcsQueryType.Idx(minMatchLength, withMatchLength) =>
-        val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
-        val min =
-          if (minMatchLength > 1)
-            Chunk(RespCommandArgument.Literal("MINMATCHLEN"), RespCommandArgument.Value(minMatchLength.toString))
-          else Chunk.empty[RespCommandArgument]
-        val length =
-          if (withMatchLength) Chunk.single(RespCommandArgument.Literal("WITHMATCHLEN"))
-          else Chunk.empty[RespCommandArgument]
-        RespCommand(Chunk(idx, min, length).flatten)
-    }
   }
 
   case object StreamMaxLenInput extends Input[StreamMaxLen] {

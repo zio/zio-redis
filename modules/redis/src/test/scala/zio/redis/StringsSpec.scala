@@ -317,15 +317,8 @@ trait StringsSpec extends BaseSpec {
           } yield assert(result)(equalTo(Chunk(Some(97L), Some(100L), Some(100L))))
         }
       ),
-      suite("Stralgo")(
-        test("get LCS from 2 strings") {
-          val str1 = "foo"
-          val str2 = "fao"
-          assertZIO(ZIO.serviceWithZIO[Redis](_.strAlgoLcs(StralgoLCS.Strings, str1, str2)))(
-            equalTo(LcsOutput.Lcs("fo"))
-          )
-        },
-        test("get LCS from 2 keys") {
+      suite("LCS")(
+        test("get LCS from two keys") {
           val str1 = "foo"
           val str2 = "fao"
 
@@ -335,8 +328,8 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- redis.set(key2, str2, None, None, None)
-            result <- redis.strAlgoLcs(StralgoLCS.Keys, key1, key2)
-          } yield assert(result)(equalTo(LcsOutput.Lcs("fo")))
+            result <- redis.lcs(key1, key2)
+          } yield assert(result)(equalTo(Lcs.PlainLcs("fo")))
         },
         test("get LCS from unknown keys") {
           val str1 = "foo"
@@ -348,19 +341,10 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- redis.set(key2, str2, None, None, None)
-            result <- redis.strAlgoLcs(StralgoLCS.Keys, "unknown", "unknown")
-          } yield assert(result)(equalTo(LcsOutput.Lcs("")))
+            result <- redis.lcs("unknown", "unknown")
+          } yield assert(result)(equalTo(Lcs.PlainLcs("")))
         },
-        test("Get length of LCS for strings") {
-          val str1 = "foo"
-          val str2 = "fao"
-          assertZIO(
-            ZIO.serviceWithZIO[Redis](_.strAlgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Len)))
-          )(
-            equalTo(LcsOutput.Length(2))
-          )
-        },
-        test("get length of LCS for keys") {
+        test("get length of LCS") {
           val str1 = "foo"
           val str2 = "fao"
 
@@ -370,45 +354,23 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1, None, None, None)
             key2   <- uuid
             _      <- redis.set(key2, str2, None, None, None)
-            result <- redis.strAlgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Len))
-          } yield assert(result)(equalTo(LcsOutput.Length(2)))
+            result <- redis.lcs(key1, key2, Some(LcsQueryType.Len))
+          } yield assert(result)(equalTo(Lcs.Length(2)))
         },
         test("get length of LCS for unknown keys") {
           val str1 = "foo"
           val str2 = "fao"
 
           for {
-            redis <- ZIO.service[Redis]
-            key1  <- uuid
-            _     <- redis.set(key1, str1, None, None, None)
-            key2  <- uuid
-            _     <- redis.set(key2, str2, None, None, None)
-            result <- redis.strAlgoLcs(
-                        StralgoLCS.Keys,
-                        "unknown",
-                        "unknown",
-                        Some(StrAlgoLcsQueryType.Len)
-                      )
-          } yield assert(result)(equalTo(LcsOutput.Length(0)))
+            redis  <- ZIO.service[Redis]
+            key1   <- uuid
+            _      <- redis.set(key1, str1, None, None, None)
+            key2   <- uuid
+            _      <- redis.set(key2, str2, None, None, None)
+            result <- redis.lcs("unknown", "unknown", Some(LcsQueryType.Len))
+          } yield assert(result)(equalTo(Lcs.Length(0)))
         },
-        test("get index of LCS for strings") {
-          val str1 = "ohmytext"
-          val str2 = "mynewtext"
-          assertZIO(
-            ZIO.serviceWithZIO[Redis](_.strAlgoLcs(StralgoLCS.Strings, str1, str2, Some(StrAlgoLcsQueryType.Idx())))
-          )(
-            equalTo(
-              LcsOutput.Matches(
-                List(
-                  Match(matchIdxA = MatchIdx(4, 7), matchIdxB = MatchIdx(5, 8)),
-                  Match(matchIdxA = MatchIdx(2, 3), matchIdxB = MatchIdx(0, 1))
-                ),
-                6
-              )
-            )
-          )
-        },
-        test("get index of LCS for keys") {
+        test("get index of LCS") {
           val str1 = "!ohmytext"
           val str2 = "!mynewtext"
 
@@ -418,11 +380,11 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key1, str1)
             key2   <- uuid
             _      <- redis.set(key2, str2)
-            result <- redis.strAlgoLcs(StralgoLCS.Keys, key1, key2, Some(StrAlgoLcsQueryType.Idx()))
+            result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx()))
           } yield {
             assert(result)(
               equalTo(
-                LcsOutput.Matches(
+                Lcs.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2)),
@@ -434,26 +396,21 @@ trait StringsSpec extends BaseSpec {
             )
           }
         },
-        test("get index of LCS for keys with MINMATCHLEN") {
+        test("get index of LCS with MINMATCHLEN") {
           val str1 = "!ohmytext"
           val str2 = "!mynewtext"
 
           for {
-            redis <- ZIO.service[Redis]
-            key1  <- uuid
-            _     <- redis.set(key1, str1)
-            key2  <- uuid
-            _     <- redis.set(key2, str2)
-            result <- redis.strAlgoLcs(
-                        StralgoLCS.Keys,
-                        key1,
-                        key2,
-                        Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2))
-                      )
+            redis  <- ZIO.service[Redis]
+            key1   <- uuid
+            _      <- redis.set(key1, str1)
+            key2   <- uuid
+            _      <- redis.set(key2, str2)
+            result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx(minMatchLength = 2)))
           } yield {
             assert(result)(
               equalTo(
-                LcsOutput.Matches(
+                Lcs.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2))
@@ -464,26 +421,21 @@ trait StringsSpec extends BaseSpec {
             )
           }
         },
-        test("get index of LCS for keys with WITHMATCHLEN") {
+        test("get index of LCS with WITHMATCHLEN") {
           val str1 = "!ohmytext"
           val str2 = "!mynewtext"
 
           for {
-            redis <- ZIO.service[Redis]
-            key1  <- uuid
-            _     <- redis.set(key1, str1)
-            key2  <- uuid
-            _     <- redis.set(key2, str2)
-            result <- redis.strAlgoLcs(
-                        StralgoLCS.Keys,
-                        key1,
-                        key2,
-                        Some(StrAlgoLcsQueryType.Idx(withMatchLength = true))
-                      )
+            redis  <- ZIO.service[Redis]
+            key1   <- uuid
+            _      <- redis.set(key1, str1)
+            key2   <- uuid
+            _      <- redis.set(key2, str2)
+            result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx(withMatchLength = true)))
           } yield {
             assert(result)(
               equalTo(
-                LcsOutput.Matches(
+                Lcs.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2)),
@@ -495,26 +447,21 @@ trait StringsSpec extends BaseSpec {
             )
           }
         },
-        test("get index of LCS for keys with MINMATCHLEN and WITHMATCHLEN") {
+        test("get index of LCS both with MINMATCHLEN and WITHMATCHLEN") {
           val str1 = "!ohmytext"
           val str2 = "!mynewtext"
 
           for {
-            redis <- ZIO.service[Redis]
-            key1  <- uuid
-            _     <- redis.set(key1, str1)
-            key2  <- uuid
-            _     <- redis.set(key2, str2)
-            result <- redis.strAlgoLcs(
-                        StralgoLCS.Keys,
-                        key1,
-                        key2,
-                        Some(StrAlgoLcsQueryType.Idx(minMatchLength = 2, withMatchLength = true))
-                      )
+            redis  <- ZIO.service[Redis]
+            key1   <- uuid
+            _      <- redis.set(key1, str1)
+            key2   <- uuid
+            _      <- redis.set(key2, str2)
+            result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx(minMatchLength = 2, withMatchLength = true)))
           } yield {
             assert(result)(
               equalTo(
-                LcsOutput.Matches(
+                Lcs.Matches(
                   List(
                     Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
                     Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2))

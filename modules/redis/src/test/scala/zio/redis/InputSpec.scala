@@ -16,7 +16,7 @@ object InputSpec extends BaseSpec {
   import BitOperation._
   import Order._
   import RadiusUnit._
-  import StrAlgoLcsQueryType._
+  import LcsQueryType._
 
   def spec: Spec[Any, Throwable] =
     suite("Input encoders")(
@@ -89,29 +89,29 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("0"))))
         }
       ),
-      suite("Stralgocommand")(
+      suite("LcsQueryType")(
         test("length option") {
-          assert(StrAlgoLcsQueryTypeInput.encode(StrAlgoLcsQueryType.Len))(
+          assert(LcsQueryTypeInput.encode(LcsQueryType.Len))(
             equalTo(RespCommand(Literal("LEN")))
           )
         },
         test("idx option default") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx()))(
+          assert(LcsQueryTypeInput.encode(Idx()))(
             equalTo(RespCommand(Literal("IDX")))
           )
         },
         test("idx option with minmatchlength") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
+          assert(LcsQueryTypeInput.encode(Idx(minMatchLength = 2)))(
             equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2")))
           )
         },
         test("idx option with withmatchlength") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
+          assert(LcsQueryTypeInput.encode(Idx(withMatchLength = true)))(
             equalTo(RespCommand(Literal("IDX"), Literal("WITHMATCHLEN")))
           )
         },
         test("idx option with minmatchlength and withmatchlength") {
-          assert(StrAlgoLcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
+          assert(LcsQueryTypeInput.encode(Idx(minMatchLength = 2, withMatchLength = true)))(
             equalTo(RespCommand(Literal("IDX"), Literal("MINMATCHLEN"), Value("2"), Literal("WITHMATCHLEN")))
           )
         }
