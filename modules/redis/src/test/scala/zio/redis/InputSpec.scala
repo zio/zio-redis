@@ -226,85 +226,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("CH"))))
         }
       ),
-      suite("ClientKill")(
-        test("address") {
-          for {
-            address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
-            port    <- ZIO.succeed(42)
-            result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ADDR"), Value("127.0.0.1:42"))))
-        },
-        test("local address") {
-          for {
-            address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
-            port    <- ZIO.succeed(42)
-            result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
-          } yield assert(result)(equalTo(RespCommand(Literal("LADDR"), Value(s"127.0.0.1:42"))))
-        },
-        test("client id") {
-          for {
-            id     <- ZIO.succeed(42L)
-            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Id(id)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Value("42"))))
-        },
-        test("type") {
-          for {
-            clientType <- ZIO.succeed(ClientType.PubSub)
-            result     <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
-          } yield assert(result)(equalTo(RespCommand(Literal("TYPE"), Literal("PUBSUB"))))
-        },
-        test("user") {
-          for {
-            user   <- ZIO.succeed("Foo Bar")
-            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.User(user)))
-          } yield assert(result)(equalTo(RespCommand(Literal("USER"), Value("Foo Bar"))))
-        },
-        test("skip me") {
-          for {
-            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.SkipMe(true)))
-          } yield assert(result)(equalTo(RespCommand(Literal("SKIPME"), Literal("YES"))))
-        }
-      ),
-      suite("ClientPauseMode")(
-        test("all") {
-          for {
-            result <- ZIO.attempt(ClientPauseModeInput.encode(ClientPauseMode.All))
-          } yield assert(result)(equalTo(RespCommand(Literal("ALL"))))
-        },
-        test("write") {
-          for {
-            result <- ZIO.attempt(ClientPauseModeInput.encode(ClientPauseMode.Write))
-          } yield assert(result)(equalTo(RespCommand(Literal("WRITE"))))
-        }
-      ),
-      suite("ClientTracking")(
-        test("off") {
-          for {
-            result <- ZIO.attempt(ClientTrackingInput.encode(None))
-          } yield assert(result)(equalTo(RespCommand(Literal("OFF"))))
-        },
-        test("client redirect with noloop and prefixes") {
-          for {
-            clientId <- ZIO.succeed(42L)
-            prefixes <- ZIO.succeed(Chunk("prefix1", "prefix2", "prefix3"))
-            result   <- ZIO.attempt(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
-          } yield assert(result)(
-            equalTo(
-              RespCommand(Literal("ON"), Literal("REDIRECT"), Value(clientId.toString)) ++ prefixes
-                .map(p => RespCommand(Literal("PREFIX"), Value(p)))
-                .fold(RespCommand.empty)(_ ++ _) ++ RespCommand(Literal("NOLOOP"))
-            )
-          )
-        },
-        test("broadcast mode") {
-          for {
-            result <-
-              ZIO.attempt(
-                ClientTrackingInput.encode(Some((None, Some(ClientTrackingMode.Broadcast), false, Chunk.empty)))
-              )
-          } yield assert(result)(equalTo(RespCommand(Literal("ON"), Literal("BCAST"))))
-        }
-      ),
       suite("Copy")(
         test("valid value") {
           for {
@@ -1094,18 +1015,6 @@ object InputSpec extends BaseSpec {
           )
         }
       ),
-      suite("UnblockBehavior")(
-        test("timeout") {
-          for {
-            result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Timeout))
-          } yield assert(result)(equalTo(RespCommand(Value("TIMEOUT"))))
-        },
-        test("error") {
-          for {
-            result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Error))
-          } yield assert(result)(equalTo(RespCommand(Value("ERROR"))))
-        }
-      ),
       suite("Varargs")(
         test("with multiple elements") {
           for {
@@ -1386,18 +1295,6 @@ object InputSpec extends BaseSpec {
             resultWithoutOption <- ZIO.attempt(GetExPersistInput[String]().encode("key" -> false))
           } yield assert(result)(equalTo(RespCommand(Key("key"), Literal("PERSIST")))) &&
             assert(resultWithoutOption)(equalTo(RespCommand(Key("key"))))
-        }
-      ),
-      suite("YesNo")(
-        test("yes") {
-          for {
-            result <- ZIO.attempt(YesNoInput.encode(true))
-          } yield assert(result)(equalTo(RespCommand(Literal("YES"))))
-        },
-        test("no") {
-          for {
-            result <- ZIO.attempt(YesNoInput.encode(false))
-          } yield assert(result)(equalTo(RespCommand(Literal("NO"))))
         }
       )
     )

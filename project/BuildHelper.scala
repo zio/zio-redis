@@ -88,12 +88,9 @@ object BuildHelper {
   private def extraOptions(scalaVersion: String, optimize: Boolean) =
     CrossVersion.partialVersion(scalaVersion) match {
       case Some((3, _)) =>
-        List("-language:implicitConversions", "-Xignore-scala2-macros", "-Wconf:origin=scala.collection.compat.*:s")
+        List("-language:implicitConversions", "-Xignore-scala2-macros")
       case Some((2, 13)) =>
-        List(
-          "-Ywarn-unused:params,-implicits",
-          "-Wconf:origin=scala.collection.compat.*:s"
-        ) ++ std2xOptions ++ optimizerOptions(optimize)
+        List("-Ywarn-unused:params,-implicits") ++ std2xOptions ++ optimizerOptions(optimize)
       case Some((2, 12)) =>
         List(
           "-opt-warnings",
