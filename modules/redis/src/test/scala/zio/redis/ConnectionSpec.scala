@@ -30,15 +30,6 @@ trait ConnectionSpec extends BaseSpec {
           name  <- redis.clientGetName
         } yield assert(name.getOrElse(""))(equalTo("foo"))
       } @@ clusterExecutorUnsupported,
-      suite("clientUnblock")(
-        test("unblock client that isn't blocked") {
-          for {
-            redis <- ZIO.service[Redis]
-            id    <- redis.clientId
-            bool  <- redis.clientUnblock(id)
-          } yield assert(bool)(equalTo(false))
-        }
-      ),
       suite("ping")(
         test("PING with no input") {
           ZIO.serviceWithZIO[Redis](_.ping(None).map(assert(_)(equalTo("PONG"))))

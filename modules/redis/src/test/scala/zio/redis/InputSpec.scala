@@ -1015,18 +1015,6 @@ object InputSpec extends BaseSpec {
           )
         }
       ),
-      suite("UnblockBehavior")(
-        test("timeout") {
-          for {
-            result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Timeout))
-          } yield assert(result)(equalTo(RespCommand(Value("TIMEOUT"))))
-        },
-        test("error") {
-          for {
-            result <- ZIO.attempt(UnblockBehaviorInput.encode(UnblockBehavior.Error))
-          } yield assert(result)(equalTo(RespCommand(Value("ERROR"))))
-        }
-      ),
       suite("Varargs")(
         test("with multiple elements") {
           for {

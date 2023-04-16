@@ -22,18 +22,4 @@ trait Connection {
   sealed case class Address(ip: InetAddress, port: Int) {
     private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
   }
-
-  sealed trait UnblockBehavior { self =>
-    private[redis] final def asString: String =
-      self match {
-        case UnblockBehavior.Timeout => "TIMEOUT"
-        case UnblockBehavior.Error   => "ERROR"
-      }
-  }
-
-  object UnblockBehavior {
-    case object Timeout extends UnblockBehavior
-    case object Error   extends UnblockBehavior
-  }
-
 }

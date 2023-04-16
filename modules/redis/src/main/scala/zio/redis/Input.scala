@@ -559,11 +559,6 @@ object Input {
         _9.encode(data._9) ++ _10.encode(data._10) ++ _11.encode(data._11)
   }
 
-  case object UnblockBehaviorInput extends Input[UnblockBehavior] {
-    def encode(data: UnblockBehavior): RespCommand =
-      RespCommand(RespCommandArgument.Value(data.asString))
-  }
-
   case object UpdateInput extends Input[Update] {
     def encode(data: Update): RespCommand =
       RespCommand(RespCommandArgument.Value(data.asString))

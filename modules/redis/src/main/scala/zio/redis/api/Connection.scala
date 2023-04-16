@@ -103,23 +103,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Unblocks, from a different connection, a client blocked in a blocking operation
-   *
-   * @param clientId
-   *   the ID of the client to unblock
-   * @param error
-   *   option to specify the unblocking behavior
-   * @return
-   *   true if the client was unblocked successfully, or false if the client wasn't unblocked.
-   */
-  final def clientUnblock(clientId: Long, error: Option[UnblockBehavior] = None): IO[RedisError, Boolean] = {
-    val command =
-      RedisCommand(ClientUnblock, Tuple2(LongInput, OptionalInput(UnblockBehaviorInput)), BoolOutput, executor)
-
-    command.run((clientId, error))
-  }
-
-  /**
    * Pings the server.
    *
    * @param message
@@ -156,7 +139,6 @@ private[redis] object Connection {
   final val ClientGetName = "CLIENT GETNAME"
   final val ClientId      = "CLIENT ID"
   final val ClientSetName = "CLIENT SETNAME"
-  final val ClientUnblock = "CLIENT UNBLOCK"
   final val Ping          = "PING"
   final val Select        = "SELECT"
 }
