@@ -45,18 +45,6 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(clientsKilled)(equalTo(0L))
         }
       ),
-      suite("client pause and unpause")(
-        test("clientPause") {
-          for {
-            unit <- ZIO.serviceWithZIO[Redis](_.clientPause(1.second, Some(ClientPauseMode.All)))
-          } yield assert(unit)(isUnit)
-        },
-        test("clientUnpause") {
-          for {
-            unit <- ZIO.serviceWithZIO[Redis](_.clientUnpause)
-          } yield assert(unit)(isUnit)
-        }
-      ),
       test("set and get name") {
         for {
           redis <- ZIO.service[Redis]

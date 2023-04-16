@@ -265,18 +265,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("SKIPME"), Literal("YES"))))
         }
       ),
-      suite("ClientPauseMode")(
-        test("all") {
-          for {
-            result <- ZIO.attempt(ClientPauseModeInput.encode(ClientPauseMode.All))
-          } yield assert(result)(equalTo(RespCommand(Literal("ALL"))))
-        },
-        test("write") {
-          for {
-            result <- ZIO.attempt(ClientPauseModeInput.encode(ClientPauseMode.Write))
-          } yield assert(result)(equalTo(RespCommand(Literal("WRITE"))))
-        }
-      ),
       suite("Copy")(
         test("valid value") {
           for {

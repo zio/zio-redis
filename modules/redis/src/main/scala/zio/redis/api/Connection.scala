@@ -129,30 +129,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Able to suspend all the Redis clients for the specified amount of time (in milliseconds). Currently supports two
-   * modes:
-   *   - All: This is the default mode. All client commands are blocked
-   *   - Write: Clients are only blocked if they attempt to execute a write command
-   *
-   * @param timeout
-   *   the length of the pause in milliseconds
-   * @param mode
-   *   option to specify the client pause mode
-   * @return
-   *   the Unit value.
-   */
-  final def clientPause(timeout: Duration, mode: Option[ClientPauseMode] = None): IO[RedisError, Unit] = {
-    val command = RedisCommand(
-      ClientPause,
-      Tuple2(DurationMillisecondsInput, OptionalInput(ClientPauseModeInput)),
-      UnitOutput,
-      executor
-    )
-
-    command.run((timeout, mode))
-  }
-
-  /**
    * Assigns a name to the current connection
    *
    * @param name
@@ -181,18 +157,6 @@ trait Connection extends RedisEnvironment {
       RedisCommand(ClientUnblock, Tuple2(LongInput, OptionalInput(UnblockBehaviorInput)), BoolOutput, executor)
 
     command.run((clientId, error))
-  }
-
-  /**
-   * Resumes command processing for all clients that were paused by clientPause
-   *
-   * @return
-   *   the Unit value.
-   */
-  final def clientUnpause: IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientUnpause, NoInput, UnitOutput, executor)
-
-    command.run(())
   }
 
   /**
@@ -228,14 +192,12 @@ trait Connection extends RedisEnvironment {
 }
 
 private[redis] object Connection {
-  final val Auth           = "AUTH"
-  final val ClientGetName  = "CLIENT GETNAME"
-  final val ClientId       = "CLIENT ID"
-  final val ClientKill     = "CLIENT KILL"
-  final val ClientPause    = "CLIENT PAUSE"
-  final val ClientSetName  = "CLIENT SETNAME"
-  final val ClientUnblock  = "CLIENT UNBLOCK"
-  final val ClientUnpause  = "CLIENT UNPAUSE"
-  final val Ping           = "PING"
-  final val Select         = "SELECT"
+  final val Auth          = "AUTH"
+  final val ClientGetName = "CLIENT GETNAME"
+  final val ClientId      = "CLIENT ID"
+  final val ClientKill    = "CLIENT KILL"
+  final val ClientSetName = "CLIENT SETNAME"
+  final val ClientUnblock = "CLIENT UNBLOCK"
+  final val Ping          = "PING"
+  final val Select        = "SELECT"
 }

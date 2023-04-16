@@ -156,16 +156,6 @@ object Input {
     }
   }
 
-  case object ClientPauseModeInput extends Input[ClientPauseMode] {
-    def encode(data: ClientPauseMode): RespCommand =
-      RespCommand(RespCommandArgument.Literal(data.asString))
-  }
-
-  case object ClientTypeInput extends Input[ClientType] {
-    def encode(data: ClientType): RespCommand =
-      RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(data.asString))
-  }
-
   case object CommandNameInput extends Input[String] {
     def encode(data: String): RespCommand =
       RespCommand(RespCommandArgument.CommandName(data))

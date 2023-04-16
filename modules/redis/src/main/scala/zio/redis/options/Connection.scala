@@ -38,19 +38,6 @@ trait Connection {
     sealed case class SkipMe(skip: Boolean)        extends ClientKillFilter
   }
 
-  sealed trait ClientPauseMode { self =>
-    private[redis] final def asString: String =
-      self match {
-        case ClientPauseMode.All   => "ALL"
-        case ClientPauseMode.Write => "WRITE"
-      }
-  }
-
-  object ClientPauseMode {
-    case object All   extends ClientPauseMode
-    case object Write extends ClientPauseMode
-  }
-
   sealed trait ClientType { self =>
     private[redis] final def asString: String =
       self match {
