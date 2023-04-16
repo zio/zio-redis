@@ -139,63 +139,6 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
-  case object ClientKillInput extends Input[ClientKillFilter] {
-    def encode(data: ClientKillFilter): RespCommand = data match {
-      case addr: ClientKillFilter.Address =>
-        RespCommand(RespCommandArgument.Literal("ADDR"), RespCommandArgument.Value(addr.asString))
-      case laddr: ClientKillFilter.LocalAddress =>
-        RespCommand(RespCommandArgument.Literal("LADDR"), RespCommandArgument.Value(laddr.asString))
-      case ClientKillFilter.Id(clientId) =>
-        RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Value(clientId.toString))
-      case ClientKillFilter.Type(clientType) =>
-        RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(clientType.asString))
-      case ClientKillFilter.User(username) =>
-        RespCommand(RespCommandArgument.Literal("USER"), RespCommandArgument.Value(username))
-      case ClientKillFilter.SkipMe(skip) =>
-        RespCommand(RespCommandArgument.Literal("SKIPME"), RespCommandArgument.Literal(if (skip) "YES" else "NO"))
-    }
-  }
-
-  case object ClientPauseModeInput extends Input[ClientPauseMode] {
-    def encode(data: ClientPauseMode): RespCommand =
-      RespCommand(RespCommandArgument.Literal(data.asString))
-  }
-
-  case object ClientTrackingInput
-      extends Input[Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]] {
-    def encode(
-      data: Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]
-    ): RespCommand =
-      data match {
-        case Some((clientRedir, mode, noLoop, prefixes)) =>
-          val modeChunk = mode match {
-            case Some(ClientTrackingMode.OptIn)     => RespCommand(RespCommandArgument.Literal("OPTIN"))
-            case Some(ClientTrackingMode.OptOut)    => RespCommand(RespCommandArgument.Literal("OPTOUT"))
-            case Some(ClientTrackingMode.Broadcast) => RespCommand(RespCommandArgument.Literal("BCAST"))
-            case None                               => RespCommand.empty
-          }
-          val loopChunk = if (noLoop) RespCommand(RespCommandArgument.Literal("NOLOOP")) else RespCommand.empty
-          RespCommand(RespCommandArgument.Literal("ON")) ++
-            clientRedir.fold(RespCommand.empty)(id =>
-              RespCommand(RespCommandArgument.Literal("REDIRECT"), RespCommandArgument.Value(id.toString))
-            ) ++
-            RespCommand(
-              prefixes.flatMap(prefix =>
-                Chunk(RespCommandArgument.Literal("PREFIX"), RespCommandArgument.Value(prefix))
-              )
-            ) ++
-            modeChunk ++
-            loopChunk
-        case None =>
-          RespCommand(RespCommandArgument.Literal("OFF"))
-      }
-  }
-
-  case object ClientTypeInput extends Input[ClientType] {
-    def encode(data: ClientType): RespCommand =
-      RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(data.asString))
-  }
-
   case object CommandNameInput extends Input[String] {
     def encode(data: String): RespCommand =
       RespCommand(RespCommandArgument.CommandName(data))
@@ -616,11 +559,6 @@ object Input {
         _9.encode(data._9) ++ _10.encode(data._10) ++ _11.encode(data._11)
   }
 
-  case object UnblockBehaviorInput extends Input[UnblockBehavior] {
-    def encode(data: UnblockBehavior): RespCommand =
-      RespCommand(RespCommandArgument.Value(data.asString))
-  }
-
   case object UpdateInput extends Input[Update] {
     def encode(data: Update): RespCommand =
       RespCommand(RespCommandArgument.Value(data.asString))
@@ -734,10 +672,5 @@ object Input {
         RespCommandArgument.Value(data.group),
         RespCommandArgument.Value(data.id)
       )
-  }
-
-  case object YesNoInput extends Input[Boolean] {
-    def encode(data: Boolean): RespCommand =
-      RespCommand(RespCommandArgument.Literal(if (data) "YES" else "NO"))
   }
 }
