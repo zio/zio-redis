@@ -61,21 +61,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Controls the tracking of the keys in the next command executed by the connection, when tracking is enabled in Optin
-   * or Optout mode.
-   *
-   * @param track
-   *   specifies whether to enable the tracking of the keys in the next command or not
-   * @return
-   *   the Unit value.
-   */
-  final def clientCaching(track: Boolean): IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientCaching, YesNoInput, UnitOutput, executor)
-
-    command.run(track)
-  }
-
-  /**
    * Returns the name of the current connection as set by clientSetName
    *
    * @return
@@ -244,7 +229,6 @@ trait Connection extends RedisEnvironment {
 
 private[redis] object Connection {
   final val Auth           = "AUTH"
-  final val ClientCaching  = "CLIENT CACHING"
   final val ClientGetName  = "CLIENT GETNAME"
   final val ClientId       = "CLIENT ID"
   final val ClientKill     = "CLIENT KILL"

@@ -1359,18 +1359,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Key("key"), Literal("PERSIST")))) &&
             assert(resultWithoutOption)(equalTo(RespCommand(Key("key"))))
         }
-      ),
-      suite("YesNo")(
-        test("yes") {
-          for {
-            result <- ZIO.attempt(YesNoInput.encode(true))
-          } yield assert(result)(equalTo(RespCommand(Literal("YES"))))
-        },
-        test("no") {
-          for {
-            result <- ZIO.attempt(YesNoInput.encode(false))
-          } yield assert(result)(equalTo(RespCommand(Literal("NO"))))
-        }
       )
     )
 }

@@ -705,9 +705,4 @@ object Input {
         RespCommandArgument.Value(data.id)
       )
   }
-
-  case object YesNoInput extends Input[Boolean] {
-    def encode(data: Boolean): RespCommand =
-      RespCommand(RespCommandArgument.Literal(if (data) "YES" else "NO"))
-  }
 }
