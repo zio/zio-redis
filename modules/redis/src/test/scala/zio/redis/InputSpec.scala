@@ -226,45 +226,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("CH"))))
         }
       ),
-      suite("ClientKill")(
-        test("address") {
-          for {
-            address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
-            port    <- ZIO.succeed(42)
-            result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Address(address, port)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ADDR"), Value("127.0.0.1:42"))))
-        },
-        test("local address") {
-          for {
-            address <- ZIO.succeed(InetAddress.getByName("127.0.0.1"))
-            port    <- ZIO.succeed(42)
-            result  <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.LocalAddress(address, port)))
-          } yield assert(result)(equalTo(RespCommand(Literal("LADDR"), Value(s"127.0.0.1:42"))))
-        },
-        test("client id") {
-          for {
-            id     <- ZIO.succeed(42L)
-            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Id(id)))
-          } yield assert(result)(equalTo(RespCommand(Literal("ID"), Value("42"))))
-        },
-        test("type") {
-          for {
-            clientType <- ZIO.succeed(ClientType.PubSub)
-            result     <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.Type(clientType)))
-          } yield assert(result)(equalTo(RespCommand(Literal("TYPE"), Literal("PUBSUB"))))
-        },
-        test("user") {
-          for {
-            user   <- ZIO.succeed("Foo Bar")
-            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.User(user)))
-          } yield assert(result)(equalTo(RespCommand(Literal("USER"), Value("Foo Bar"))))
-        },
-        test("skip me") {
-          for {
-            result <- ZIO.attempt(ClientKillInput.encode(ClientKillFilter.SkipMe(true)))
-          } yield assert(result)(equalTo(RespCommand(Literal("SKIPME"), Literal("YES"))))
-        }
-      ),
       suite("Copy")(
         test("valid value") {
           for {

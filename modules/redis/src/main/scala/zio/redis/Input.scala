@@ -139,23 +139,6 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
-  case object ClientKillInput extends Input[ClientKillFilter] {
-    def encode(data: ClientKillFilter): RespCommand = data match {
-      case addr: ClientKillFilter.Address =>
-        RespCommand(RespCommandArgument.Literal("ADDR"), RespCommandArgument.Value(addr.asString))
-      case laddr: ClientKillFilter.LocalAddress =>
-        RespCommand(RespCommandArgument.Literal("LADDR"), RespCommandArgument.Value(laddr.asString))
-      case ClientKillFilter.Id(clientId) =>
-        RespCommand(RespCommandArgument.Literal("ID"), RespCommandArgument.Value(clientId.toString))
-      case ClientKillFilter.Type(clientType) =>
-        RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(clientType.asString))
-      case ClientKillFilter.User(username) =>
-        RespCommand(RespCommandArgument.Literal("USER"), RespCommandArgument.Value(username))
-      case ClientKillFilter.SkipMe(skip) =>
-        RespCommand(RespCommandArgument.Literal("SKIPME"), RespCommandArgument.Literal(if (skip) "YES" else "NO"))
-    }
-  }
-
   case object CommandNameInput extends Input[String] {
     def encode(data: String): RespCommand =
       RespCommand(RespCommandArgument.CommandName(data))

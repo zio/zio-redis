@@ -5,8 +5,6 @@ import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 
-import java.net.InetAddress
-
 trait ConnectionSpec extends BaseSpec {
   def connectionSuite: Spec[Redis, RedisError] =
     suite("connection")(
@@ -23,26 +21,6 @@ trait ConnectionSpec extends BaseSpec {
           for {
             id <- ZIO.serviceWithZIO[Redis](_.clientId)
           } yield assert(id)(isGreaterThan(0L))
-        }
-      ),
-      suite("clientKill")(
-        test("error when a connection with the specified address doesn't exist") {
-          for {
-            error <- ZIO.serviceWithZIO[Redis](_.clientKill(Address(InetAddress.getByName("0.0.0.0"), 0)).either)
-          } yield assert(error)(isLeft)
-        },
-        test("specify filters that don't kill the connection") {
-          for {
-            clientsKilled <-
-              ZIO.serviceWithZIO[Redis](_.clientKill(ClientKillFilter.SkipMe(false), ClientKillFilter.Id(3341L)))
-          } yield assert(clientsKilled)(equalTo(0L))
-        },
-        test("specify filters that kill the connection but skipme is enabled") {
-          for {
-            redis         <- ZIO.service[Redis]
-            id            <- redis.clientId
-            clientsKilled <- redis.clientKill(ClientKillFilter.SkipMe(true), ClientKillFilter.Id(id))
-          } yield assert(clientsKilled)(equalTo(0L))
         }
       ),
       test("set and get name") {

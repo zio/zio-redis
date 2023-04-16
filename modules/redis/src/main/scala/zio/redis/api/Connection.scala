@@ -89,46 +89,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Closes a given client connection with the specified address
-   *
-   * @param address
-   *   the address of the client to kill
-   * @return
-   *   the Unit value.
-   */
-  final def clientKill(address: Address): IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientKill, AddressInput, UnitOutput, executor)
-
-    command.run(address)
-  }
-
-  /**
-   * Closes client connections with the specified filters.The following filters are available:
-   *   - Address(ip, port). Kill all clients connected to specified address
-   *   - LocalAddress(ip, port). Kill all clients connected to specified local (bind) address
-   *   - Id(id). Allows to kill a client by its unique ID field. Client ID's are retrieved using the CLIENT LIST command
-   *   - ClientType, where the type is one of normal, master, replica and pubsub. This closes the connections of all the
-   *     clients in the specified class. Note that clients blocked into the MONITOR command are considered to belong to
-   *     the normal class
-   *   - User(username). Closes all the connections that are authenticated with the specified ACL username, however it
-   *     returns an error if the username does not map to an existing ACL user
-   *   - SkipMe(skip). By default this option is set to yes, that is, the client calling the command will not get
-   *     killed, however setting this option to no will have the effect of also killing the client calling the command
-   *     It is possible to provide multiple filters at the same time. The command will handle multiple filters via
-   *     logical AND
-   *
-   * @param filters
-   *   the specified filters for killing clients
-   * @return
-   *   the number of clients killed.
-   */
-  final def clientKill(filters: ClientKillFilter*): IO[RedisError, Long] = {
-    val command = RedisCommand(ClientKill, Varargs(ClientKillInput), LongOutput, executor)
-
-    command.run(filters)
-  }
-
-  /**
    * Assigns a name to the current connection
    *
    * @param name
@@ -195,7 +155,6 @@ private[redis] object Connection {
   final val Auth          = "AUTH"
   final val ClientGetName = "CLIENT GETNAME"
   final val ClientId      = "CLIENT ID"
-  final val ClientKill    = "CLIENT KILL"
   final val ClientSetName = "CLIENT SETNAME"
   final val ClientUnblock = "CLIENT UNBLOCK"
   final val Ping          = "PING"

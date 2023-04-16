@@ -23,38 +23,6 @@ trait Connection {
     private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
   }
 
-  sealed trait ClientKillFilter
-
-  object ClientKillFilter {
-    sealed case class Address(ip: InetAddress, port: Int) extends ClientKillFilter {
-      private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
-    }
-    sealed case class LocalAddress(ip: InetAddress, port: Int) extends ClientKillFilter {
-      private[redis] final def asString: String = s"${ip.getHostAddress}:$port"
-    }
-    sealed case class Id(id: Long)                 extends ClientKillFilter
-    sealed case class Type(clientType: ClientType) extends ClientKillFilter
-    sealed case class User(username: String)       extends ClientKillFilter
-    sealed case class SkipMe(skip: Boolean)        extends ClientKillFilter
-  }
-
-  sealed trait ClientType { self =>
-    private[redis] final def asString: String =
-      self match {
-        case ClientType.Normal  => "NORMAL"
-        case ClientType.Master  => "MASTER"
-        case ClientType.Replica => "REPLICA"
-        case ClientType.PubSub  => "PUBSUB"
-      }
-  }
-
-  object ClientType {
-    case object Normal  extends ClientType
-    case object Master  extends ClientType
-    case object Replica extends ClientType
-    case object PubSub  extends ClientType
-  }
-
   sealed trait UnblockBehavior { self =>
     private[redis] final def asString: String =
       self match {
