@@ -88,18 +88,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Returns the client ID we are redirecting our tracking notifications to
-   *
-   * @return
-   *   the client ID if the tracking is enabled and the notifications are being redirected
-   */
-  final def clientGetRedir: IO[RedisError, ClientTrackingRedirect] = {
-    val command = RedisCommand(ClientGetRedir, NoInput, ClientTrackingRedirectOutput, executor)
-
-    command.run(())
-  }
-
-  /**
    * Returns the ID of the current connection. Every connection ID has certain guarantees:
    *   - It is never repeated, so if clientID returns the same number, the caller can be sure that the underlying client
    *     did not disconnect and reconnect the connection, but it is still the same connection.
@@ -258,7 +246,6 @@ private[redis] object Connection {
   final val Auth           = "AUTH"
   final val ClientCaching  = "CLIENT CACHING"
   final val ClientGetName  = "CLIENT GETNAME"
-  final val ClientGetRedir = "CLIENT GETREDIR"
   final val ClientId       = "CLIENT ID"
   final val ClientKill     = "CLIENT KILL"
   final val ClientPause    = "CLIENT PAUSE"

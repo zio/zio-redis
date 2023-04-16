@@ -886,32 +886,6 @@ object OutputSpec extends BaseSpec {
             )
           }
         )
-      ),
-      suite("ClientTrackingRedirect")(
-        test("extract not enabled") {
-          for {
-            resp <- ZIO.succeed(RespValue.Integer(-1L))
-            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(ClientTrackingRedirect.NotEnabled))
-        },
-        test("extract not redirected") {
-          for {
-            resp <- ZIO.succeed(RespValue.Integer(0L))
-            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(ClientTrackingRedirect.NotRedirected))
-        },
-        test("extract redirect id") {
-          for {
-            resp <- ZIO.succeed(RespValue.Integer(42L))
-            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp))
-          } yield assert(res)(equalTo(ClientTrackingRedirect.RedirectedTo(resp.value)))
-        },
-        test("error when redirect id is invalid") {
-          for {
-            resp <- ZIO.succeed(RespValue.Integer(-42L))
-            res  <- ZIO.attempt(ClientTrackingRedirectOutput.unsafeDecode(resp)).either
-          } yield assert(res)(isLeft(isSubtype[ProtocolError](anything)))
-        }
       )
     )
 

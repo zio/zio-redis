@@ -51,14 +51,6 @@ trait Connection {
     case object Write extends ClientPauseMode
   }
 
-  sealed trait ClientTrackingRedirect
-
-  object ClientTrackingRedirect {
-    case object NotEnabled                         extends ClientTrackingRedirect
-    case object NotRedirected                      extends ClientTrackingRedirect
-    sealed case class RedirectedTo(clientId: Long) extends ClientTrackingRedirect
-  }
-
   sealed trait ClientType { self =>
     private[redis] final def asString: String =
       self match {

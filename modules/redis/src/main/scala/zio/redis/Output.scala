@@ -92,16 +92,6 @@ object Output {
       }
   }
 
-  case object ClientTrackingRedirectOutput extends Output[ClientTrackingRedirect] {
-    protected def tryDecode(respValue: RespValue): ClientTrackingRedirect =
-      respValue match {
-        case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
-        case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
-        case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
-        case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
-      }
-  }
-
   case object ClusterPartitionNodeOutput extends Output[Node] {
     protected def tryDecode(respValue: RespValue): Node =
       respValue match {
