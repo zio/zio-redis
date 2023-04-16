@@ -277,34 +277,6 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("WRITE"))))
         }
       ),
-      suite("ClientTracking")(
-        test("off") {
-          for {
-            result <- ZIO.attempt(ClientTrackingInput.encode(None))
-          } yield assert(result)(equalTo(RespCommand(Literal("OFF"))))
-        },
-        test("client redirect with noloop and prefixes") {
-          for {
-            clientId <- ZIO.succeed(42L)
-            prefixes <- ZIO.succeed(Chunk("prefix1", "prefix2", "prefix3"))
-            result   <- ZIO.attempt(ClientTrackingInput.encode(Some((Some(clientId), None, true, prefixes))))
-          } yield assert(result)(
-            equalTo(
-              RespCommand(Literal("ON"), Literal("REDIRECT"), Value(clientId.toString)) ++ prefixes
-                .map(p => RespCommand(Literal("PREFIX"), Value(p)))
-                .fold(RespCommand.empty)(_ ++ _) ++ RespCommand(Literal("NOLOOP"))
-            )
-          )
-        },
-        test("broadcast mode") {
-          for {
-            result <-
-              ZIO.attempt(
-                ClientTrackingInput.encode(Some((None, Some(ClientTrackingMode.Broadcast), false, Chunk.empty)))
-              )
-          } yield assert(result)(equalTo(RespCommand(Literal("ON"), Literal("BCAST"))))
-        }
-      ),
       suite("Copy")(
         test("valid value") {
           for {

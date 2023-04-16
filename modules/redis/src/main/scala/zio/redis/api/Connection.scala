@@ -194,42 +194,6 @@ trait Connection extends RedisEnvironment {
   }
 
   /**
-   * Disables the tracking feature of the Redis server, that is used for server assisted client side caching
-   *
-   * @return
-   *   the Unit value.
-   */
-  final def clientTrackingOff: IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput, executor)
-    command.run(None)
-  }
-
-  /**
-   * Enables the tracking feature of the Redis server, that is used for server assisted client side caching. The feature
-   * will remain active in the current connection for all its life, unless tracking is turned off with clientTrackingOff
-   *
-   * @param redirect
-   *   the ID of the connection we want to send invalidation messages to
-   * @param trackingMode
-   *   the mode used for tracking
-   * @param noLoop
-   *   no loop option
-   * @param prefixes
-   *   the prefixes registered
-   * @return
-   *   the Unit value.
-   */
-  final def clientTrackingOn(
-    redirect: Option[Long] = None,
-    trackingMode: Option[ClientTrackingMode] = None,
-    noLoop: Boolean = false,
-    prefixes: Set[String] = Set.empty
-  ): IO[RedisError, Unit] = {
-    val command = RedisCommand(ClientTracking, ClientTrackingInput, UnitOutput, executor)
-    command.run(Some((redirect, trackingMode, noLoop, Chunk.fromIterable(prefixes))))
-  }
-
-  /**
    * Unblocks, from a different connection, a client blocked in a blocking operation
    *
    * @param clientId
@@ -299,7 +263,6 @@ private[redis] object Connection {
   final val ClientKill     = "CLIENT KILL"
   final val ClientPause    = "CLIENT PAUSE"
   final val ClientSetName  = "CLIENT SETNAME"
-  final val ClientTracking = "CLIENT TRACKING"
   final val ClientUnblock  = "CLIENT UNBLOCK"
   final val ClientUnpause  = "CLIENT UNPAUSE"
   final val Ping           = "PING"

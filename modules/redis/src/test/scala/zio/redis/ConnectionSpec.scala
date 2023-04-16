@@ -45,22 +45,6 @@ trait ConnectionSpec extends BaseSpec {
           } yield assert(clientsKilled)(equalTo(0L))
         }
       ),
-      suite("clientGetRedir")(
-        test("tracking disabled") {
-          for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.clientTrackingOff
-            redir <- redis.clientGetRedir
-          } yield assert(redir)(equalTo(ClientTrackingRedirect.NotEnabled))
-        },
-        test("tracking enabled but not redirecting") {
-          for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.clientTrackingOn()
-            redir <- redis.clientGetRedir
-          } yield assert(redir)(equalTo(ClientTrackingRedirect.NotRedirected))
-        }
-      ),
       suite("client pause and unpause")(
         test("clientPause") {
           for {

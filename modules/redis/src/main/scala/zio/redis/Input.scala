@@ -161,36 +161,6 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
-  case object ClientTrackingInput
-      extends Input[Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]] {
-    def encode(
-      data: Option[(Option[Long], Option[ClientTrackingMode], Boolean, Chunk[String])]
-    ): RespCommand =
-      data match {
-        case Some((clientRedir, mode, noLoop, prefixes)) =>
-          val modeChunk = mode match {
-            case Some(ClientTrackingMode.OptIn)     => RespCommand(RespCommandArgument.Literal("OPTIN"))
-            case Some(ClientTrackingMode.OptOut)    => RespCommand(RespCommandArgument.Literal("OPTOUT"))
-            case Some(ClientTrackingMode.Broadcast) => RespCommand(RespCommandArgument.Literal("BCAST"))
-            case None                               => RespCommand.empty
-          }
-          val loopChunk = if (noLoop) RespCommand(RespCommandArgument.Literal("NOLOOP")) else RespCommand.empty
-          RespCommand(RespCommandArgument.Literal("ON")) ++
-            clientRedir.fold(RespCommand.empty)(id =>
-              RespCommand(RespCommandArgument.Literal("REDIRECT"), RespCommandArgument.Value(id.toString))
-            ) ++
-            RespCommand(
-              prefixes.flatMap(prefix =>
-                Chunk(RespCommandArgument.Literal("PREFIX"), RespCommandArgument.Value(prefix))
-              )
-            ) ++
-            modeChunk ++
-            loopChunk
-        case None =>
-          RespCommand(RespCommandArgument.Literal("OFF"))
-      }
-  }
-
   case object ClientTypeInput extends Input[ClientType] {
     def encode(data: ClientType): RespCommand =
       RespCommand(RespCommandArgument.Literal("TYPE"), RespCommandArgument.Literal(data.asString))

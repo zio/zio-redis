@@ -51,22 +51,6 @@ trait Connection {
     case object Write extends ClientPauseMode
   }
 
-  sealed trait ClientTrackingMode { self =>
-    private[redis] final def asString: String =
-      self match {
-        case ClientTrackingMode.OptIn     => "OPTIN"
-        case ClientTrackingMode.OptOut    => "OPTOUT"
-        case ClientTrackingMode.Broadcast => "BCAST"
-      }
-
-  }
-
-  object ClientTrackingMode {
-    case object OptIn     extends ClientTrackingMode
-    case object OptOut    extends ClientTrackingMode
-    case object Broadcast extends ClientTrackingMode
-  }
-
   sealed trait ClientTrackingRedirect
 
   object ClientTrackingRedirect {
