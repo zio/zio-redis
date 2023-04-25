@@ -18,6 +18,24 @@ trait KeysSpec extends BaseSpec {
           v     <- redis.get(key).returning[String]
         } yield assert(v)(isSome(equalTo(value)))
       },
+      test("setGet with non-existing key") {
+        for {
+          redis <- ZIO.service[Redis]
+          key   <- uuid
+          value <- uuid
+          v     <- redis.setGet(key, value)
+        } yield assert(v)(isNone)
+      },
+      test("setGet with the existing key") {
+        for {
+          redis    <- ZIO.service[Redis]
+          value    <- uuid
+          key      <- uuid
+          _        <- redis.set(key, value)
+          newValue <- uuid
+          v        <- redis.setGet(key, newValue)
+        } yield assert(v)(isSome(equalTo(value)))
+      },
       test("get non-existing key") {
         for {
           redis <- ZIO.service[Redis]
@@ -359,7 +377,7 @@ trait KeysSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
-            _     <- redis.zAdd(key)(MemberScore(1d, value))
+            _     <- redis.zAdd(key)(MemberScore(value, 1d))
             zset  <- redis.typeOf(key)
           } yield assert(zset)(equalTo(RedisType.SortedSet))
         },
@@ -481,9 +499,8 @@ object KeysSpec {
     ZLayer
       .make[Redis](
         ZLayer.succeed(RedisConfig("localhost", 6380)),
-        SingleNodeExecutor.layer,
         ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
-        Redis.layer
+        Redis.singleNode
       )
       .fresh
 }

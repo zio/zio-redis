@@ -202,50 +202,6 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
-   * Get a substring of the string stored at key.
-   *
-   * @param key
-   *   Key of the string to get a substring of
-   * @param range
-   *   Range of the substring
-   * @return
-   *   Returns the substring.
-   */
-  final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[R: Schema]: IO[RedisError, Option[R]] =
-        RedisCommand(
-          GetRange,
-          Tuple2(ArbitraryKeyInput[K](), RangeInput),
-          OptionalOutput(ArbitraryOutput[R]()),
-          executor
-        )
-          .run((key, range))
-    }
-
-  /**
-   * Set the string value of a key and return its old value.
-   *
-   * @param key
-   *   Key of string to set
-   * @param value
-   *   New value of the string
-   * @return
-   *   Returns the previous value of the string or None if it did not previously have a value.
-   */
-  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[R: Schema]: IO[RedisError, Option[R]] =
-        RedisCommand(
-          GetSet,
-          Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()),
-          OptionalOutput(ArbitraryOutput[R]()),
-          executor
-        )
-          .run((key, value))
-    }
-
-  /**
    * Get the string value of a key and delete it on success (if and only if the key's value type is a string).
    *
    * @param key
@@ -317,6 +273,50 @@ trait Strings extends RedisEnvironment {
     }
 
   /**
+   * Get a substring of the string stored at key.
+   *
+   * @param key
+   *   Key of the string to get a substring of
+   * @param range
+   *   Range of the substring
+   * @return
+   *   Returns the substring.
+   */
+  final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(
+          GetRange,
+          Tuple2(ArbitraryKeyInput[K](), RangeInput),
+          OptionalOutput(ArbitraryOutput[R]()),
+          executor
+        )
+          .run((key, range))
+    }
+
+  /**
+   * Set the string value of a key and return its old value.
+   *
+   * @param key
+   *   Key of string to set
+   * @param value
+   *   New value of the string
+   * @return
+   *   Returns the previous value of the string or None if it did not previously have a value.
+   */
+  final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[R: Schema]: IO[RedisError, Option[R]] =
+        RedisCommand(
+          GetSet,
+          Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()),
+          OptionalOutput(ArbitraryOutput[R]()),
+          executor
+        )
+          .run((key, value))
+    }
+
+  /**
    * Increment the integer value of a key by one.
    *
    * @param key
@@ -358,6 +358,35 @@ trait Strings extends RedisEnvironment {
   final def incrByFloat[K: Schema](key: K, increment: Double): IO[RedisError, Double] = {
     val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryKeyInput[K](), DoubleInput), DoubleOutput, executor)
     command.run((key, increment))
+  }
+
+  /**
+   * Get the longest common subsequence of values stored in the given keys.
+   *
+   * @param keyA
+   *   first value that will contain subsequence
+   * @param keyB
+   *   second value that will contain subsequence
+   * @param lcsQueryType
+   *   modifier that will affect the output
+   * @return
+   *   Without modifiers returns the string representing the longest common substring. When LEN is given the command
+   *   returns the length of the longest common substring. When IDX is given the command returns an array with the LCS
+   *   length and all the ranges in both the strings, start and end offset for each string, where there are matches.
+   *   When withMatchLen is given each array representing a match will also have the length of the match (see examples).
+   */
+  final def lcs[K: Schema](keyA: K, keyB: K, lcsQueryType: Option[LcsQueryType] = None): IO[RedisError, Lcs] = {
+    val redisCommand = RedisCommand(
+      Lcs,
+      Tuple3(
+        ArbitraryKeyInput[K](),
+        ArbitraryKeyInput[K](),
+        OptionalInput(LcsQueryTypeInput)
+      ),
+      LcsOutput,
+      executor
+    )
+    redisCommand.run((keyA, keyB, lcsQueryType))
   }
 
   /**
@@ -524,6 +553,42 @@ trait Strings extends RedisEnvironment {
   }
 
   /**
+   * Set the string value of a key with a 'GET' option.
+   *
+   * @param key
+   *   Key of the string to set
+   * @param value
+   *   Value to set
+   * @param expireTime
+   *   Time until the string expires
+   * @param update
+   *   Update can be Update.SetExisting which only sets the key if it exists, or Update.SetNew which nly sets the key if
+   *   it does not exist
+   * @param keepTtl
+   *   When set any previously set expire time remains unchanged
+   * @return
+   *   the old value stored at key, or None if key did not exist
+   */
+  final def setGet[K: Schema, V: Schema](
+    key: K,
+    value: V,
+    expireTime: Option[Duration] = None,
+    update: Option[Update] = None,
+    keepTtl: Option[KeepTtl] = None
+  ): IO[RedisError, Option[V]] = {
+    val input = Tuple6(
+      ArbitraryKeyInput[K](),
+      ArbitraryValueInput[V](),
+      OptionalInput(DurationTtlInput),
+      OptionalInput(UpdateInput),
+      OptionalInput(KeepTtlInput),
+      GetKeywordInput
+    )
+    val command = RedisCommand(Set, input, OptionalOutput(ArbitraryOutput[V]()), executor)
+    command.run((key, value, expireTime, update, keepTtl, GetKeyword))
+  }
+
+  /**
    * Set the value of a key, only if the key does not exist.
    *
    * @param key
@@ -543,7 +608,7 @@ trait Strings extends RedisEnvironment {
    * Overwrite part of a string at key starting at the specified offset.
    *
    * @param key
-   *   Key of the string to overwite
+   *   Key of the string to overwrite
    * @param offset
    *   Offset to start writing
    * @param value
@@ -569,43 +634,6 @@ trait Strings extends RedisEnvironment {
     val command = RedisCommand(StrLen, ArbitraryKeyInput[K](), LongOutput, executor)
     command.run(key)
   }
-
-  /**
-   * Get the longest common subsequence of values stored in the given keys.
-   *
-   * @param command
-   *   type of value it (possible values are Strings and Keys)
-   * @param keyA
-   *   first value that will contain subsequence
-   * @param keyB
-   *   second value that will contain subsequence
-   * @param lcsQueryType
-   *   modifier that will affect the output
-   * @return
-   *   Without modifiers returns the string representing the longest common substring. When LEN is given the command
-   *   returns the length of the longest common substring. When IDX is given the command returns an array with the LCS
-   *   length and all the ranges in both the strings, start and end offset for each string, where there are matches.
-   *   When withMatchLen is given each array representing a match will also have the length of the match (see examples).
-   */
-  final def stralgoLcs[K: Schema](
-    command: StrAlgoLCS,
-    keyA: K,
-    keyB: K,
-    lcsQueryType: Option[StrAlgoLcsQueryType] = None
-  ): IO[RedisError, LcsOutput] = {
-    val redisCommand = RedisCommand(
-      StrAlgoLcs,
-      Tuple4(
-        ArbitraryValueInput[String](),
-        ArbitraryKeyInput[K](),
-        ArbitraryKeyInput[K](),
-        OptionalInput(StralgoLcsQueryTypeInput)
-      ),
-      StrAlgoLcsOutput,
-      executor
-    )
-    redisCommand.run((command.asString, keyA, keyB, lcsQueryType))
-  }
 }
 
 private[redis] object Strings {
@@ -618,11 +646,14 @@ private[redis] object Strings {
   final val DecrBy      = "DECRBY"
   final val Get         = "GET"
   final val GetBit      = "GETBIT"
+  final val GetDel      = "GETDEL"
+  final val GetEx       = "GETEX"
   final val GetRange    = "GETRANGE"
   final val GetSet      = "GETSET"
   final val Incr        = "INCR"
   final val IncrBy      = "INCRBY"
   final val IncrByFloat = "INCRBYFLOAT"
+  final val Lcs         = "LCS"
   final val MGet        = "MGET"
   final val MSet        = "MSET"
   final val MSetNx      = "MSETNX"
@@ -633,7 +664,4 @@ private[redis] object Strings {
   final val SetNx       = "SETNX"
   final val SetRange    = "SETRANGE"
   final val StrLen      = "STRLEN"
-  final val StrAlgoLcs  = "STRALGO LCS"
-  final val GetDel      = "GETDEL"
-  final val GetEx       = "GETEX"
 }

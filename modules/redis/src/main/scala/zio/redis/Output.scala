@@ -23,6 +23,8 @@ import zio.redis.options.PubSub.{NumberOfSubscribers, PushProtocol}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
+import java.nio.charset.StandardCharsets
+
 sealed trait Output[+A] { self =>
   protected def tryDecode(respValue: RespValue): A
 
@@ -43,8 +45,12 @@ object Output {
 
   def apply[A](implicit output: Output[A]): Output[A] = output
 
-  case object RespValueOutput extends Output[RespValue] {
-    protected def tryDecode(respValue: RespValue): RespValue = respValue
+  final case class ArbitraryOutput[A]()(implicit codec: BinaryCodec[A]) extends Output[A] {
+    protected def tryDecode(respValue: RespValue): A =
+      respValue match {
+        case RespValue.BulkString(s) => codec.decode(s).fold(e => throw CodecError(e.message), identity)
+        case other                   => throw ProtocolError(s"$other isn't a bulk string")
+      }
   }
 
   case object BoolOutput extends Output[Boolean] {
@@ -56,22 +62,20 @@ object Output {
       }
   }
 
+  case object BulkStringOutput extends Output[Chunk[Byte]] {
+    protected def tryDecode(respValue: RespValue): Chunk[Byte] =
+      respValue match {
+        case RespValue.BulkString(value) => value
+        case other                       => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
+
   final case class ChunkOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
     protected def tryDecode(respValue: RespValue): Chunk[A] =
       respValue match {
         case RespValue.NullArray     => Chunk.empty
         case RespValue.Array(values) => values.map(output.tryDecode)
         case other                   => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  final case class ZRandMemberOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
-    protected def tryDecode(respValue: RespValue): Chunk[A] =
-      respValue match {
-        case RespValue.NullBulkString => Chunk.empty
-        case RespValue.NullArray      => Chunk.empty
-        case RespValue.Array(values)  => values.map(output.tryDecode)
-        case other                    => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -89,17 +93,30 @@ object Output {
       }
   }
 
-  final case class ZRandMemberTuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[Chunk[(A, B)]] {
-    protected def tryDecode(respValue: RespValue): Chunk[(A, B)] =
+  case object ClusterPartitionNodeOutput extends Output[Node] {
+    protected def tryDecode(respValue: RespValue): Node =
       respValue match {
-        case RespValue.NullBulkString => Chunk.empty
-        case RespValue.NullArray      => Chunk.empty
-        case RespValue.Array(values) if values.length % 2 == 0 =>
-          Chunk.fromIterator(values.grouped(2).map(g => _1.tryDecode(g(0)) -> _2.tryDecode(g(1))))
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have an even number of elements")
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val host   = MultiStringOutput.unsafeDecode(values(0))
+          val port   = LongOutput.unsafeDecode(values(1))
+          val nodeId = MultiStringOutput.unsafeDecode(values(2))
+          Node(nodeId, RedisUri(host, port.toInt))
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object ClusterPartitionOutput extends Output[Partition] {
+    protected def tryDecode(respValue: RespValue): Partition =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val start  = LongOutput.unsafeDecode(values(0))
+          val end    = LongOutput.unsafeDecode(values(1))
+          val master = ClusterPartitionNodeOutput.unsafeDecode(values(2))
+          val slaves = values.drop(3).map(ClusterPartitionNodeOutput.unsafeDecode)
+          Partition(SlotRange(start, end), master, slaves)
+        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -124,141 +141,6 @@ object Output {
   final val DurationMillisecondsOutput: Output[Duration] = DurationOutput.map(_.milliseconds)
 
   final val DurationSecondsOutput: Output[Duration] = DurationOutput.map(_.seconds)
-
-  case object LongOutput extends Output[Long] {
-    protected def tryDecode(respValue: RespValue): Long =
-      respValue match {
-        case RespValue.Integer(v) => v
-        case other                => throw ProtocolError(s"$other isn't an integer")
-      }
-  }
-
-  final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
-    protected def tryDecode(respValue: RespValue): Option[A] =
-      respValue match {
-        case RespValue.NullBulkString | RespValue.NullArray => None
-        case RespValue.BulkString(value) if value.isEmpty   => None
-        case other                                          => Some(output.tryDecode(other))
-      }
-  }
-
-  final case class ScanOutput[+A](output: Output[A]) extends Output[(Long, Chunk[A])] {
-    protected def tryDecode(respValue: RespValue): (Long, Chunk[A]) =
-      respValue match {
-        case RespValue.ArrayValues(cursor @ RespValue.BulkString(_), RespValue.Array(items)) =>
-          (cursor.asLong, items.map(output.tryDecode))
-        case other =>
-          throw ProtocolError(s"$other isn't scan output")
-      }
-  }
-
-  case object KeyElemOutput extends Output[Option[(String, String)]] {
-    protected def tryDecode(respValue: RespValue): Option[(String, String)] =
-      respValue match {
-        case RespValue.NullArray =>
-          None
-        case RespValue.ArrayValues(a @ RespValue.BulkString(_), b @ RespValue.BulkString(_)) =>
-          Some((a.asString, b.asString))
-        case other => throw ProtocolError(s"$other isn't blPop output")
-      }
-  }
-
-  case object StringOutput extends Output[String] {
-    protected def tryDecode(respValue: RespValue): String =
-      respValue match {
-        case RespValue.SimpleString(s) => s
-        case other                     => throw ProtocolError(s"$other isn't a simple string")
-      }
-  }
-
-  case object MultiStringOutput extends Output[String] {
-    protected def tryDecode(respValue: RespValue): String =
-      respValue match {
-        case s @ RespValue.BulkString(_) => s.asString
-        case other                       => throw ProtocolError(s"$other isn't a bulk string")
-      }
-  }
-
-  case object BulkStringOutput extends Output[Chunk[Byte]] {
-    protected def tryDecode(respValue: RespValue): Chunk[Byte] =
-      respValue match {
-        case RespValue.BulkString(value) => value
-        case other                       => throw ProtocolError(s"$other isn't a bulk string")
-      }
-  }
-
-  final case class ArbitraryOutput[A]()(implicit codec: BinaryCodec[A]) extends Output[A] {
-    protected def tryDecode(respValue: RespValue): A =
-      respValue match {
-        case RespValue.BulkString(s) => codec.decode(s).fold(e => throw CodecError(e.message), identity)
-        case other                   => throw ProtocolError(s"$other isn't a bulk string")
-      }
-  }
-
-  final case class Tuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[(A, B)] {
-    protected def tryDecode(respValue: RespValue): (A, B) =
-      respValue match {
-        case RespValue.ArrayValues(a: RespValue, b: RespValue) => (_1.tryDecode(a), _2.tryDecode(b))
-        case other                                             => throw ProtocolError(s"$other isn't a tuple2")
-      }
-  }
-
-  final case class Tuple3Output[+A, +B, +C](_1: Output[A], _2: Output[B], _3: Output[C]) extends Output[(A, B, C)] {
-    protected def tryDecode(respValue: RespValue): (A, B, C) =
-      respValue match {
-        case RespValue.ArrayValues(a: RespValue, b: RespValue, c: RespValue) =>
-          (_1.tryDecode(a), _2.tryDecode(b), _3.tryDecode(c))
-        case other => throw ProtocolError(s"$other isn't a tuple3")
-      }
-  }
-
-  case object SingleOrMultiStringOutput extends Output[String] {
-    protected def tryDecode(respValue: RespValue): String =
-      respValue match {
-        case RespValue.SimpleString(s)   => s
-        case s @ RespValue.BulkString(_) => s.asString
-        case other                       => throw ProtocolError(s"$other isn't a bulk string")
-      }
-  }
-
-  final case class MultiStringChunkOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
-    protected def tryDecode(respValue: RespValue): Chunk[A] =
-      respValue match {
-        case RespValue.NullBulkString    => Chunk.empty
-        case s @ RespValue.BulkString(_) => Chunk.single(output.tryDecode(s))
-        case RespValue.Array(elements)   => elements.map(output.tryDecode)
-        case other                       => throw ProtocolError(s"$other isn't a string nor an array")
-      }
-  }
-
-  case object TypeOutput extends Output[RedisType] {
-    protected def tryDecode(respValue: RespValue): RedisType =
-      respValue match {
-        case RespValue.SimpleString("string") => RedisType.String
-        case RespValue.SimpleString("list")   => RedisType.List
-        case RespValue.SimpleString("set")    => RedisType.Set
-        case RespValue.SimpleString("zset")   => RedisType.SortedSet
-        case RespValue.SimpleString("hash")   => RedisType.Hash
-        case RespValue.SimpleString("stream") => RedisType.Stream
-        case other                            => throw ProtocolError(s"$other isn't redis type.")
-      }
-  }
-
-  case object UnitOutput extends Output[Unit] {
-    protected def tryDecode(respValue: RespValue): Unit =
-      respValue match {
-        case RespValue.SimpleString("OK") => ()
-        case other                        => throw ProtocolError(s"$other isn't unit.")
-      }
-  }
-
-  case object ResetOutput extends Output[Unit] {
-    protected def tryDecode(respValue: RespValue): Unit =
-      respValue match {
-        case RespValue.SimpleString("RESET") => ()
-        case other                           => throw ProtocolError(s"$other isn't unit.")
-      }
-  }
 
   case object GeoOutput extends Output[Chunk[Option[LongLat]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[LongLat]] =
@@ -304,6 +186,17 @@ object Output {
       }
   }
 
+  case object KeyElemOutput extends Output[Option[(String, String)]] {
+    protected def tryDecode(respValue: RespValue): Option[(String, String)] =
+      respValue match {
+        case RespValue.NullArray =>
+          None
+        case RespValue.ArrayValues(a @ RespValue.BulkString(_), b @ RespValue.BulkString(_)) =>
+          Some((a.asString, b.asString))
+        case other => throw ProtocolError(s"$other isn't blPop output")
+      }
+  }
+
   final case class KeyValueOutput[K, V](outK: Output[K], outV: Output[V]) extends Output[Map[K, V]] {
     protected def tryDecode(respValue: RespValue): Map[K, V] =
       respValue match {
@@ -329,6 +222,172 @@ object Output {
       }
   }
 
+  case object LongOutput extends Output[Long] {
+    protected def tryDecode(respValue: RespValue): Long =
+      respValue match {
+        case RespValue.Integer(v) => v
+        case other                => throw ProtocolError(s"$other isn't an integer")
+      }
+  }
+
+  final case class MultiStringChunkOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
+    protected def tryDecode(respValue: RespValue): Chunk[A] =
+      respValue match {
+        case RespValue.NullBulkString    => Chunk.empty
+        case s @ RespValue.BulkString(_) => Chunk.single(output.tryDecode(s))
+        case RespValue.Array(elements)   => elements.map(output.tryDecode)
+        case other                       => throw ProtocolError(s"$other isn't a string nor an array")
+      }
+  }
+
+  case object MultiStringOutput extends Output[String] {
+    protected def tryDecode(respValue: RespValue): String =
+      respValue match {
+        case s @ RespValue.BulkString(_) => s.asString
+        case other                       => throw ProtocolError(s"$other isn't a bulk string")
+      }
+  }
+
+  final case class OptionalOutput[+A](output: Output[A]) extends Output[Option[A]] {
+    protected def tryDecode(respValue: RespValue): Option[A] =
+      respValue match {
+        case RespValue.NullBulkString | RespValue.NullArray => None
+        case RespValue.BulkString(value) if value.isEmpty   => None
+        case other                                          => Some(output.tryDecode(other))
+      }
+  }
+
+  case object PendingMessagesOutput extends Output[Chunk[PendingMessage]] {
+    protected def tryDecode(respValue: RespValue): Chunk[PendingMessage] =
+      respValue match {
+        case RespValue.Array(messages) =>
+          messages.collect {
+            case RespValue.Array(
+                  Seq(
+                    id @ RespValue.BulkString(_),
+                    owner @ RespValue.BulkString(_),
+                    RespValue.Integer(lastDelivered),
+                    RespValue.Integer(counter)
+                  )
+                ) =>
+              PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
+            case other =>
+              throw ProtocolError(s"$other isn't an array with four elements")
+          }
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object ResetOutput extends Output[Unit] {
+    protected def tryDecode(respValue: RespValue): Unit =
+      respValue match {
+        case RespValue.SimpleString("RESET") => ()
+        case other                           => throw ProtocolError(s"$other isn't unit.")
+      }
+  }
+
+  case object RespValueOutput extends Output[RespValue] {
+    protected def tryDecode(respValue: RespValue): RespValue = respValue
+  }
+
+  final case class ScanOutput[+A](output: Output[A]) extends Output[(Long, Chunk[A])] {
+    protected def tryDecode(respValue: RespValue): (Long, Chunk[A]) =
+      respValue match {
+        case RespValue.ArrayValues(cursor @ RespValue.BulkString(_), RespValue.Array(items)) =>
+          (cursor.asLong, items.map(output.tryDecode))
+        case other =>
+          throw ProtocolError(s"$other isn't scan output")
+      }
+  }
+
+  case object SetOutput extends Output[Boolean] {
+    protected def tryDecode(respValue: RespValue): Boolean =
+      respValue match {
+        case RespValue.NullBulkString  => false
+        case RespValue.SimpleString(_) => true
+        case other                     => throw ProtocolError(s"$other isn't a valid set response")
+      }
+  }
+
+  case object LcsOutput extends Output[Lcs] {
+    protected def tryDecode(respValue: RespValue): Lcs =
+      respValue match {
+        case result @ RespValue.BulkString(_) => Lcs.PlainLcs(result.asString)
+        case RespValue.Integer(length)        => Lcs.Length(length)
+        case RespValue.ArrayValues(
+              RespValue.BulkString(_),
+              RespValue.Array(items),
+              RespValue.BulkString(_),
+              RespValue.Integer(length)
+            ) =>
+          val matches = items.map {
+            case RespValue.Array(array) =>
+              val matchIdxs = array.collect { case RespValue.Array(values) =>
+                val idxs = values.map {
+                  case RespValue.Integer(value) => value
+                  case other                    => throw ProtocolError(s"$other isn't a valid response")
+                }
+                if (idxs.size == 2)
+                  MatchIdx(idxs.head, idxs(1))
+                else throw ProtocolError(s"Response contains illegal number of indices for a match: ${idxs.size}")
+              }
+              val matchLength = array.collectFirst { case RespValue.Integer(value) => value }
+              Match(matchIdxs(0), matchIdxs(1), matchLength)
+            case other => throw ProtocolError(s"$other isn't a valid response")
+          }
+          Lcs.Matches(matches.toList, length)
+        case other => throw ProtocolError(s"$other isn't a valid set response")
+      }
+  }
+
+  case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
+    protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
+      respValue match {
+        case RespValue.NullArray => Chunk.empty
+        case RespValue.Array(messages) =>
+          messages.collect {
+            // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
+            case RespValue.Array(elements) if elements.length % 2 == 0 =>
+              var streamConsumersInfo: StreamConsumersInfo = StreamConsumersInfo.empty
+              val len                                      = elements.length
+              var pos                                      = 0
+              while (pos < len) {
+                (elements(pos), elements(pos + 1)) match {
+                  case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
+                      if key.asString == XInfoFields.Name =>
+                    streamConsumersInfo = streamConsumersInfo.copy(name = value.asString)
+                  case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                    if (key.asString == XInfoFields.Pending)
+                      streamConsumersInfo = streamConsumersInfo.copy(pending = value.value)
+                    else if (key.asString == XInfoFields.Idle)
+                      streamConsumersInfo = streamConsumersInfo.copy(idle = value.value.millis)
+                  case _ =>
+                }
+                pos += 2
+              }
+              streamConsumersInfo
+            case array @ RespValue.Array(_) =>
+              throw ProtocolError(s"$array doesn't have an even number of elements")
+            case other =>
+              throw ProtocolError(s"$other isn't an array")
+          }
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  final case class StreamEntriesOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[Chunk[StreamEntry[I, K, V]]] {
+    protected def tryDecode(respValue: RespValue): Chunk[StreamEntry[I, K, V]] =
+      ChunkOutput(StreamEntryOutput[I, K, V]()).unsafeDecode(respValue)
+  }
+
   final case class StreamEntryOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
     idSchema: Schema[I],
     keySchema: Schema[K],
@@ -343,27 +402,6 @@ object Output {
         case other =>
           throw ProtocolError(s"$other isn't a valid array")
       }
-  }
-
-  final case class StreamEntriesOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
-    idSchema: Schema[I],
-    keySchema: Schema[K],
-    valueSchema: Schema[V]
-  ) extends Output[Chunk[StreamEntry[I, K, V]]] {
-    protected def tryDecode(respValue: RespValue): Chunk[StreamEntry[I, K, V]] =
-      ChunkOutput(StreamEntryOutput[I, K, V]()).unsafeDecode(respValue)
-  }
-
-  final case class StreamOutput[N: BinaryCodec, I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
-    nameSchema: Schema[N],
-    idSchema: Schema[I],
-    keySchema: Schema[K],
-    valueSchema: Schema[V]
-  ) extends Output[StreamChunk[N, I, K, V]] {
-    protected def tryDecode(respValue: RespValue): StreamChunk[N, I, K, V] = {
-      val (name, entries) = Tuple2Output(ArbitraryOutput[N](), StreamEntriesOutput[I, K, V]()).unsafeDecode(respValue)
-      StreamChunk(name, entries)
-    }
   }
 
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
@@ -394,43 +432,6 @@ object Output {
                 pos += 2
               }
               streamGroupsInfo
-            case array @ RespValue.Array(_) =>
-              throw ProtocolError(s"$array doesn't have an even number of elements")
-            case other =>
-              throw ProtocolError(s"$other isn't an array")
-          }
-
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
-    protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
-      respValue match {
-        case RespValue.NullArray => Chunk.empty
-        case RespValue.Array(messages) =>
-          messages.collect {
-            // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
-            case RespValue.Array(elements) if elements.length % 2 == 0 =>
-              var streamConsumersInfo: StreamConsumersInfo = StreamConsumersInfo.empty
-              val len                                      = elements.length
-              var pos                                      = 0
-              while (pos < len) {
-                (elements(pos), elements(pos + 1)) match {
-                  case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
-                      if key.asString == XInfoFields.Name =>
-                    streamConsumersInfo = streamConsumersInfo.copy(name = value.asString)
-                  case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
-                    if (key.asString == XInfoFields.Pending)
-                      streamConsumersInfo = streamConsumersInfo.copy(pending = value.value)
-                    else if (key.asString == XInfoFields.Idle)
-                      streamConsumersInfo = streamConsumersInfo.copy(idle = value.value.millis)
-                  case _ =>
-                }
-                pos += 2
-              }
-              streamConsumersInfo
             case array @ RespValue.Array(_) =>
               throw ProtocolError(s"$array doesn't have an even number of elements")
             case other =>
@@ -480,6 +481,214 @@ object Output {
         case other =>
           throw ProtocolError(s"$other isn't an array")
       }
+    }
+  }
+
+  final case class StreamInfoOutput[I: Schema: BinaryCodec, K: Schema: BinaryCodec, V: Schema: BinaryCodec]()
+      extends Output[StreamInfo[I, K, V]] {
+    protected def tryDecode(respValue: RespValue): StreamInfo[I, K, V] = {
+      var streamInfo: StreamInfo[I, K, V] = StreamInfo.empty
+      respValue match {
+        // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
+        case RespValue.Array(elements) if elements.length % 2 == 0 =>
+          val len = elements.length
+          var pos = 0
+          while (pos < len) {
+            (elements(pos), elements(pos + 1)) match {
+              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                if (key.asString == XInfoFields.Length)
+                  streamInfo = streamInfo.copy(length = value.value)
+                else if (key.asString == XInfoFields.RadixTreeNodes)
+                  streamInfo = streamInfo.copy(radixTreeNodes = value.value)
+                else if (key.asString == XInfoFields.RadixTreeKeys)
+                  streamInfo = streamInfo.copy(radixTreeKeys = value.value)
+                else if (key.asString == XInfoFields.Groups)
+                  streamInfo = streamInfo.copy(groups = value.value)
+              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
+                  if key.asString == XInfoFields.LastGeneratedId =>
+                streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
+              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) =>
+                if (key.asString == XInfoFields.FirstEntry)
+                  streamInfo = streamInfo.copy(firstEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
+                else if (key.asString == XInfoFields.LastEntry)
+                  streamInfo = streamInfo.copy(lastEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
+              case _ =>
+            }
+            pos += 2
+          }
+          streamInfo
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have an even number of elements")
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+    }
+  }
+
+  final case class StreamOutput[N: BinaryCodec, I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
+    nameSchema: Schema[N],
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[StreamChunk[N, I, K, V]] {
+    protected def tryDecode(respValue: RespValue): StreamChunk[N, I, K, V] = {
+      val (name, entries) = Tuple2Output(ArbitraryOutput[N](), StreamEntriesOutput[I, K, V]()).unsafeDecode(respValue)
+      StreamChunk(name, entries)
+    }
+  }
+
+  case object StringOutput extends Output[String] {
+    protected def tryDecode(respValue: RespValue): String =
+      respValue match {
+        case RespValue.SimpleString(s) => s
+        case other                     => throw ProtocolError(s"$other isn't a simple string")
+      }
+  }
+
+  final case class Tuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[(A, B)] {
+    protected def tryDecode(respValue: RespValue): (A, B) =
+      respValue match {
+        case RespValue.ArrayValues(a: RespValue, b: RespValue) => (_1.tryDecode(a), _2.tryDecode(b))
+        case other                                             => throw ProtocolError(s"$other isn't a tuple2")
+      }
+  }
+
+  final case class Tuple3Output[+A, +B, +C](_1: Output[A], _2: Output[B], _3: Output[C]) extends Output[(A, B, C)] {
+    protected def tryDecode(respValue: RespValue): (A, B, C) =
+      respValue match {
+        case RespValue.ArrayValues(a: RespValue, b: RespValue, c: RespValue) =>
+          (_1.tryDecode(a), _2.tryDecode(b), _3.tryDecode(c))
+        case other => throw ProtocolError(s"$other isn't a tuple3")
+      }
+  }
+
+  case object TypeOutput extends Output[RedisType] {
+    protected def tryDecode(respValue: RespValue): RedisType =
+      respValue match {
+        case RespValue.SimpleString("string") => RedisType.String
+        case RespValue.SimpleString("list")   => RedisType.List
+        case RespValue.SimpleString("set")    => RedisType.Set
+        case RespValue.SimpleString("zset")   => RedisType.SortedSet
+        case RespValue.SimpleString("hash")   => RedisType.Hash
+        case RespValue.SimpleString("stream") => RedisType.Stream
+        case other                            => throw ProtocolError(s"$other isn't redis type.")
+      }
+  }
+
+  case object UnitOutput extends Output[Unit] {
+    protected def tryDecode(respValue: RespValue): Unit =
+      respValue match {
+        case RespValue.SimpleString("OK") => ()
+        case other                        => throw ProtocolError(s"$other isn't unit.")
+      }
+  }
+
+  final case class ZRandMemberOutput[+A](output: Output[A]) extends Output[Chunk[A]] {
+    protected def tryDecode(respValue: RespValue): Chunk[A] =
+      respValue match {
+        case RespValue.NullBulkString => Chunk.empty
+        case RespValue.NullArray      => Chunk.empty
+        case RespValue.Array(values)  => values.map(output.tryDecode)
+        case other                    => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  final case class ZRandMemberTuple2Output[+A, +B](_1: Output[A], _2: Output[B]) extends Output[Chunk[(A, B)]] {
+    protected def tryDecode(respValue: RespValue): Chunk[(A, B)] =
+      respValue match {
+        case RespValue.NullBulkString => Chunk.empty
+        case RespValue.NullArray      => Chunk.empty
+        case RespValue.Array(values) if values.length % 2 == 0 =>
+          Chunk.fromIterator(values.grouped(2).map(g => _1.tryDecode(g(0)) -> _2.tryDecode(g(1))))
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have an even number of elements")
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object XPendingOutput extends Output[PendingInfo] {
+    protected def tryDecode(respValue: RespValue): PendingInfo =
+      respValue match {
+        case RespValue.Array(Seq(RespValue.Integer(total), f, l, ps)) =>
+          val first = OptionalOutput(MultiStringOutput).unsafeDecode(f)
+          val last  = OptionalOutput(MultiStringOutput).unsafeDecode(l)
+
+          val pairs = ps match {
+            case RespValue.NullArray    => Chunk.empty
+            case RespValue.Array(value) => value
+            case other                  => throw ProtocolError(s"$other isn't an array")
+          }
+
+          val consumers = collection.mutable.Map.empty[String, Long]
+
+          pairs.foreach {
+            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
+              consumers += (consumer.asString -> total.asLong)
+            case _ =>
+              throw ProtocolError(s"Consumers doesn't have 2 elements")
+          }
+
+          PendingInfo(total, first, last, consumers.toMap)
+
+        case array @ RespValue.Array(_) =>
+          throw ProtocolError(s"$array doesn't have valid format")
+
+        case other =>
+          throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object PushProtocolOutput extends Output[PushProtocol] {
+    protected def tryDecode(respValue: RespValue): PushProtocol =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val name = MultiStringOutput.unsafeDecode(values(0))
+          val key  = MultiStringOutput.unsafeDecode(values(1))
+          name match {
+            case "subscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushProtocol.Subscribe(key, num)
+            case "psubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushProtocol.PSubscribe(key, num)
+            case "unsubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushProtocol.Unsubscribe(key, num)
+            case "punsubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushProtocol.PUnsubscribe(key, num)
+            case "message" =>
+              PushProtocol.Message(key, values(2))
+            case "pmessage" =>
+              val channel = MultiStringOutput.unsafeDecode(values(2))
+              PushProtocol.PMessage(key, channel, values(3))
+            case other => throw ProtocolError(s"$other isn't a pushed message")
+          }
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object NumSubResponseOutput extends Output[Chunk[NumberOfSubscribers]] {
+    protected def tryDecode(respValue: RespValue): Chunk[NumberOfSubscribers] =
+      respValue match {
+        case RespValue.Array(values) =>
+          Chunk.fromIterator(values.grouped(2).map { chunk =>
+            val channel           = MultiStringOutput.unsafeDecode(chunk(0))
+            val numOfSubscription = LongOutput.unsafeDecode(chunk(1))
+            NumberOfSubscribers(channel, numOfSubscription)
+          })
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  private def decodeDouble(bytes: Chunk[Byte]): Double = {
+    val text = new String(bytes.toArray, StandardCharsets.UTF_8)
+    try text.toDouble
+    catch {
+      case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
     }
   }
 
@@ -579,295 +788,5 @@ object Output {
       case other =>
         throw ProtocolError(s"$other isn't an array")
     }
-  }
-
-  final case class StreamInfoOutput[I: Schema: BinaryCodec, K: Schema: BinaryCodec, V: Schema: BinaryCodec]()
-      extends Output[StreamInfo[I, K, V]] {
-    protected def tryDecode(respValue: RespValue): StreamInfo[I, K, V] = {
-      var streamInfo: StreamInfo[I, K, V] = StreamInfo.empty
-      respValue match {
-        // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
-        case RespValue.Array(elements) if elements.length % 2 == 0 =>
-          val len = elements.length
-          var pos = 0
-          while (pos < len) {
-            (elements(pos), elements(pos + 1)) match {
-              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
-                if (key.asString == XInfoFields.Length)
-                  streamInfo = streamInfo.copy(length = value.value)
-                else if (key.asString == XInfoFields.RadixTreeNodes)
-                  streamInfo = streamInfo.copy(radixTreeNodes = value.value)
-                else if (key.asString == XInfoFields.RadixTreeKeys)
-                  streamInfo = streamInfo.copy(radixTreeKeys = value.value)
-                else if (key.asString == XInfoFields.Groups)
-                  streamInfo = streamInfo.copy(groups = value.value)
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
-                  if key.asString == XInfoFields.LastGeneratedId =>
-                streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
-              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) =>
-                if (key.asString == XInfoFields.FirstEntry)
-                  streamInfo = streamInfo.copy(firstEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
-                else if (key.asString == XInfoFields.LastEntry)
-                  streamInfo = streamInfo.copy(lastEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
-              case _ =>
-            }
-            pos += 2
-          }
-          streamInfo
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have an even number of elements")
-
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-    }
-  }
-
-  case object XPendingOutput extends Output[PendingInfo] {
-    protected def tryDecode(respValue: RespValue): PendingInfo =
-      respValue match {
-        case RespValue.Array(Seq(RespValue.Integer(total), f, l, ps)) =>
-          val first = OptionalOutput(MultiStringOutput).unsafeDecode(f)
-          val last  = OptionalOutput(MultiStringOutput).unsafeDecode(l)
-
-          val pairs = ps match {
-            case RespValue.NullArray    => Chunk.empty
-            case RespValue.Array(value) => value
-            case other                  => throw ProtocolError(s"$other isn't an array")
-          }
-
-          val consumers = collection.mutable.Map.empty[String, Long]
-
-          pairs.foreach {
-            case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
-              consumers += (consumer.asString -> total.asLong)
-            case _ =>
-              throw ProtocolError(s"Consumers doesn't have 2 elements")
-          }
-
-          PendingInfo(total, first, last, consumers.toMap)
-
-        case array @ RespValue.Array(_) =>
-          throw ProtocolError(s"$array doesn't have valid format")
-
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object PendingMessagesOutput extends Output[Chunk[PendingMessage]] {
-    protected def tryDecode(respValue: RespValue): Chunk[PendingMessage] =
-      respValue match {
-        case RespValue.Array(messages) =>
-          messages.collect {
-            case RespValue.Array(
-                  Seq(
-                    id @ RespValue.BulkString(_),
-                    owner @ RespValue.BulkString(_),
-                    RespValue.Integer(lastDelivered),
-                    RespValue.Integer(counter)
-                  )
-                ) =>
-              PendingMessage(id.asString, owner.asString, lastDelivered.millis, counter)
-            case other =>
-              throw ProtocolError(s"$other isn't an array with four elements")
-          }
-
-        case other =>
-          throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object SetOutput extends Output[Boolean] {
-    protected def tryDecode(respValue: RespValue): Boolean =
-      respValue match {
-        case RespValue.NullBulkString  => false
-        case RespValue.SimpleString(_) => true
-        case other                     => throw ProtocolError(s"$other isn't a valid set response")
-      }
-  }
-
-  case object StrAlgoLcsOutput extends Output[LcsOutput] {
-    protected def tryDecode(respValue: RespValue): LcsOutput =
-      respValue match {
-        case result @ RespValue.BulkString(_) => LcsOutput.Lcs(result.asString)
-        case RespValue.Integer(length)        => LcsOutput.Length(length)
-        case RespValue.ArrayValues(
-              RespValue.BulkString(_),
-              RespValue.Array(items),
-              RespValue.BulkString(_),
-              RespValue.Integer(length)
-            ) =>
-          val matches = items.map {
-            case RespValue.Array(array) =>
-              val matchIdxs = array.collect { case RespValue.Array(values) =>
-                val idxs = values.map {
-                  case RespValue.Integer(value) => value
-                  case other                    => throw ProtocolError(s"$other isn't a valid response")
-                }
-                if (idxs.size == 2)
-                  MatchIdx(idxs.head, idxs(1))
-                else throw ProtocolError(s"Response contains illegal number of indices for a match: ${idxs.size}")
-              }
-              val matchLength = array.collectFirst { case RespValue.Integer(value) => value }
-              Match(matchIdxs(0), matchIdxs(1), matchLength)
-            case other => throw ProtocolError(s"$other isn't a valid response")
-          }
-          LcsOutput.Matches(matches.toList, length)
-        case other => throw ProtocolError(s"$other isn't a valid set response")
-      }
-  }
-
-  private def decodeDouble(bytes: Chunk[Byte]): Double = {
-    val text = RespValue.decode(bytes)
-    try text.toDouble
-    catch {
-      case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
-    }
-  }
-
-  case object ClientTrackingInfoOutput extends Output[ClientTrackingInfo] {
-    protected def tryDecode(respValue: RespValue): ClientTrackingInfo =
-      respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
-        case RespValue.Array(values) if values.length % 2 == 0 =>
-          val fields = values.toList
-            .grouped(2)
-            .map {
-              case (bulk @ RespValue.BulkString(_)) :: value :: Nil => (bulk.asString, value)
-              case other                                            => throw ProtocolError(s"$other isn't a valid format")
-            }
-            .toMap
-          ClientTrackingInfo(
-            fields
-              .get("flags")
-              .fold(throw ProtocolError("Missing flags field")) {
-                case RespValue.Array(value) =>
-                  val set = value.map {
-                    case bulk @ RespValue.BulkString(_) => bulk.asString
-                    case other                          => throw ProtocolError(s"$other isn't a string")
-                  }.toSet
-                  ClientTrackingFlags(
-                    set.contains("on"),
-                    set match {
-                      case s if s.contains("optin")  => Some(ClientTrackingMode.OptIn)
-                      case s if s.contains("optout") => Some(ClientTrackingMode.OptOut)
-                      case s if s.contains("bcast")  => Some(ClientTrackingMode.Broadcast)
-                      case _                         => None
-                    },
-                    set.contains("noloop"),
-                    set match {
-                      case s if s.contains("caching-yes") => Some(true)
-                      case s if s.contains("caching-no")  => Some(false)
-                      case _                              => None
-                    },
-                    set.contains("broken_redirect")
-                  )
-                case other => throw ProtocolError(s"$other isn't an array with elements")
-              },
-            fields
-              .get("redirect")
-              .fold(throw ProtocolError("Missing redirect field")) {
-                case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
-                case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
-                case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
-                case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
-              },
-            fields
-              .get("prefixes")
-              .fold(throw ProtocolError("Missing prefixes field")) {
-                case RespValue.NullArray => Set.empty[String]
-                case RespValue.Array(value) =>
-                  value.map {
-                    case bulk @ RespValue.BulkString(_) => bulk.asString
-                    case other                          => throw ProtocolError(s"$other isn't a string")
-                  }.toSet[String]
-                case other => throw ProtocolError(s"$other isn't an array")
-              }
-          )
-        case array @ RespValue.Array(_) => throw ProtocolError(s"$array doesn't have an even number of elements")
-        case other                      => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object ClientTrackingRedirectOutput extends Output[ClientTrackingRedirect] {
-    protected def tryDecode(respValue: RespValue): ClientTrackingRedirect =
-      respValue match {
-        case RespValue.Integer(-1L)         => ClientTrackingRedirect.NotEnabled
-        case RespValue.Integer(0L)          => ClientTrackingRedirect.NotRedirected
-        case RespValue.Integer(v) if v > 0L => ClientTrackingRedirect.RedirectedTo(v)
-        case other                          => throw ProtocolError(s"$other isn't an integer >= -1")
-      }
-  }
-
-  case object ClusterPartitionOutput extends Output[Partition] {
-    protected def tryDecode(respValue: RespValue): Partition =
-      respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
-        case RespValue.Array(values) =>
-          val start  = LongOutput.unsafeDecode(values(0))
-          val end    = LongOutput.unsafeDecode(values(1))
-          val master = ClusterPartitionNodeOutput.unsafeDecode(values(2))
-          val slaves = values.drop(3).map(ClusterPartitionNodeOutput.unsafeDecode)
-          Partition(SlotRange(start, end), master, slaves)
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object ClusterPartitionNodeOutput extends Output[Node] {
-    protected def tryDecode(respValue: RespValue): Node =
-      respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
-        case RespValue.Array(values) =>
-          val host   = MultiStringOutput.unsafeDecode(values(0))
-          val port   = LongOutput.unsafeDecode(values(1))
-          val nodeId = MultiStringOutput.unsafeDecode(values(2))
-          Node(nodeId, RedisUri(host, port.toInt))
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object PushProtocolOutput extends Output[PushProtocol] {
-    protected def tryDecode(respValue: RespValue): PushProtocol =
-      respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
-        case RespValue.Array(values) =>
-          val name = MultiStringOutput.unsafeDecode(values(0))
-          val key  = MultiStringOutput.unsafeDecode(values(1))
-          name match {
-            case "subscribe" =>
-              val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.Subscribe(key, num)
-            case "psubscribe" =>
-              val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.PSubscribe(key, num)
-            case "unsubscribe" =>
-              val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.Unsubscribe(key, num)
-            case "punsubscribe" =>
-              val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.PUnsubscribe(key, num)
-            case "message" =>
-              PushProtocol.Message(key, values(2))
-            case "pmessage" =>
-              val channel = MultiStringOutput.unsafeDecode(values(2))
-              PushProtocol.PMessage(key, channel, values(3))
-            case other => throw ProtocolError(s"$other isn't a pushed message")
-          }
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
-  }
-
-  case object NumSubResponseOutput extends Output[Chunk[NumberOfSubscribers]] {
-    protected def tryDecode(respValue: RespValue): Chunk[NumberOfSubscribers] =
-      respValue match {
-        case RespValue.Array(values) =>
-          Chunk.fromIterator(values.grouped(2).map { chunk =>
-            val channel           = MultiStringOutput.unsafeDecode(chunk(0))
-            val numOfSubscription = LongOutput.unsafeDecode(chunk(1))
-            NumberOfSubscribers(channel, numOfSubscription)
-          })
-        case other => throw ProtocolError(s"$other isn't an array")
-      }
   }
 }

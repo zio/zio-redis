@@ -27,15 +27,6 @@ private[redis] sealed trait RespCommandArgument {
 
 private[redis] object RespCommandArgument {
 
-  final case class Unknown(bytes: Chunk[Byte]) extends RespCommandArgument {
-    lazy val value: RespValue.BulkString = RespValue.BulkString(bytes)
-  }
-
-  object Unknown {
-    def apply(str: String): Unknown                                = Unknown(Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8)))
-    def apply[A](data: A)(implicit codec: BinaryCodec[A]): Unknown = Unknown(codec.encode(data))
-  }
-
   final case class CommandName(str: String) extends RespCommandArgument {
     lazy val value: RespValue.BulkString = RespValue.bulkString(str)
   }
@@ -64,5 +55,6 @@ private[redis] object RespCommandArgument {
 
   object Value {
     def apply[A](data: A)(implicit codec: BinaryCodec[A]): Value = Value(codec.encode(data))
+    def apply(str: String): Value                                = Value(Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8)))
   }
 }

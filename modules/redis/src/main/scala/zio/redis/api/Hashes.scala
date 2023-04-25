@@ -208,6 +208,47 @@ trait Hashes extends RedisEnvironment {
     }
 
   /**
+   * Returns a random field from the hash value stored at `key`
+   *
+   * @param key
+   *   of the hash which fields should be read
+   * @return
+   *   random field in the hash or `None` when `key` does not exist.
+   */
+  final def hRandField[K: Schema](key: K): ResultBuilder1[Option] =
+    new ResultBuilder1[Option] {
+      def returning[V: Schema]: IO[RedisError, Option[V]] =
+        RedisCommand(HRandField, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]()), executor).run(key)
+    }
+
+  /**
+   * Returns an array of at most `count` distinct fields randomly. If called with a negative `count`, the command will
+   * return exactly `count` fields, allowing repeats. If `withValues` is true it will return fields with his values
+   * intercalated.
+   *
+   * @param key
+   *   of the hash which fields should be read
+   * @param count
+   *   maximum number of different fields to return if positive or the exact number, in absolute value if negative
+   * @param withValues
+   *   when true includes the respective values of the randomly selected hash fields
+   * @return
+   *   a list of fields or fields and values if `withValues` is true.
+   */
+  final def hRandField[K: Schema](key: K, count: Long, withValues: Boolean = false): ResultBuilder1[Chunk] =
+    new ResultBuilder1[Chunk] {
+      def returning[V: Schema]: IO[RedisError, Chunk[V]] = {
+        val command = RedisCommand(
+          HRandField,
+          Tuple3(ArbitraryKeyInput[K](), LongInput, OptionalInput(StringInput)),
+          ChunkOutput(ArbitraryOutput[V]()),
+          executor
+        )
+        command.run((key, count, if (withValues) Some("WITHVALUES") else None))
+      }
+    }
+
+  /**
    * Sets the specified `field -> value` pairs in the hash stored at `key`. Deprecated: As per Redis 4.0.0, HMSET is
    * considered deprecated. Please use `hSet` instead.
    *
@@ -348,47 +389,6 @@ trait Hashes extends RedisEnvironment {
       def returning[V: Schema]: IO[RedisError, Chunk[V]] =
         RedisCommand(HVals, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[V]()), executor).run(key)
     }
-
-  /**
-   * Returns a random field from the hash value stored at `key`
-   *
-   * @param key
-   *   of the hash which fields should be read
-   * @return
-   *   random field in the hash or `None` when `key` does not exist.
-   */
-  final def hRandField[K: Schema](key: K): ResultBuilder1[Option] =
-    new ResultBuilder1[Option] {
-      def returning[V: Schema]: IO[RedisError, Option[V]] =
-        RedisCommand(HRandField, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]()), executor).run(key)
-    }
-
-  /**
-   * Returns an array of at most `count` distinct fields randomly. If called with a negative `count`, the command will
-   * return exactly `count` fields, allowing repeats. If `withValues` is true it will return fields with his values
-   * intercalated.
-   *
-   * @param key
-   *   of the hash which fields should be read
-   * @param count
-   *   maximum number of different fields to return if positive or the exact number, in absolute value if negative
-   * @param withValues
-   *   when true includes the respective values of the randomly selected hash fields
-   * @return
-   *   a list of fields or fields and values if `withValues` is true.
-   */
-  final def hRandField[K: Schema](key: K, count: Long, withValues: Boolean = false): ResultBuilder1[Chunk] =
-    new ResultBuilder1[Chunk] {
-      def returning[V: Schema]: IO[RedisError, Chunk[V]] = {
-        val command = RedisCommand(
-          HRandField,
-          Tuple3(ArbitraryKeyInput[K](), LongInput, OptionalInput(StringInput)),
-          ChunkOutput(ArbitraryOutput[V]()),
-          executor
-        )
-        command.run((key, count, if (withValues) Some("WITHVALUES") else None))
-      }
-    }
 }
 
 private[redis] object Hashes {
@@ -401,11 +401,11 @@ private[redis] object Hashes {
   final val HKeys        = "HKEYS"
   final val HLen         = "HLEN"
   final val HmGet        = "HMGET"
+  final val HRandField   = "HRANDFIELD"
   final val HmSet        = "HMSET"
   final val HScan        = "HSCAN"
   final val HSet         = "HSET"
   final val HSetNx       = "HSETNX"
   final val HStrLen      = "HSTRLEN"
   final val HVals        = "HVALS"
-  final val HRandField   = "HRANDFIELD"
 }

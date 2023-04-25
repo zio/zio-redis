@@ -27,7 +27,7 @@ import java.util.UUID
 
 object EmbeddedRedisSpec extends ZIOSpecDefault {
 
-  final case class Item private (id: UUID, name: String, quantity: Int)
+  final case class Item(id: UUID, name: String, quantity: Int)
   object Item {
     implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
   }
@@ -43,11 +43,10 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
     }
   ).provideShared(
     EmbeddedRedis.layer,
-    SingleNodeExecutor.layer,
     ZLayer.succeed[CodecSupplier](new CodecSupplier {
       def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
     }),
-    Redis.layer
+    Redis.singleNode
   ) @@ TestAspect.silentLogging
 
 }

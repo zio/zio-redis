@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
-import cats.effect.{IO => CIO}
-import dev.profunktor.redis4cats.RedisCommands
-import io.chrisdavenport.rediculous
-import laserdisc.fs2.RedisClient
+import zio._
+import zio.redis._
+import zio.redis.options.Cluster.{Partition, Slot}
 
-package object benchmarks {
-  type Redis4CatsClient[A] = RedisCommands[CIO, String, A]
-  type LaserDiscClient     = RedisClient[CIO]
-  type RediculousClient    = rediculous.RedisConnection[CIO]
+private[redis] final case class ClusterConnection(
+  partitions: Chunk[Partition],
+  executors: Map[RedisUri, ExecutorScope],
+  slots: Map[Slot, RedisUri]
+) {
+  def executor(slot: Slot): Option[RedisExecutor] = executors.get(slots(slot)).map(_.executor)
+
+  def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
+    copy(executors = executors + (uri -> es))
 }

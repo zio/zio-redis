@@ -4,7 +4,7 @@ import zio.redis.Input.{CommandNameInput, StringInput}
 import zio.redis.Output.PushProtocolOutput
 import zio.redis.SingleNodeSubscriptionExecutor.{Request, RequestQueueSize, True}
 import zio.redis.api.Subscription
-import zio.redis.internal.{RedisConnection, RespCommand, RespCommandArgument, RespValue}
+import zio.redis.internal.{RedisConnection, RespCommand, RespCommandArgument, RespValue, logScopeFinalizer}
 import zio.redis.options.PubSub.PushProtocol
 import zio.stream._
 import zio.{Chunk, ChunkBuilder, IO, Promise, Queue, Ref, Schedule, ZIO}
@@ -87,7 +87,7 @@ final class SingleNodeSubscriptionExecutor(
 
       while (it.hasNext) {
         val req = it.next()
-        buffer ++= RespValue.Array(req.command).serialize
+        buffer ++= RespValue.Array(req.command).asBytes
       }
 
       val bytes = buffer.result()
@@ -146,7 +146,7 @@ final class SingleNodeSubscriptionExecutor(
       else
         RespValue
           .Array((CommandNameInput.encode(name) ++ Input.Varargs(StringInput).encode(keys)).args.map(_.value))
-          .serialize
+          .asBytes
 
     for {
       channels <- channelSubsRef.get.map(_.keys)
@@ -190,6 +190,6 @@ object SingleNodeSubscriptionExecutor {
       patternRef <- Ref.make(Map.empty[String, Chunk[Queue[Take[RedisError, PushProtocol]]]])
       pubSub      = new SingleNodeSubscriptionExecutor(channelRef, patternRef, reqQueue, conn)
       _          <- pubSub.run.forkScoped
-      _          <- logScopeFinalizer(s"$pubSub Node PubSub is closed")
+      _          <- logScopeFinalizer(s"$pubSub Subscription Node is closed")
     } yield pubSub
 }

@@ -17,32 +17,20 @@
 package zio.redis.options
 
 trait Strings {
-  sealed trait StrAlgoLCS { self =>
-    private[redis] final def asString: String =
-      self match {
-        case StralgoLCS.Strings => "STRINGS"
-        case StralgoLCS.Keys    => "KEYS"
-      }
+
+  sealed trait Lcs
+
+  object Lcs {
+    case class PlainLcs(lcs: String)                       extends Lcs
+    case class Length(length: Long)                        extends Lcs
+    case class Matches(matches: List[Match], length: Long) extends Lcs
   }
 
-  object StralgoLCS {
-    case object Strings extends StrAlgoLCS
-    case object Keys    extends StrAlgoLCS
-  }
+  sealed trait LcsQueryType
 
-  sealed trait StrAlgoLcsQueryType
-
-  object StrAlgoLcsQueryType {
-    case object Len                                                           extends StrAlgoLcsQueryType
-    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends StrAlgoLcsQueryType
-  }
-
-  sealed trait LcsOutput
-
-  object LcsOutput {
-    case class Lcs(lcs: String)                            extends LcsOutput
-    case class Length(length: Long)                        extends LcsOutput
-    case class Matches(matches: List[Match], length: Long) extends LcsOutput
+  object LcsQueryType {
+    case object Len                                                           extends LcsQueryType
+    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends LcsQueryType
   }
 
   case class MatchIdx(start: Long, end: Long)
@@ -118,6 +106,7 @@ trait Strings {
         case Expire.SetExpireMilliseconds => "PX"
       }
   }
+
   object Expire {
     case object SetExpireSeconds      extends Expire
     case object SetExpireMilliseconds extends Expire
@@ -130,8 +119,15 @@ trait Strings {
         case ExpiredAt.SetExpireAtMilliseconds => "PXAT"
       }
   }
+
   object ExpiredAt {
     case object SetExpireAtSeconds      extends ExpiredAt
     case object SetExpireAtMilliseconds extends ExpiredAt
   }
+
+  case object GetKeyword {
+    private[redis] def asString: String = "GET"
+  }
+
+  type GetKeyword = GetKeyword.type
 }

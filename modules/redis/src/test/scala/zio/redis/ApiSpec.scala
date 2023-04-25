@@ -20,7 +20,7 @@ object ApiSpec
     with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("Redis commands")(singleNodeSuite, clusterSuite) @@ sequential @@ withLiveEnvironment
+    suite("Redis commands")(clusterSuite, singleNodeSuite) @@ sequential @@ withLiveEnvironment
 
   private val singleNodeSuite =
     suite("Single node executor")(
@@ -36,13 +36,7 @@ object ApiSpec
       streamsSuite,
       scriptingSpec,
       pubSubSuite
-    ).provideShared(
-      SingleNodeExecutor.local,
-      SubscriptionExecutor.local,
-      Redis.layer,
-      RedisSubscription.layer,
-      ZLayer.succeed(ProtobufCodecSupplier)
-    )
+    ).provideShared(Redis.local, RedisSubscription.local, ZLayer.succeed(ProtobufCodecSupplier))
 
   private val clusterSuite =
     suite("Cluster executor")(
@@ -59,8 +53,7 @@ object ApiSpec
       scriptingSpec,
       clusterSpec
     ).provideShared(
-      ClusterExecutor.layer,
-      Redis.layer,
+      Redis.cluster,
       ZLayer.succeed(ProtobufCodecSupplier),
       ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
