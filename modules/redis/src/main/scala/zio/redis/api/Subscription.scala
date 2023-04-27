@@ -11,18 +11,29 @@ import zio.{Chunk, IO, ZIO}
 trait Subscription extends SubscribeEnvironment {
   import Subscription._
 
+  final def subscribe(channel: String): ResultStreamBuilder1[Id] =
+    subscribeWithCallback(channel)(emptyCallback, emptyCallback)
+
+  final def subscribeWithCallback(channel: String)(
+    onSubscribe: PubSubCallback,
+    onUnsubscribe: PubSubCallback
+  ): ResultStreamBuilder1[Id] =
+    new ResultStreamBuilder1[Id] {
+      def returning[R: Schema]: Stream[RedisError, R] =
+        RedisSubscriptionCommand(executor)
+          .subscribe(
+            Chunk.single(channel),
+            onSubscribe,
+            onUnsubscribe
+          )
+          .map(_._2)
+    }
+
   final def subscribe(
     channel: String,
     channels: String*
   ): ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] =
-    new ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] {
-      def returning[R: Schema]: Stream[RedisError, (String, R)] =
-        RedisSubscriptionCommand(executor).subscribe(
-          Chunk.single(channel) ++ Chunk.fromIterable(channels),
-          emptyCallback,
-          emptyCallback
-        )
-    }
+    subscribeWithCallback(channel, channels: _*)(emptyCallback, emptyCallback)
 
   final def subscribeWithCallback(channel: String, channels: String*)(
     onSubscribe: PubSubCallback,
@@ -37,18 +48,31 @@ trait Subscription extends SubscribeEnvironment {
         )
     }
 
+  final def pSubscribe(pattern: String): ResultStreamBuilder1[Id] =
+    pSubscribeWithCallback(pattern)(emptyCallback, emptyCallback)
+
+  final def pSubscribeWithCallback(
+    pattern: String
+  )(
+    onSubscribe: PubSubCallback,
+    onUnsubscribe: PubSubCallback
+  ): ResultStreamBuilder1[Id] =
+    new ResultStreamBuilder1[Id] {
+      def returning[R: Schema]: Stream[RedisError, R] =
+        RedisSubscriptionCommand(executor)
+          .pSubscribe(
+            Chunk.single(pattern),
+            onSubscribe,
+            onUnsubscribe
+          )
+          .map(_._2)
+    }
+
   final def pSubscribe(
     pattern: String,
     patterns: String*
   ): ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] =
-    new ResultStreamBuilder1[({ type lambda[x] = (String, x) })#lambda] {
-      def returning[R: Schema]: Stream[RedisError, (String, R)] =
-        RedisSubscriptionCommand(executor).pSubscribe(
-          Chunk.single(pattern) ++ Chunk.fromIterable(patterns),
-          emptyCallback,
-          emptyCallback
-        )
-    }
+    pSubscribeWithCallback(pattern, patterns: _*)(emptyCallback, emptyCallback)
 
   final def pSubscribeWithCallback(
     pattern: String,

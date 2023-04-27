@@ -44,7 +44,7 @@ trait PubSubSpec extends BaseSpec {
                    .repeatUntil(_ contains channel)
             _   <- redis.publish(channel, message)
             res <- fiber.join
-          } yield assertTrue(res.get == (channel, message))
+          } yield assertTrue(res.get == message)
         },
         test("multiple subscribe") {
           val numOfPublish = 20
@@ -107,7 +107,7 @@ trait PubSubSpec extends BaseSpec {
             _   <- redis.pubSubNumPat.repeatUntil(_ > 0)
             _   <- redis.publish(channel, message)
             res <- stream.join
-          } yield assertTrue(res.get == (channel, message))
+          } yield assertTrue(res.get == message)
         }
       ),
       suite("publish")(test("publish long type message") {
@@ -120,7 +120,7 @@ trait PubSubSpec extends BaseSpec {
             stream <- subscription
                         .subscribe(channel)
                         .returning[Long]
-                        .runFoldWhile(0L)(_ < 10L) { case (sum, (_, message)) =>
+                        .runFoldWhile(0L)(_ < 10L) { case (sum, message) =>
                           sum + message
                         }
                         .fork
