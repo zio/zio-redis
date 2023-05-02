@@ -891,56 +891,56 @@ object OutputSpec extends BaseSpec {
       suite("PushProtocol")(
         test("subscribe") {
           val channel           = "foo"
-          val numOfSubscription = 1L
+          val numOfSubs = 1L
           val input =
             RespValue.array(
               RespValue.bulkString("subscribe"),
               RespValue.bulkString(channel),
-              RespValue.Integer(numOfSubscription)
+              RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.Subscribe(channel, numOfSubscription)
+          val expected = PushProtocol.Subscribe(channel, numOfSubs)
           assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
         test("psubscribe") {
           val pattern           = "f*"
-          val numOfSubscription = 1L
+          val numOfSubs = 1L
           val input =
             RespValue.array(
               RespValue.bulkString("psubscribe"),
               RespValue.bulkString(pattern),
-              RespValue.Integer(numOfSubscription)
+              RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.PSubscribe(pattern, numOfSubscription)
+          val expected = PushProtocol.PSubscribe(pattern, numOfSubs)
           assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
         test("unsubscribe") {
           val channel           = "foo"
-          val numOfSubscription = 1L
+          val numOfSubs = 1L
           val input =
             RespValue.array(
               RespValue.bulkString("unsubscribe"),
               RespValue.bulkString(channel),
-              RespValue.Integer(numOfSubscription)
+              RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.Unsubscribe(channel, numOfSubscription)
+          val expected = PushProtocol.Unsubscribe(channel, numOfSubs)
           assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
         test("punsubscribe") {
           val pattern           = "f*"
-          val numOfSubscription = 1L
+          val numOfSubs = 1L
           val input =
             RespValue.array(
               RespValue.bulkString("punsubscribe"),
               RespValue.bulkString(pattern),
-              RespValue.Integer(numOfSubscription)
+              RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.PUnsubscribe(pattern, numOfSubscription)
+          val expected = PushProtocol.PUnsubscribe(pattern, numOfSubs)
           assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
             equalTo(expected)
           )

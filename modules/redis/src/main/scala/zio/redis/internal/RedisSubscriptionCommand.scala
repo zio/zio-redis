@@ -20,14 +20,14 @@ private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionE
     executor
       .execute(makeCommand(Subscription.Subscribe, channels))
       .mapZIO {
-        case Subscribe(channel, numOfSubscription) =>
-          onSubscribe(channel, numOfSubscription).as(None)
+        case Subscribe(channel, numOfSubs) =>
+          onSubscribe(channel, numOfSubs).as(None)
         case Message(channel, message) =>
           ZIO
             .attempt(ArbitraryOutput[A]().unsafeDecode(message))
             .map(msg => Some((channel, msg)))
-        case Unsubscribe(channel, numOfSubscription) =>
-          onUnsubscribe(channel, numOfSubscription).as(None)
+        case Unsubscribe(channel, numOfSubs) =>
+          onUnsubscribe(channel, numOfSubs).as(None)
         case _ => ZIO.none
       }
       .collectSome
@@ -41,14 +41,14 @@ private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionE
     executor
       .execute(makeCommand(Subscription.PSubscribe, patterns))
       .mapZIO {
-        case PSubscribe(pattern, numOfSubscription) =>
-          onSubscribe(pattern, numOfSubscription).as(None)
+        case PSubscribe(pattern, numOfSubs) =>
+          onSubscribe(pattern, numOfSubs).as(None)
         case PMessage(_, channel, message) =>
           ZIO
             .attempt(ArbitraryOutput[A]().unsafeDecode(message))
             .map(msg => Some((channel, msg)))
-        case PUnsubscribe(pattern, numOfSubscription) =>
-          onUnsubscribe(pattern, numOfSubscription).as(None)
+        case PUnsubscribe(pattern, numOfSubs) =>
+          onUnsubscribe(pattern, numOfSubs).as(None)
         case _ => ZIO.none
       }
       .collectSome

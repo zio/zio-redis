@@ -676,9 +676,9 @@ object Output {
       respValue match {
         case RespValue.Array(values) =>
           Chunk.fromIterator(values.grouped(2).map { chunk =>
-            val channel           = MultiStringOutput.unsafeDecode(chunk(0))
-            val numOfSubscription = LongOutput.unsafeDecode(chunk(1))
-            NumberOfSubscribers(channel, numOfSubscription)
+            val channel   = MultiStringOutput.unsafeDecode(chunk(0))
+            val numOfSubs = LongOutput.unsafeDecode(chunk(1))
+            NumberOfSubscribers(channel, numOfSubs)
           })
         case other => throw ProtocolError(s"$other isn't an array")
       }

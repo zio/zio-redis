@@ -46,8 +46,8 @@ object RedisError {
   object Moved {
     def apply(slotAndAddress: (Slot, RedisUri)): Moved = Moved(slotAndAddress._1, slotAndAddress._2)
   }
-  final case class IOError(exception: IOException) extends RedisError
-  final case class CommandNameNotFound(message: String) extends RedisError
-  sealed trait PubSubError extends RedisError
+  final case class IOError(exception: IOException)       extends RedisError
+  final case class CommandNameNotFound(message: String)  extends RedisError
+  sealed trait PubSubError                               extends RedisError
   final case class InvalidPubSubCommand(command: String) extends PubSubError
 }
