@@ -2,6 +2,7 @@ package zio.redis.options
 
 import zio.UIO
 import zio.redis.internal.RespValue
+
 object PubSub {
   type PubSubCallback = (String, Long) => UIO[Unit]
 
