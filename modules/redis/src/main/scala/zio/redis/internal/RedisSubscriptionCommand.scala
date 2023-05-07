@@ -9,7 +9,7 @@ import zio.schema.codec.BinaryCodec
 import zio.stream._
 import zio.{Chunk, IO, ZIO}
 
-private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionExecutor) extends {
+private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionExecutor) {
   import zio.redis.options.PubSub.PushProtocol._
 
   def subscribe[A: BinaryCodec](

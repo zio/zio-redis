@@ -1,6 +1,6 @@
 package zio.redis
 
-import zio.{&, URLayer, ZIO, ZLayer}
+import zio._
 
 trait RedisSubscription extends api.Subscription
 
@@ -12,7 +12,7 @@ object RedisSubscription {
     SubscriptionExecutor.layer >>> makeLayer
 
   private def makeLayer: URLayer[CodecSupplier & SubscriptionExecutor, RedisSubscription] =
-   ZLayer.fromFunction(Live.apply _)
+    ZLayer.fromFunction(Live.apply _)
 
   private final case class Live(codecSupplier: CodecSupplier, executor: SubscriptionExecutor) extends RedisSubscription
 }
