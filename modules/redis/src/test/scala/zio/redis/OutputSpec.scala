@@ -890,7 +890,7 @@ object OutputSpec extends BaseSpec {
       ),
       suite("PushProtocol")(
         test("subscribe") {
-          val channel           = "foo"
+          val channel   = "foo"
           val numOfSubs = 1L
           val input =
             RespValue.array(
@@ -904,7 +904,7 @@ object OutputSpec extends BaseSpec {
           )
         },
         test("psubscribe") {
-          val pattern           = "f*"
+          val pattern   = "f*"
           val numOfSubs = 1L
           val input =
             RespValue.array(
@@ -918,7 +918,7 @@ object OutputSpec extends BaseSpec {
           )
         },
         test("unsubscribe") {
-          val channel           = "foo"
+          val channel   = "foo"
           val numOfSubs = 1L
           val input =
             RespValue.array(
@@ -932,7 +932,7 @@ object OutputSpec extends BaseSpec {
           )
         },
         test("punsubscribe") {
-          val pattern           = "f*"
+          val pattern   = "f*"
           val numOfSubs = 1L
           val input =
             RespValue.array(
