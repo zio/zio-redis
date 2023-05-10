@@ -33,10 +33,10 @@ object SubscriptionExecutor {
     RedisConnection.local.fresh >>> pubSublayer
 
   private lazy val pubSublayer: ZLayer[RedisConnection, RedisError.IOError, SubscriptionExecutor] =
-    ZLayer.scoped(
+    ZLayer.scoped {
       for {
         conn   <- ZIO.service[RedisConnection]
         pubSub <- SingleNodeSubscriptionExecutor.create(conn)
       } yield pubSub
-    )
+    }
 }
