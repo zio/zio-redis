@@ -20,7 +20,6 @@ import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
-import zio.redis.options.PubSub.NumberOfSubscribers
 import zio.schema.Schema
 import zio.{Chunk, IO}
 

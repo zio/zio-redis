@@ -17,6 +17,7 @@
 package zio.redis
 
 import zio._
+import zio.redis.internal.SubscriptionExecutor
 
 trait RedisSubscription extends api.Subscription
 

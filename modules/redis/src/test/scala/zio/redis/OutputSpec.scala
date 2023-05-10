@@ -1,10 +1,10 @@
 package zio.redis
 
 import zio._
-import zio.redis.Output.{PushProtocolOutput, _}
+import zio.redis.Output._
 import zio.redis.RedisError._
+import zio.redis.internal.PubSub.{PushMessage, SubscriptionKey}
 import zio.redis.internal.RespValue
-import zio.redis.options.PubSub.PushProtocol
 import zio.test.Assertion._
 import zio.test._
 
@@ -888,7 +888,7 @@ object OutputSpec extends BaseSpec {
           }
         )
       ),
-      suite("PushProtocol")(
+      suite("PushMessage")(
         test("subscribe") {
           val channel   = "foo"
           val numOfSubs = 1L
@@ -898,8 +898,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString(channel),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.Subscribe(channel, numOfSubs)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
+          val expected = PushMessage.Subscribed(SubscriptionKey.Channel(channel), numOfSubs)
+          assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
@@ -912,8 +912,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString(pattern),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.PSubscribe(pattern, numOfSubs)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
+          val expected = PushMessage.Subscribed(SubscriptionKey.Pattern(pattern), numOfSubs)
+          assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
@@ -926,8 +926,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString(channel),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.Unsubscribe(channel, numOfSubs)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
+          val expected = PushMessage.Unsubscribed(SubscriptionKey.Channel(channel), numOfSubs)
+          assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
@@ -940,8 +940,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString(pattern),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushProtocol.PUnsubscribe(pattern, numOfSubs)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
+          val expected = PushMessage.Unsubscribed(SubscriptionKey.Pattern(pattern), numOfSubs)
+          assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
@@ -954,8 +954,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString(channel),
               message
             )
-          val expected = PushProtocol.Message(channel, message)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
+          val expected = PushMessage.Message(SubscriptionKey.Channel(channel), channel, message)
+          assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
@@ -970,8 +970,8 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString(channel),
               message
             )
-          val expected = PushProtocol.PMessage(pattern, channel, message)
-          assertZIO(ZIO.attempt(PushProtocolOutput.unsafeDecode(input)))(
+          val expected = PushMessage.Message(SubscriptionKey.Pattern(pattern), channel, message)
+          assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         }

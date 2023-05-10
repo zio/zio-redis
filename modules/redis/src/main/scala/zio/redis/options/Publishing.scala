@@ -14,19 +14,8 @@
  * limitations under the License.
  */
 
-package zio
+package zio.redis.options
 
-package object redis
-    extends options.Connection
-    with options.Geo
-    with options.Keys
-    with options.Shared
-    with options.SortedSets
-    with options.Strings
-    with options.Lists
-    with options.Streams
-    with options.Scripting
-    with options.Publishing {
-
-  type Id[+A] = A
+trait Publishing {
+  sealed case class NumberOfSubscribers(channel: String, subscriberCount: Long)
 }

@@ -16,6 +16,7 @@
 
 package zio.redis
 
+import zio.redis.internal.RespCommand
 import zio.redis.options.Cluster.Slot
 
 import java.io.IOException
@@ -46,8 +47,12 @@ object RedisError {
   object Moved {
     def apply(slotAndAddress: (Slot, RedisUri)): Moved = Moved(slotAndAddress._1, slotAndAddress._2)
   }
-  final case class IOError(exception: IOException)       extends RedisError
-  final case class CommandNameNotFound(message: String)  extends RedisError
+  final case class IOError(exception: IOException)      extends RedisError
+  final case class CommandNameNotFound(message: String) extends RedisError
+  object CommandNameNotFound {
+    def apply(command: RespCommand): CommandNameNotFound = CommandNameNotFound(command.args.toString())
+  }
+
   sealed trait PubSubError                               extends RedisError
   final case class InvalidPubSubCommand(command: String) extends PubSubError
 }

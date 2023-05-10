@@ -17,9 +17,9 @@
 package zio.redis
 
 import zio._
+import zio.redis.internal.PubSub.{PushMessage, SubscriptionKey}
 import zio.redis.internal.RespValue
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
-import zio.redis.options.PubSub.{NumberOfSubscribers, PushProtocol}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
@@ -640,8 +640,8 @@ object Output {
       }
   }
 
-  case object PushProtocolOutput extends Output[PushProtocol] {
-    protected def tryDecode(respValue: RespValue): PushProtocol =
+  private[redis] case object PushMessageOutput extends Output[PushMessage] {
+    protected def tryDecode(respValue: RespValue): PushMessage =
       respValue match {
         case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
@@ -650,21 +650,23 @@ object Output {
           name match {
             case "subscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.Subscribe(key, num)
+              PushMessage.Subscribed(SubscriptionKey.Channel(key), num)
             case "psubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.PSubscribe(key, num)
+              PushMessage.Subscribed(SubscriptionKey.Pattern(key), num)
             case "unsubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.Unsubscribe(key, num)
+              PushMessage.Unsubscribed(SubscriptionKey.Channel(key), num)
             case "punsubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
-              PushProtocol.PUnsubscribe(key, num)
+              PushMessage.Unsubscribed(SubscriptionKey.Pattern(key), num)
             case "message" =>
-              PushProtocol.Message(key, values(2))
+              val message = values(2)
+              PushMessage.Message(SubscriptionKey.Channel(key), key, message)
             case "pmessage" =>
               val channel = MultiStringOutput.unsafeDecode(values(2))
-              PushProtocol.PMessage(key, channel, values(3))
+              val message = values(3)
+              PushMessage.Message(SubscriptionKey.Pattern(key), channel, message)
             case other => throw ProtocolError(s"$other isn't a pushed message")
           }
         case other => throw ProtocolError(s"$other isn't an array")

@@ -20,67 +20,56 @@ import zio.redis.Input._
 import zio.redis.Output.ArbitraryOutput
 import zio.redis._
 import zio.redis.api.Subscription
-import zio.redis.options.PubSub.PubSubCallback
+import zio.redis.api.Subscription.PubSubCallback
+import zio.redis.internal.PubSub.PushMessage._
 import zio.schema.codec.BinaryCodec
 import zio.stream._
 import zio.{Chunk, IO, ZIO}
 
 private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionExecutor) {
-  import zio.redis.options.PubSub.PushProtocol._
-
   def subscribe[A: BinaryCodec](
     channels: Chunk[String],
-    onSubscribe: PubSubCallback,
-    onUnsubscribe: PubSubCallback
+    onSubscribe: Option[PubSubCallback],
+    onUnsubscribe: Option[PubSubCallback]
   )(implicit codec: BinaryCodec[String]): Stream[RedisError, (String, A)] =
-    executor
-      .execute(makeCommand(Subscription.Subscribe, channels))
-      .mapZIO {
-        case Subscribe(channel, numOfSubs) =>
-          onSubscribe(channel, numOfSubs).as(None)
-        case Message(channel, message) =>
-          ZIO
-            .attempt(ArbitraryOutput[A]().unsafeDecode(message))
-            .map(msg => Some((channel, msg)))
-        case Unsubscribe(channel, numOfSubs) =>
-          onUnsubscribe(channel, numOfSubs).as(None)
-        case _ => ZIO.none
-      }
-      .collectSome
-      .refineToOrDie[RedisError]
+    executeCommand[A](makeCommand(Subscription.Subscribe, channels), onSubscribe, onUnsubscribe)
 
   def pSubscribe[A: BinaryCodec](
     patterns: Chunk[String],
-    onSubscribe: PubSubCallback,
-    onUnsubscribe: PubSubCallback
+    onSubscribe: Option[PubSubCallback],
+    onUnsubscribe: Option[PubSubCallback]
   )(implicit stringCodec: BinaryCodec[String]): Stream[RedisError, (String, A)] =
-    executor
-      .execute(makeCommand(Subscription.PSubscribe, patterns))
-      .mapZIO {
-        case PSubscribe(pattern, numOfSubs) =>
-          onSubscribe(pattern, numOfSubs).as(None)
-        case PMessage(_, channel, message) =>
-          ZIO
-            .attempt(ArbitraryOutput[A]().unsafeDecode(message))
-            .map(msg => Some((channel, msg)))
-        case PUnsubscribe(pattern, numOfSubs) =>
-          onUnsubscribe(pattern, numOfSubs).as(None)
-        case _ => ZIO.none
-      }
-      .collectSome
-      .refineToOrDie[RedisError]
+    executeCommand[A](makeCommand(Subscription.PSubscribe, patterns), onSubscribe, onUnsubscribe)
 
   def unsubscribe(channels: Chunk[String])(implicit codec: BinaryCodec[String]): IO[RedisError, Unit] =
-    executor
-      .execute(makeCommand(Subscription.Unsubscribe, channels))
-      .runDrain
+    executeCommand(makeCommand(Subscription.Unsubscribe, channels), None, None).runDrain
 
   def pUnsubscribe(patterns: Chunk[String])(implicit codec: BinaryCodec[String]): IO[RedisError, Unit] =
-    executor
-      .execute(makeCommand(Subscription.PUnsubscribe, patterns))
-      .runDrain
+    executeCommand(makeCommand(Subscription.PUnsubscribe, patterns), None, None).runDrain
 
   private def makeCommand(commandName: String, keys: Chunk[String])(implicit codec: BinaryCodec[String]) =
     CommandNameInput.encode(commandName) ++
       Varargs(ArbitraryKeyInput[String]()).encode(keys)
+
+  private def executeCommand[A: BinaryCodec](
+    command: RespCommand,
+    onSubscribe: Option[PubSubCallback],
+    onUnsubscribe: Option[PubSubCallback]
+  ): Stream[RedisError, (String, A)] =
+    executor
+      .execute(command)
+      .mapZIO {
+        case Subscribed(key, numOfSubs) =>
+          ZIO.foreach(onSubscribe)(_.apply(key.value, numOfSubs)).as(None)
+        case Unsubscribed(key, numOfSubs) =>
+          ZIO.foreach(onUnsubscribe)(_.apply(key.value, numOfSubs)).as(None)
+        case Message(_, channel, message) =>
+          ZIO
+            .attempt(ArbitraryOutput[A]().unsafeDecode(message))
+            .map(msg => Some((channel, msg)))
+        case _ => ZIO.none
+      }
+      .collectSome
+      .refineToOrDie[RedisError]
+
 }

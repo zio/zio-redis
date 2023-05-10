@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
-import zio.redis.internal.{RedisConnection, RespCommand}
-import zio.redis.options.PubSub.PushProtocol
+import zio.redis.internal.PubSub.PushMessage
+import zio.redis.{RedisConfig, RedisError}
 import zio.stream._
 import zio.{Layer, ZIO, ZLayer}
 
 trait SubscriptionExecutor {
-  private[redis] def execute(command: RespCommand): Stream[RedisError, PushProtocol]
+  private[redis] def execute(command: RespCommand): Stream[RedisError, PushMessage]
 }
 
 object SubscriptionExecutor {

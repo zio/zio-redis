@@ -1,6 +1,5 @@
 package zio.redis
 
-import zio.redis.options.PubSub.NumberOfSubscribers
 import zio.test.Assertion._
 import zio.test._
 import zio.{Chunk, Promise, ZIO}
@@ -19,8 +18,8 @@ trait PubSubSpec extends BaseSpec {
             resBuilder =
               subscription
                 .subscribeWithCallback(channel)(
-                  (key: String, _: Long) => promise.succeed(key).unit,
-                  (_, _) => ZIO.unit
+                  Some((key: String, _: Long) => promise.succeed(key).unit),
+                  None
                 )
             stream = resBuilder.returning[String]
             _ <- stream
@@ -81,8 +80,8 @@ trait PubSubSpec extends BaseSpec {
             promise      <- Promise.make[RedisError, String]
             _ <- subscription
                    .pSubscribeWithCallback(pattern)(
-                     (key: String, _: Long) => promise.succeed(key).unit,
-                     (_, _) => ZIO.unit
+                     Some((key: String, _: Long) => promise.succeed(key).unit),
+                     None
                    )
                    .returning[String]
                    .interruptWhen(promise)
@@ -142,7 +141,7 @@ trait PubSubSpec extends BaseSpec {
             message      <- generateRandomString()
             promise      <- Promise.make[Nothing, Unit]
             _ <- subscription
-                   .subscribeWithCallback(channel)((_, _) => ZIO.unit, (_, _) => promise.succeed(()).unit)
+                   .subscribeWithCallback(channel)(None, Some((_, _) => promise.succeed(()).unit))
                    .returning[String]
                    .runCollect
                    .fork
@@ -161,8 +160,8 @@ trait PubSubSpec extends BaseSpec {
             promise      <- Promise.make[RedisError, String]
             _ <- subscription
                    .subscribeWithCallback(channel)(
-                     (_, _) => ZIO.unit,
-                     (key, _) => promise.succeed(key).unit
+                     None,
+                     Some((key, _) => promise.succeed(key).unit)
                    )
                    .returning[Unit]
                    .runDrain
@@ -178,8 +177,8 @@ trait PubSubSpec extends BaseSpec {
             promise      <- Promise.make[RedisError, String]
             _ <- subscription
                    .pSubscribeWithCallback(pattern)(
-                     (_, _) => ZIO.unit,
-                     (key, _) => promise.succeed(key).unit
+                     None,
+                     Some((key, _) => promise.succeed(key).unit)
                    )
                    .returning[Unit]
                    .runDrain
@@ -201,8 +200,8 @@ trait PubSubSpec extends BaseSpec {
             _ <-
               subscription
                 .subscribeWithCallback(channel1)(
-                  (_, _) => ZIO.unit,
-                  (_, _) => promise1.succeed(()).unit
+                  None,
+                  Some((_, _) => promise1.succeed(()).unit)
                 )
                 .returning[String]
                 .runCollect
@@ -210,8 +209,8 @@ trait PubSubSpec extends BaseSpec {
             _ <-
               subscription
                 .subscribeWithCallback(channel2)(
-                  (_, _) => ZIO.unit,
-                  (_, _) => promise2.succeed(()).unit
+                  None,
+                  Some((_, _) => promise2.succeed(()).unit)
                 )
                 .returning[String]
                 .runCollect
