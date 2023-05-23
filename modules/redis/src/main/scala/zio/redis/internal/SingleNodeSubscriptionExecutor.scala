@@ -178,12 +178,12 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
 
     for {
       subsKeys <- subsRef.get.map(_.keys)
-      (channels, patterns) = subsKeys.partitionMap {
-                               case SubscriptionKey.Channel(value) => Left(value)
-                               case SubscriptionKey.Pattern(value) => Right(value)
+      (channels, patterns) = subsKeys.partition {
+                               case _: SubscriptionKey.Channel => false
+                               case _: SubscriptionKey.Pattern => true
                              }
-      commands = makeCommand(Subscription.Subscribe, Chunk.fromIterable(channels)) ++
-                   makeCommand(Subscription.PSubscribe, Chunk.fromIterable(patterns))
+      commands = makeCommand(Subscription.Subscribe, Chunk.fromIterable(channels).map(_.value)) ++
+                   makeCommand(Subscription.PSubscribe, Chunk.fromIterable(patterns).map(_.value))
       _ <- connection
              .write(commands)
              .when(commands.nonEmpty)

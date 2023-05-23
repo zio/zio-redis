@@ -67,7 +67,6 @@ private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionE
           ZIO
             .attempt(ArbitraryOutput[A]().unsafeDecode(message))
             .map(msg => Some((channel, msg)))
-        case _ => ZIO.none
       }
       .collectSome
       .refineToOrDie[RedisError]
