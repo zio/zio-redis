@@ -149,9 +149,10 @@ object OutputSpec extends BaseSpec {
             res <- ZIO.attempt(OptionalOutput(UnitOutput).unsafeDecode(RespValue.SimpleString("OK")))
           } yield assert(res)(isSome(isUnit))
         },
-          test ("extract empty bulk string") {
+        test("extract empty bulk string") {
           for {
-            res <- ZIO.attempt(OptionalOutput(ArbitraryOutput[String]()).unsafeDecode(RespValue.BulkString(Chunk.empty)))
+            res <-
+              ZIO.attempt(OptionalOutput(ArbitraryOutput[String]()).unsafeDecode(RespValue.BulkString(Chunk.empty)))
           } yield assert(res)(isSome(equalTo("")))
         }
       ),

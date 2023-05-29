@@ -991,9 +991,9 @@ trait StringsSpec extends BaseSpec {
         },
         test("emtpy string") {
           for {
-            redis <- ZIO.service[Redis]
-            key <- uuid
-            _ <- redis.set(key, "")
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.set(key, "")
             result <- redis.get(key).returning[String]
           } yield assert(result)(isSome(equalTo("")))
         },
