@@ -251,7 +251,6 @@ object Output {
     protected def tryDecode(respValue: RespValue): Option[A] =
       respValue match {
         case RespValue.NullBulkString | RespValue.NullArray => None
-        case RespValue.BulkString(value) if value.isEmpty   => None
         case other                                          => Some(output.tryDecode(other))
       }
   }

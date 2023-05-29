@@ -982,12 +982,20 @@ trait StringsSpec extends BaseSpec {
             result <- redis.get(key).returning[String]
           } yield assert(result)(isSome(equalTo("value")))
         },
-        test("emtpy string") {
+        test("non existent string") {
           for {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             result <- redis.get(key).returning[String]
           } yield assert(result)(isNone)
+        },
+        test("emtpy string") {
+          for {
+            redis <- ZIO.service[Redis]
+            key <- uuid
+            _ <- redis.set(key, "")
+            result <- redis.get(key).returning[String]
+          } yield assert(result)(isSome(equalTo("")))
         },
         test("error when not string") {
           for {
@@ -1061,7 +1069,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             _      <- redis.set(key, "value")
             substr <- redis.getRange(key, 10 to 15).returning[String]
-          } yield assert(substr)(isNone)
+          } yield assert(substr)(isSome(equalTo("")))
         },
         test("with inverse range of non-empty string") {
           for {
@@ -1069,7 +1077,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             _      <- redis.set(key, "value")
             substr <- redis.getRange(key, 15 to 3).returning[String]
-          } yield assert(substr)(isNone)
+          } yield assert(substr)(isSome(equalTo("")))
         },
         test("with negative range end from non-empty string") {
           for {
@@ -1092,7 +1100,7 @@ trait StringsSpec extends BaseSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             substr <- redis.getRange(key, 1 to 3).returning[String]
-          } yield assert(substr)(isNone)
+          } yield assert(substr)(isSome(equalTo("")))
         },
         test("error when not string") {
           for {
