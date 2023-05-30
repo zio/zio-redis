@@ -159,6 +159,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
       }
   }
 
+  private def drainWith(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
   private def resubscribe: IO[RedisError, Unit] = {
     def makeCommand(name: String, keys: Chunk[String]) =
       if (keys.isEmpty)
@@ -191,7 +192,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
   val run: IO[RedisError, AnyVal] =
     ZIO.logTrace(s"$this PubSub sender and reader has been started") *>
       (send.repeat(Schedule.forever) race receive)
-        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> resubscribe)
+        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e) *> resubscribe)
         .retryWhile(True)
         .tapError(e => ZIO.logError(s"Executor exiting: $e"))
 }
