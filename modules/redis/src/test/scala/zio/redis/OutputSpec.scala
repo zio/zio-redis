@@ -134,15 +134,26 @@ object OutputSpec extends BaseSpec {
         }
       ),
       suite("optional")(
-        test("extract None") {
+        test("extract null bulk string") {
           for {
             res <- ZIO.attempt(OptionalOutput(UnitOutput).unsafeDecode(RespValue.NullBulkString))
+          } yield assert(res)(isNone)
+        },
+        test("extract null array") {
+          for {
+            res <- ZIO.attempt(OptionalOutput(ArbitraryOutput[String]()).unsafeDecode(RespValue.NullArray))
           } yield assert(res)(isNone)
         },
         test("extract some") {
           for {
             res <- ZIO.attempt(OptionalOutput(UnitOutput).unsafeDecode(RespValue.SimpleString("OK")))
           } yield assert(res)(isSome(isUnit))
+        },
+        test("extract empty bulk string") {
+          for {
+            res <-
+              ZIO.attempt(OptionalOutput(ArbitraryOutput[String]()).unsafeDecode(RespValue.BulkString(Chunk.empty)))
+          } yield assert(res)(isSome(equalTo("")))
         }
       ),
       suite("scan")(
