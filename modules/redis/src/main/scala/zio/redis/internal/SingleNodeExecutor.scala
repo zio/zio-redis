@@ -24,7 +24,8 @@ private[redis] final class SingleNodeExecutor private (
   connection: RedisConnection,
   requests: Queue[Request],
   responses: Queue[Promise[RedisError, RespValue]]
-) extends RedisExecutor {
+) extends SingleNodeRunner
+    with RedisExecutor {
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
   def execute(command: RespCommand): IO[RedisError, RespValue] =
@@ -32,21 +33,10 @@ private[redis] final class SingleNodeExecutor private (
       .make[RedisError, RespValue]
       .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)) *> promise.await)
 
-  /**
-   * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a
-   * new connection. Only exits by interruption or defect.
-   */
-  private val run: IO[RedisError, AnyVal] =
-    ZIO.logTrace(s"$this Executable sender and reader has been started") *>
-      (send.repeat[Any, Long](Schedule.forever) race receive)
-        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e))
-        .retryWhile(True)
-        .tapError(e => ZIO.logError(s"Executor exiting: $e"))
+  def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
-  private def drainWith(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
-
-  private def send: IO[RedisError.IOError, Option[Unit]] =
-    requests.takeBetween(1, RequestQueueSize).flatMap { requests =>
+  def send: IO[RedisError.IOError, Unit] =
+    requests.takeAll.flatMap { requests =>
       val bytes =
         requests
           .foldLeft(new ChunkBuilder.Byte())((builder, req) => builder ++= RespValue.Array(req.command).asBytes)
@@ -59,9 +49,10 @@ private[redis] final class SingleNodeExecutor private (
           e => ZIO.foreachDiscard(requests)(_.promise.fail(e)),
           _ => ZIO.foreachDiscard(requests)(req => responses.offer(req.promise))
         )
+        .unit
     }
 
-  private def receive: IO[RedisError, Unit] =
+  def receive: IO[RedisError, Unit] =
     connection.read
       .mapError(RedisError.IOError(_))
       .via(RespValue.Decoder)
@@ -79,7 +70,7 @@ private[redis] object SingleNodeExecutor {
 
   def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
     for {
-      requests  <- Queue.bounded[Request](RequestQueueSize)
+      requests  <- RequestQueue.create[Request]
       responses <- Queue.unbounded[Promise[RedisError, RespValue]]
       executor   = new SingleNodeExecutor(connection, requests, responses)
       _         <- executor.run.forkScoped
@@ -87,10 +78,6 @@ private[redis] object SingleNodeExecutor {
     } yield executor
 
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
-
-  private final val True: Any => Boolean = _ => true
-
-  private final val RequestQueueSize = 16
 
   private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
     ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))

@@ -20,17 +20,19 @@ import zio.redis.Input.{CommandNameInput, StringInput}
 import zio.redis.Output.PushMessageOutput
 import zio.redis.api.Subscription
 import zio.redis.internal.PubSub.{PushMessage, SubscriptionKey}
-import zio.redis.internal.SingleNodeSubscriptionExecutor.{Request, RequestQueueSize, True}
+import zio.redis.internal.SingleNodeRunner.True
+import zio.redis.internal.SingleNodeSubscriptionExecutor.Request
 import zio.redis.{Input, RedisError}
 import zio.stream._
-import zio.{Chunk, ChunkBuilder, Hub, IO, Promise, Queue, Ref, Schedule, Scope, UIO, URIO, ZIO}
+import zio.{Chunk, ChunkBuilder, Hub, IO, Promise, Queue, Ref, Scope, UIO, URIO, ZIO}
 
 private[redis] final class SingleNodeSubscriptionExecutor private (
   subsRef: Ref[Map[SubscriptionKey, Hub[Take[RedisError, PushMessage]]]],
   requests: Queue[Request],
   responses: Queue[Promise[RedisError, PushMessage]],
   connection: RedisConnection
-) extends SubscriptionExecutor {
+) extends SingleNodeRunner
+    with SubscriptionExecutor {
   def execute(command: RespCommand): Stream[RedisError, PushMessage] = {
     def getStream(commandName: String): IO[RedisError, Stream[RedisError, PushMessage]] = commandName match {
       case Subscription.Subscribe =>
@@ -108,8 +110,8 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
     } yield streams.fold(ZStream.empty)(_ merge _)
   }
 
-  private def send =
-    requests.takeBetween(1, RequestQueueSize).flatMap { reqs =>
+  def send: IO[RedisError.IOError, Unit] =
+    requests.takeAll.flatMap { reqs =>
       val buffer = ChunkBuilder.make[Byte]()
       val it     = reqs.iterator
 
@@ -127,9 +129,10 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
           e => ZIO.foreachDiscard(reqs.flatMap(_.promises))(_.fail(e)),
           _ => ZIO.foreachDiscard(reqs)(req => responses.offerAll(req.promises))
         )
+        .unit
     }
 
-  private def receive: IO[RedisError, Unit] = {
+  def receive: IO[RedisError, Unit] = {
     def offerMessage(msg: PushMessage) =
       for {
         subscription <- subsRef.get
@@ -159,8 +162,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
       }
   }
 
-  private def drainWith(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
-  private def resubscribe: IO[RedisError, Unit] = {
+  def onError(e: RedisError): IO[RedisError, Unit] = {
     def makeCommand(name: String, keys: Chunk[String]) =
       if (keys.isEmpty)
         Chunk.empty
@@ -170,6 +172,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
           .asBytes
 
     for {
+      _        <- responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
       subsKeys <- subsRef.get.map(_.keys)
       (channels, patterns) = subsKeys.partition {
                                case _: SubscriptionKey.Channel => false
@@ -184,17 +187,6 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
              .retryWhile(True)
     } yield ()
   }
-
-  /**
-   * Opens a connection to the server and launches receive operations. All failures are retried by opening a new
-   * connection. Only exits by interruption or defect.
-   */
-  val run: IO[RedisError, AnyVal] =
-    ZIO.logTrace(s"$this PubSub sender and reader has been started") *>
-      (send.repeat(Schedule.forever) race receive)
-        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> drainWith(e) *> resubscribe)
-        .retryWhile(True)
-        .tapError(e => ZIO.logError(s"Executor exiting: $e"))
 }
 
 private[redis] object SingleNodeSubscriptionExecutor {
@@ -203,13 +195,9 @@ private[redis] object SingleNodeSubscriptionExecutor {
     promises: Chunk[Promise[RedisError, PushMessage]]
   )
 
-  private final val True: Any => Boolean = _ => true
-
-  private final val RequestQueueSize = 16
-
   def create(conn: RedisConnection): URIO[Scope, SubscriptionExecutor] =
     for {
-      reqQueue <- Queue.bounded[Request](RequestQueueSize)
+      reqQueue <- RequestQueue.create[Request]
       resQueue <- Queue.unbounded[Promise[RedisError, PushMessage]]
       subsRef  <- Ref.make(Map.empty[SubscriptionKey, Hub[Take[RedisError, PushMessage]]])
       pubSub    = new SingleNodeSubscriptionExecutor(subsRef, reqQueue, resQueue, conn)
