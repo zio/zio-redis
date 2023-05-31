@@ -16,6 +16,7 @@
 
 package zio.redis
 
+import zio.redis.internal.PubSub.SubscriptionKey
 import zio.redis.internal.RespCommand
 import zio.redis.options.Cluster.Slot
 
@@ -53,6 +54,7 @@ object RedisError {
     def apply(command: RespCommand): CommandNameNotFound = CommandNameNotFound(command.args.toString())
   }
 
-  sealed trait PubSubError                               extends RedisError
-  final case class InvalidPubSubCommand(command: String) extends PubSubError
+  sealed trait PubSubError                                               extends RedisError
+  final case class InvalidPubSubCommand(command: String)                 extends PubSubError
+  final case class SubscriptionStreamAlreadyClosed(key: SubscriptionKey) extends PubSubError
 }

@@ -41,7 +41,7 @@ trait PubSubSpec extends BaseSpec {
             _ <- redis
                    .pubSubChannels(channel)
                    .repeatUntil(_ contains channel)
-            _   <- redis.publish(channel, message)
+            _   <- redis.publish(channel, message).replicateZIO(10)
             res <- fiber.join
           } yield assertTrue(res.get == message)
         },
@@ -84,7 +84,6 @@ trait PubSubSpec extends BaseSpec {
                      None
                    )
                    .returning[String]
-                   .interruptWhen(promise)
                    .runHead
                    .fork
             res <- promise.await
@@ -104,7 +103,7 @@ trait PubSubSpec extends BaseSpec {
                         .runHead
                         .fork
             _   <- redis.pubSubNumPat.repeatUntil(_ > 0)
-            _   <- redis.publish(channel, message)
+            _   <- redis.publish(channel, message).replicateZIO(10)
             res <- stream.join
           } yield assertTrue(res.get == message)
         }
@@ -124,7 +123,7 @@ trait PubSubSpec extends BaseSpec {
                         }
                         .fork
             _   <- redis.pubSubChannels(channel).repeatUntil(_ contains channel)
-            _   <- ZIO.replicateZIO(10)(redis.publish(channel, message))
+            _   <- ZIO.replicateZIO(50)(redis.publish(channel, message))
             res <- stream.join
           } yield res
         )(equalTo(10L))
@@ -136,18 +135,19 @@ trait PubSubSpec extends BaseSpec {
             redis        <- ZIO.service[Redis]
             subscription <- ZIO.service[RedisSubscription]
             prefix       <- generateRandomString(5)
-            pattern       = prefix + '*'
             channel      <- generateRandomString(prefix)
             message      <- generateRandomString()
+            subsPromise  <- Promise.make[Nothing, Unit]
             promise      <- Promise.make[Nothing, Unit]
             _ <- subscription
-                   .subscribeWithCallback(channel)(None, Some((_, _) => promise.succeed(()).unit))
+                   .subscribeWithCallback(channel)(
+                     Some((_, _) => subsPromise.succeed(()).unit),
+                     Some((_, _) => promise.succeed(()).unit)
+                   )
                    .returning[String]
-                   .runCollect
+                   .runDrain
                    .fork
-            _ <- redis
-                   .pubSubChannels(pattern)
-                   .repeatUntil(_ contains channel)
+            _             <- subsPromise.await
             _             <- subscription.unsubscribe(channel)
             _             <- promise.await
             receiverCount <- redis.publish(channel, message).replicateZIO(numOfPublished).map(_.head)
@@ -157,16 +157,19 @@ trait PubSubSpec extends BaseSpec {
           for {
             subscription <- ZIO.service[RedisSubscription]
             channel      <- generateRandomString()
+            subsPromise  <- Promise.make[RedisError, Unit]
             promise      <- Promise.make[RedisError, String]
-            _ <- subscription
-                   .subscribeWithCallback(channel)(
-                     None,
-                     Some((key, _) => promise.succeed(key).unit)
-                   )
-                   .returning[Unit]
-                   .runDrain
-                   .fork
+            fiber <- subscription
+                       .subscribeWithCallback(channel)(
+                         Some((_, _) => subsPromise.succeed(()).unit),
+                         Some((key, _) => promise.succeed(key).unit)
+                       )
+                       .returning[Unit]
+                       .runDrain
+                       .fork
+            _   <- subsPromise.await
             _   <- subscription.unsubscribe(channel)
+            _   <- fiber.join
             res <- promise.await
           } yield assertTrue(res == channel)
         },
@@ -174,16 +177,19 @@ trait PubSubSpec extends BaseSpec {
           for {
             subscription <- ZIO.service[RedisSubscription]
             pattern      <- generateRandomString()
+            subsPromise  <- Promise.make[RedisError, Unit]
             promise      <- Promise.make[RedisError, String]
-            _ <- subscription
-                   .pSubscribeWithCallback(pattern)(
-                     None,
-                     Some((key, _) => promise.succeed(key).unit)
-                   )
-                   .returning[Unit]
-                   .runDrain
-                   .fork
+            fiber <- subscription
+                       .pSubscribeWithCallback(pattern)(
+                         Some((_, _) => subsPromise.succeed(()).unit),
+                         Some((key, _) => promise.succeed(key).unit)
+                       )
+                       .returning[Unit]
+                       .runDrain
+                       .fork
+            _   <- subsPromise.await
             _   <- subscription.pUnsubscribe(pattern)
+            _   <- fiber.join
             res <- promise.await
           } yield assertTrue(res == pattern)
         },
