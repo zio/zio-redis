@@ -24,7 +24,7 @@ import zio.redis.internal.SingleNodeRunner.True
 import zio.redis.internal.SingleNodeSubscriptionExecutor.Request
 import zio.redis.{Input, RedisError}
 import zio.stream._
-import zio.{Chunk, ChunkBuilder, Hub, IO, Promise, Queue, Ref, Scope, UIO, URIO, ZIO}
+import zio._
 
 private[redis] final class SingleNodeSubscriptionExecutor private (
   subsRef: Ref[Map[SubscriptionKey, Hub[Take[RedisError, PushMessage]]]],
