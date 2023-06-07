@@ -16,6 +16,8 @@
 
 package zio.redis.internal
 
+import zio._
+import zio.concurrent.ConcurrentMap
 import zio.redis.Input.{CommandNameInput, StringInput}
 import zio.redis.Output.PushMessageOutput
 import zio.redis.api.Subscription
@@ -24,10 +26,9 @@ import zio.redis.internal.SingleNodeRunner.True
 import zio.redis.internal.SingleNodeSubscriptionExecutor.Request
 import zio.redis.{Input, RedisError}
 import zio.stream._
-import zio._
 
 private[redis] final class SingleNodeSubscriptionExecutor private (
-  subsRef: Ref[Map[SubscriptionKey, Hub[Take[RedisError, PushMessage]]]],
+  subscriptionMap: ConcurrentMap[SubscriptionKey, Hub[Take[RedisError, PushMessage]]],
   requests: Queue[Request],
   subsResponses: Queue[Promise[RedisError, PushMessage]],
   connection: RedisConnection
@@ -63,8 +64,8 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
     command: RespCommand
   ): IO[RedisError, Stream[RedisError, PushMessage]] = {
     def getHub(key: SubscriptionKey): IO[RedisError, Hub[Take[RedisError, PushMessage]]] =
-      subsRef.get
-        .map(_.get(key))
+      subscriptionMap
+        .get(key)
         .flatMap(ZIO.fromOption(_))
         .orElseFail(RedisError.SubscriptionStreamAlreadyClosed(key))
 
@@ -79,15 +80,14 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
     def makeHub(key: SubscriptionKey): UIO[Unit] =
       Hub
         .unbounded[Take[RedisError, PushMessage]]
-        .tap(hub => subsRef.update(_ + (key -> hub)))
-        .unlessZIO(subsRef.get.map(_.contains(key)))
+        .tap(subscriptionMap.putIfAbsent(key, _))
         .unit
 
     for {
-      _        <- ZIO.foreachDiscard(keys)(makeHub(_))
-      promises <- Promise.make[RedisError, PushMessage].replicateZIO(keys.size).map(Chunk.fromIterable(_))
+      _        <- ZIO.foreachDiscard(keys)(makeHub)
+      promises <- Promise.make[RedisError, PushMessage].replicateZIO(keys.size).map(Chunk.fromIterable)
       _        <- requests.offer(Request.Subscribe(command.args.map(_.value), promises))
-      streams   = promises.map(getStream(_))
+      streams   = promises.map(getStream)
     } yield streams.fold(ZStream.empty)(_ merge _)
   }
 
@@ -101,12 +101,12 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
   private def extractChannelKeys(command: Chunk[RespCommandArgument]): Chunk[SubscriptionKey.Channel] =
     command.collect { case RespCommandArgument.Key(key) =>
       key.asString
-    }.map(SubscriptionKey.Channel(_))
+    }.map(SubscriptionKey.Channel.apply)
 
   private def extractPatternKeys(command: Chunk[RespCommandArgument]): Chunk[SubscriptionKey.Pattern] =
     command.collect { case RespCommandArgument.Key(key) =>
       key.asString
-    }.map(SubscriptionKey.Pattern(_))
+    }.map(SubscriptionKey.Pattern.apply)
 
   def send: IO[RedisError.IOError, Unit] =
     requests.takeAll.flatMap { reqs =>
@@ -122,7 +122,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
 
       connection
         .write(bytes)
-        .mapError(RedisError.IOError(_))
+        .mapError(RedisError.IOError.apply)
         .tapBoth(
           e =>
             ZIO.foreachDiscard(reqs) {
@@ -141,21 +141,24 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
   def receive: IO[RedisError, Unit] = {
     def offerMessage(msg: PushMessage) =
       for {
-        subscription <- subsRef.get
-        _            <- ZIO.foreachDiscard(subscription.get(msg.key))(_.offer(Take.single(msg)))
+        hub <- subscriptionMap.get(msg.key)
+        _   <- ZIO.foreachDiscard(hub)(_.offer(Take.single(msg)))
       } yield ()
 
     def releasePromise(msg: PushMessage): UIO[Unit] =
-      subsResponses.take.flatMap(_.succeed(msg)).unit
+      for {
+        promise <- subsResponses.take
+        _       <- promise.succeed(msg)
+      } yield ()
 
     def releaseHub(key: SubscriptionKey): UIO[Unit] =
       for {
-        subscription <- subsRef.getAndUpdate(_ - key)
-        _            <- ZIO.foreachDiscard(subscription.get(key))(_.offer(Take.end))
+        hub <- subscriptionMap.remove(key)
+        _   <- ZIO.foreachDiscard(hub)(_.offer(Take.end))
       } yield ()
 
     connection.read
-      .mapError(RedisError.IOError(_))
+      .mapError(RedisError.IOError.apply)
       .via(RespValue.Decoder)
       .collectSome
       .mapZIO(resp => ZIO.attempt(PushMessageOutput.unsafeDecode(resp)))
@@ -177,9 +180,9 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
           .asBytes
 
     for {
-      _        <- subsResponses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
-      subsKeys <- subsRef.get.map(_.keys)
-      (channels, patterns) = subsKeys.partition {
+      _             <- subsResponses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
+      subscriptions <- subscriptionMap.toChunk
+      (channels, patterns) = subscriptions.map(_._1).partition {
                                case _: SubscriptionKey.Channel => false
                                case _: SubscriptionKey.Pattern => true
                              }
@@ -188,7 +191,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
       _ <- connection
              .write(commands)
              .when(commands.nonEmpty)
-             .mapError(RedisError.IOError(_))
+             .mapError(RedisError.IOError.apply)
              .retryWhile(True)
     } yield ()
   }
@@ -208,9 +211,9 @@ private[redis] object SingleNodeSubscriptionExecutor {
 
   def create(conn: RedisConnection): URIO[Scope, SubscriptionExecutor] =
     for {
-      reqQueue <- RequestQueue.create[Request]
+      reqQueue <- Queue.bounded[Request](RequestQueueSize)
       resQueue <- Queue.unbounded[Promise[RedisError, PushMessage]]
-      subsRef  <- Ref.make(Map.empty[SubscriptionKey, Hub[Take[RedisError, PushMessage]]])
+      subsRef  <- ConcurrentMap.empty[SubscriptionKey, Hub[Take[RedisError, PushMessage]]]
       pubSub    = new SingleNodeSubscriptionExecutor(subsRef, reqQueue, resQueue, conn)
       _        <- pubSub.run.forkScoped
       _        <- logScopeFinalizer(s"$pubSub Subscription Node is closed")

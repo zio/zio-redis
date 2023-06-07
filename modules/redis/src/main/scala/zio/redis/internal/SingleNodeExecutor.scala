@@ -70,7 +70,7 @@ private[redis] object SingleNodeExecutor {
 
   def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
     for {
-      requests  <- RequestQueue.create[Request]
+      requests  <- Queue.bounded[Request](RequestQueueSize)
       responses <- Queue.unbounded[Promise[RedisError, RespValue]]
       executor   = new SingleNodeExecutor(connection, requests, responses)
       _         <- executor.run.forkScoped

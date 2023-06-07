@@ -19,6 +19,7 @@ package zio.redis
 import zio._
 
 package object internal {
+  private[redis] final val RequestQueueSize = 16
   private[redis] def logScopeFinalizer(msg: String): URIO[Scope, Unit] =
     for {
       scope <- ZIO.scope

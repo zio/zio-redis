@@ -70,5 +70,4 @@ private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionE
       }
       .collectSome
       .refineToOrDie[RedisError]
-
 }

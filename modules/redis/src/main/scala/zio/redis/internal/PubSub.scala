@@ -16,7 +16,7 @@
 
 package zio.redis.internal
 
-object PubSub {
+private[redis] object PubSub {
   private[redis] sealed trait PushMessage {
     def key: SubscriptionKey
   }
