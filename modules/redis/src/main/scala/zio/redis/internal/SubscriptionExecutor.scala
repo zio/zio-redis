@@ -21,11 +21,11 @@ import zio.redis.{RedisConfig, RedisError}
 import zio.stream._
 import zio.{Layer, ZIO, ZLayer}
 
-trait SubscriptionExecutor {
+private[redis] trait SubscriptionExecutor {
   private[redis] def execute(command: RespCommand): Stream[RedisError, PushMessage]
 }
 
-object SubscriptionExecutor {
+private[redis] object SubscriptionExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, SubscriptionExecutor] =
     RedisConnection.layer.fresh >>> pubSublayer
 
