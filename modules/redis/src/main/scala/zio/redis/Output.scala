@@ -673,15 +673,17 @@ object Output {
       }
   }
 
-  case object NumSubResponseOutput extends Output[Chunk[NumberOfSubscribers]] {
-    protected def tryDecode(respValue: RespValue): Chunk[NumberOfSubscribers] =
+  case object NumSubResponseOutput extends Output[Map[String, Long]] {
+    protected def tryDecode(respValue: RespValue): Map[String, Long] =
       respValue match {
         case RespValue.Array(values) =>
-          Chunk.fromIterator(values.grouped(2).map { chunk =>
+          val builder = Map.newBuilder[String, Long]
+          values.grouped(2).foreach { chunk =>
             val channel   = MultiStringOutput.unsafeDecode(chunk(0))
             val numOfSubs = LongOutput.unsafeDecode(chunk(1))
-            NumberOfSubscribers(channel, numOfSubs)
-          })
+            builder += channel -> numOfSubs
+          }
+          builder.result()
         case other => throw ProtocolError(s"$other isn't an array")
       }
   }

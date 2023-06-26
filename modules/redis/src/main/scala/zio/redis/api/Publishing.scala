@@ -26,22 +26,56 @@ import zio.{Chunk, IO}
 trait Publishing extends RedisEnvironment {
   import Publishing._
 
+  /**
+   * Posts a message to the given channel.
+   *
+   * @param channel
+   *   Target channel name for publishing messages.
+   * @param message
+   *   The value of the message to be published to the channel.
+   * @return
+   *   Returns the number of clients that received the message.
+   */
   final def publish[A: Schema](channel: String, message: A): IO[RedisError, Long] = {
     val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryKeyInput[A]()), LongOutput, executor)
     command.run((channel, message))
   }
 
+  /**
+   * Lists the currently active channel that has one or more subscribers (excluding clients subscribed to patterns).
+   *
+   * @param pattern
+   *   Pattern to get matching channels.
+   * @return
+   *   Returns a list of active channels matching the specified pattern.
+   */
   final def pubSubChannels(pattern: String): IO[RedisError, Chunk[String]] = {
     val command = RedisCommand(PubSubChannels, StringInput, ChunkOutput(MultiStringOutput), executor)
     command.run(pattern)
   }
 
+  /**
+   * The number of unique patterns that are subscribed to by clients.
+   *
+   * @return
+   *   Returns the number of patterns all the clients are subscribed to.
+   */
   final def pubSubNumPat: IO[RedisError, Long] = {
     val command = RedisCommand(PubSubNumPat, NoInput, LongOutput, executor)
     command.run(())
   }
 
-  final def pubSubNumSub(channel: String, channels: String*): IO[RedisError, Chunk[NumberOfSubscribers]] = {
+  /**
+   * The number of subscribers (exclusive of clients subscribed to patterns) for the specified channels.
+   *
+   * @param channel
+   *   Channel name to get the number of subscribers.
+   * @param channels
+   *   Channel names to get the number of subscribers.
+   * @return
+   *   Returns a map of channel and number of subscribers for channel.
+   */
+  final def pubSubNumSub(channel: String, channels: String*): IO[RedisError, Map[String, Long]] = {
     val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput, executor)
     command.run((channel, channels.toList))
   }

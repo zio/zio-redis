@@ -25,8 +25,7 @@ package object redis
     with options.Strings
     with options.Lists
     with options.Streams
-    with options.Scripting
-    with options.Publishing {
+    with options.Scripting {
 
   type Id[+A] = A
 }

@@ -36,7 +36,7 @@ private[redis] final class SingleNodeExecutor private (
   def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
   def send: IO[RedisError.IOError, Unit] =
-    requests.takeAll.flatMap { requests =>
+    requests.takeBetween(1, RequestQueueSize).flatMap { requests =>
       val bytes =
         requests
           .foldLeft(new ChunkBuilder.Byte())((builder, req) => builder ++= RespValue.Array(req.command).asBytes)

@@ -2,7 +2,7 @@ package zio.redis
 
 import zio.test.Assertion._
 import zio.test._
-import zio.{Chunk, Promise, ZIO}
+import zio.{Promise, ZIO}
 
 import scala.util.Random
 
@@ -17,10 +17,7 @@ trait PubSubSpec extends BaseSpec {
             promise      <- Promise.make[RedisError, String]
             resBuilder =
               subscription
-                .subscribeWithCallback(channel)(
-                  Some((key: String, _: Long) => promise.succeed(key).unit),
-                  None
-                )
+                .subscribeSingleWith(channel)(onSubscribe = (key: String, _: Long) => promise.succeed(key).unit)
             stream = resBuilder.returning[String]
             _ <- stream
                    .interruptWhen(promise)
@@ -36,7 +33,7 @@ trait PubSubSpec extends BaseSpec {
             channel      <- generateRandomString()
             message       = "bar"
             promise      <- Promise.make[RedisError, String]
-            stream        = subscription.subscribe(channel).returning[String]
+            stream        = subscription.subscribeSingle(channel).returning[String]
             fiber        <- stream.interruptWhen(promise).runHead.fork
             _ <- redis
                    .pubSubChannels(channel)
@@ -56,10 +53,10 @@ trait PubSubSpec extends BaseSpec {
             pattern       = prefix + '*'
             message      <- generateRandomString(5)
             stream1 = subscription
-                        .subscribe(channel1)
+                        .subscribeSingle(channel1)
                         .returning[String]
             stream2 = subscription
-                        .subscribe(channel2)
+                        .subscribeSingle(channel2)
                         .returning[String]
             fiber1 <- stream1.runDrain.fork
             fiber2 <- stream2.runDrain.fork
@@ -79,10 +76,7 @@ trait PubSubSpec extends BaseSpec {
             pattern      <- generateRandomString()
             promise      <- Promise.make[RedisError, String]
             _ <- subscription
-                   .pSubscribeWithCallback(pattern)(
-                     Some((key: String, _: Long) => promise.succeed(key).unit),
-                     None
-                   )
+                   .pSubscribeWith(pattern)(onSubscribe = (key: String, _: Long) => promise.succeed(key).unit)
                    .returning[String]
                    .runHead
                    .fork
@@ -105,7 +99,7 @@ trait PubSubSpec extends BaseSpec {
             _   <- redis.pubSubNumPat.repeatUntil(_ > 0)
             _   <- redis.publish(channel, message).replicateZIO(10)
             res <- stream.join
-          } yield assertTrue(res.get == message)
+          } yield assertTrue(res.map(_._2).get == message)
         }
       ),
       suite("publish")(test("publish long type message") {
@@ -116,7 +110,7 @@ trait PubSubSpec extends BaseSpec {
             subscription <- ZIO.service[RedisSubscription]
             channel      <- generateRandomString()
             stream <- subscription
-                        .subscribe(channel)
+                        .subscribeSingle(channel)
                         .returning[Long]
                         .runFoldWhile(0L)(_ < 10L) { case (sum, message) =>
                           sum + message
@@ -140,9 +134,9 @@ trait PubSubSpec extends BaseSpec {
             subsPromise  <- Promise.make[Nothing, Unit]
             promise      <- Promise.make[Nothing, Unit]
             _ <- subscription
-                   .subscribeWithCallback(channel)(
-                     Some((_, _) => subsPromise.succeed(()).unit),
-                     Some((_, _) => promise.succeed(()).unit)
+                   .subscribeSingleWith(channel)(
+                     onSubscribe = (_, _) => subsPromise.succeed(()).unit,
+                     onUnsubscribe = (_, _) => promise.succeed(()).unit
                    )
                    .returning[String]
                    .runDrain
@@ -160,9 +154,9 @@ trait PubSubSpec extends BaseSpec {
             subsPromise  <- Promise.make[RedisError, Unit]
             promise      <- Promise.make[RedisError, String]
             fiber <- subscription
-                       .subscribeWithCallback(channel)(
-                         Some((_, _) => subsPromise.succeed(()).unit),
-                         Some((key, _) => promise.succeed(key).unit)
+                       .subscribeSingleWith(channel)(
+                         onSubscribe = (_, _) => subsPromise.succeed(()).unit,
+                         onUnsubscribe = (key, _) => promise.succeed(key).unit
                        )
                        .returning[Unit]
                        .runDrain
@@ -180,9 +174,9 @@ trait PubSubSpec extends BaseSpec {
             subsPromise  <- Promise.make[RedisError, Unit]
             promise      <- Promise.make[RedisError, String]
             fiber <- subscription
-                       .pSubscribeWithCallback(pattern)(
-                         Some((_, _) => subsPromise.succeed(()).unit),
-                         Some((key, _) => promise.succeed(key).unit)
+                       .pSubscribeWith(pattern)(
+                         onSubscribe = (_, _) => subsPromise.succeed(()).unit,
+                         onUnsubscribe = (key, _) => promise.succeed(key).unit
                        )
                        .returning[Unit]
                        .runDrain
@@ -205,18 +199,16 @@ trait PubSubSpec extends BaseSpec {
             promise2     <- Promise.make[Nothing, Unit]
             _ <-
               subscription
-                .subscribeWithCallback(channel1)(
-                  None,
-                  Some((_, _) => promise1.succeed(()).unit)
+                .subscribeSingleWith(channel1)(
+                  onUnsubscribe = (_, _) => promise1.succeed(()).unit
                 )
                 .returning[String]
                 .runCollect
                 .fork
             _ <-
               subscription
-                .subscribeWithCallback(channel2)(
-                  None,
-                  Some((_, _) => promise2.succeed(()).unit)
+                .subscribeSingleWith(channel2)(
+                  onUnsubscribe = (_, _) => promise2.succeed(()).unit
                 )
                 .returning[String]
                 .runCollect
@@ -229,9 +221,9 @@ trait PubSubSpec extends BaseSpec {
             _               <- promise2.await
             numSubResponses <- redis.pubSubNumSub(channel1, channel2)
           } yield assertTrue(
-            numSubResponses == Chunk(
-              NumberOfSubscribers(channel1, 0L),
-              NumberOfSubscribers(channel2, 0L)
+            numSubResponses == Map(
+              channel1 -> 0L,
+              channel2 -> 0L
             )
           )
         }

@@ -29,23 +29,23 @@ import zio.{Chunk, IO, ZIO}
 private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionExecutor) {
   def subscribe[A: BinaryCodec](
     channels: Chunk[String],
-    onSubscribe: Option[PubSubCallback],
-    onUnsubscribe: Option[PubSubCallback]
+    onSubscribe: PubSubCallback,
+    onUnsubscribe: PubSubCallback
   )(implicit codec: BinaryCodec[String]): Stream[RedisError, (String, A)] =
     executeCommand[A](makeCommand(Subscription.Subscribe, channels), onSubscribe, onUnsubscribe)
 
   def pSubscribe[A: BinaryCodec](
     patterns: Chunk[String],
-    onSubscribe: Option[PubSubCallback],
-    onUnsubscribe: Option[PubSubCallback]
+    onSubscribe: PubSubCallback,
+    onUnsubscribe: PubSubCallback
   )(implicit stringCodec: BinaryCodec[String]): Stream[RedisError, (String, A)] =
     executeCommand[A](makeCommand(Subscription.PSubscribe, patterns), onSubscribe, onUnsubscribe)
 
   def unsubscribe(channels: Chunk[String])(implicit codec: BinaryCodec[String]): IO[RedisError, Unit] =
-    executeCommand(makeCommand(Subscription.Unsubscribe, channels), None, None).runDrain
+    executor.execute(makeCommand(Subscription.Unsubscribe, channels)).runDrain
 
   def pUnsubscribe(patterns: Chunk[String])(implicit codec: BinaryCodec[String]): IO[RedisError, Unit] =
-    executeCommand(makeCommand(Subscription.PUnsubscribe, patterns), None, None).runDrain
+    executor.execute(makeCommand(Subscription.PUnsubscribe, patterns)).runDrain
 
   private def makeCommand(commandName: String, keys: Chunk[String])(implicit codec: BinaryCodec[String]) =
     CommandNameInput.encode(commandName) ++
@@ -53,16 +53,16 @@ private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionE
 
   private def executeCommand[A: BinaryCodec](
     command: RespCommand,
-    onSubscribe: Option[PubSubCallback],
-    onUnsubscribe: Option[PubSubCallback]
+    onSubscribe: PubSubCallback,
+    onUnsubscribe: PubSubCallback
   ): Stream[RedisError, (String, A)] =
     executor
       .execute(command)
       .mapZIO {
         case Subscribed(key, numOfSubs) =>
-          ZIO.foreach(onSubscribe)(_.apply(key.value, numOfSubs)).as(None)
+          onSubscribe(key.value, numOfSubs).as(None)
         case Unsubscribed(key, numOfSubs) =>
-          ZIO.foreach(onUnsubscribe)(_.apply(key.value, numOfSubs)).as(None)
+          onUnsubscribe(key.value, numOfSubs).as(None)
         case Message(_, channel, message) =>
           ZIO
             .attempt(ArbitraryOutput[A]().unsafeDecode(message))

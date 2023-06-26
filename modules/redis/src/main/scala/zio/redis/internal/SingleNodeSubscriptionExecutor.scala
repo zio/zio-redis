@@ -109,7 +109,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
     }.map(SubscriptionKey.Pattern.apply)
 
   def send: IO[RedisError.IOError, Unit] =
-    requests.takeAll.flatMap { reqs =>
+    requests.takeBetween(1, RequestQueueSize).flatMap { reqs =>
       val buffer = ChunkBuilder.make[Byte]()
       val it     = reqs.iterator
 
