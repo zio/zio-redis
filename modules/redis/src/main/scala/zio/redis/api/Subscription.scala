@@ -35,7 +35,7 @@ trait Subscription extends SubscribeEnvironment {
    *   Returns stream that only emits published value for the given channel.
    */
   final def subscribeSingle(channel: String): ResultStreamBuilder1[Id] =
-    subscribeSingleWith(channel)()
+    subscribeSingleWith(channel)(NoopCallback, NoopCallback)
 
   /**
    * Subscribes the client to the specified channel with callbacks for Subscribe and Unsubscribe messages.
