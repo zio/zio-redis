@@ -30,7 +30,7 @@ private[redis] final class SingleNodeExecutor private (
   def execute(command: RespCommand): IO[RedisError, RespValue] =
     Promise
       .make[RedisError, RespValue]
-      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)) *> promise.await)
+      .flatMap(promise => requests.offer(Request(command.bulkStrings, promise)) *> promise.await)
 
   /**
    * Opens a connection to the server and launches send and receive operations. All failures are retried by opening a

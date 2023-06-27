@@ -18,18 +18,32 @@ package zio.redis.internal
 
 import zio.Chunk
 
-private[redis] final case class RespCommand(args: Chunk[RespCommandArgument]) extends AnyVal {
-  def ++(that: RespCommand): RespCommand = RespCommand(this.args ++ that.args)
-
-  def mapArguments(f: RespCommandArgument => RespCommandArgument): RespCommand = RespCommand(args.map(f(_)))
+private[redis] final case class RespCommand(name: RespCommandName, args: RespCommandArguments) {
+  def bulkStrings: Chunk[RespValue.BulkString] = name.bulkStrings ++ args.bulkStrings
 }
 
-private[redis] object RespCommand {
-  def empty: RespCommand = new RespCommand(Chunk.empty)
+private[redis] final case class RespCommandName(str: String) extends AnyVal {
+  def bulkStrings: Chunk[RespValue.BulkString] = Chunk.fromArray(str.split(" ").map(RespValue.bulkString))
+}
 
-  def apply(args: Chunk[RespCommandArgument]): RespCommand = new RespCommand(args)
+private[redis] final case class RespCommandArguments(values: Chunk[RespCommandArgument]) extends AnyVal {
+  def ++(that: RespCommandArguments): RespCommandArguments = RespCommandArguments(this.values ++ that.values)
 
-  def apply(args: RespCommandArgument*): RespCommand = new RespCommand(Chunk.fromIterable(args))
+  def mapArguments(f: RespCommandArgument => RespCommandArgument): RespCommandArguments = RespCommandArguments(
+    values.map(f(_))
+  )
 
-  def apply(arg: RespCommandArgument): RespCommand = new RespCommand(Chunk.single(arg))
+  def buildCommand(name: RespCommandName): RespCommand = RespCommand(name, this)
+
+  def bulkStrings: Chunk[RespValue.BulkString] = values.map(_.value)
+}
+
+private[redis] object RespCommandArguments {
+  def empty: RespCommandArguments = new RespCommandArguments(Chunk.empty)
+
+  def apply(args: Chunk[RespCommandArgument]): RespCommandArguments = new RespCommandArguments(args)
+
+  def apply(args: RespCommandArgument*): RespCommandArguments = new RespCommandArguments(Chunk.fromIterable(args))
+
+  def apply(arg: RespCommandArgument): RespCommandArguments = new RespCommandArguments(Chunk.single(arg))
 }

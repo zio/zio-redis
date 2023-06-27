@@ -26,11 +26,6 @@ private[redis] sealed trait RespCommandArgument {
 }
 
 private[redis] object RespCommandArgument {
-
-  final case class CommandName(str: String) extends RespCommandArgument {
-    lazy val value: RespValue.BulkString = RespValue.bulkString(str)
-  }
-
   final case class Literal(str: String) extends RespCommandArgument {
     lazy val value: RespValue.BulkString = RespValue.bulkString(str)
   }

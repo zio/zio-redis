@@ -58,7 +58,7 @@ private[redis] final class ClusterExecutor private (
     }
 
     for {
-      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespCommandArgument.Key => key })
+      keyOpt <- ZIO.succeed(command.args.values.collectFirst { case key: RespCommandArgument.Key => key })
       keySlot = keyOpt.fold(Slot.Default)(key => Slot((key.asCRC16 & (SlotsAmount - 1)).toLong))
       result <- executeSafe(keySlot)
     } yield result
