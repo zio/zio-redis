@@ -85,7 +85,7 @@ lazy val benchmarks =
       libraryDependencies ++= List(
         "dev.profunktor" %% "redis4cats-effects"  % "1.4.1",
         "dev.zio"        %% "zio-schema-protobuf" % zioSchemaVersion,
-        "org.typelevel"  %% "cats-effect"         % "3.5.0"
+        "org.typelevel"  %% "cats-effect"         % "3.5.1"
       )
     )
 
