@@ -17,16 +17,19 @@
 package zio.redis
 
 import zio._
+import zio.redis.internal.SubscriptionExecutor
 
-package object internal {
-  private[redis] final val RequestQueueSize = 16
-  private[redis] def logScopeFinalizer(msg: String): URIO[Scope, Unit] =
-    for {
-      scope <- ZIO.scope
-      _ <- scope.addFinalizerExit {
-             case Exit.Success(_)  => ZIO.logTrace(s"$msg with success")
-             case Exit.Failure(th) => ZIO.logTraceCause(s"$msg with failure", th)
-           }
-    } yield ()
+trait RedisSubscription extends api.Subscription
 
+object RedisSubscription {
+  lazy val local: ZLayer[CodecSupplier, RedisError.IOError, RedisSubscription] =
+    SubscriptionExecutor.local >>> makeLayer
+
+  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, RedisSubscription] =
+    SubscriptionExecutor.layer >>> makeLayer
+
+  private def makeLayer: URLayer[CodecSupplier & SubscriptionExecutor, RedisSubscription] =
+    ZLayer.fromFunction(Live.apply _)
+
+  private final case class Live(codecSupplier: CodecSupplier, executor: SubscriptionExecutor) extends RedisSubscription
 }
