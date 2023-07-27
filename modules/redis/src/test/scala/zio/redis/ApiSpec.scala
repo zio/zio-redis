@@ -16,7 +16,8 @@ object ApiSpec
     with HashSpec
     with StreamsSpec
     with ScriptingSpec
-    with ClusterSpec {
+    with ClusterSpec
+    with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
     suite("Redis commands")(clusterSuite, singleNodeSuite) @@ sequential @@ withLiveEnvironment
@@ -33,8 +34,9 @@ object ApiSpec
       hyperLogLogSuite,
       hashSuite,
       streamsSuite,
-      scriptingSpec
-    ).provideShared(Redis.local, ZLayer.succeed(ProtobufCodecSupplier))
+      scriptingSpec,
+      pubSubSuite
+    ).provideShared(Redis.local, RedisSubscription.local, ZLayer.succeed(ProtobufCodecSupplier))
 
   private val clusterSuite =
     suite("Cluster executor")(

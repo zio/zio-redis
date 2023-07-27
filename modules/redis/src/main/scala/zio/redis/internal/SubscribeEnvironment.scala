@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-package zio.redis
+package zio.redis.internal
 
-import zio._
+import zio.redis.CodecSupplier
+import zio.schema.Schema
+import zio.schema.codec.BinaryCodec
 
-package object internal {
-  private[redis] final val RequestQueueSize = 16
-  private[redis] def logScopeFinalizer(msg: String): URIO[Scope, Unit] =
-    for {
-      scope <- ZIO.scope
-      _ <- scope.addFinalizerExit {
-             case Exit.Success(_)  => ZIO.logTrace(s"$msg with success")
-             case Exit.Failure(th) => ZIO.logTraceCause(s"$msg with failure", th)
-           }
-    } yield ()
-
+private[redis] trait SubscribeEnvironment {
+  protected def codecSupplier: CodecSupplier
+  protected def executor: SubscriptionExecutor
+  protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }
