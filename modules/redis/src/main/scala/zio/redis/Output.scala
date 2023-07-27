@@ -17,6 +17,7 @@
 package zio.redis
 
 import zio._
+import zio.redis.internal.PubSub.{PushMessage, SubscriptionKey}
 import zio.redis.internal.RespValue
 import zio.redis.options.Cluster.{Node, Partition, SlotRange}
 import zio.schema.Schema
@@ -635,6 +636,54 @@ object Output {
 
         case other =>
           throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  private[redis] case object PushMessageOutput extends Output[PushMessage] {
+    protected def tryDecode(respValue: RespValue): PushMessage =
+      respValue match {
+        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.Array(values) =>
+          val name = MultiStringOutput.unsafeDecode(values(0))
+          val key  = MultiStringOutput.unsafeDecode(values(1))
+          name match {
+            case "subscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushMessage.Subscribed(SubscriptionKey.Channel(key), num)
+            case "psubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushMessage.Subscribed(SubscriptionKey.Pattern(key), num)
+            case "unsubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushMessage.Unsubscribed(SubscriptionKey.Channel(key), num)
+            case "punsubscribe" =>
+              val num = LongOutput.unsafeDecode(values(2))
+              PushMessage.Unsubscribed(SubscriptionKey.Pattern(key), num)
+            case "message" =>
+              val message = values(2)
+              PushMessage.Message(SubscriptionKey.Channel(key), key, message)
+            case "pmessage" =>
+              val channel = MultiStringOutput.unsafeDecode(values(2))
+              val message = values(3)
+              PushMessage.Message(SubscriptionKey.Pattern(key), channel, message)
+            case other => throw ProtocolError(s"$other isn't a pushed message")
+          }
+        case other => throw ProtocolError(s"$other isn't an array")
+      }
+  }
+
+  case object NumSubResponseOutput extends Output[Map[String, Long]] {
+    protected def tryDecode(respValue: RespValue): Map[String, Long] =
+      respValue match {
+        case RespValue.Array(values) =>
+          val builder = Map.newBuilder[String, Long]
+          values.grouped(2).foreach { chunk =>
+            val channel   = MultiStringOutput.unsafeDecode(chunk(0))
+            val numOfSubs = LongOutput.unsafeDecode(chunk(1))
+            builder += channel -> numOfSubs
+          }
+          builder.result()
+        case other => throw ProtocolError(s"$other isn't an array")
       }
   }
 

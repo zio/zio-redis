@@ -32,6 +32,7 @@ trait Redis
     with api.Streams
     with api.Scripting
     with api.Cluster
+    with api.Publishing
 
 object Redis {
   lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
