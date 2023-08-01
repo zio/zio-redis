@@ -178,10 +178,10 @@ object Input {
       val (lua, keys, args) = data
       val encodedScript     = RespCommandArguments(RespCommandArgument.Value(lua), RespCommandArgument.Value(keys.size.toString))
       val encodedKeys = keys.foldLeft(RespCommandArguments.empty)((acc, a) =>
-        acc ++ inputK.encode(a).mapArguments(arg => RespCommandArgument.Key(arg.value.value))
+        acc ++ inputK.encode(a).map(arg => RespCommandArgument.Key(arg.value.value))
       )
       val encodedArgs = args.foldLeft(RespCommandArguments.empty)((acc, a) =>
-        acc ++ inputV.encode(a).mapArguments(arg => RespCommandArgument.Value(arg.value.value))
+        acc ++ inputV.encode(a).map(arg => RespCommandArgument.Value(arg.value.value))
       )
       encodedScript ++ encodedKeys ++ encodedArgs
     }

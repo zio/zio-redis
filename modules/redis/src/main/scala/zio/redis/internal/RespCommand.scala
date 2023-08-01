@@ -29,11 +29,9 @@ private[redis] final case class RespCommandName(str: String) extends AnyVal {
 private[redis] final case class RespCommandArguments(values: Chunk[RespCommandArgument]) extends AnyVal {
   def ++(that: RespCommandArguments): RespCommandArguments = RespCommandArguments(this.values ++ that.values)
 
-  def mapArguments(f: RespCommandArgument => RespCommandArgument): RespCommandArguments = RespCommandArguments(
+  def map(f: RespCommandArgument => RespCommandArgument): RespCommandArguments = RespCommandArguments(
     values.map(f(_))
   )
-
-  def buildCommand(name: RespCommandName): RespCommand = RespCommand(name, this)
 
   def bulkStrings: Chunk[RespValue.BulkString] = values.map(_.value)
 }

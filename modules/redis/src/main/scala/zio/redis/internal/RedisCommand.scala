@@ -32,7 +32,7 @@ private[redis] final class RedisCommand[-In, +Out] private (
       .refineToOrDie[RedisError]
 
   def resp(in: In): RespCommand =
-    input.encode(in).buildCommand(RespCommandName(name))
+    RespCommand(RespCommandName(name), input.encode(in))
 }
 
 private[redis] object RedisCommand {
