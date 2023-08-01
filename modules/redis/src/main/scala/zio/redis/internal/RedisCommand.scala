@@ -17,7 +17,6 @@
 package zio.redis.internal
 
 import zio._
-import zio.redis.Input.{CommandNameInput, Varargs}
 import zio.redis._
 
 private[redis] final class RedisCommand[-In, +Out] private (
@@ -33,7 +32,7 @@ private[redis] final class RedisCommand[-In, +Out] private (
       .refineToOrDie[RedisError]
 
   def resp(in: In): RespCommand =
-    Varargs(CommandNameInput).encode(name.split(" ")) ++ input.encode(in)
+    RespCommand(RespCommandName(name), input.encode(in))
 }
 
 private[redis] object RedisCommand {

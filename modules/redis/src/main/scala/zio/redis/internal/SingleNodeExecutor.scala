@@ -31,7 +31,7 @@ private[redis] final class SingleNodeExecutor private (
   def execute(command: RespCommand): IO[RedisError, RespValue] =
     Promise
       .make[RedisError, RespValue]
-      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)) *> promise.await)
+      .flatMap(promise => requests.offer(Request(command.bulkStrings, promise)) *> promise.await)
 
   def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
