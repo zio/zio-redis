@@ -85,6 +85,7 @@ private[redis] final class ClusterExecutor private (
       } yield cluster
     }
 
+  @annotation.nowarn
   private val retryPolicy: Schedule[Any, Throwable, (Duration, Long, Throwable)] =
     Schedule.exponential(config.retry.base, config.retry.factor) &&
       Schedule.recurs(config.retry.maxRecurs) &&
