@@ -3,7 +3,7 @@ package zio.redis
 import zio._
 import zio.redis.RedisError._
 import zio.test.Assertion._
-import zio.test.TestAspect.{flaky, ignore}
+import zio.test.TestAspect.ignore
 import zio.test._
 
 trait StreamsSpec extends BaseSpec {
@@ -926,7 +926,7 @@ trait StreamsSpec extends BaseSpec {
             assert(result.owner)(equalTo(consumer)) &&
             assert(result.lastDelivered)(isGreaterThan(0.millis)) &&
             assert(result.counter)(equalTo(1L))
-        } @@ flaky,
+        },
         test("with multiple message, unlimited start, unlimited end and count with value 10") {
           for {
             redis                      <- ZIO.service[Redis]
@@ -950,7 +950,7 @@ trait StreamsSpec extends BaseSpec {
             assert(secondResult.owner)(equalTo(second)) &&
             assert(secondResult.lastDelivered)(isGreaterThan(0.millis)) &&
             assert(secondResult.counter)(equalTo(1L))
-        } @@ flaky,
+        },
         test("with unlimited start, unlimited end, count with value 10, and the specified consumer") {
           for {
             redis    <- ZIO.service[Redis]
