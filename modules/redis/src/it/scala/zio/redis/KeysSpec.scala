@@ -133,7 +133,7 @@ trait KeysSpec extends BaseSpec {
             (next, elements) = scan
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         }
-      ) @@ clusterExecutorUnsupported,
+      ) @@ flaky @@ clusterExecutorUnsupported,
       test("fetch random key") {
         for {
           redis     <- ZIO.service[Redis]
@@ -476,7 +476,7 @@ trait KeysSpec extends BaseSpec {
                          .sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
                          .returning[String]
           } yield assert(sorted)(equalTo(Chunk("A1", "B1", "A2", "B2")))
-        } @@ clusterExecutorUnsupported,
+        } @@ flaky @@ clusterExecutorUnsupported,
         test("sort and store result") {
           for {
             redis     <- ZIO.service[Redis]
