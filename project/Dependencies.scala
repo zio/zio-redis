@@ -2,14 +2,14 @@ import sbt._
 
 object Dependencies {
   private object Versions {
-    val CatsEffect    = "3.5.0"
+    val CatsEffect    = "3.5.1"
     val EmbeddedRedis = "0.6"
-    val Redis4Cats    = "1.4.1"
-    val Sttp          = "3.8.15"
+    val Redis4Cats    = "1.4.3"
+    val Sttp          = "3.8.16"
     val ZHttp         = "2.0.0-RC11"
     val ZioConfig     = "3.0.7"
-    val ZioJson       = "0.5.0"
-    val ZioSchema     = "0.4.12"
+    val ZioJson       = "0.6.0"
+    val ZioSchema     = "0.4.13"
   }
 
   lazy val Benchmarks =
