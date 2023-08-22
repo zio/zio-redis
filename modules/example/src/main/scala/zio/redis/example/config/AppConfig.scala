@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package example.config
+package zio.redis.example.config
 
 import com.typesafe.config.ConfigFactory
 import zio._

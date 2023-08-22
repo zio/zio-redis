@@ -14,8 +14,19 @@
  * limitations under the License.
  */
 
-package example
+package zio.redis.example.api
 
-final case class Repository(owner: Owner, name: Name) {
-  lazy val key: String = s"$owner:$name"
+import zhttp.http._
+import zio._
+import zio.json._
+import zio.redis.example._
+
+object Api {
+  val routes: HttpApp[ContributorsCache, Nothing] =
+    Http.collectZIO { case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
+      ZIO
+        .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
+        .mapBoth(_.asResponse, r => Response.json(r.toJson))
+        .merge
+    }
 }

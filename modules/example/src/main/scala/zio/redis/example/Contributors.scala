@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-import sttp.capabilities.WebSockets
-import sttp.capabilities.zio.ZioStreams
-import sttp.client3.SttpBackend
-import zio.Task
+package zio.redis.example
 
-package object example {
-  type Contributions = Contributions.Type
-  type Login         = Login.Type
-  type Owner         = Owner.Type
-  type Name          = Name.Type
-  type Sttp          = SttpBackend[Task, ZioStreams with WebSockets]
+import zio.Chunk
+import zio.json.{DeriveJsonCodec, JsonCodec}
+
+final case class Contributors(contributors: Chunk[Contributor])
+
+object Contributors {
+  implicit val codec: JsonCodec[Contributors] = DeriveJsonCodec.gen[Contributors]
 }
