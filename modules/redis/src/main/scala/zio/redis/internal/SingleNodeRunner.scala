@@ -27,11 +27,10 @@ private[redis] trait SingleNodeRunner {
 
   def onError(e: RedisError): IO[RedisError, Unit]
 
-  /*
+  /**
    * Opens a connection to the server and launches receive operations. All failures are retried by opening a new
    * connection. Only exits by interruption or defect.
    */
-  @annotation.nowarn
   private[internal] final val run: IO[RedisError, AnyVal] =
     ZIO.logTrace(s"$this sender and reader has been started") *>
       (send.repeat(Schedule.forever) race receive)
