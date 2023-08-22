@@ -96,6 +96,8 @@ jobs:
       run: docker-compose -f docker/redis-compose.yml up -d
     - name: Run Redis cluster
       run: docker-compose -f docker/redis-cluster-compose.yml up -d
+    - name: Run integration tests
+      run: sbt ++${{ matrix.scala }} IntegrationTest/test
   update-readme:
     name: Update README
     runs-on: ubuntu-latest

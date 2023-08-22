@@ -14,6 +14,10 @@ inThisBuild(
       SingleStep(
         name = "Run Redis cluster",
         run = Some("docker-compose -f docker/redis-cluster-compose.yml up -d")
+      ),
+      SingleStep(
+        name = "Run integration tests",
+        run = Some("sbt ++${{ matrix.scala }} IntegrationTest/test")
       )
     ),
     crossScalaVersions -= scala211.value,
