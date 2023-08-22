@@ -28,7 +28,10 @@ inThisBuild(
 lazy val root =
   project
     .in(file("."))
-    .settings(publish / skip := true)
+    .settings(
+      crossScalaVersions := Nil,
+      publish / skip := true
+    )
     .aggregate(redis, embedded, benchmarks, example, docs)
 
 lazy val redis =
