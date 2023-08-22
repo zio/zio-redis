@@ -70,7 +70,7 @@ object Input {
       data.username match {
         case Some(username) =>
           RespCommand(RespCommandArgument.Value(username), RespCommandArgument.Value(data.password))
-        case None => RespCommand(RespCommandArgument.Value(data.password))
+        case None           => RespCommand(RespCommandArgument.Value(data.password))
       }
   }
 
@@ -79,13 +79,13 @@ object Input {
       import BitFieldCommand._
 
       val respArgs = data match {
-        case BitFieldGet(t, o) =>
+        case BitFieldGet(t, o)     =>
           Chunk(
             RespCommandArgument.Literal("GET"),
             RespCommandArgument.Value(t.asString),
             RespCommandArgument.Value(o.toString)
           )
-        case BitFieldSet(t, o, v) =>
+        case BitFieldSet(t, o, v)  =>
           Chunk(
             RespCommandArgument.Literal("SET"),
             RespCommandArgument.Value(t.asString),
@@ -182,10 +182,10 @@ object Input {
     def encode(data: (String, Chunk[K], Chunk[V])): RespCommand = {
       val (lua, keys, args) = data
       val encodedScript     = RespCommand(RespCommandArgument.Value(lua), RespCommandArgument.Value(keys.size.toString))
-      val encodedKeys = keys.foldLeft(RespCommand.empty)((acc, a) =>
+      val encodedKeys       = keys.foldLeft(RespCommand.empty)((acc, a) =>
         acc ++ inputK.encode(a).mapArguments(arg => RespCommandArgument.Key(arg.value.value))
       )
-      val encodedArgs = args.foldLeft(RespCommand.empty)((acc, a) =>
+      val encodedArgs       = args.foldLeft(RespCommand.empty)((acc, a) =>
         acc ++ inputV.encode(a).mapArguments(arg => RespCommandArgument.Value(arg.value.value))
       )
       encodedScript ++ encodedKeys ++ encodedArgs
@@ -205,7 +205,7 @@ object Input {
   final case class GetExInput[K: BinaryCodec]() extends Input[(K, Expire, Duration)] {
     def encode(data: (K, Expire, Duration)): RespCommand =
       data match {
-        case (key, Expire.SetExpireSeconds, duration) =>
+        case (key, Expire.SetExpireSeconds, duration)      =>
           RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EX")) ++ DurationSecondsInput.encode(
             duration
           )
@@ -218,7 +218,7 @@ object Input {
   final case class GetExAtInput[K: BinaryCodec]() extends Input[(K, ExpiredAt, Instant)] {
     def encode(data: (K, ExpiredAt, Instant)): RespCommand =
       data match {
-        case (key, ExpiredAt.SetExpireAtSeconds, instant) =>
+        case (key, ExpiredAt.SetExpireAtSeconds, instant)      =>
           RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EXAT")) ++ TimeSecondsInput.encode(
             instant
           )
@@ -282,10 +282,10 @@ object Input {
 
   case object LcsQueryTypeInput extends Input[LcsQueryType] {
     def encode(data: LcsQueryType): RespCommand = data match {
-      case LcsQueryType.Len => RespCommand(RespCommandArgument.Literal("LEN"))
+      case LcsQueryType.Len                                  => RespCommand(RespCommandArgument.Literal("LEN"))
       case LcsQueryType.Idx(minMatchLength, withMatchLength) =>
-        val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
-        val min =
+        val idx    = Chunk.single(RespCommandArgument.Literal("IDX"))
+        val min    =
           if (minMatchLength > 1)
             Chunk(RespCommandArgument.Literal("MINMATCHLEN"), RespCommandArgument.Value(minMatchLength.toString))
           else Chunk.empty[RespCommandArgument]

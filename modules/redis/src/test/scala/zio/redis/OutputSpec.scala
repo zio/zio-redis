@@ -903,13 +903,13 @@ object OutputSpec extends BaseSpec {
         test("subscribe") {
           val channel   = "foo"
           val numOfSubs = 1L
-          val input =
+          val input     =
             RespValue.array(
               RespValue.bulkString("subscribe"),
               RespValue.bulkString(channel),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushMessage.Subscribed(SubscriptionKey.Channel(channel), numOfSubs)
+          val expected  = PushMessage.Subscribed(SubscriptionKey.Channel(channel), numOfSubs)
           assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
@@ -917,13 +917,13 @@ object OutputSpec extends BaseSpec {
         test("psubscribe") {
           val pattern   = "f*"
           val numOfSubs = 1L
-          val input =
+          val input     =
             RespValue.array(
               RespValue.bulkString("psubscribe"),
               RespValue.bulkString(pattern),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushMessage.Subscribed(SubscriptionKey.Pattern(pattern), numOfSubs)
+          val expected  = PushMessage.Subscribed(SubscriptionKey.Pattern(pattern), numOfSubs)
           assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
@@ -931,13 +931,13 @@ object OutputSpec extends BaseSpec {
         test("unsubscribe") {
           val channel   = "foo"
           val numOfSubs = 1L
-          val input =
+          val input     =
             RespValue.array(
               RespValue.bulkString("unsubscribe"),
               RespValue.bulkString(channel),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushMessage.Unsubscribed(SubscriptionKey.Channel(channel), numOfSubs)
+          val expected  = PushMessage.Unsubscribed(SubscriptionKey.Channel(channel), numOfSubs)
           assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
@@ -945,21 +945,21 @@ object OutputSpec extends BaseSpec {
         test("punsubscribe") {
           val pattern   = "f*"
           val numOfSubs = 1L
-          val input =
+          val input     =
             RespValue.array(
               RespValue.bulkString("punsubscribe"),
               RespValue.bulkString(pattern),
               RespValue.Integer(numOfSubs)
             )
-          val expected = PushMessage.Unsubscribed(SubscriptionKey.Pattern(pattern), numOfSubs)
+          val expected  = PushMessage.Unsubscribed(SubscriptionKey.Pattern(pattern), numOfSubs)
           assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(
             equalTo(expected)
           )
         },
         test("message") {
-          val channel = "foo"
-          val message = RespValue.bulkString("bar")
-          val input =
+          val channel  = "foo"
+          val message  = RespValue.bulkString("bar")
+          val input    =
             RespValue.array(
               RespValue.bulkString("message"),
               RespValue.bulkString(channel),
@@ -971,10 +971,10 @@ object OutputSpec extends BaseSpec {
           )
         },
         test("pmessage") {
-          val pattern = "f*"
-          val channel = "foo"
-          val message = RespValue.bulkString("bar")
-          val input =
+          val pattern  = "f*"
+          val channel  = "foo"
+          val message  = RespValue.bulkString("bar")
+          val input    =
             RespValue.array(
               RespValue.bulkString("pmessage"),
               RespValue.bulkString(pattern),

@@ -28,10 +28,10 @@ sealed trait RedisError extends NoStackTrace
 object RedisError {
   sealed trait ClusterRedisError extends RedisError
 
-  final case class ProtocolError(message: String) extends RedisError {
+  final case class ProtocolError(message: String)     extends RedisError {
     override def toString: String = s"ProtocolError: $message"
   }
-  final case class CodecError(message: String) extends RedisError {
+  final case class CodecError(message: String)        extends RedisError {
     override def toString: String = s"CodecError: $message"
   }
   final case class WrongType(message: String)         extends RedisError
@@ -41,14 +41,14 @@ object RedisError {
   final case class NotBusy(message: String)           extends RedisError
   final case class CrossSlot(message: String)         extends ClusterRedisError
   final case class Ask(slot: Slot, address: RedisUri) extends ClusterRedisError
-  object Ask {
+  object Ask   {
     def apply(slotAndAddress: (Slot, RedisUri)): Ask = Ask(slotAndAddress._1, slotAndAddress._2)
   }
   final case class Moved(slot: Slot, address: RedisUri) extends ClusterRedisError
   object Moved {
     def apply(slotAndAddress: (Slot, RedisUri)): Moved = Moved(slotAndAddress._1, slotAndAddress._2)
   }
-  final case class IOError(exception: IOException)      extends RedisError
+  final case class IOError(exception: IOException) extends RedisError
   final case class CommandNameNotFound(message: String) extends RedisError
   object CommandNameNotFound {
     def apply(command: RespCommand): CommandNameNotFound = CommandNameNotFound(command.args.toString())

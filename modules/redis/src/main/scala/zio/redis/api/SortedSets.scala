@@ -52,7 +52,7 @@ trait SortedSets extends RedisEnvironment {
           Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
             (k, MemberScore(m, s))
           }
-        val command = RedisCommand(
+        val command           = RedisCommand(
           BzPopMax,
           Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
           OptionalOutput(memberScoreOutput),
@@ -87,7 +87,7 @@ trait SortedSets extends RedisEnvironment {
           Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
             (k, MemberScore(m, s))
           }
-        val command = RedisCommand(
+        val command           = RedisCommand(
           BzPopMin,
           Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
           OptionalOutput(memberScoreOutput),
@@ -1043,7 +1043,7 @@ trait SortedSets extends RedisEnvironment {
       def returning[M: Schema]: IO[RedisError, (Long, Chunk[MemberScore[M]])] = {
         val memberScoresOutput =
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput).map(_.map { case (m, s) => MemberScore(m, s) })
-        val command = RedisCommand(
+        val command            = RedisCommand(
           ZScan,
           Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput),

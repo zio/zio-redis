@@ -348,7 +348,7 @@ trait StreamsSpec extends BaseSpec {
             group     <- uuid
             consumer  <- uuid
             _         <- redis.set(nonStream, "value")
-            result <-
+            result    <-
               redis.xClaim(nonStream, group, consumer, 0.millis, force = true)("1-0").returning[String, String].either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
@@ -540,10 +540,10 @@ trait StreamsSpec extends BaseSpec {
             group     <- uuid
             consumer  <- uuid
             _         <- redis.set(nonStream, "value")
-            result <- redis
-                        .xClaimWithJustId(nonStream, group, consumer, 0.millis, force = true)("1-0")
-                        .returning[String]
-                        .either
+            result    <- redis
+                           .xClaimWithJustId(nonStream, group, consumer, 0.millis, force = true)("1-0")
+                           .returning[String]
+                           .either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),

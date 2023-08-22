@@ -36,8 +36,8 @@ private[redis] final class RedisConnection(
     ZStream.repeatZIOChunkOption {
       val receive =
         for {
-          _ <- ZIO.succeed(readBuffer.clear())
-          _ <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+          _     <- ZIO.succeed(readBuffer.clear())
+          _     <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
           chunk <- ZIO.succeed {
                      readBuffer.flip()
                      val count = readBuffer.remaining()
@@ -117,8 +117,8 @@ private[redis] object RedisConnection {
                      channel.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.box(true))
                      channel
                    }
-        _ <- closeWith[Void](channel)(channel.connect(address, null, _))
-        _ <- ZIO.logInfo(s"Connected to the redis server with address $address.")
+        _       <- closeWith[Void](channel)(channel.connect(address, null, _))
+        _       <- ZIO.logInfo(s"Connected to the redis server with address $address.")
       } yield channel
     }.refineToOrDie[IOException]
 }

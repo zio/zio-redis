@@ -36,15 +36,15 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
     with SubscriptionExecutor {
   def execute(command: RespCommand): Stream[RedisError, PushMessage] = {
     def getStream(commandName: String): IO[RedisError, Stream[RedisError, PushMessage]] = commandName match {
-      case Subscription.Subscribe =>
+      case Subscription.Subscribe    =>
         subscribe(extractChannelKeys(command.args), command)
-      case Subscription.PSubscribe =>
+      case Subscription.PSubscribe   =>
         subscribe(extractPatternKeys(command.args), command)
-      case Subscription.Unsubscribe =>
+      case Subscription.Unsubscribe  =>
         unsubscribe(command).as(ZStream.empty)
       case Subscription.PUnsubscribe =>
         unsubscribe(command).as(ZStream.empty)
-      case other => ZIO.fail(RedisError.InvalidPubSubCommand(other))
+      case other                     => ZIO.fail(RedisError.InvalidPubSubCommand(other))
     }
 
     for {
@@ -180,19 +180,19 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
           .asBytes
 
     for {
-      _             <- subsResponses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
-      subscriptions <- subscriptionMap.toChunk
+      _                   <- subsResponses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
+      subscriptions       <- subscriptionMap.toChunk
       (channels, patterns) = subscriptions.map(_._1).partition {
                                case _: SubscriptionKey.Channel => false
                                case _: SubscriptionKey.Pattern => true
                              }
-      commands = makeCommand(Subscription.Subscribe, Chunk.fromIterable(channels).map(_.value)) ++
-                   makeCommand(Subscription.PSubscribe, Chunk.fromIterable(patterns).map(_.value))
-      _ <- connection
-             .write(commands)
-             .when(commands.nonEmpty)
-             .mapError(RedisError.IOError.apply)
-             .retryWhile(True)
+      commands             = makeCommand(Subscription.Subscribe, Chunk.fromIterable(channels).map(_.value)) ++
+                               makeCommand(Subscription.PSubscribe, Chunk.fromIterable(patterns).map(_.value))
+      _                   <- connection
+                               .write(commands)
+                               .when(commands.nonEmpty)
+                               .mapError(RedisError.IOError.apply)
+                               .retryWhile(True)
     } yield ()
   }
 }

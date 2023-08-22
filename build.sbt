@@ -6,7 +6,7 @@ inThisBuild(
   List(
     name              := "ZIO Redis",
     ciEnabledBranches := List("master"),
-    ciExtraTestSteps := List(
+    ciExtraTestSteps  := List(
       SingleStep(
         name = "Run Redis",
         run = Some("docker-compose -f docker/redis-compose.yml up -d")
@@ -17,11 +17,11 @@ inThisBuild(
       )
     ),
     crossScalaVersions -= scala211.value,
-    developers := List(
+    developers        := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
-    startYear := Some(2021)
+    startYear         := Some(2021)
   )
 )
 

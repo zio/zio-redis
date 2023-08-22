@@ -178,7 +178,7 @@ trait Streams extends RedisEnvironment {
   )(id: I, ids: I*): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
       def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
-        val command = RedisCommand(
+        val command  = RedisCommand(
           XClaim,
           Tuple9(
             ArbitraryKeyInput[SK](),
@@ -238,7 +238,7 @@ trait Streams extends RedisEnvironment {
   )(id: I, ids: I*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
-        val command = RedisCommand(
+        val command  = RedisCommand(
           XClaim,
           Tuple10(
             ArbitraryKeyInput[SK](),
@@ -690,7 +690,7 @@ trait Streams extends RedisEnvironment {
   ): ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] {
       def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamChunks[SK, I, RK, RV]] = {
-        val command = RedisCommand(
+        val command  = RedisCommand(
           XReadGroup,
           Tuple6(
             ArbitraryValueInput[SG](),

@@ -498,7 +498,7 @@ trait Strings extends RedisEnvironment {
     update: Option[Update] = None,
     keepTtl: Option[KeepTtl] = None
   ): IO[RedisError, Boolean] = {
-    val input = Tuple5(
+    val input   = Tuple5(
       ArbitraryKeyInput[K](),
       ArbitraryValueInput[V](),
       OptionalInput(DurationTtlInput),
@@ -576,7 +576,7 @@ trait Strings extends RedisEnvironment {
     update: Option[Update] = None,
     keepTtl: Option[KeepTtl] = None
   ): IO[RedisError, Option[V]] = {
-    val input = Tuple6(
+    val input   = Tuple6(
       ArbitraryKeyInput[K](),
       ArbitraryValueInput[V](),
       OptionalInput(DurationTtlInput),
