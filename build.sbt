@@ -34,6 +34,7 @@ lazy val root =
 lazy val redis =
   project
     .in(file("modules/redis"))
+    .settings(addOptionsOn("2.13")("-Xlint:-infer-any"))
     .settings(stdSettings(name = Some("zio-redis"), packageName = Some("zio.redis")))
     .settings(enableZIO(enableStreaming = true))
     .settings(libraryDependencies ++= Dependencies.redis(zioVersion.value))
