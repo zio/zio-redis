@@ -13,15 +13,6 @@ inThisBuild(
   )
 )
 
-addCommandAlias("compileBenchmarks", "benchmarks/Jmh/compile")
-addCommandAlias("compileSources", "example/Test/compile; redis/Test/compile")
-addCommandAlias("check", "fixCheck; fmtCheck; headerCheck")
-addCommandAlias("fix", "scalafixAll")
-addCommandAlias("fixCheck", "scalafixAll --check")
-addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
-addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheckAll")
-addCommandAlias("prepare", "fix; fmt; headerCreate")
-
 lazy val root =
   project
     .in(file("."))
