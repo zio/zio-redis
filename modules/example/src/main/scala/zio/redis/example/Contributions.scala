@@ -14,19 +14,11 @@
  * limitations under the License.
  */
 
-package example.api
+package zio.redis.example
 
-import example._
-import zhttp.http._
-import zio._
 import zio.json._
+import zio.prelude.Newtype
 
-object Api {
-  val routes: HttpApp[ContributorsCache, Nothing] =
-    Http.collectZIO { case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
-      ZIO
-        .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
-        .mapBoth(_.asResponse, r => Response.json(r.toJson))
-        .merge
-    }
+object Contributions extends Newtype[Int] {
+  implicit val codec: JsonCodec[Contributions] = JsonCodec.int.transform(Contributions(_), Contributions.unwrap)
 }

@@ -29,8 +29,8 @@ private[redis] sealed trait RespValue extends Product with Serializable { self =
 
   final def asBytes: Chunk[Byte] =
     self match {
-      case NullBulkString => NullStringEncoded
-      case NullArray      => NullArrayEncoded
+      case NullBulkString  => NullStringEncoded
+      case NullArray       => NullArrayEncoded
       case SimpleString(s) =>
         val builder = new ChunkBuilder.Byte()
 
@@ -182,10 +182,10 @@ private[redis] object RespValue {
               case Headers.SimpleString => Done(SimpleString(decode(bytes.tail)))
               case Headers.Error        => Done(Error(decode(bytes.tail)))
               case Headers.Integer      => Done(Integer(unsafeReadLong(bytes, 1)))
-              case Headers.BulkString =>
+              case Headers.BulkString   =>
                 val size = unsafeReadSize(bytes)
                 CollectingBulkString(size, ChunkBuilder.make(size))
-              case Headers.Array =>
+              case Headers.Array        =>
                 val size = unsafeReadSize(bytes)
 
                 if (size > 0)

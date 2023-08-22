@@ -48,15 +48,15 @@ object ClusterExecutorSpec extends BaseSpec {
           _               <- ZIO.logDebug(s"$key _____ Migrating $keySlot from ${sourceMaster.id}")
           sourceMasterConn = getRedisNodeLayer(sourceMaster.address)
           _               <- ZIO.serviceWithZIO[Redis](_.setSlotMigrating(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
-          _ <- ZIO
-                 .serviceWithZIO[Redis](
-                   _.migrate(destMaster.address.host, destMaster.address.port.toLong, key, 0, 5.seconds, keys = None)
-                 )
-                 .provideLayer(sourceMasterConn)
-          _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(destMasterConn)
-          _      <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
-          value2 <- redis.get(key).returning[String] // have to refresh connection
-          value3 <- redis.get(key).returning[String] // have to get value without refreshing connection
+          _               <- ZIO
+                               .serviceWithZIO[Redis](
+                                 _.migrate(destMaster.address.host, destMaster.address.port.toLong, key, 0, 5.seconds, keys = None)
+                               )
+                               .provideLayer(sourceMasterConn)
+          _               <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(destMasterConn)
+          _               <- ZIO.serviceWithZIO[Redis](_.setSlotNode(keySlot, destMaster.id)).provideLayer(sourceMasterConn)
+          value2          <- redis.get(key).returning[String] // have to refresh connection
+          value3          <- redis.get(key).returning[String] // have to get value without refreshing connection
         } yield assertTrue(value1 == value2) && assertTrue(value2 == value3)
       }
     ).provideLayerShared(ClusterLayer)

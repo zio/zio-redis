@@ -96,27 +96,27 @@ object Output {
   case object ClusterPartitionNodeOutput extends Output[Node] {
     protected def tryDecode(respValue: RespValue): Node =
       respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.NullArray     => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
           val host   = MultiStringOutput.unsafeDecode(values(0))
           val port   = LongOutput.unsafeDecode(values(1))
           val nodeId = MultiStringOutput.unsafeDecode(values(2))
           Node(nodeId, RedisUri(host, port.toInt))
-        case other => throw ProtocolError(s"$other isn't an array")
+        case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }
 
   case object ClusterPartitionOutput extends Output[Partition] {
     protected def tryDecode(respValue: RespValue): Partition =
       respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.NullArray     => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
           val start  = LongOutput.unsafeDecode(values(0))
           val end    = LongOutput.unsafeDecode(values(1))
           val master = ClusterPartitionNodeOutput.unsafeDecode(values(2))
           val slaves = values.drop(3).map(ClusterPartitionNodeOutput.unsafeDecode)
           Partition(SlotRange(start, end), master, slaves)
-        case other => throw ProtocolError(s"$other isn't an array")
+        case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -145,17 +145,17 @@ object Output {
   case object GeoOutput extends Output[Chunk[Option[LongLat]]] {
     protected def tryDecode(respValue: RespValue): Chunk[Option[LongLat]] =
       respValue match {
-        case RespValue.NullArray =>
+        case RespValue.NullArray       =>
           Chunk.empty
         case RespValue.Array(elements) =>
           elements.map {
-            case RespValue.NullArray => None
+            case RespValue.NullArray                                                          => None
             case RespValue.ArrayValues(RespValue.BulkString(long), RespValue.BulkString(lat)) =>
               Some(LongLat(decodeDouble(long), decodeDouble(lat)))
-            case other =>
+            case other                                                                        =>
               throw ProtocolError(s"$other was not a longitude,latitude pair")
           }
-        case other =>
+        case other                     =>
           throw ProtocolError(s"$other isn't geo output")
       }
   }
@@ -165,7 +165,7 @@ object Output {
       respValue match {
         case RespValue.Array(elements) =>
           elements.map {
-            case s @ RespValue.BulkString(_) =>
+            case s @ RespValue.BulkString(_)                                       =>
               GeoView(s.asString, None, None, None)
             case RespValue.ArrayValues(name @ RespValue.BulkString(_), infos @ _*) =>
               val distance = infos.collectFirst { case RespValue.BulkString(bytes) => decodeDouble(bytes) }
@@ -189,11 +189,11 @@ object Output {
   case object KeyElemOutput extends Output[Option[(String, String)]] {
     protected def tryDecode(respValue: RespValue): Option[(String, String)] =
       respValue match {
-        case RespValue.NullArray =>
+        case RespValue.NullArray                                                             =>
           None
         case RespValue.ArrayValues(a @ RespValue.BulkString(_), b @ RespValue.BulkString(_)) =>
           Some((a.asString, b.asString))
-        case other => throw ProtocolError(s"$other isn't blPop output")
+        case other                                                                           => throw ProtocolError(s"$other isn't blPop output")
       }
   }
 
@@ -296,7 +296,7 @@ object Output {
       respValue match {
         case RespValue.ArrayValues(cursor @ RespValue.BulkString(_), RespValue.Array(items)) =>
           (cursor.asLong, items.map(output.tryDecode))
-        case other =>
+        case other                                                                           =>
           throw ProtocolError(s"$other isn't scan output")
       }
   }
@@ -323,7 +323,7 @@ object Output {
             ) =>
           val matches = items.map {
             case RespValue.Array(array) =>
-              val matchIdxs = array.collect { case RespValue.Array(values) =>
+              val matchIdxs   = array.collect { case RespValue.Array(values) =>
                 val idxs = values.map {
                   case RespValue.Integer(value) => value
                   case other                    => throw ProtocolError(s"$other isn't a valid response")
@@ -334,17 +334,17 @@ object Output {
               }
               val matchLength = array.collectFirst { case RespValue.Integer(value) => value }
               Match(matchIdxs(0), matchIdxs(1), matchLength)
-            case other => throw ProtocolError(s"$other isn't a valid response")
+            case other                  => throw ProtocolError(s"$other isn't a valid response")
           }
           Lcs.Matches(matches.toList, length)
-        case other => throw ProtocolError(s"$other isn't a valid set response")
+        case other                            => throw ProtocolError(s"$other isn't a valid set response")
       }
   }
 
   case object StreamConsumersInfoOutput extends Output[Chunk[StreamConsumersInfo]] {
     protected def tryDecode(respValue: RespValue): Chunk[StreamConsumersInfo] =
       respValue match {
-        case RespValue.NullArray => Chunk.empty
+        case RespValue.NullArray       => Chunk.empty
         case RespValue.Array(messages) =>
           messages.collect {
             // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
@@ -362,7 +362,7 @@ object Output {
                       streamConsumersInfo = streamConsumersInfo.copy(pending = value.value)
                     else if (key.asString == XInfoFields.Idle)
                       streamConsumersInfo = streamConsumersInfo.copy(idle = value.value.millis)
-                  case _ =>
+                  case _                                                             =>
                 }
                 pos += 2
               }
@@ -398,7 +398,7 @@ object Output {
           val entryId = ArbitraryOutput[I]().unsafeDecode(id)
           val entry   = KeyValueOutput(ArbitraryOutput[K](), ArbitraryOutput[V]()).unsafeDecode(value)
           StreamEntry(entryId, entry)
-        case other =>
+        case other                                                     =>
           throw ProtocolError(s"$other isn't a valid array")
       }
   }
@@ -406,7 +406,7 @@ object Output {
   case object StreamGroupsInfoOutput extends Output[Chunk[StreamGroupsInfo]] {
     protected def tryDecode(respValue: RespValue): Chunk[StreamGroupsInfo] =
       respValue match {
-        case RespValue.NullArray => Chunk.empty
+        case RespValue.NullArray       => Chunk.empty
         case RespValue.Array(messages) =>
           messages.collect {
             // Note that you should not rely on the fields exact position. see https://redis.io/commands/xinfo
@@ -421,12 +421,12 @@ object Output {
                       streamGroupsInfo = streamGroupsInfo.copy(name = value.asString)
                     else if (key.asString == XInfoFields.LastDeliveredId)
                       streamGroupsInfo = streamGroupsInfo.copy(lastDeliveredId = value.asString)
-                  case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+                  case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))    =>
                     if (key.asString == XInfoFields.Pending)
                       streamGroupsInfo = streamGroupsInfo.copy(pending = value.value)
                     else if (key.asString == XInfoFields.Consumers)
                       streamGroupsInfo = streamGroupsInfo.copy(consumers = value.value)
-                  case _ =>
+                  case _                                                                =>
                 }
                 pos += 2
               }
@@ -455,7 +455,7 @@ object Output {
           while (pos < elements.length) {
             (elements(pos), elements(pos + 1)) match {
               // Get the basic information of the outermost stream.
-              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))                                  =>
                 key.asString match {
                   case XInfoFields.Length         => streamInfoFull = streamInfoFull.copy(length = value.value)
                   case XInfoFields.RadixTreeNodes => streamInfoFull = streamInfoFull.copy(radixTreeNodes = value.value)
@@ -465,12 +465,12 @@ object Output {
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                   if key.asString == XInfoFields.LastGeneratedId =>
                 streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
-              case (key @ RespValue.BulkString(_), value) if key.asString == XInfoFields.Entries =>
+              case (key @ RespValue.BulkString(_), value) if key.asString == XInfoFields.Entries                  =>
                 streamInfoFull = streamInfoFull.copy(entries = StreamEntriesOutput[I, K, V]().unsafeDecode(value))
               case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Groups =>
                 // Get the group list of the stream.
                 streamInfoFull = streamInfoFull.copy(groups = values.map(extractXInfoFullGroup))
-              case _ =>
+              case _                                                                                              =>
             }
             pos += 2
           }
@@ -506,12 +506,12 @@ object Output {
               case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
                   if key.asString == XInfoFields.LastGeneratedId =>
                 streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
-              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_)) =>
+              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_))   =>
                 if (key.asString == XInfoFields.FirstEntry)
                   streamInfo = streamInfo.copy(firstEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
                 else if (key.asString == XInfoFields.LastEntry)
                   streamInfo = streamInfo.copy(lastEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
-              case _ =>
+              case _                                                             =>
             }
             pos += 2
           }
@@ -558,7 +558,7 @@ object Output {
       respValue match {
         case RespValue.ArrayValues(a: RespValue, b: RespValue, c: RespValue) =>
           (_1.tryDecode(a), _2.tryDecode(b), _3.tryDecode(c))
-        case other => throw ProtocolError(s"$other isn't a tuple3")
+        case other                                                           => throw ProtocolError(s"$other isn't a tuple3")
       }
   }
 
@@ -625,7 +625,7 @@ object Output {
           pairs.foreach {
             case RespValue.Array(Seq(consumer @ RespValue.BulkString(_), total @ RespValue.BulkString(_))) =>
               consumers += (consumer.asString -> total.asLong)
-            case _ =>
+            case _                                                                                         =>
               throw ProtocolError(s"Consumers doesn't have 2 elements")
           }
 
@@ -642,33 +642,33 @@ object Output {
   private[redis] case object PushMessageOutput extends Output[PushMessage] {
     protected def tryDecode(respValue: RespValue): PushMessage =
       respValue match {
-        case RespValue.NullArray => throw ProtocolError(s"Array must not be empty")
+        case RespValue.NullArray     => throw ProtocolError(s"Array must not be empty")
         case RespValue.Array(values) =>
           val name = MultiStringOutput.unsafeDecode(values(0))
           val key  = MultiStringOutput.unsafeDecode(values(1))
           name match {
-            case "subscribe" =>
+            case "subscribe"    =>
               val num = LongOutput.unsafeDecode(values(2))
               PushMessage.Subscribed(SubscriptionKey.Channel(key), num)
-            case "psubscribe" =>
+            case "psubscribe"   =>
               val num = LongOutput.unsafeDecode(values(2))
               PushMessage.Subscribed(SubscriptionKey.Pattern(key), num)
-            case "unsubscribe" =>
+            case "unsubscribe"  =>
               val num = LongOutput.unsafeDecode(values(2))
               PushMessage.Unsubscribed(SubscriptionKey.Channel(key), num)
             case "punsubscribe" =>
               val num = LongOutput.unsafeDecode(values(2))
               PushMessage.Unsubscribed(SubscriptionKey.Pattern(key), num)
-            case "message" =>
+            case "message"      =>
               val message = values(2)
               PushMessage.Message(SubscriptionKey.Channel(key), key, message)
-            case "pmessage" =>
+            case "pmessage"     =>
               val channel = MultiStringOutput.unsafeDecode(values(2))
               val message = values(3)
               PushMessage.Message(SubscriptionKey.Pattern(key), channel, message)
-            case other => throw ProtocolError(s"$other isn't a pushed message")
+            case other          => throw ProtocolError(s"$other isn't a pushed message")
           }
-        case other => throw ProtocolError(s"$other isn't an array")
+        case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -683,7 +683,7 @@ object Output {
             builder += channel -> numOfSubs
           }
           builder.result()
-        case other => throw ProtocolError(s"$other isn't an array")
+        case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }
 
@@ -712,12 +712,12 @@ object Output {
             case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))
                 if XInfoFields.PelCount == key.asString =>
               readyGroup = readyGroup.copy(pelCount = value.value)
-            case (key @ RespValue.BulkString(_), RespValue.Array(values)) =>
+            case (key @ RespValue.BulkString(_), RespValue.Array(values))         =>
               // Get the consumer list of the current group.
               key.asString match {
                 case XInfoFields.Consumers =>
                   readyGroup = readyGroup.copy(consumers = values.map(extractXInfoFullConsumer))
-                case XInfoFields.Pending =>
+                case XInfoFields.Pending   =>
                   // Get the pel list of the current group.
                   val groupPelList = values.map {
                     case RespValue.Array(
@@ -737,9 +737,9 @@ object Output {
                     case other => throw ProtocolError(s"$other isn't a valid array")
                   }
                   readyGroup = readyGroup.copy(pending = groupPelList)
-                case _ =>
+                case _                     =>
               }
-            case _ =>
+            case _                                                                =>
           }
           groupElementPos += 2
         }
@@ -761,14 +761,14 @@ object Output {
             // Get the basic information of the current consumer.
             case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) if key.asString == XInfoFields.Name =>
               readyConsumer = readyConsumer.copy(name = value.asString)
-            case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+            case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))                                        =>
               key.asString match {
                 case XInfoFields.PelCount => readyConsumer = readyConsumer.copy(pelCount = value.value)
                 case XInfoFields.SeenTime => readyConsumer = readyConsumer.copy(seenTime = value.value.millis)
                 case _                    =>
               }
             // Get the pel list of the current consumer.
-            case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Pending =>
+            case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Pending      =>
               val consumerPelList = values.map {
                 case RespValue.Array(
                       Seq(
@@ -781,7 +781,7 @@ object Output {
                 case other => throw ProtocolError(s"$other isn't a valid array")
               }
               readyConsumer = readyConsumer.copy(pending = consumerPelList)
-            case _ =>
+            case _                                                                                                    =>
           }
           consumerElementPos += 2
         }

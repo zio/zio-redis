@@ -59,7 +59,7 @@ private[redis] final case class RedisSubscriptionCommand(executor: SubscriptionE
     executor
       .execute(command)
       .mapZIO {
-        case Subscribed(key, numOfSubs) =>
+        case Subscribed(key, numOfSubs)   =>
           onSubscribe(key.value, numOfSubs).as(None)
         case Unsubscribed(key, numOfSubs) =>
           onUnsubscribe(key.value, numOfSubs).as(None)

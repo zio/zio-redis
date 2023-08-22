@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-package example
+package zio.redis.example
 
-import zio.json._
 import zio.prelude.Newtype
 
-object Contributions extends Newtype[Int] {
-  implicit val codec: JsonCodec[Contributions] = JsonCodec.int.transform(Contributions(_), Contributions.unwrap)
-}
+object Owner extends Newtype[String]

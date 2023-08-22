@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package example
+package zio.redis.example
 
-import example.api.Api
-import example.config.AppConfig
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zhttp.service.Server
 import zio._
 import zio.redis._
+import zio.redis.example.api.Api
+import zio.redis.example.config.AppConfig
 import zio.schema.Schema
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 

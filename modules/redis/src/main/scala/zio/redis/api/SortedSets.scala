@@ -52,12 +52,15 @@ trait SortedSets extends RedisEnvironment {
           Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
             (k, MemberScore(m, s))
           }
-        val command = RedisCommand(
-          BzPopMax,
-          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
-          OptionalOutput(memberScoreOutput),
-          executor
-        )
+
+        val command =
+          RedisCommand(
+            BzPopMax,
+            Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
+            OptionalOutput(memberScoreOutput),
+            executor
+          )
+
         command.run(((key, keys.toList), timeout))
       }
     }
@@ -87,12 +90,15 @@ trait SortedSets extends RedisEnvironment {
           Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
             (k, MemberScore(m, s))
           }
-        val command = RedisCommand(
-          BzPopMin,
-          Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
-          OptionalOutput(memberScoreOutput),
-          executor
-        )
+
+        val command =
+          RedisCommand(
+            BzPopMin,
+            Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
+            OptionalOutput(memberScoreOutput),
+            executor
+          )
+
         command.run(((key, keys.toList), timeout))
       }
     }
@@ -1043,12 +1049,15 @@ trait SortedSets extends RedisEnvironment {
       def returning[M: Schema]: IO[RedisError, (Long, Chunk[MemberScore[M]])] = {
         val memberScoresOutput =
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput).map(_.map { case (m, s) => MemberScore(m, s) })
-        val command = RedisCommand(
-          ZScan,
-          Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-          Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput),
-          executor
-        )
+
+        val command =
+          RedisCommand(
+            ZScan,
+            Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
+            Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput),
+            executor
+          )
+
         command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }

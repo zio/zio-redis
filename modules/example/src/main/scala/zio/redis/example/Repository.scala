@@ -14,13 +14,8 @@
  * limitations under the License.
  */
 
-package example
+package zio.redis.example
 
-import zio.Chunk
-import zio.json.{DeriveJsonCodec, JsonCodec}
-
-final case class Contributors(contributors: Chunk[Contributor])
-
-object Contributors {
-  implicit val codec: JsonCodec[Contributors] = DeriveJsonCodec.gen[Contributors]
+final case class Repository(owner: Owner, name: Name) {
+  lazy val key: String = s"$owner:$name"
 }
