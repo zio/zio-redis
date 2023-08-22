@@ -3,7 +3,7 @@ package zio.redis
 import zio._
 import zio.schema.Schema
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test.TestAspect.{fibers, silentLogging, tag, timeout}
+import zio.test.TestAspect.{fibers, silentLogging, tag}
 import zio.test._
 
 import java.util.UUID
@@ -12,7 +12,7 @@ trait BaseSpec extends ZIOSpecDefault {
   implicit def summonCodec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk(fibers, silentLogging, timeout(10.seconds))
+    Chunk(fibers, silentLogging)
 
   final val genStringRedisTypeOption: Gen[Any, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
