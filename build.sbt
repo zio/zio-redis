@@ -1,9 +1,21 @@
+import zio.sbt.githubactions.Step.SingleStep
+
 enablePlugins(ZioSbtEcosystemPlugin, ZioSbtCiPlugin)
 
 inThisBuild(
   List(
     name              := "ZIO Redis",
-    ciEnabledBranches := Seq("master"),
+    ciEnabledBranches := List("master"),
+    ciExtraTestSteps := List(
+      SingleStep(
+        name = "Run Redis",
+        run = Some("docker-compose -f docker/redis-compose.yml up -d")
+      ),
+      SingleStep(
+        name = "Run Redis cluster",
+        run = Some("docker-compose -f docker/redis-cluster-compose.yml up -d")
+      )
+    ),
     crossScalaVersions -= scala211.value,
     developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
