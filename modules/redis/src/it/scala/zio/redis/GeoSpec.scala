@@ -51,9 +51,9 @@ trait GeoSpec extends BaseSpec {
         test("storing the result") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            dest  <- uuid
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis     <- ZIO.service[Redis]
+            dest      <- uuid
+            _         <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             numStored <-
               redis.geoRadiusStore(key, member1LongLat, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
@@ -76,8 +76,8 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates and distance") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
               redis.geoRadius(key, LongLat(15d, 37d), 200d, RadiusUnit.Kilometers, Some(WithCoord), Some(WithDist))
           } yield assert(response)(
@@ -92,8 +92,8 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates, distance and hash") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- redis.geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -130,8 +130,8 @@ trait GeoSpec extends BaseSpec {
         test("with distance and hash") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- redis.geoRadius(
                           key,
                           LongLat(15d, 37d),
@@ -167,8 +167,8 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
               redis.geoRadius(
                 key,
@@ -202,9 +202,9 @@ trait GeoSpec extends BaseSpec {
         test("storing the result") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            dest  <- uuid
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis     <- ZIO.service[Redis]
+            dest      <- uuid
+            _         <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             numStored <-
               redis.geoRadiusByMemberStore(key, member1, 200d, RadiusUnit.Kilometers, StoreResults(Store(dest)))
           } yield assert(numStored)(equalTo(2L))
@@ -229,8 +229,8 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
               redis.geoRadiusByMember(key, member1, 200d, RadiusUnit.Kilometers, Some(WithCoord), Some(WithDist))
           } yield assert(response)(
@@ -247,8 +247,8 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- redis.geoRadiusByMember(
                           key,
                           member1,
@@ -287,8 +287,8 @@ trait GeoSpec extends BaseSpec {
           val member1Distance = 0d
           val member2Distance = 166.2742
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <- redis.geoRadiusByMember(
                           key,
                           member1,
@@ -326,8 +326,8 @@ trait GeoSpec extends BaseSpec {
         test("with coordinates and hash") {
           import GeoSpec.Sicily._
           for {
-            redis <- ZIO.service[Redis]
-            _     <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
+            redis    <- ZIO.service[Redis]
+            _        <- redis.geoAdd(key, member1LongLat -> member1, member2LongLat -> member2)
             response <-
               redis.geoRadiusByMember(
                 key,

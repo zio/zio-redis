@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package example
+package zio.redis.example
 
-import example.ApiError._
 import sttp.client3.ziojson.asJson
 import sttp.client3.{UriContext, basicRequest}
 import sttp.model.Uri
 import zio._
 import zio.json._
 import zio.redis._
+import zio.redis.example.ApiError._
 
 trait ContributorsCache {
   def fetchAll(repository: Repository): IO[ApiError, Contributors]

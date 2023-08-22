@@ -267,9 +267,9 @@ trait StringsSpec extends BaseSpec {
         },
         test("increment with overflow saturation") {
           for {
-            redis <- ZIO.service[Redis]
-            key   <- uuid
-            _     <- redis.set(key, "value")
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.set(key, "value")
             result <- redis.bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Sat,
@@ -279,9 +279,9 @@ trait StringsSpec extends BaseSpec {
         },
         test("increment with overflow fail") {
           for {
-            redis <- ZIO.service[Redis]
-            key   <- uuid
-            _     <- redis.set(key, "value")
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.set(key, "value")
             result <- redis.bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Fail,
@@ -291,9 +291,9 @@ trait StringsSpec extends BaseSpec {
         },
         test("increment first with overflow wrap and then overflow fail") {
           for {
-            redis <- ZIO.service[Redis]
-            key   <- uuid
-            _     <- redis.set(key, "value")
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.set(key, "value")
             result <- redis.bitField(
                         key,
                         BitFieldCommand.BitFieldOverflow.Wrap,
@@ -305,9 +305,9 @@ trait StringsSpec extends BaseSpec {
         },
         test("first set, then increment and then get same bits") {
           for {
-            redis <- ZIO.service[Redis]
-            key   <- uuid
-            _     <- redis.set(key, "value", None, None, None)
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.set(key, "value", None, None, None)
             result <- redis.bitField(
                         key,
                         BitFieldCommand.BitFieldSet(BitFieldType.UnsignedInt(8), 8, 98L),
@@ -381,20 +381,18 @@ trait StringsSpec extends BaseSpec {
             key2   <- uuid
             _      <- redis.set(key2, str2)
             result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx()))
-          } yield {
-            assert(result)(
-              equalTo(
-                Lcs.Matches(
-                  List(
-                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
-                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2)),
-                    Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0))
-                  ),
-                  7
-                )
+          } yield assert(result)(
+            equalTo(
+              Lcs.Matches(
+                List(
+                  Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
+                  Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2)),
+                  Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0))
+                ),
+                7
               )
             )
-          }
+          )
         },
         test("get index of LCS with MINMATCHLEN") {
           val str1 = "!ohmytext"
@@ -407,19 +405,17 @@ trait StringsSpec extends BaseSpec {
             key2   <- uuid
             _      <- redis.set(key2, str2)
             result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx(minMatchLength = 2)))
-          } yield {
-            assert(result)(
-              equalTo(
-                Lcs.Matches(
-                  List(
-                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
-                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2))
-                  ),
-                  7
-                )
+          } yield assert(result)(
+            equalTo(
+              Lcs.Matches(
+                List(
+                  Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9)),
+                  Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2))
+                ),
+                7
               )
             )
-          }
+          )
         },
         test("get index of LCS with WITHMATCHLEN") {
           val str1 = "!ohmytext"
@@ -432,20 +428,18 @@ trait StringsSpec extends BaseSpec {
             key2   <- uuid
             _      <- redis.set(key2, str2)
             result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx(withMatchLength = true)))
-          } yield {
-            assert(result)(
-              equalTo(
-                Lcs.Matches(
-                  List(
-                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
-                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2)),
-                    Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0), matchLength = Some(1))
-                  ),
-                  7
-                )
+          } yield assert(result)(
+            equalTo(
+              Lcs.Matches(
+                List(
+                  Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
+                  Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2)),
+                  Match(matchIdxA = MatchIdx(0, 0), matchIdxB = MatchIdx(0, 0), matchLength = Some(1))
+                ),
+                7
               )
             )
-          }
+          )
         },
         test("get index of LCS both with MINMATCHLEN and WITHMATCHLEN") {
           val str1 = "!ohmytext"
@@ -458,19 +452,17 @@ trait StringsSpec extends BaseSpec {
             key2   <- uuid
             _      <- redis.set(key2, str2)
             result <- redis.lcs(key1, key2, Some(LcsQueryType.Idx(minMatchLength = 2, withMatchLength = true)))
-          } yield {
-            assert(result)(
-              equalTo(
-                Lcs.Matches(
-                  List(
-                    Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
-                    Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2))
-                  ),
-                  7
-                )
+          } yield assert(result)(
+            equalTo(
+              Lcs.Matches(
+                List(
+                  Match(matchIdxA = MatchIdx(5, 8), matchIdxB = MatchIdx(6, 9), matchLength = Some(4)),
+                  Match(matchIdxA = MatchIdx(3, 4), matchIdxB = MatchIdx(1, 2), matchLength = Some(2))
+                ),
+                7
               )
             )
-          }
+          )
         }
       ) @@ clusterExecutorUnsupported,
       suite("bitOp")(

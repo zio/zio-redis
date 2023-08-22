@@ -178,22 +178,24 @@ trait Streams extends RedisEnvironment {
   )(id: I, ids: I*): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda] {
       def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamEntries[I, RK, RV]] = {
-        val command = RedisCommand(
-          XClaim,
-          Tuple9(
-            ArbitraryKeyInput[SK](),
-            ArbitraryValueInput[SG](),
-            ArbitraryValueInput[SC](),
-            DurationMillisecondsInput,
-            NonEmptyList(ArbitraryValueInput[I]()),
-            OptionalInput(IdleInput),
-            OptionalInput(TimeInput),
-            OptionalInput(RetryCountInput),
-            OptionalInput(WithForceInput)
-          ),
-          StreamEntriesOutput[I, RK, RV](),
-          executor
-        )
+        val command =
+          RedisCommand(
+            XClaim,
+            Tuple9(
+              ArbitraryKeyInput[SK](),
+              ArbitraryValueInput[SG](),
+              ArbitraryValueInput[SC](),
+              DurationMillisecondsInput,
+              NonEmptyList(ArbitraryValueInput[I]()),
+              OptionalInput(IdleInput),
+              OptionalInput(TimeInput),
+              OptionalInput(RetryCountInput),
+              OptionalInput(WithForceInput)
+            ),
+            StreamEntriesOutput[I, RK, RV](),
+            executor
+          )
+
         val forceOpt = if (force) Some(WithForce) else None
         command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt))
       }
@@ -238,7 +240,7 @@ trait Streams extends RedisEnvironment {
   )(id: I, ids: I*): ResultBuilder1[Chunk] =
     new ResultBuilder1[Chunk] {
       def returning[R: Schema]: IO[RedisError, Chunk[R]] = {
-        val command = RedisCommand(
+        val command  = RedisCommand(
           XClaim,
           Tuple10(
             ArbitraryKeyInput[SK](),
@@ -690,19 +692,21 @@ trait Streams extends RedisEnvironment {
   ): ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] =
     new ResultBuilder2[({ type lambda[x, y] = StreamChunks[SK, I, x, y] })#lambda] {
       def returning[RK: Schema, RV: Schema]: IO[RedisError, StreamChunks[SK, I, RK, RV]] = {
-        val command = RedisCommand(
-          XReadGroup,
-          Tuple6(
-            ArbitraryValueInput[SG](),
-            ArbitraryValueInput[SC](),
-            OptionalInput(CountInput),
-            OptionalInput(BlockInput),
-            OptionalInput(NoAckInput),
-            StreamsInput[SK, I]()
-          ),
-          ChunkOutput(StreamOutput[SK, I, RK, RV]()),
-          executor
-        )
+        val command =
+          RedisCommand(
+            XReadGroup,
+            Tuple6(
+              ArbitraryValueInput[SG](),
+              ArbitraryValueInput[SC](),
+              OptionalInput(CountInput),
+              OptionalInput(BlockInput),
+              OptionalInput(NoAckInput),
+              StreamsInput[SK, I]()
+            ),
+            ChunkOutput(StreamOutput[SK, I, RK, RV]()),
+            executor
+          )
+
         val noAckOpt = if (noAck) Some(NoAck) else None
         command.run((group, consumer, count.map(Count(_)), block, noAckOpt, (stream, Chunk.fromIterable(streams))))
       }

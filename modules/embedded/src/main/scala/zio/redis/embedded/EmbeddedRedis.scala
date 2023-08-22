@@ -37,11 +37,11 @@ object EmbeddedRedis {
   lazy val layer: ZLayer[Any, Throwable, RedisConfig] =
     ZLayer.scoped {
       for {
-        port <- findFreePort
+        port        <- findFreePort
         redisServer <- ZIO.acquireRelease(ZIO.attemptBlockingIO(new RedisServer(port)))(redisServer =>
                          ZIO.attemptBlockingIO(redisServer.stop).ignoreLogged
                        )
-        _ <- ZIO.attemptBlockingIO(redisServer.start)
+        _           <- ZIO.attemptBlockingIO(redisServer.start)
       } yield RedisConfig("localhost", port)
     }
 

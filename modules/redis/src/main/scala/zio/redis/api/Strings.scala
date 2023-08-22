@@ -498,13 +498,15 @@ trait Strings extends RedisEnvironment {
     update: Option[Update] = None,
     keepTtl: Option[KeepTtl] = None
   ): IO[RedisError, Boolean] = {
-    val input = Tuple5(
-      ArbitraryKeyInput[K](),
-      ArbitraryValueInput[V](),
-      OptionalInput(DurationTtlInput),
-      OptionalInput(UpdateInput),
-      OptionalInput(KeepTtlInput)
-    )
+    val input =
+      Tuple5(
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[V](),
+        OptionalInput(DurationTtlInput),
+        OptionalInput(UpdateInput),
+        OptionalInput(KeepTtlInput)
+      )
+
     val command = RedisCommand(Set, input, SetOutput, executor)
     command.run((key, value, expireTime, update, keepTtl))
   }
@@ -576,14 +578,16 @@ trait Strings extends RedisEnvironment {
     update: Option[Update] = None,
     keepTtl: Option[KeepTtl] = None
   ): IO[RedisError, Option[V]] = {
-    val input = Tuple6(
-      ArbitraryKeyInput[K](),
-      ArbitraryValueInput[V](),
-      OptionalInput(DurationTtlInput),
-      OptionalInput(UpdateInput),
-      OptionalInput(KeepTtlInput),
-      GetKeywordInput
-    )
+    val input =
+      Tuple6(
+        ArbitraryKeyInput[K](),
+        ArbitraryValueInput[V](),
+        OptionalInput(DurationTtlInput),
+        OptionalInput(UpdateInput),
+        OptionalInput(KeepTtlInput),
+        GetKeywordInput
+      )
+
     val command = RedisCommand(Set, input, OptionalOutput(ArbitraryOutput[V]()), executor)
     command.run((key, value, expireTime, update, keepTtl, GetKeyword))
   }

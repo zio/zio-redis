@@ -70,7 +70,7 @@ private[redis] final class ClusterExecutor private (
   // TODO introduce max connection amount
   private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor] =
     clusterConnection.modifyZIO { cc =>
-      val executorOpt = cc.executors.get(address).map(es => (es.executor, cc))
+      val executorOpt       = cc.executors.get(address).map(es => (es.executor, cc))
       val enrichedClusterIO =
         scope.extend[Any](connectToNode(address)).map(es => (es.executor, cc.addExecutor(address, es)))
       ZIO.fromOption(executorOpt).catchAll(_ => enrichedClusterIO)

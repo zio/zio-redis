@@ -1259,7 +1259,7 @@ object InputSpec extends BaseSpec {
       suite("GetEx")(
         test("GetExInput - valid value") {
           for {
-            resultSeconds <-
+            resultSeconds      <-
               ZIO.attempt(GetExInput[String]().encode(scala.Tuple3.apply("key", Expire.SetExpireSeconds, 1.second)))
             resultMilliseconds <-
               ZIO.attempt(GetExInput[String]().encode(scala.Tuple3("key", Expire.SetExpireMilliseconds, 100.millis)))
@@ -1271,7 +1271,7 @@ object InputSpec extends BaseSpec {
         },
         test("GetExAtInput - valid value") {
           for {
-            resultSeconds <-
+            resultSeconds      <-
               ZIO.attempt(
                 GetExAtInput[String]().encode(
                   scala.Tuple3("key", ExpiredAt.SetExpireAtSeconds, Instant.parse("2021-04-06T00:00:00Z"))

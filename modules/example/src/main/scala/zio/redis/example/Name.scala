@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package example
+package zio.redis.example
 
 import zio.prelude.Newtype
 

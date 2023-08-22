@@ -159,20 +159,20 @@ trait KeysSpec extends BaseSpec {
       suite("migrate")(
         test("migrate key to another redis server (copy and replace)") {
           for {
-            redis <- ZIO.service[Redis]
-            key   <- uuid
-            value <- uuid
-            _     <- redis.set(key, value)
-            response <- redis.migrate(
-                          "redis2",
-                          6379,
-                          key,
-                          0L,
-                          KeysSpec.MigrateTimeout,
-                          copy = Option(Copy),
-                          replace = Option(Replace),
-                          keys = None
-                        )
+            redis     <- ZIO.service[Redis]
+            key       <- uuid
+            value     <- uuid
+            _         <- redis.set(key, value)
+            response  <- redis.migrate(
+                           "redis2",
+                           6379,
+                           key,
+                           0L,
+                           KeysSpec.MigrateTimeout,
+                           copy = Option(Copy),
+                           replace = Option(Replace),
+                           keys = None
+                         )
             originGet <- redis.get(key).returning[String]
             destGet   <- redis.get(key).returning[String].provideLayer(KeysSpec.SecondExecutor)
           } yield assert(response)(equalTo("OK")) &&
@@ -181,20 +181,20 @@ trait KeysSpec extends BaseSpec {
         },
         test("migrate key to another redis server (move and replace)") {
           for {
-            key   <- uuid
-            value <- uuid
-            redis <- ZIO.service[Redis]
-            _     <- redis.set(key, value)
-            response <- redis.migrate(
-                          "redis2",
-                          6379,
-                          key,
-                          0L,
-                          KeysSpec.MigrateTimeout,
-                          copy = None,
-                          replace = Option(Replace),
-                          keys = None
-                        )
+            key       <- uuid
+            value     <- uuid
+            redis     <- ZIO.service[Redis]
+            _         <- redis.set(key, value)
+            response  <- redis.migrate(
+                           "redis2",
+                           6379,
+                           key,
+                           0L,
+                           KeysSpec.MigrateTimeout,
+                           copy = None,
+                           replace = Option(Replace),
+                           keys = None
+                         )
             originGet <- redis.get(key).returning[String]
             destGet   <- ZIO.serviceWithZIO[Redis](_.get(key).returning[String]).provideLayer(KeysSpec.SecondExecutor)
           } yield assert(response)(equalTo("OK")) &&
@@ -203,13 +203,13 @@ trait KeysSpec extends BaseSpec {
         },
         test("migrate key to another redis server (move and no replace, should fail when key exists)") {
           for {
-            redis <- ZIO.service[Redis]
-            key   <- uuid
-            value <- uuid
-            _     <- redis.set(key, value)
-            _ <- ZIO
-                   .serviceWithZIO[Redis](_.set(key, value))
-                   .provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
+            redis    <- ZIO.service[Redis]
+            key      <- uuid
+            value    <- uuid
+            _        <- redis.set(key, value)
+            _        <- ZIO
+                          .serviceWithZIO[Redis](_.set(key, value))
+                          .provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
             response <-
               redis
                 .migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None)
@@ -472,9 +472,9 @@ trait KeysSpec extends BaseSpec {
             prefix2 <- uuid
             _       <- redis.set(s"${prefix2}_$value1", "B1")
             _       <- redis.set(s"${prefix2}_$value2", "B2")
-            sorted <- redis
-                        .sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
-                        .returning[String]
+            sorted  <- redis
+                         .sort(key, get = Some((s"${prefix}_*", List(s"${prefix2}_*"))), alpha = Some(Alpha))
+                         .returning[String]
           } yield assert(sorted)(equalTo(Chunk("A1", "B1", "A2", "B2")))
         } @@ flaky @@ clusterExecutorUnsupported,
         test("sort and store result") {
