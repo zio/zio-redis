@@ -6,7 +6,7 @@ import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 
-object RespValueSpec extends BaseSpec {
+object RespValueSpec extends ZIOSpecDefault {
   def spec: Spec[Any, RedisError.ProtocolError] =
     suite("RespValue")(
       test("serializes and deserializes messages") {
