@@ -182,12 +182,17 @@ object Input {
     def encode(data: (String, Chunk[K], Chunk[V])): RespCommand = {
       val (lua, keys, args) = data
       val encodedScript     = RespCommand(RespCommandArgument.Value(lua), RespCommandArgument.Value(keys.size.toString))
-      val encodedKeys       = keys.foldLeft(RespCommand.empty)((acc, a) =>
-        acc ++ inputK.encode(a).mapArguments(arg => RespCommandArgument.Key(arg.value.value))
-      )
-      val encodedArgs       = args.foldLeft(RespCommand.empty)((acc, a) =>
-        acc ++ inputV.encode(a).mapArguments(arg => RespCommandArgument.Value(arg.value.value))
-      )
+
+      val encodedKeys =
+        keys.foldLeft(RespCommand.empty) { (acc, a) =>
+          acc ++ inputK.encode(a).mapArguments(arg => RespCommandArgument.Key(arg.value.value))
+        }
+
+      val encodedArgs =
+        args.foldLeft(RespCommand.empty) { (acc, a) =>
+          acc ++ inputV.encode(a).mapArguments(arg => RespCommandArgument.Value(arg.value.value))
+        }
+
       encodedScript ++ encodedKeys ++ encodedArgs
     }
   }
@@ -284,14 +289,17 @@ object Input {
     def encode(data: LcsQueryType): RespCommand = data match {
       case LcsQueryType.Len                                  => RespCommand(RespCommandArgument.Literal("LEN"))
       case LcsQueryType.Idx(minMatchLength, withMatchLength) =>
-        val idx    = Chunk.single(RespCommandArgument.Literal("IDX"))
-        val min    =
+        val idx = Chunk.single(RespCommandArgument.Literal("IDX"))
+
+        val min =
           if (minMatchLength > 1)
             Chunk(RespCommandArgument.Literal("MINMATCHLEN"), RespCommandArgument.Value(minMatchLength.toString))
           else Chunk.empty[RespCommandArgument]
+
         val length =
           if (withMatchLength) Chunk.single(RespCommandArgument.Literal("WITHMATCHLEN"))
           else Chunk.empty[RespCommandArgument]
+
         RespCommand(Chunk(idx, min, length).flatten)
     }
   }

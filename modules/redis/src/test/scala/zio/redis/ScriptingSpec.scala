@@ -284,19 +284,23 @@ object ScriptingSpec {
       case RespValue.Array(elements) =>
         val count = RespToLong(elements(0))
         val avg   = RespToLong(elements(1))
-        val pair  = elements(2) match {
-          case RespValue.Array(elements) => (RespToLong(elements(0)).toInt, RespToString(elements(1)))
-          case other                     => throw ProtocolError(s"$other isn't an array type")
-        }
+
+        val pair =
+          elements(2) match {
+            case RespValue.Array(elements) => (RespToLong(elements(0)).toInt, RespToString(elements(1)))
+            case other                     => throw ProtocolError(s"$other isn't an array type")
+          }
+
         CustomData(count, avg, pair)
       case other                     => throw ProtocolError(s"$other isn't an array type")
     }
   }
 
-  private val RespToLong: RespValue => Long     = {
+  private val RespToLong: RespValue => Long = {
     case RespValue.Integer(value) => value
     case other                    => throw ProtocolError(s"$other isn't a integer type")
   }
+
   private val RespToString: RespValue => String = {
     case s @ RespValue.BulkString(_) => s.asString
     case other                       => throw ProtocolError(s"$other isn't a string type")
@@ -308,25 +312,30 @@ object ScriptingSpec {
   implicit val longInput: Input[Long]           = LongInput
 
   implicit val keyValueOutput: KeyValueOutput[String, String] = KeyValueOutput(MultiStringOutput, MultiStringOutput)
-  implicit val booleanOutput: Output[Boolean]                 = RespValueOutput.map {
-    case RespValue.Integer(0) => false
-    case RespValue.Integer(1) => true
-    case other                => throw ProtocolError(s"$other isn't a string nor an array")
-  }
-  implicit val simpleStringOutput: Output[String]             = RespValueOutput.map {
-    case RespValue.SimpleString(value) => value
-    case other                         => throw ProtocolError(s"$other isn't a string nor an array")
-  }
-  implicit val chunkStringOutput: Output[Chunk[String]]       = RespValueOutput.map {
-    case RespValue.Array(elements) =>
-      elements.map {
-        case s @ RespValue.BulkString(_) => s.asString
-        case other                       => throw ProtocolError(s"$other isn't a bulk string")
-      }
-    case other                     => throw ProtocolError(s"$other isn't a string nor an array")
-  }
 
-  def errorOutput(error: String): Output[String] = RespValueOutput.map { _ =>
-    throw ProtocolError(error)
-  }
+  implicit val booleanOutput: Output[Boolean] =
+    RespValueOutput.map {
+      case RespValue.Integer(0) => false
+      case RespValue.Integer(1) => true
+      case other                => throw ProtocolError(s"$other isn't a string nor an array")
+    }
+
+  implicit val simpleStringOutput: Output[String] =
+    RespValueOutput.map {
+      case RespValue.SimpleString(value) => value
+      case other                         => throw ProtocolError(s"$other isn't a string nor an array")
+    }
+
+  implicit val chunkStringOutput: Output[Chunk[String]] =
+    RespValueOutput.map {
+      case RespValue.Array(elements) =>
+        elements.map {
+          case s @ RespValue.BulkString(_) => s.asString
+          case other                       => throw ProtocolError(s"$other isn't a bulk string")
+        }
+      case other                     => throw ProtocolError(s"$other isn't a string nor an array")
+    }
+
+  def errorOutput(error: String): Output[String] =
+    RespValueOutput.map(_ => throw ProtocolError(error))
 }
