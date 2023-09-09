@@ -5,6 +5,10 @@ enablePlugins(ZioSbtEcosystemPlugin, ZioSbtCiPlugin)
 inThisBuild(
   List(
     name              := "ZIO Redis",
+    zioVersion        := "2.0.16",
+    scala212          := "2.12.18",
+    scala213          := "2.13.11",
+    scala3            := "3.3.0",
     ciEnabledBranches := List("master"),
     ciExtraTestSteps  := List(
       SingleStep(
@@ -20,7 +24,6 @@ inThisBuild(
         run = Some("sbt ++${{ matrix.scala }} IntegrationTest/test")
       )
     ),
-    crossScalaVersions -= scala211.value,
     developers        := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
@@ -33,8 +36,9 @@ lazy val root =
   project
     .in(file("."))
     .settings(
+      name               := "zio-redis",
       crossScalaVersions := Nil,
-      publish / skip := true
+      publish / skip     := true
     )
     .aggregate(redis, embedded, benchmarks, example, docs)
 
