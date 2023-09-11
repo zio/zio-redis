@@ -9,7 +9,7 @@ object Dependencies {
     val ZHttp         = "2.0.0-RC11"
     val ZioConfig     = "3.0.7"
     val ZioJson       = "0.6.2"
-    val ZioSchema     = "0.4.13"
+    val ZioSchema     = "0.4.14"
   }
 
   lazy val Benchmarks =
