@@ -64,6 +64,15 @@ jobs:
       run: sbt ciCheckGithubWorkflow
     - name: Lint
       run: sbt lint
+  test-setup:
+    name: Setup the test environment
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+    - name: Run Redis
+      run: docker-compose -f docker/redis-compose.yml up -d
+    - name: Run Redis cluster
+      run: docker-compose -f docker/redis-cluster-compose.yml up -d
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -92,12 +101,6 @@ jobs:
         fetch-depth: '0'
     - name: Test
       run: sbt +test
-    - name: Run Redis
-      run: docker-compose -f docker/redis-compose.yml up -d
-    - name: Run Redis cluster
-      run: docker-compose -f docker/redis-cluster-compose.yml up -d
-    - name: Run integration tests
-      run: sbt ++${{ matrix.scala }} IntegrationTest/test
   update-readme:
     name: Update README
     runs-on: ubuntu-latest
@@ -165,6 +168,7 @@ jobs:
     continue-on-error: false
     needs:
     - lint
+    - test
     - test
     - build
     steps:

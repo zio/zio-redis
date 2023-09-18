@@ -1,3 +1,4 @@
+import zio.sbt.githubactions.Job
 import zio.sbt.githubactions.Step.SingleStep
 
 enablePlugins(ZioSbtEcosystemPlugin, ZioSbtCiPlugin)
@@ -10,20 +11,20 @@ inThisBuild(
     scala213          := "2.13.11",
     scala3            := "3.3.1",
     ciEnabledBranches := List("master"),
-    ciExtraTestSteps  := List(
-      SingleStep(
-        name = "Run Redis",
-        run = Some("docker-compose -f docker/redis-compose.yml up -d")
-      ),
-      SingleStep(
-        name = "Run Redis cluster",
-        run = Some("docker-compose -f docker/redis-cluster-compose.yml up -d")
-      ),
-      SingleStep(
-        name = "Run integration tests",
-        run = Some("sbt ++${{ matrix.scala }} IntegrationTest/test")
+    ciTestJobs        := Job(
+      id = "test-setup",
+      name = "Setup the test environment",
+      steps = List(
+        SingleStep(
+          name = "Run Redis",
+          run = Some("docker-compose -f docker/redis-compose.yml up -d")
+        ),
+        SingleStep(
+          name = "Run Redis cluster",
+          run = Some("docker-compose -f docker/redis-cluster-compose.yml up -d")
+        )
       )
-    ),
+    ) +: ciTestJobs.value,
     developers        := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
@@ -40,7 +41,7 @@ lazy val root =
       crossScalaVersions := Nil,
       publish / skip     := true
     )
-    .aggregate(redis, embedded, benchmarks, example, docs)
+    .aggregate(redis, integrationTest, embedded, benchmarks, example, docs)
 
 lazy val redis =
   project
