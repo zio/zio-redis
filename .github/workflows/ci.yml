@@ -69,6 +69,10 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: false
     steps:
+    - name: Git Checkout
+      uses: actions/checkout@v4.0.0
+      with:
+        fetch-depth: '0'
     - name: Run Redis
       run: docker-compose -f docker/redis-compose.yml up -d
     - name: Run Redis cluster

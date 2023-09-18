@@ -15,6 +15,7 @@ inThisBuild(
       id = "test-setup",
       name = "Setup the test environment",
       steps = List(
+        ZioSbtCiPlugin.Checkout.value,
         SingleStep(
           name = "Run Redis",
           run = Some("docker-compose -f docker/redis-compose.yml up -d")
