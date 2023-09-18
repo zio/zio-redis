@@ -49,8 +49,17 @@ lazy val redis =
     .settings(stdSettings(name = Some("zio-redis"), packageName = Some("zio.redis")))
     .settings(enableZIO(enableStreaming = true))
     .settings(libraryDependencies ++= Dependencies.redis(zioVersion.value))
-    .settings(Defaults.itSettings)
-    .configs(IntegrationTest)
+
+lazy val integrationTest =
+  project
+    .in(file("modules/redis-it"))
+    .settings(stdSettings(name = Some("zio-redis-it")))
+    .settings(enableZIO(enableStreaming = true))
+    .settings(
+      libraryDependencies ++= Dependencies.redis(zioVersion.value),
+      publish / skip := true
+    )
+    .dependsOn(redis)
 
 lazy val embedded =
   project

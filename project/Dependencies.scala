@@ -47,8 +47,8 @@ object Dependencies {
     List(
       "dev.zio" %% "zio-concurrent"      % zioVersion,
       "dev.zio" %% "zio-schema"          % Versions.ZioSchema,
-      "dev.zio" %% "zio-schema-protobuf" % Versions.ZioSchema % "it,test",
-      "dev.zio" %% "zio-test"            % zioVersion         % IntegrationTest,
-      "dev.zio" %% "zio-test-sbt"        % zioVersion         % IntegrationTest
+      "dev.zio" %% "zio-schema-protobuf" % Versions.ZioSchema % Test,
+      "dev.zio" %% "zio-test"            % zioVersion         % Test,
+      "dev.zio" %% "zio-test-sbt"        % zioVersion         % Test
     )
 }
