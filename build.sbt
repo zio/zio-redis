@@ -7,21 +7,6 @@ inThisBuild(
   List(
     name              := "ZIO Redis",
     ciEnabledBranches := List("master"),
-    ciTestJobs        := Job(
-      id = "test-setup",
-      name = "Setup the test environment",
-      steps = List(
-        ZioSbtCiPlugin.Checkout.value,
-        SingleStep(
-          name = "Run Redis",
-          run = Some("docker-compose -f docker/redis-compose.yml up -d")
-        ),
-        SingleStep(
-          name = "Run Redis cluster",
-          run = Some("docker-compose -f docker/redis-cluster-compose.yml up -d")
-        )
-      )
-    ) +: ciTestJobs.value,
     developers        := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
@@ -103,6 +88,7 @@ lazy val integrationTest =
     .settings(enableZIO(enableStreaming = true))
     .settings(
       libraryDependencies ++= Dependencies.redis(zioVersion.value),
-      publish / skip := true
+      publish / skip := true,
+      Test / fork := false
     )
     .dependsOn(client)

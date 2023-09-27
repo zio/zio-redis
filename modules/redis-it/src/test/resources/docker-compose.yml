@@ -1,0 +1,56 @@
+version: "3.3"
+
+services:
+  single-node-0:
+    image: bitnami/redis:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+
+  single-node-1:
+    image: bitnami/redis:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+
+  cluster-node-0:
+    image: bitnami/redis-cluster:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=cluster-node-0 cluster-node-1 cluster-node-2 cluster-node-3 cluster-node-4 cluster-node-5'
+
+  cluster-node-1:
+    image: bitnami/redis-cluster:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=cluster-node-0 cluster-node-1 cluster-node-2 cluster-node-3 cluster-node-4 cluster-node-5'
+
+  cluster-node-2:
+    image: bitnami/redis-cluster:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=cluster-node-0 cluster-node-1 cluster-node-2 cluster-node-3 cluster-node-4 cluster-node-5'
+
+  cluster-node-3:
+    image: bitnami/redis-cluster:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=cluster-node-0 cluster-node-1 cluster-node-2 cluster-node-3 cluster-node-4 cluster-node-5'
+
+  cluster-node-4:
+    image: bitnami/redis-cluster:7.2
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=cluster-node-0 cluster-node-1 cluster-node-2 cluster-node-3 cluster-node-4 cluster-node-5'
+
+  cluster-node-5:
+    image: bitnami/redis-cluster:7.2
+    depends_on:
+      - cluster-node-0
+      - cluster-node-1
+      - cluster-node-2
+      - cluster-node-3
+      - cluster-node-4
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_REPLICAS=1'
+      - 'REDIS_NODES=cluster-node-0 cluster-node-1 cluster-node-2 cluster-node-3 cluster-node-4 cluster-node-5'
+      - 'REDIS_CLUSTER_CREATOR=yes'

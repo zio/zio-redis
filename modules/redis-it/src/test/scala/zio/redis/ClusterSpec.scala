@@ -1,21 +1,26 @@
 package zio.redis
 
-import zio.ZIO
-import zio.test.Assertion._
+import com.dimafeng.testcontainers.DockerComposeContainer
+import zio._
 import zio.test._
 
 trait ClusterSpec extends BaseSpec {
-  def clusterSpec: Spec[Redis, RedisError] =
+  def clusterSpec: Spec[DockerComposeContainer & Redis, RedisError] =
     suite("cluster")(
       suite("slots")(
         test("get cluster slots") {
           for {
-            res <- ZIO.serviceWithZIO[Redis](_.slots)
-          } yield {
-            val addresses    = (5000 to 5005).map(port => RedisUri("127.0.0.1", port))
-            val resAddresses = res.map(_.master.address) ++ res.flatMap(_.slaves.map(_.address))
-            assert(resAddresses.distinct)(hasSameElements(addresses))
-          }
+            res      <- ZIO.serviceWithZIO[Redis](_.slots)
+            docker   <- ZIO.service[DockerComposeContainer]
+            port      = 6379
+            expected <-
+              ZIO
+                .foreach(0 to 5) { n =>
+                  ZIO.attempt(docker.getServiceHost(s"cluster-node-$n", port)).map(host => RedisUri(host, port))
+                }
+                .orDie
+            actual    = res.map(_.master.address) ++ res.flatMap(_.slaves.map(_.address))
+          } yield assertTrue(actual.distinct.size == expected.size)
         }
       )
     )

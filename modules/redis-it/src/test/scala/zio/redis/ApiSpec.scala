@@ -1,5 +1,6 @@
 package zio.redis
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import zio._
 import zio.test.TestAspect._
 import zio.test._
@@ -20,25 +21,16 @@ object ApiSpec
     with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("Redis commands")(clusterSuite, singleNodeSuite) @@ sequential @@ withLiveEnvironment
+    suite("Redis commands")(ClusterSuite, SingleNodeSuite)
+      .provideShared(
+        compose(
+          service(BaseSpec.SingleNode0, ".*Ready to accept connections.*"),
+          service(BaseSpec.SingleNode1, ".*Ready to accept connections.*"),
+          service(BaseSpec.MasterNode, ".*Cluster correctly created.*")
+        )
+      ) @@ sequential @@ withLiveEnvironment
 
-  private val singleNodeSuite =
-    suite("Single node executor")(
-      connectionSuite,
-      keysSuite,
-      listSuite,
-      setsSuite,
-      sortedSetsSuite,
-      stringsSuite,
-      geoSuite,
-      hyperLogLogSuite,
-      hashSuite,
-      streamsSuite,
-      scriptingSpec,
-      pubSubSuite
-    ).provideShared(Redis.local, RedisSubscription.local, ZLayer.succeed(ProtobufCodecSupplier))
-
-  private val clusterSuite =
+  private final val ClusterSuite =
     suite("Cluster executor")(
       connectionSuite,
       keysSuite,
@@ -52,10 +44,31 @@ object ApiSpec
       streamsSuite,
       scriptingSpec,
       clusterSpec
-    ).provideShared(
+    ).provideSomeShared[DockerComposeContainer](
       Redis.cluster,
-      ZLayer.succeed(ProtobufCodecSupplier),
-      ZLayer.succeed(RedisClusterConfig(Chunk(RedisUri("localhost", 5000))))
+      masterNodeConfig,
+      ZLayer.succeed(ProtobufCodecSupplier)
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
       .getOrElse(Spec.empty)
+
+  private final val SingleNodeSuite =
+    suite("Single node executor")(
+      connectionSuite,
+      keysSuite,
+      listSuite,
+      setsSuite,
+      sortedSetsSuite,
+      stringsSuite,
+      geoSuite,
+      hyperLogLogSuite,
+      hashSuite,
+      streamsSuite,
+      scriptingSpec,
+      pubSubSuite
+    ).provideSomeShared[DockerComposeContainer](
+      Redis.singleNode,
+      RedisSubscription.singleNode,
+      singleNodeConfig(BaseSpec.SingleNode0),
+      ZLayer.succeed(ProtobufCodecSupplier)
+    )
 }

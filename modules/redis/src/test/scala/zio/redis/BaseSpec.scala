@@ -1,5 +1,4 @@
 package zio.redis
-
 import zio._
 import zio.schema.Schema
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
