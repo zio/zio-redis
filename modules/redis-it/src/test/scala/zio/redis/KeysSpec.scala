@@ -1,5 +1,6 @@
 package zio.redis
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import zio._
 import zio.redis.RedisError.ProtocolError
 import zio.test.Assertion.{exists => _, _}
@@ -7,7 +8,7 @@ import zio.test.TestAspect.{restore => _, _}
 import zio.test._
 
 trait KeysSpec extends BaseSpec {
-  def keysSuite: Spec[Redis, RedisError] = {
+  def keysSuite: Spec[DockerComposeContainer & Redis, RedisError] = {
     suite("keys")(
       test("set followed by get") {
         for {
@@ -163,18 +164,19 @@ trait KeysSpec extends BaseSpec {
             key       <- uuid
             value     <- uuid
             _         <- redis.set(key, value)
-            response  <- redis.migrate(
-                           "redis2",
-                           6379,
-                           key,
-                           0L,
-                           KeysSpec.MigrateTimeout,
-                           copy = Option(Copy),
-                           replace = Option(Replace),
-                           keys = None
-                         )
+            response  <- redis
+                           .migrate(
+                             BaseSpec.SingleNode1,
+                             6379,
+                             key,
+                             0L,
+                             KeysSpec.MigrateTimeout,
+                             copy = Option(Copy),
+                             replace = Option(Replace),
+                             keys = None
+                           )
             originGet <- redis.get(key).returning[String]
-            destGet   <- redis.get(key).returning[String].provideLayer(KeysSpec.SecondExecutor)
+            destGet   <- ZIO.serviceWithZIO[Redis](_.get(key).returning[String]).provideLayer(secondExecutor)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isSome(equalTo(value))) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -186,8 +188,8 @@ trait KeysSpec extends BaseSpec {
             redis     <- ZIO.service[Redis]
             _         <- redis.set(key, value)
             response  <- redis.migrate(
-                           "redis2",
-                           6379,
+                           BaseSpec.SingleNode1,
+                           6379L,
                            key,
                            0L,
                            KeysSpec.MigrateTimeout,
@@ -196,7 +198,7 @@ trait KeysSpec extends BaseSpec {
                            keys = None
                          )
             originGet <- redis.get(key).returning[String]
-            destGet   <- ZIO.serviceWithZIO[Redis](_.get(key).returning[String]).provideLayer(KeysSpec.SecondExecutor)
+            destGet   <- ZIO.serviceWithZIO[Redis](_.get(key).returning[String]).provideLayer(secondExecutor)
           } yield assert(response)(equalTo("OK")) &&
             assert(originGet)(isNone) &&
             assert(destGet)(isSome(equalTo(value)))
@@ -209,11 +211,19 @@ trait KeysSpec extends BaseSpec {
             _        <- redis.set(key, value)
             _        <- ZIO
                           .serviceWithZIO[Redis](_.set(key, value))
-                          .provideLayer(KeysSpec.SecondExecutor) // also add to second Redis
-            response <-
-              redis
-                .migrate("redis2", 6379, key, 0L, KeysSpec.MigrateTimeout, copy = None, replace = None, keys = None)
-                .either
+                          .provideLayer(secondExecutor) // also add to second Redis
+            response <- redis
+                          .migrate(
+                            BaseSpec.SingleNode1,
+                            6379,
+                            key,
+                            0L,
+                            KeysSpec.MigrateTimeout,
+                            copy = None,
+                            replace = None,
+                            keys = None
+                          )
+                          .either
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ) @@ clusterExecutorUnsupported,
@@ -490,17 +500,16 @@ trait KeysSpec extends BaseSpec {
       )
     )
   }
-}
 
-object KeysSpec {
-  final val MigrateTimeout: Duration = 5.seconds
-
-  final val SecondExecutor: Layer[RedisError.IOError, Redis] =
+  private val secondExecutor =
     ZLayer
-      .make[Redis](
-        ZLayer.succeed(RedisConfig("localhost", 6380)),
+      .makeSome[DockerComposeContainer, Redis](
+        singleNodeConfig(BaseSpec.SingleNode1),
         ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
         Redis.singleNode
       )
-      .fresh
+}
+
+object KeysSpec {
+  final val MigrateTimeout = 5.seconds
 }
