@@ -4,7 +4,6 @@
 name: CI
 env:
   JDK_JAVA_OPTIONS: -XX:+PrintCommandLineFlags
-  JVM_OPTS: -XX:+PrintCommandLineFlags
 'on':
   workflow_dispatch: {}
   release:
@@ -14,7 +13,6 @@ env:
     branches:
     - master
   pull_request: {}
-  create: {}
 jobs:
   build:
     name: Build
@@ -30,8 +28,8 @@ jobs:
     - name: Setup Scala
       uses: actions/setup-java@v3.13.0
       with:
-        distribution: temurin
-        java-version: '8'
+        distribution: corretto
+        java-version: '17'
         check-latest: true
     - name: Cache Dependencies
       uses: coursier/cache-action@v6
@@ -55,8 +53,8 @@ jobs:
     - name: Setup Scala
       uses: actions/setup-java@v3.13.0
       with:
-        distribution: temurin
-        java-version: '8'
+        distribution: corretto
+        java-version: '17'
         check-latest: true
     - name: Cache Dependencies
       uses: coursier/cache-action@v6
@@ -72,16 +70,16 @@ jobs:
       fail-fast: false
       matrix:
         java:
-        - '8'
         - '11'
         - '17'
+        - '21'
     steps:
     - name: Install libuv
       run: sudo apt-get update && sudo apt-get install -y libuv1-dev
     - name: Setup Scala
       uses: actions/setup-java@v3.13.0
       with:
-        distribution: temurin
+        distribution: corretto
         java-version: ${{ matrix.java }}
         check-latest: true
     - name: Cache Dependencies
@@ -92,12 +90,6 @@ jobs:
         fetch-depth: '0'
     - name: Test
       run: sbt +test
-    - name: Run Redis
-      run: docker-compose -f docker/redis-compose.yml up -d
-    - name: Run Redis cluster
-      run: docker-compose -f docker/redis-cluster-compose.yml up -d
-    - name: Run integration tests
-      run: sbt ++${{ matrix.scala }} IntegrationTest/test
   update-readme:
     name: Update README
     runs-on: ubuntu-latest
@@ -113,8 +105,8 @@ jobs:
     - name: Setup Scala
       uses: actions/setup-java@v3.13.0
       with:
-        distribution: temurin
-        java-version: '8'
+        distribution: corretto
+        java-version: '17'
         check-latest: true
     - name: Cache Dependencies
       uses: coursier/cache-action@v6
@@ -187,8 +179,8 @@ jobs:
     - name: Setup Scala
       uses: actions/setup-java@v3.13.0
       with:
-        distribution: temurin
-        java-version: '8'
+        distribution: corretto
+        java-version: '17'
         check-latest: true
     - name: Cache Dependencies
       uses: coursier/cache-action@v6
@@ -216,8 +208,8 @@ jobs:
     - name: Setup Scala
       uses: actions/setup-java@v3.13.0
       with:
-        distribution: temurin
-        java-version: '8'
+        distribution: corretto
+        java-version: '17'
         check-latest: true
     - name: Cache Dependencies
       uses: coursier/cache-action@v6

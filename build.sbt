@@ -1,3 +1,4 @@
+import zio.sbt.githubactions.Job
 import zio.sbt.githubactions.Step.SingleStep
 
 enablePlugins(ZioSbtEcosystemPlugin, ZioSbtCiPlugin)
@@ -5,25 +6,7 @@ enablePlugins(ZioSbtEcosystemPlugin, ZioSbtCiPlugin)
 inThisBuild(
   List(
     name              := "ZIO Redis",
-    zioVersion        := "2.0.16",
-    scala212          := "2.12.18",
-    scala213          := "2.13.11",
-    scala3            := "3.3.1",
     ciEnabledBranches := List("master"),
-    ciExtraTestSteps  := List(
-      SingleStep(
-        name = "Run Redis",
-        run = Some("docker-compose -f docker/redis-compose.yml up -d")
-      ),
-      SingleStep(
-        name = "Run Redis cluster",
-        run = Some("docker-compose -f docker/redis-cluster-compose.yml up -d")
-      ),
-      SingleStep(
-        name = "Run integration tests",
-        run = Some("sbt ++${{ matrix.scala }} IntegrationTest/test")
-      )
-    ),
     developers        := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
@@ -40,31 +23,13 @@ lazy val root =
       crossScalaVersions := Nil,
       publish / skip     := true
     )
-    .aggregate(redis, embedded, benchmarks, example, docs)
-
-lazy val redis =
-  project
-    .in(file("modules/redis"))
-    .settings(addOptionsOn("2.13")("-Xlint:-infer-any"))
-    .settings(stdSettings(name = Some("zio-redis"), packageName = Some("zio.redis")))
-    .settings(enableZIO(enableStreaming = true))
-    .settings(libraryDependencies ++= Dependencies.redis(zioVersion.value))
-    .settings(Defaults.itSettings)
-    .configs(IntegrationTest)
-
-lazy val embedded =
-  project
-    .in(file("modules/embedded"))
-    .settings(stdSettings(name = Some("zio-redis-embedded"), packageName = Some("zio.redis.embedded")))
-    .settings(enableZIO())
-    .settings(libraryDependencies ++= Dependencies.Embedded)
-    .dependsOn(redis)
+    .aggregate(benchmarks, client, docs, embedded, example, integrationTest)
 
 lazy val benchmarks =
   project
     .in(file("modules/benchmarks"))
     .enablePlugins(JmhPlugin)
-    .dependsOn(redis)
+    .dependsOn(client)
     .settings(stdSettings(name = Some("benchmarks"), packageName = Some("zio.redis.benchmarks")))
     .settings(
       crossScalaVersions -= scala3.value,
@@ -72,16 +37,13 @@ lazy val benchmarks =
       publish / skip := true
     )
 
-lazy val example =
+lazy val client =
   project
-    .in(file("modules/example"))
-    .dependsOn(redis)
-    .settings(stdSettings(name = Some("example"), packageName = Some("zio.redis.example")))
+    .in(file("modules/redis"))
+    .settings(addOptionsOn("2.13")("-Xlint:-infer-any"))
+    .settings(stdSettings(name = Some("zio-redis"), packageName = Some("zio.redis")))
     .settings(enableZIO(enableStreaming = true))
-    .settings(
-      publish / skip := true,
-      libraryDependencies ++= Dependencies.Example
-    )
+    .settings(libraryDependencies ++= Dependencies.redis(zioVersion.value))
 
 lazy val docs = project
   .in(file("zio-redis-docs"))
@@ -93,9 +55,40 @@ lazy val docs = project
   .settings(
     moduleName                                 := "zio-redis-docs",
     projectName                                := (ThisBuild / name).value,
-    mainModuleName                             := (redis / moduleName).value,
+    mainModuleName                             := (client / moduleName).value,
     projectStage                               := ProjectStage.Development,
-    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(redis)
+    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(client)
   )
-  .dependsOn(redis, embedded)
+  .dependsOn(client, embedded)
   .enablePlugins(WebsitePlugin)
+
+lazy val embedded =
+  project
+    .in(file("modules/embedded"))
+    .settings(stdSettings(name = Some("zio-redis-embedded"), packageName = Some("zio.redis.embedded")))
+    .settings(enableZIO())
+    .settings(libraryDependencies ++= Dependencies.Embedded)
+    .dependsOn(client)
+
+lazy val example =
+  project
+    .in(file("modules/example"))
+    .dependsOn(client)
+    .settings(stdSettings(name = Some("example"), packageName = Some("zio.redis.example")))
+    .settings(enableZIO(enableStreaming = true))
+    .settings(
+      publish / skip := true,
+      libraryDependencies ++= Dependencies.Example
+    )
+
+lazy val integrationTest =
+  project
+    .in(file("modules/redis-it"))
+    .settings(stdSettings(name = Some("zio-redis-it")))
+    .settings(enableZIO(enableStreaming = true))
+    .settings(
+      libraryDependencies ++= Dependencies.redis(zioVersion.value),
+      publish / skip := true,
+      Test / fork := false
+    )
+    .dependsOn(client)
