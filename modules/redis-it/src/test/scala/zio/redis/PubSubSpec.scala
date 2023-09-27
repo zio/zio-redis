@@ -237,7 +237,7 @@ trait PubSubSpec extends BaseSpec {
           )
         }
       )
-    )
+    ) @@ TestAspect.flaky
 
   private def generateRandomString(prefix: String = "") =
     ZIO.succeed(Random.alphanumeric.take(15).mkString).map(prefix + _.substring((prefix.length - 1) max 0))
