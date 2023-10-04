@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
   private object Versions {
-    val CatsEffect        = "3.5.1"
+    val CatsEffect        = "3.5.2"
     val EmbeddedRedis     = "0.6"
     val Redis4Cats        = "1.5.0"
     val Sttp              = "3.9.0"
