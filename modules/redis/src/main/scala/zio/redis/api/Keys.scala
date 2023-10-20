@@ -44,7 +44,7 @@ trait Keys extends RedisEnvironment {
    *   true if source was copied, false otherwise.
    */
 
-  final def redisCopy[S: Schema, D: Schema](
+  final def copy[S: Schema, D: Schema](
     source: S,
     destination: D,
     database: Option[Long] = None,

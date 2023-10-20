@@ -78,7 +78,7 @@ trait KeysSpec extends BaseSpec {
           sourceValue      <- uuid
           _                <- redis.set(sourceKey, sourceValue)
           destinationKey   <- uuid
-          _                <- redis.redisCopy(sourceKey, destinationKey)
+          _                <- redis.copy(sourceKey, destinationKey)
           destinationValue <- redis.get(destinationKey).returning[String]
         } yield assertTrue(destinationValue.contains(sourceValue))
       } @@ clusterExecutorUnsupported,
