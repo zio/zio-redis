@@ -124,6 +124,11 @@ object Input {
       RespCommand(RespCommandArgument.Literal("BLOCK"), RespCommandArgument.Value(data.toMillis.toString))
   }
 
+  case object DbInput extends Input[Long] {
+    def encode(db: Long): RespCommand =
+      RespCommand(RespCommandArgument.Literal("DB"), RespCommandArgument.Value(db.toString()))
+  }
+
   case object BoolInput extends Input[Boolean] {
     def encode(data: Boolean): RespCommand =
       RespCommand(RespCommandArgument.Literal(if (data) "1" else "0"))

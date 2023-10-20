@@ -30,6 +30,36 @@ trait Keys extends RedisEnvironment {
   import Keys.{Keys => _, _}
 
   /**
+   * Copies the value stored at the source key to the destination key.
+   *
+   * @param source
+   *   source key
+   * @param destination
+   *   destination key
+   * @param database
+   *   optional database index
+   * @param replace
+   *   if this is non-empty, the destination will be removed before copying the value to it
+   * @return
+   *   true if source was copied, false otherwise.
+   */
+
+  final def copy[S: Schema, D: Schema](
+    source: S,
+    destination: D,
+    database: Option[Long] = None,
+    replace: Option[Replace] = None
+  ): IO[RedisError, Boolean] = {
+    val command = RedisCommand(
+      Copy,
+      Tuple4(ArbitraryKeyInput[S](), ArbitraryKeyInput[D](), OptionalInput(DbInput), OptionalInput(ReplaceInput)),
+      BoolOutput,
+      executor
+    )
+    command.run((source, destination, database, replace))
+  }
+
+  /**
    * Removes the specified keys. A key is ignored if it does not exist.
    *
    * @param key
@@ -561,6 +591,7 @@ trait Keys extends RedisEnvironment {
 }
 
 private[redis] object Keys {
+  final val Copy      = "COPY"
   final val Del       = "DEL"
   final val Dump      = "DUMP"
   final val Exists    = "EXISTS"
