@@ -71,6 +71,17 @@ trait KeysSpec extends BaseSpec {
           e1    <- redis.exists(key, "unknown")
         } yield assert(e1)(equalTo(1L))
       } @@ clusterExecutorUnsupported,
+      test("copy") {
+        for {
+          redis            <- ZIO.service[Redis]
+          sourceKey        <- uuid
+          sourceValue      <- uuid
+          _                <- redis.set(sourceKey, sourceValue)
+          destinationKey   <- uuid
+          _                <- redis.copy(sourceKey, destinationKey)
+          destinationValue <- redis.get(destinationKey).returning[String]
+        } yield assertTrue(destinationValue.contains(sourceValue))
+      },
       test("delete existing key") {
         for {
           redis   <- ZIO.service[Redis]
