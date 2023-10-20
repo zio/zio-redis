@@ -81,7 +81,7 @@ trait KeysSpec extends BaseSpec {
           _                <- redis.redisCopy(sourceKey, destinationKey)
           destinationValue <- redis.get(destinationKey).returning[String]
         } yield assertTrue(destinationValue.contains(sourceValue))
-      },
+      } @@ clusterExecutorUnsupported,
       test("delete existing key") {
         for {
           redis   <- ZIO.service[Redis]
