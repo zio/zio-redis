@@ -49,8 +49,8 @@ object Redis {
       for {
         codecSupplier <- ZIO.service[CodecSupplier]
         executor      <- ZIO.service[RedisExecutor]
-      } yield Live(codecSupplier, executor)
+      } yield new Live(codecSupplier, executor)
     }
 
-  private final case class Live(codecSupplier: CodecSupplier, executor: RedisExecutor) extends Redis
+  private final class Live(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends Redis
 }
