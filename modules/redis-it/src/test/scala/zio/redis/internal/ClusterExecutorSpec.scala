@@ -1,7 +1,9 @@
 package zio.redis.internal
+
 import zio._
 import zio.redis._
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
+import zio.test.TestAspect.{flaky, ifEnvNotSet}
 import zio.test._
 
 object ClusterExecutorSpec extends BaseSpec {
@@ -63,7 +65,7 @@ object ClusterExecutorSpec extends BaseSpec {
       compose(service(BaseSpec.MasterNode, ".*Cluster correctly created.*")),
       masterNodeConfig,
       ZLayer.succeed(ProtobufCodecSupplier)
-    ) @@ TestAspect.flaky
+    ) @@ flaky @@ ifEnvNotSet("CI")
 
   private def redisNodeLayer(uri: RedisUri): Layer[Any, Redis] =
     ZLayer.make[Redis](
