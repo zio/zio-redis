@@ -3,7 +3,7 @@ package zio.redis
 import zio._
 import zio.redis.RedisError.{ProtocolError, WrongType}
 import zio.test.Assertion.{exists => _, _}
-import zio.test.TestAspect.{eventually, ignore}
+import zio.test.TestAspect.{flaky, ignore}
 import zio.test._
 
 trait StringsSpec extends BaseSpec {
@@ -1421,7 +1421,7 @@ trait StringsSpec extends BaseSpec {
             _            <- fiber.join
             existsAfter  <- redis.exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
-        } @@ eventually,
+        } @@ flaky,
         test("override existing string") {
           for {
             redis      <- ZIO.service[Redis]
@@ -1634,7 +1634,7 @@ trait StringsSpec extends BaseSpec {
             _            <- fiber.join
             existsAfter  <- redis.exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
-        } @@ eventually,
+        } @@ flaky,
         test("existing value with 1 second ttl") {
           for {
             redis        <- ZIO.service[Redis]
@@ -1647,7 +1647,7 @@ trait StringsSpec extends BaseSpec {
             _            <- fiber.join
             existsAfter  <- redis.exists(key)
           } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
-        } @@ eventually,
+        } @@ flaky,
         test("override when not string") {
           for {
             redis        <- ZIO.service[Redis]
@@ -1783,7 +1783,7 @@ trait StringsSpec extends BaseSpec {
             _      <- fiber.join
             res    <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(true)) && assert(exists)(equalTo(Some(value)))
-        } @@ eventually,
+        } @@ flaky,
         test("not found value when set seconds ttl") {
           for {
             redis  <- ZIO.service[Redis]
@@ -1795,7 +1795,7 @@ trait StringsSpec extends BaseSpec {
             _      <- fiber.join
             res    <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
-        } @@ eventually,
+        } @@ flaky,
         test("not found value when set milliseconds ttl") {
           for {
             redis  <- ZIO.service[Redis]
@@ -1807,7 +1807,7 @@ trait StringsSpec extends BaseSpec {
             _      <- fiber.join
             res    <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
-        } @@ eventually,
+        } @@ flaky,
         test("not found value when set seconds timestamp") {
           for {
             redis     <- ZIO.service[Redis]
@@ -1820,7 +1820,7 @@ trait StringsSpec extends BaseSpec {
             _         <- fiber.join
             res       <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
-        } @@ eventually,
+        } @@ flaky,
         test("not found value when set milliseconds timestamp") {
           for {
             redis     <- ZIO.service[Redis]
@@ -1833,7 +1833,7 @@ trait StringsSpec extends BaseSpec {
             _         <- fiber.join
             res       <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(equalTo(Some(value)))
-        } @@ eventually,
+        } @@ flaky,
         test("key not found") {
           for {
             redis     <- ZIO.service[Redis]
@@ -1845,7 +1845,7 @@ trait StringsSpec extends BaseSpec {
             res2      <- redis.getEx(value, Expire.SetExpireMilliseconds, 10.millis).returning[String]
             res3      <- redis.getEx(value, true).returning[String]
           } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))
-        } @@ eventually
+        } @@ flaky
       ),
       suite("getDel")(
         test("error when not string") {
