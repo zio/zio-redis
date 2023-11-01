@@ -18,7 +18,7 @@ trait KeysSpec extends BaseSpec {
           _     <- redis.set(key, value)
           v     <- redis.get(key).returning[String]
         } yield assert(v)(isSome(equalTo(value)))
-      } @@ clusterExecutorUnsupported,
+      },
       test("setGet with non-existing key") {
         for {
           redis <- ZIO.service[Redis]
@@ -26,7 +26,7 @@ trait KeysSpec extends BaseSpec {
           value <- uuid
           v     <- redis.setGet(key, value)
         } yield assert(v)(isNone)
-      } @@ clusterExecutorUnsupported,
+      },
       test("setGet with the existing key") {
         for {
           redis    <- ZIO.service[Redis]
@@ -36,14 +36,14 @@ trait KeysSpec extends BaseSpec {
           newValue <- uuid
           v        <- redis.setGet(key, newValue)
         } yield assert(v)(isSome(equalTo(value)))
-      } @@ clusterExecutorUnsupported,
+      },
       test("get non-existing key") {
         for {
           redis <- ZIO.service[Redis]
           key   <- uuid
           v     <- redis.get(key).returning[String]
         } yield assert(v)(isNone)
-      } @@ clusterExecutorUnsupported,
+      },
       test("handles wrong types") {
         for {
           redis <- ZIO.service[Redis]
