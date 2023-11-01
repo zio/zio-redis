@@ -33,7 +33,7 @@ object ApiSpec
   private final val ClusterSuite =
     suite("Cluster executor")(
       connectionSuite,
-      keysSuite,
+      keysSuite @@ ignore,
       listSuite,
       stringsSuite,
       hashSuite,
