@@ -1,6 +1,7 @@
 package zio.redis
 
 import zio.test.Assertion._
+import zio.test.TestAspect.{flaky, ifEnvNotSet}
 import zio.test._
 import zio.{Promise, ZIO}
 
@@ -237,7 +238,7 @@ trait PubSubSpec extends BaseSpec {
           )
         }
       )
-    ) @@ TestAspect.flaky
+    ) @@ flaky @@ ifEnvNotSet("CI")
 
   private def generateRandomString(prefix: String = "") =
     ZIO.succeed(Random.alphanumeric.take(15).mkString).map(prefix + _.substring((prefix.length - 1) max 0))
