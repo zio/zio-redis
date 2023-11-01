@@ -247,7 +247,7 @@ trait KeysSpec extends BaseSpec {
             _     <- redis.pSetEx(key, 1000.millis, value)
             ttl   <- redis.ttl(key).either
           } yield assert(ttl)(isRight)
-        } @@ eventually,
+        } @@ flaky,
         test("check ttl for non-existing key") {
           for {
             redis <- ZIO.service[Redis]
@@ -263,7 +263,7 @@ trait KeysSpec extends BaseSpec {
             _     <- redis.pSetEx(key, 1000.millis, value)
             pTtl  <- redis.pTtl(key).either
           } yield assert(pTtl)(isRight)
-        } @@ eventually,
+        } @@ flaky,
         test("check pTtl for non-existing key") {
           for {
             redis <- ZIO.service[Redis]
