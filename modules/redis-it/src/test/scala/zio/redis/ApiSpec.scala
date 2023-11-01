@@ -49,7 +49,7 @@ object ApiSpec
       masterNodeConfig,
       ZLayer.succeed(ProtobufCodecSupplier)
     ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
-      .getOrElse(Spec.empty) @@ ignore
+      .getOrElse(Spec.empty) @@ ifEnvNotSet("CI")
 
   private final val SingleNodeSuite =
     suite("Single node executor")(
