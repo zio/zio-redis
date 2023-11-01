@@ -5,7 +5,6 @@ import zio.redis._
 import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test.TestAspect.{flaky, ifEnvNotSet}
 import zio.test._
-import zio.test.TestAspect.{ifEnvNotSet, flaky}
 
 object ClusterExecutorSpec extends BaseSpec {
   def spec: Spec[TestEnvironment, Any] =
