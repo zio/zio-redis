@@ -64,7 +64,7 @@ private[redis] final class SingleNodeExecutor[G[+_]] private (
 
 private[redis] object SingleNodeExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]
-    with RedisExecutor[RedisExecutor.Async]] =
+    & RedisExecutor[RedisExecutor.Async]] =
     RedisConnection.layer >>> makeLayer
 
   lazy val local
@@ -73,7 +73,7 @@ private[redis] object SingleNodeExecutor {
 
   def create(
     connection: RedisConnection
-  ): URIO[Scope, ZEnvironment[SingleNodeExecutor[RedisExecutor.Sync] with SingleNodeExecutor[RedisExecutor.Async]]] =
+  ): URIO[Scope, ZEnvironment[SingleNodeExecutor[RedisExecutor.Sync] & SingleNodeExecutor[RedisExecutor.Async]]] =
     for {
       requests     <- Queue.bounded[Request](RequestQueueSize)
       responses    <- Queue.unbounded[Promise[RedisError, RespValue]]
@@ -99,6 +99,6 @@ private[redis] object SingleNodeExecutor {
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
   private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]
-    with RedisExecutor[RedisExecutor.Async]] =
+    & RedisExecutor[RedisExecutor.Async]] =
     ZLayer.scopedEnvironment(ZIO.serviceWithZIO[RedisConnection](create))
 }
