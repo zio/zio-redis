@@ -16,9 +16,8 @@
 
 package zio.redis
 
-import zio._
 import zio.redis.internal._
-import zio.Tag
+import zio.{Tag, _}
 
 trait GenRedis[G[+_]]
     extends api.Connection[G]

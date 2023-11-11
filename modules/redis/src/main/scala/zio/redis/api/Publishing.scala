@@ -16,11 +16,11 @@
 
 package zio.redis.api
 
+import zio.Chunk
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
-import zio.Chunk
 
 trait Publishing[G[+_]] extends RedisEnvironment[G] {
   import Publishing._

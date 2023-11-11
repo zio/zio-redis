@@ -16,13 +16,13 @@
 
 package zio.redis.api
 
+import zio.Chunk
 import zio.redis.Input._
 import zio.redis.Output.{ChunkOutput, ClusterPartitionOutput, UnitOutput}
 import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
 import zio.redis.internal.{RedisCommand, RedisEnvironment, RedisExecutor}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
-import zio.Chunk
 
 trait Cluster[G[+_]] extends RedisEnvironment[G] {
 

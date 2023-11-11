@@ -16,8 +16,8 @@
 
 package zio.redis.internal
 
-import zio.{IO, UIO}
 import zio.redis.RedisError
+import zio.{IO, UIO}
 
 private[redis] trait ToG[G[+_]] {
   def apply[A](in: UIO[IO[RedisError, A]]): G[A]
