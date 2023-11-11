@@ -22,7 +22,7 @@ import zio.redis.ResultBuilder.ResultOutputBuilder
 import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 
-trait Scripting extends RedisEnvironment {
+trait Scripting[G[+_]] extends RedisEnvironment[G] {
   import Input._
   import Scripting._
 
@@ -43,8 +43,8 @@ trait Scripting extends RedisEnvironment {
     script: String,
     keys: Chunk[K],
     args: Chunk[A]
-  ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: IO[RedisError, R] = {
+  ): ResultOutputBuilder[G] = new ResultOutputBuilder[G] {
+    def returning[R: Output]: G[R] = {
       val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R], executor)
       command.run((script, keys, args))
     }
@@ -68,8 +68,8 @@ trait Scripting extends RedisEnvironment {
     sha1: String,
     keys: Chunk[K],
     args: Chunk[A]
-  ): ResultOutputBuilder = new ResultOutputBuilder {
-    def returning[R: Output]: IO[RedisError, R] = {
+  ): ResultOutputBuilder[G] = new ResultOutputBuilder[G] {
+    def returning[R: Output]: G[R] = {
       val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R], executor)
       command.run((sha1, keys, args))
     }
@@ -85,7 +85,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def scriptDebug(mode: DebugMode): IO[RedisError, Unit] = {
+  final def scriptDebug(mode: DebugMode): G[Unit] = {
     val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput, executor)
     command.run(mode)
   }
@@ -101,7 +101,7 @@ trait Scripting extends RedisEnvironment {
    *   for every corresponding SHA1 digest of a script that actually exists in the script cache, an true is returned,
    *   otherwise false is returned.
    */
-  final def scriptExists(sha1: String, sha1s: String*): IO[RedisError, Chunk[Boolean]] = {
+  final def scriptExists(sha1: String, sha1s: String*): G[Chunk[Boolean]] = {
     val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput), executor)
     command.run((sha1, sha1s.toList))
   }
@@ -119,7 +119,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def scriptFlush(mode: Option[FlushMode] = None): IO[RedisError, Unit] = {
+  final def scriptFlush(mode: Option[FlushMode] = None): G[Unit] = {
     val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput, executor)
     command.run(mode)
   }
@@ -131,7 +131,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the Unit value.
    */
-  final def scriptKill: IO[RedisError, Unit] = {
+  final def scriptKill: G[Unit] = {
     val command = RedisCommand(ScriptKill, NoInput, UnitOutput, executor)
     command.run(())
   }
@@ -145,7 +145,7 @@ trait Scripting extends RedisEnvironment {
    * @return
    *   the SHA1 digest of the script added into the script cache.
    */
-  final def scriptLoad(script: String): IO[RedisError, String] = {
+  final def scriptLoad(script: String): G[String] = {
     val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput, executor)
     command.run(script)
   }

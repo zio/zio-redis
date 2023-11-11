@@ -23,7 +23,7 @@ import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
-trait Geo extends RedisEnvironment {
+trait Geo[G[+_]] extends RedisEnvironment[G] {
   import Geo._
 
   /**
@@ -42,7 +42,7 @@ trait Geo extends RedisEnvironment {
     key: K,
     item: (LongLat, M),
     items: (LongLat, M)*
-  ): IO[RedisError, Long] = {
+  ): G[Long] = {
     val command = RedisCommand(
       GeoAdd,
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryValueInput[M]()))),
@@ -71,7 +71,7 @@ trait Geo extends RedisEnvironment {
     member1: M,
     member2: M,
     radiusUnit: Option[RadiusUnit] = None
-  ): IO[RedisError, Option[Double]] = {
+  ): G[Option[Double]] = {
     val command = RedisCommand(
       GeoDist,
       Tuple4(
@@ -103,7 +103,7 @@ trait Geo extends RedisEnvironment {
     key: K,
     member: M,
     members: M*
-  ): IO[RedisError, Chunk[Option[String]]] = {
+  ): G[Chunk[Option[String]]] = {
     val command = RedisCommand(
       GeoHash,
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
@@ -130,7 +130,7 @@ trait Geo extends RedisEnvironment {
     key: K,
     member: M,
     members: M*
-  ): IO[RedisError, Chunk[Option[LongLat]]] = {
+  ): G[Chunk[Option[LongLat]]] = {
     val command =
       RedisCommand(GeoPos, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), GeoOutput, executor)
     command.run((key, (member, members.toList)))
@@ -171,7 +171,7 @@ trait Geo extends RedisEnvironment {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): IO[RedisError, Chunk[GeoView]] = {
+  ): G[Chunk[GeoView]] = {
     val command = RedisCommand(
       GeoRadius,
       Tuple9(
@@ -233,7 +233,7 @@ trait Geo extends RedisEnvironment {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): IO[RedisError, Long] = {
+  ): G[Long] = {
     val command = RedisCommand(
       GeoRadius,
       Tuple11(
@@ -292,7 +292,7 @@ trait Geo extends RedisEnvironment {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): IO[RedisError, Chunk[GeoView]] = {
+  ): G[Chunk[GeoView]] = {
     val command = RedisCommand(
       GeoRadiusByMember,
       Tuple9(
@@ -354,7 +354,7 @@ trait Geo extends RedisEnvironment {
     withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
-  ): IO[RedisError, Long] = {
+  ): G[Long] = {
     val command = RedisCommand(
       GeoRadiusByMember,
       Tuple11(

@@ -18,12 +18,11 @@ package zio.redis.api
 
 import zio.redis.Input._
 import zio.redis.Output._
-import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
-import zio.{Chunk, IO}
+import zio.Chunk
 
-trait Publishing extends RedisEnvironment {
+trait Publishing[G[+_]] extends RedisEnvironment[G] {
   import Publishing._
 
   /**
@@ -36,7 +35,7 @@ trait Publishing extends RedisEnvironment {
    * @return
    *   Returns the number of clients that received the message.
    */
-  final def publish[A: Schema](channel: String, message: A): IO[RedisError, Long] = {
+  final def publish[A: Schema](channel: String, message: A): G[Long] = {
     val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryKeyInput[A]()), LongOutput, executor)
     command.run((channel, message))
   }
@@ -49,7 +48,7 @@ trait Publishing extends RedisEnvironment {
    * @return
    *   Returns a list of active channels matching the specified pattern.
    */
-  final def pubSubChannels(pattern: String): IO[RedisError, Chunk[String]] = {
+  final def pubSubChannels(pattern: String): G[Chunk[String]] = {
     val command = RedisCommand(PubSubChannels, StringInput, ChunkOutput(MultiStringOutput), executor)
     command.run(pattern)
   }
@@ -60,7 +59,7 @@ trait Publishing extends RedisEnvironment {
    * @return
    *   Returns the number of patterns all the clients are subscribed to.
    */
-  final def pubSubNumPat: IO[RedisError, Long] = {
+  final def pubSubNumPat: G[Long] = {
     val command = RedisCommand(PubSubNumPat, NoInput, LongOutput, executor)
     command.run(())
   }
@@ -75,7 +74,7 @@ trait Publishing extends RedisEnvironment {
    * @return
    *   Returns a map of channel and number of subscribers for channel.
    */
-  final def pubSubNumSub(channel: String, channels: String*): IO[RedisError, Map[String, Long]] = {
+  final def pubSubNumSub(channel: String, channels: String*): G[Map[String, Long]] = {
     val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput, executor)
     command.run((channel, channels.toList))
   }

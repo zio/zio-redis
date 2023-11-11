@@ -23,15 +23,19 @@ import zio.redis.{RedisConfig, RedisError}
 private[redis] final class SingleNodeExecutor private (
   connection: RedisConnection,
   requests: Queue[Request],
-  responses: Queue[Promise[RedisError, RespValue]]
+  responses: Queue[Promise[RedisError, RespValue]],
 ) extends SingleNodeRunner
-    with RedisExecutor {
+    with RedisExecutor[RedisExecutor.Sync] {
+  
+  val toG: ToG[RedisExecutor.Sync] = new ToG[RedisExecutor.Sync] {
+    def apply[A](r: UIO[IO[RedisError, A]]) = r.flatten
+  }
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
-  def execute(command: RespCommand): IO[RedisError, RespValue] =
+  def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] =
     Promise
       .make[RedisError, RespValue]
-      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)) *> promise.await)
+      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)).as(promise.await))
 
   def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
@@ -62,10 +66,10 @@ private[redis] final class SingleNodeExecutor private (
 }
 
 private[redis] object SingleNodeExecutor {
-  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]] =
     RedisConnection.layer >>> makeLayer
 
-  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]] =
     RedisConnection.local >>> makeLayer
 
   def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
@@ -79,6 +83,6 @@ private[redis] object SingleNodeExecutor {
 
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
-  private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
+  private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]] =
     ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))
 }

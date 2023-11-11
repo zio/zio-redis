@@ -20,9 +20,9 @@ import zio.redis.CodecSupplier
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
-private[redis] trait RedisEnvironment {
+private[redis] trait RedisEnvironment[G[+_]] {
   protected def codecSupplier: CodecSupplier
-  protected def executor: RedisExecutor
+  protected def executor: RedisExecutor[G]
 
   protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }
