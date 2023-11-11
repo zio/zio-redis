@@ -895,7 +895,11 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  final def zRevRangeByLex[K: Schema](key: K, lexRange: LexRange, limit: Option[Limit] = None): ResultBuilder1[Chunk, G] =
+  final def zRevRangeByLex[K: Schema](
+    key: K,
+    lexRange: LexRange,
+    limit: Option[Limit] = None
+  ): ResultBuilder1[Chunk, G] =
     new ResultBuilder1[Chunk, G] {
       def returning[M: Schema]: G[Chunk[M]] = {
         val command = RedisCommand(

@@ -149,7 +149,10 @@ private[redis] object ClusterExecutor {
     for {
       closableScope <- Scope.make
       connection    <- closableScope.extend[Any](RedisConnection.create(RedisConfig(address.host, address.port)))
-      executor      <- closableScope.extend[Any](SingleNodeExecutor.create(connection))
+      executor      <-
+        closableScope
+          .extend[Any](SingleNodeExecutor.create(connection))
+          .map(_.get[RedisExecutor[RedisExecutor.Sync]])
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)

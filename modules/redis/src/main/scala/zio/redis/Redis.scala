@@ -18,6 +18,7 @@ package zio.redis
 
 import zio._
 import zio.redis.internal._
+import zio.Tag
 
 trait GenRedis[G[+_]]
     extends api.Connection[G]
@@ -34,26 +35,26 @@ trait GenRedis[G[+_]]
     with api.Cluster[G]
     with api.Publishing[G]
 
-trait Redis extends GenRedis[RedisExecutor.Sync]
-trait AsyncRedis extends GenRedis[RedisExecutor.Async]
-
 object Redis {
   lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
-    ClusterExecutor.layer >>> makeLayer
+    ClusterExecutor.layer >>> makeLayer[RedisExecutor.Sync]
 
   lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis] =
-    SingleNodeExecutor.local >>> makeLayer
+    SingleNodeExecutor.local >>> makeLayer[RedisExecutor.Sync]
 
-  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis] =
-    SingleNodeExecutor.layer >>> makeLayer
+  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis with AsyncRedis] =
+    SingleNodeExecutor.layer >>> (makeLayer[RedisExecutor.Sync] ++ makeLayer[RedisExecutor.Async])
 
-  private def makeLayer: URLayer[CodecSupplier & RedisExecutor[RedisExecutor.Sync], Redis] =
+  private def makeLayer[G[+_]](implicit
+    tag1: Tag[RedisExecutor[G]],
+    tag2: Tag[GenRedis[G]]
+  ): URLayer[CodecSupplier & RedisExecutor[G], GenRedis[G]] =
     ZLayer {
       for {
         codecSupplier <- ZIO.service[CodecSupplier]
-        executor      <- ZIO.service[RedisExecutor[RedisExecutor.Sync]]
-      } yield new Live(codecSupplier, executor)
+        executor      <- ZIO.service[RedisExecutor[G]]
+      } yield (new Live(codecSupplier, executor): GenRedis[G])
     }
 
-  private final class Live(val codecSupplier: CodecSupplier, val executor: RedisExecutor[RedisExecutor.Sync]) extends Redis
+  private final class Live[G[+_]](val codecSupplier: CodecSupplier, val executor: RedisExecutor[G]) extends GenRedis[G]
 }

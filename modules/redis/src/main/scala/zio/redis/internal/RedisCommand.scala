@@ -28,10 +28,13 @@ private[redis] final class RedisCommand[-In, +Out, G[+_]] private (
 ) {
   def run(in: In): G[Out] =
     executor.toG(
-    executor
-      .execute(resp(in))
-      .map(_.flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)))
-      .refineToOrDie[RedisError]))
+      executor
+        .execute(resp(in))
+        .map(
+          _.flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)))
+            .refineToOrDie[RedisError]
+        )
+    )
 
   def resp(in: In): RespCommand =
     Varargs(CommandNameInput).encode(name.split(" ")) ++ input.encode(in)
