@@ -49,11 +49,11 @@ private[redis] final class ClusterExecutor private (
         res      <- toG(executor.execute(command))
       } yield res
 
-    def executeSafe(keySlot: Slot) = {
+    def executeSafe(keySlot: Slot): IO[RedisError, RespValue] = {
       val recover = execute(keySlot).flatMap {
         case e: RespValue.Error => ZIO.fail(e.asRedisError)
         case success            => ZIO.succeed(success)
-      }.catchSome {
+      }.catchSome[Any, RedisError, RespValue] {
         case e: RedisError.Ask   => executeAsk(e.address)
         case _: RedisError.Moved => refreshConnect *> execute(keySlot)
       }
