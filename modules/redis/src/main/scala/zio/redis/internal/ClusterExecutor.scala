@@ -32,17 +32,17 @@ private[redis] final class ClusterExecutor private (
 
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] = {
 
-    def execute(keySlot: Slot): RedisExecutor.Sync[RespValue] =
+    def execute(keySlot: Slot): GenRedis.Sync[RespValue] =
       for {
         executor <- executor(keySlot)
-        res      <- RedisExecutor.sync(executor.execute(command))
+        res      <- GenRedis.sync(executor.execute(command))
       } yield res
 
-    def executeAsk(address: RedisUri): RedisExecutor.Sync[RespValue] =
+    def executeAsk(address: RedisUri): GenRedis.Sync[RespValue] =
       for {
         executor <- executor(address)
-        _        <- RedisExecutor.sync(executor.execute(askingCommand.resp(())))
-        res      <- RedisExecutor.sync(executor.execute(command))
+        _        <- GenRedis.sync(executor.execute(askingCommand.resp(())))
+        res      <- GenRedis.sync(executor.execute(command))
       } yield res
 
     def executeSafe(keySlot: Slot): IO[RedisError, RespValue] = {

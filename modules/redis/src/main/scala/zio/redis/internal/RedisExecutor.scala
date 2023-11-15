@@ -22,11 +22,3 @@ import zio.{IO, UIO}
 private[redis] trait RedisExecutor {
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]]
 }
-
-object RedisExecutor {
-  type Async[+A] = IO[RedisError, IO[RedisError, A]]
-  private[redis] def async[A](io: UIO[IO[RedisError, A]]) = io
-  type Sync[+A] = IO[RedisError, A]
-  private[redis] def sync[A](io: UIO[IO[RedisError, A]]) = io.flatten
-
-}

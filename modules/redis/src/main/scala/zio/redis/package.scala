@@ -16,8 +16,6 @@
 
 package zio
 
-import zio.redis.internal.RedisExecutor
-
 package object redis
     extends options.Connection
     with options.Geo
@@ -31,6 +29,6 @@ package object redis
 
   type Id[+A] = A
 
-  type AsyncRedis = GenRedis[RedisExecutor.Async]
-  type Redis      = GenRedis[RedisExecutor.Sync]
+  type AsyncRedis = GenRedis[GenRedis.Async]
+  type Redis      = GenRedis[GenRedis.Sync]
 }
