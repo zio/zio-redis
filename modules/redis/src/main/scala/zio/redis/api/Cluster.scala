@@ -19,7 +19,7 @@ package zio.redis.api
 import zio.Chunk
 import zio.redis.Input._
 import zio.redis.Output.{ChunkOutput, ClusterPartitionOutput, UnitOutput}
-import zio.redis.api.Cluster.{AskingCommand, ClusterSetSlots, ClusterSlots}
+import zio.redis.api.Cluster.{askingCommand, ClusterSetSlots, ClusterSlots}
 import zio.redis.internal.{RedisCommand, RedisEnvironment, RedisExecutor}
 import zio.redis.options.Cluster.SetSlotSubCommand._
 import zio.redis.options.Cluster.{Partition, Slot}
@@ -34,7 +34,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
    *   the Unit value.
    */
   final def asking: G[Unit] =
-    AskingCommand(executor).run(())
+    askingCommand(executor).run(())
 
   /**
    * Set a hash slot in importing state. Command should be executed on the node where hash slot will be migrated
@@ -130,6 +130,6 @@ private[redis] object Cluster {
   final val ClusterSetSlots = "CLUSTER SETSLOT"
   final val ClusterSlots    = "CLUSTER SLOTS"
 
-  final def AskingCommand[G[+_]](executor: RedisExecutor[G]): RedisCommand[Unit, Unit, G] =
+  final def askingCommand[G[+_]](executor: RedisExecutor[G]): RedisCommand[Unit, Unit, G] =
     RedisCommand(Asking, NoInput, UnitOutput, executor)
 }

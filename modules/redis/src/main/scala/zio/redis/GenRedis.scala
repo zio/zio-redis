@@ -1,0 +1,16 @@
+package zio.redis
+
+trait GenRedis[G[+_]]
+    extends api.Connection[G]
+    with api.Geo[G]
+    with api.Hashes[G]
+    with api.HyperLogLog[G]
+    with api.Keys[G]
+    with api.Lists[G]
+    with api.Sets[G]
+    with api.Strings[G]
+    with api.SortedSets[G]
+    with api.Streams[G]
+    with api.Scripting[G]
+    with api.Cluster[G]
+    with api.Publishing[G]

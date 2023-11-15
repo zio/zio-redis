@@ -18,7 +18,7 @@ package zio.redis.internal
 
 import zio._
 import zio.redis._
-import zio.redis.api.Cluster.AskingCommand
+import zio.redis.api.Cluster.askingCommand
 import zio.redis.options.Cluster._
 
 import java.io.IOException
@@ -45,7 +45,7 @@ private[redis] final class ClusterExecutor private (
     def executeAsk(address: RedisUri): RedisExecutor.Sync[RespValue] =
       for {
         executor <- executor(address)
-        _        <- toG(executor.execute(AskingCommand(this).resp(())))
+        _        <- toG(executor.execute(askingCommand(this).resp(())))
         res      <- toG(executor.execute(command))
       } yield res
 

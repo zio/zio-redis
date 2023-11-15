@@ -31,6 +31,6 @@ package object redis
 
   type Id[+A] = A
 
-  type Redis      = GenRedis[RedisExecutor.Sync]
   type AsyncRedis = GenRedis[RedisExecutor.Async]
+  type Redis      = GenRedis[RedisExecutor.Sync]
 }

@@ -29,6 +29,6 @@ private[redis] trait RedisExecutor[G[+_]] {
 }
 
 object RedisExecutor {
-  type Sync[+A]  = IO[RedisError, A]
   type Async[+A] = IO[RedisError, IO[RedisError, A]]
+  type Sync[+A]  = IO[RedisError, A]
 }
