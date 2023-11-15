@@ -37,9 +37,9 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
   final def auth(password: String): G[Unit] = {
-    val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput, executor)
+    val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput)
 
-    command.run(Auth(None, password))
+    runCommand(command, Auth(None, password))
   }
 
   /**
@@ -54,9 +54,9 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    *   the server starts accepting commands. Otherwise, an error is returned and the client needs to try a new password.
    */
   final def auth(username: String, password: String): G[Unit] = {
-    val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput, executor)
+    val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput)
 
-    command.run(Auth(Some(username), password))
+    runCommand(command, Auth(Some(username), password))
   }
 
   /**
@@ -66,9 +66,9 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    *   the connection name, or None if a name wasn't set.
    */
   final def clientGetName: G[Option[String]] = {
-    val command = RedisCommand(ClientGetName, NoInput, OptionalOutput(MultiStringOutput), executor)
+    val command = RedisCommand(ClientGetName, NoInput, OptionalOutput(MultiStringOutput))
 
-    command.run(())
+    runCommand(command, ())
   }
 
   /**
@@ -82,9 +82,9 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    *   the ID of the current connection.
    */
   final def clientId: G[Long] = {
-    val command = RedisCommand(ClientId, NoInput, LongOutput, executor)
+    val command = RedisCommand(ClientId, NoInput, LongOutput)
 
-    command.run(())
+    runCommand(command, ())
   }
 
   /**
@@ -96,9 +96,9 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    *   the Unit value.
    */
   final def clientSetName(name: String): G[Unit] = {
-    val command = RedisCommand(ClientSetName, StringInput, UnitOutput, executor)
+    val command = RedisCommand(ClientSetName, StringInput, UnitOutput)
 
-    command.run(name)
+    runCommand(command, name)
   }
 
   /**
@@ -112,9 +112,9 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    *   the Unit value.
    */
   final def select(index: Long): G[Unit] = {
-    val command = RedisCommand(Select, LongInput, UnitOutput, executor)
+    val command = RedisCommand(Select, LongInput, UnitOutput)
 
-    command.run(index)
+    runCommand(command, index)
   }
 }
 

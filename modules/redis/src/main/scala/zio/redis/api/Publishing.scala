@@ -36,8 +36,8 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    *   Returns the number of clients that received the message.
    */
   final def publish[A: Schema](channel: String, message: A): G[Long] = {
-    val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryKeyInput[A]()), LongOutput, executor)
-    command.run((channel, message))
+    val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryKeyInput[A]()), LongOutput)
+    runCommand(command, (channel, message))
   }
 
   /**
@@ -49,8 +49,8 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    *   Returns a list of active channels matching the specified pattern.
    */
   final def pubSubChannels(pattern: String): G[Chunk[String]] = {
-    val command = RedisCommand(PubSubChannels, StringInput, ChunkOutput(MultiStringOutput), executor)
-    command.run(pattern)
+    val command = RedisCommand(PubSubChannels, StringInput, ChunkOutput(MultiStringOutput))
+    runCommand(command, pattern)
   }
 
   /**
@@ -60,8 +60,8 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    *   Returns the number of patterns all the clients are subscribed to.
    */
   final def pubSubNumPat: G[Long] = {
-    val command = RedisCommand(PubSubNumPat, NoInput, LongOutput, executor)
-    command.run(())
+    val command = RedisCommand(PubSubNumPat, NoInput, LongOutput)
+    runCommand(command, ())
   }
 
   /**
@@ -75,8 +75,8 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    *   Returns a map of channel and number of subscribers for channel.
    */
   final def pubSubNumSub(channel: String, channels: String*): G[Map[String, Long]] = {
-    val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput, executor)
-    command.run((channel, channels.toList))
+    val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput)
+    runCommand(command, (channel, channels.toList))
   }
 }
 

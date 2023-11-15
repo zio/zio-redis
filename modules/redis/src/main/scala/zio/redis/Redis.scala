@@ -21,25 +21,38 @@ import zio._
 
 object Redis {
   lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
-    ZLayer.makeSome[CodecSupplier & RedisClusterConfig, Redis](ClusterExecutor.layer, makeLayer[RedisExecutor.Sync])
+    ZLayer.makeSome[CodecSupplier & RedisClusterConfig, Redis](ClusterExecutor.layer, makeLayer)
 
   lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis & AsyncRedis] =
     ZLayer.makeSome[CodecSupplier, Redis & AsyncRedis](
       SingleNodeExecutor.local,
-      makeLayer[RedisExecutor.Sync],
-      makeLayer[RedisExecutor.Async]
+      makeLayer
     )
 
   lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis & AsyncRedis] =
-    SingleNodeExecutor.layer >>> (makeLayer[RedisExecutor.Sync] ++ makeLayer[RedisExecutor.Async])
-
-  private def makeLayer[G[+_]: TagK]: URLayer[CodecSupplier & RedisExecutor[G], GenRedis[G]] =
-    ZLayer {
+    ZLayer.makeSome[CodecSupplier & RedisConfig, Redis & AsyncRedis](
+      SingleNodeExecutor.layer,
+      makeLayer
+    )
+  private def makeLayer
+    : URLayer[CodecSupplier & RedisExecutor, GenRedis[RedisExecutor.Async] & GenRedis[RedisExecutor.Sync]] =
+    ZLayer.fromZIOEnvironment {
       for {
         codecSupplier <- ZIO.service[CodecSupplier]
-        executor      <- ZIO.service[RedisExecutor[G]]
-      } yield new Live(codecSupplier, executor)
+        executor      <- ZIO.service[RedisExecutor]
+      } yield ZEnvironment[GenRedis[RedisExecutor.Async], GenRedis[RedisExecutor.Sync]](
+        new AsyncLive(codecSupplier, executor),
+        new SyncLive(codecSupplier, executor)
+      )
     }
 
-  private final class Live[G[+_]](val codecSupplier: CodecSupplier, val executor: RedisExecutor[G]) extends GenRedis[G]
+  private final class SyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor)
+      extends GenRedis[RedisExecutor.Sync] {
+    def toG[A](in: UIO[IO[RedisError, A]]): RedisExecutor.Sync[A] = RedisExecutor.sync(in)
+  }
+
+  private final class AsyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor)
+      extends GenRedis[RedisExecutor.Async] {
+    def toG[A](in: UIO[IO[RedisError, A]]): RedisExecutor.Async[A] = RedisExecutor.async(in)
+  }
 }

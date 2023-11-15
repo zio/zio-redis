@@ -39,8 +39,8 @@ trait HyperLogLog[G[+_]] extends RedisEnvironment[G] {
    */
   final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): G[Boolean] = {
     val command =
-      RedisCommand(PfAdd, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), BoolOutput, executor)
-    command.run((key, (element, elements.toList)))
+      RedisCommand(PfAdd, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), BoolOutput)
+    runCommand(command, (key, (element, elements.toList)))
   }
 
   /**
@@ -54,8 +54,8 @@ trait HyperLogLog[G[+_]] extends RedisEnvironment[G] {
    *   approximate number of unique elements observed via PFADD.
    */
   final def pfCount[K: Schema](key: K, keys: K*): G[Long] = {
-    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput, executor)
-    command.run((key, keys.toList))
+    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput)
+    runCommand(command, (key, keys.toList))
   }
 
   /**
@@ -70,8 +70,8 @@ trait HyperLogLog[G[+_]] extends RedisEnvironment[G] {
    */
   final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): G[Unit] = {
     val command =
-      RedisCommand(PfMerge, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryKeyInput[K]())), UnitOutput, executor)
-    command.run((destKey, (sourceKey, sourceKeys.toList)))
+      RedisCommand(PfMerge, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryKeyInput[K]())), UnitOutput)
+    runCommand(command, (destKey, (sourceKey, sourceKeys.toList)))
   }
 }
 

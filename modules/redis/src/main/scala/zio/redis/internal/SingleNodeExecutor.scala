@@ -20,12 +20,12 @@ import zio._
 import zio.redis.internal.SingleNodeExecutor._
 import zio.redis.{RedisConfig, RedisError}
 
-private[redis] sealed abstract class SingleNodeExecutor[G[+_]] private (
+private[redis] final class SingleNodeExecutor private (
   connection: RedisConnection,
   requests: Queue[Request],
   responses: Queue[Promise[RedisError, RespValue]]
 ) extends SingleNodeRunner
-    with RedisExecutor[G] {
+    with RedisExecutor {
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] =
@@ -62,44 +62,29 @@ private[redis] sealed abstract class SingleNodeExecutor[G[+_]] private (
 }
 
 private[redis] object SingleNodeExecutor {
-  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]
-    & RedisExecutor[RedisExecutor.Async]] =
+  lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
     RedisConnection.layer >>> makeLayer
 
-  lazy val local
-    : ZLayer[Any, RedisError.IOError, RedisExecutor[RedisExecutor.Sync] & RedisExecutor[RedisExecutor.Async]] =
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     RedisConnection.local >>> makeLayer
 
   def create(
     connection: RedisConnection
-  ): URIO[Scope, ZEnvironment[SingleNodeExecutor[RedisExecutor.Sync] & SingleNodeExecutor[RedisExecutor.Async]]] =
+  ): URIO[Scope, SingleNodeExecutor] =
     for {
-      requests     <- Queue.bounded[Request](RequestQueueSize)
-      responses    <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor      = new SingleNodeExecutor[RedisExecutor.Sync](
-                        connection,
-                        requests,
-                        responses
-                      ) {
-                        def toG[A](io: UIO[IO[RedisError, A]]): IO[RedisError, A] = RedisExecutor.sync(io)
-                      }
-      asyncExecutor = new SingleNodeExecutor[RedisExecutor.Async](
-                        connection,
-                        requests,
-                        responses
-                      ) {
-                        def toG[A](io: UIO[IO[RedisError, A]]): UIO[IO[RedisError, A]] = RedisExecutor.async(io)
-                      }
-      _            <- executor.run.forkScoped
-      _            <- logScopeFinalizer(s"$executor Node Executor is closed")
-    } yield ZEnvironment[SingleNodeExecutor[RedisExecutor.Sync], SingleNodeExecutor[RedisExecutor.Async]](
-      executor,
-      asyncExecutor
-    )
+      requests  <- Queue.bounded[Request](RequestQueueSize)
+      responses <- Queue.unbounded[Promise[RedisError, RespValue]]
+      executor   = new SingleNodeExecutor(
+                     connection,
+                     requests,
+                     responses
+                   )
+      _         <- executor.run.forkScoped
+      _         <- logScopeFinalizer(s"$executor Node Executor is closed")
+    } yield executor
 
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
-  private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor[RedisExecutor.Sync]
-    & RedisExecutor[RedisExecutor.Async]] =
-    ZLayer.scopedEnvironment(ZIO.serviceWithZIO[RedisConnection](create))
+  private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
+    ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))
 }

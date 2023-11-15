@@ -16,26 +16,14 @@
 
 package zio.redis.internal
 
-import zio._
 import zio.redis.Input.{CommandNameInput, Varargs}
 import zio.redis._
 
-private[redis] final class RedisCommand[-In, +Out, G[+_]] private (
+private[redis] final class RedisCommand[-In, +Out] private (
   val name: String,
   val input: Input[In],
-  val output: Output[Out],
-  val executor: RedisExecutor[G]
+  val output: Output[Out]
 ) {
-  def run(in: In): G[Out] =
-    executor.toG(
-      executor
-        .execute(resp(in))
-        .map(
-          _.flatMap[Any, Throwable, Out](out => ZIO.attempt(output.unsafeDecode(out)))
-            .refineToOrDie[RedisError]
-        )
-    )
-
   def resp(in: In): RespCommand =
     Varargs(CommandNameInput).encode(name.split(" ")) ++ input.encode(in)
 }
@@ -44,8 +32,7 @@ private[redis] object RedisCommand {
   def apply[In, Out, G[+_]](
     name: String,
     input: Input[In],
-    output: Output[Out],
-    executor: RedisExecutor[G]
-  ): RedisCommand[In, Out, G] =
-    new RedisCommand(name, input, output, executor)
+    output: Output[Out]
+  ): RedisCommand[In, Out] =
+    new RedisCommand(name, input, output)
 }

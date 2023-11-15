@@ -25,7 +25,7 @@ private[redis] final case class ClusterConnection(
   executors: Map[RedisUri, ExecutorScope],
   slots: Map[Slot, RedisUri]
 ) {
-  def executor(slot: Slot): Option[RedisExecutor[RedisExecutor.Sync]] = executors.get(slots(slot)).map(_.executor)
+  def executor(slot: Slot): Option[RedisExecutor] = executors.get(slots(slot)).map(_.executor)
 
   def addExecutor(uri: RedisUri, es: ExecutorScope): ClusterConnection =
     copy(executors = executors + (uri -> es))

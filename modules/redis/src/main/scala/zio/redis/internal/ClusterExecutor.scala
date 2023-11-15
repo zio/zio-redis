@@ -27,24 +27,22 @@ private[redis] final class ClusterExecutor private (
   clusterConnection: Ref.Synchronized[ClusterConnection],
   config: RedisClusterConfig,
   scope: Scope.Closeable
-) extends RedisExecutor[RedisExecutor.Sync] {
+) extends RedisExecutor {
   import ClusterExecutor._
-
-  def toG[A](io: UIO[IO[RedisError, A]]) = RedisExecutor.sync[A](io)
 
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] = {
 
     def execute(keySlot: Slot): RedisExecutor.Sync[RespValue] =
       for {
         executor <- executor(keySlot)
-        res      <- toG(executor.execute(command))
+        res      <- RedisExecutor.sync(executor.execute(command))
       } yield res
 
     def executeAsk(address: RedisUri): RedisExecutor.Sync[RespValue] =
       for {
         executor <- executor(address)
-        _        <- toG(executor.execute(askingCommand(this).resp(())))
-        res      <- toG(executor.execute(command))
+        _        <- RedisExecutor.sync(executor.execute(askingCommand.resp(())))
+        res      <- RedisExecutor.sync(executor.execute(command))
       } yield res
 
     def executeSafe(keySlot: Slot): IO[RedisError, RespValue] = {
@@ -67,11 +65,11 @@ private[redis] final class ClusterExecutor private (
     }
   }
 
-  private def executor(slot: Slot): IO[RedisError.IOError, RedisExecutor[RedisExecutor.Sync]] =
+  private def executor(slot: Slot): IO[RedisError.IOError, RedisExecutor] =
     clusterConnection.get.map(_.executor(slot)).flatMap(ZIO.fromOption(_).orElseFail(CusterKeyExecutorError))
 
   // TODO introduce max connection amount
-  private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor[RedisExecutor.Sync]] =
+  private def executor(address: RedisUri): IO[RedisError.IOError, RedisExecutor] =
     clusterConnection.modifyZIO { cc =>
       val executorOpt       = cc.executors.get(address).map(es => (es.executor, cc))
       val enrichedClusterIO =
@@ -99,7 +97,7 @@ private[redis] final class ClusterExecutor private (
 
 private[redis] object ClusterExecutor {
 
-  lazy val layer: ZLayer[RedisClusterConfig, RedisError, RedisExecutor[RedisExecutor.Sync]] =
+  lazy val layer: ZLayer[RedisClusterConfig, RedisError, RedisExecutor] =
     ZLayer.scoped {
       for {
         config       <- ZIO.service[RedisClusterConfig]
@@ -150,7 +148,6 @@ private[redis] object ClusterExecutor {
       executor      <-
         closableScope
           .extend[Any](SingleNodeExecutor.create(connection))
-          .map(_.get[RedisExecutor[RedisExecutor.Sync]])
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
