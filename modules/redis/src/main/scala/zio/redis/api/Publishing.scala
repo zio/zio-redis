@@ -37,7 +37,7 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    */
   final def publish[A: Schema](channel: String, message: A): G[Long] = {
     val command = RedisCommand(Publish, Tuple2(StringInput, ArbitraryKeyInput[A]()), LongOutput)
-    runCommand(command, (channel, message))
+    command.run((channel, message))
   }
 
   /**
@@ -50,7 +50,7 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    */
   final def pubSubChannels(pattern: String): G[Chunk[String]] = {
     val command = RedisCommand(PubSubChannels, StringInput, ChunkOutput(MultiStringOutput))
-    runCommand(command, pattern)
+    command.run(pattern)
   }
 
   /**
@@ -61,7 +61,7 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    */
   final def pubSubNumPat: G[Long] = {
     val command = RedisCommand(PubSubNumPat, NoInput, LongOutput)
-    runCommand(command, ())
+    command.run(())
   }
 
   /**
@@ -76,7 +76,7 @@ trait Publishing[G[+_]] extends RedisEnvironment[G] {
    */
   final def pubSubNumSub(channel: String, channels: String*): G[Map[String, Long]] = {
     val command = RedisCommand(PubSubNumSub, NonEmptyList(StringInput), NumSubResponseOutput)
-    runCommand(command, (channel, channels.toList))
+    command.run((channel, channels.toList))
   }
 }
 

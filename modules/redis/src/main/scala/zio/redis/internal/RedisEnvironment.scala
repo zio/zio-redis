@@ -24,9 +24,8 @@ import zio.{IO, UIO, ZIO}
 private[redis] trait RedisEnvironment[G[+_]] {
   protected def codecSupplier: CodecSupplier
   protected def executor: RedisExecutor
-  def toG[A](in: UIO[IO[RedisError, A]]): G[A]
-  def runCommand[In, Out](cmd: RedisCommand[In, Out], in: In): G[Out] =
-    toG(
+  implicit class RunOps[In, Out](cmd: RedisCommand[In, Out]) {
+    def run(in: In): G[Out] = toG(
       executor
         .execute(cmd.resp(in))
         .map(
@@ -34,6 +33,9 @@ private[redis] trait RedisEnvironment[G[+_]] {
             .refineToOrDie[RedisError]
         )
     )
+  }
+
+  def toG[A](in: UIO[IO[RedisError, A]]): G[A]
 
   protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }

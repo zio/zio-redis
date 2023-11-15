@@ -46,7 +46,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
   ): ResultOutputBuilder[G] = new ResultOutputBuilder[G] {
     def returning[R: Output]: G[R] = {
       val command = RedisCommand(Eval, EvalInput(Input[K], Input[A]), Output[R])
-      runCommand(command, (script, keys, args))
+      command.run((script, keys, args))
     }
   }
 
@@ -71,7 +71,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
   ): ResultOutputBuilder[G] = new ResultOutputBuilder[G] {
     def returning[R: Output]: G[R] = {
       val command = RedisCommand(EvalSha, EvalInput(Input[K], Input[A]), Output[R])
-      runCommand(command, (sha1, keys, args))
+      command.run((sha1, keys, args))
     }
   }
 
@@ -87,7 +87,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
    */
   final def scriptDebug(mode: DebugMode): G[Unit] = {
     val command = RedisCommand(ScriptDebug, ScriptDebugInput, UnitOutput)
-    runCommand(command, mode)
+    command.run(mode)
   }
 
   /**
@@ -103,7 +103,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
    */
   final def scriptExists(sha1: String, sha1s: String*): G[Chunk[Boolean]] = {
     val command = RedisCommand(ScriptExists, NonEmptyList(StringInput), ChunkOutput(BoolOutput))
-    runCommand(command, (sha1, sha1s.toList))
+    command.run((sha1, sha1s.toList))
   }
 
   /**
@@ -121,7 +121,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
    */
   final def scriptFlush(mode: Option[FlushMode] = None): G[Unit] = {
     val command = RedisCommand(ScriptFlush, OptionalInput(ScriptFlushInput), UnitOutput)
-    runCommand(command, mode)
+    command.run(mode)
   }
 
   /**
@@ -133,7 +133,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
    */
   final def scriptKill: G[Unit] = {
     val command = RedisCommand(ScriptKill, NoInput, UnitOutput)
-    runCommand(command, ())
+    command.run(())
   }
 
   /**
@@ -147,7 +147,7 @@ trait Scripting[G[+_]] extends RedisEnvironment[G] {
    */
   final def scriptLoad(script: String): G[String] = {
     val command = RedisCommand(ScriptLoad, StringInput, MultiStringOutput)
-    runCommand(command, script)
+    command.run(script)
   }
 }
 

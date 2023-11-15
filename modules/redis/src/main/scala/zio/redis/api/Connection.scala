@@ -39,7 +39,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def auth(password: String): G[Unit] = {
     val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput)
 
-    runCommand(command, Auth(None, password))
+    command.run(Auth(None, password))
   }
 
   /**
@@ -56,7 +56,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def auth(username: String, password: String): G[Unit] = {
     val command = RedisCommand(Connection.Auth, AuthInput, UnitOutput)
 
-    runCommand(command, Auth(Some(username), password))
+    command.run(Auth(Some(username), password))
   }
 
   /**
@@ -68,7 +68,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def clientGetName: G[Option[String]] = {
     val command = RedisCommand(ClientGetName, NoInput, OptionalOutput(MultiStringOutput))
 
-    runCommand(command, ())
+    command.run(())
   }
 
   /**
@@ -84,7 +84,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def clientId: G[Long] = {
     val command = RedisCommand(ClientId, NoInput, LongOutput)
 
-    runCommand(command, ())
+    command.run(())
   }
 
   /**
@@ -98,7 +98,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def clientSetName(name: String): G[Unit] = {
     val command = RedisCommand(ClientSetName, StringInput, UnitOutput)
 
-    runCommand(command, name)
+    command.run(name)
   }
 
   /**
@@ -114,7 +114,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def select(index: Long): G[Unit] = {
     val command = RedisCommand(Select, LongInput, UnitOutput)
 
-    runCommand(command, index)
+    command.run(index)
   }
 }
 

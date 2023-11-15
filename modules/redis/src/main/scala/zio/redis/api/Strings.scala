@@ -42,7 +42,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def append[K: Schema, V: Schema](key: K, value: V): G[Long] = {
     val command =
       RedisCommand(Append, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()), LongOutput)
-    runCommand(command, (key, value))
+    command.run((key, value))
   }
 
   /**
@@ -58,7 +58,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def bitCount[K: Schema](key: K, range: Option[Range] = None): G[Long] = {
     val command =
       RedisCommand(BitCount, Tuple2(ArbitraryKeyInput[K](), OptionalInput(RangeInput)), LongOutput)
-    runCommand(command, (key, range))
+    command.run((key, range))
   }
 
   /**
@@ -83,7 +83,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(BitFieldCommandInput)),
       ChunkOutput(OptionalOutput(LongOutput))
     )
-    runCommand(command, (key, (bitFieldCommand, bitFieldCommands.toList)))
+    command.run((key, (bitFieldCommand, bitFieldCommands.toList)))
   }
 
   /**
@@ -112,7 +112,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
         Tuple3(BitOperationInput, ArbitraryValueInput[D](), NonEmptyList(ArbitraryValueInput[S]())),
         LongOutput
       )
-    runCommand(command, (operation, destKey, (srcKey, srcKeys.toList)))
+    command.run((operation, destKey, (srcKey, srcKeys.toList)))
   }
 
   /**
@@ -134,7 +134,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   ): G[Long] = {
     val command =
       RedisCommand(BitPos, Tuple3(ArbitraryKeyInput[K](), BoolInput, OptionalInput(BitPosRangeInput)), LongOutput)
-    runCommand(command, (key, bit, range))
+    command.run((key, bit, range))
   }
 
   /**
@@ -147,7 +147,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
    */
   final def decr[K: Schema](key: K): G[Long] = {
     val command = RedisCommand(Decr, ArbitraryKeyInput[K](), LongOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -162,7 +162,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
    */
   final def decrBy[K: Schema](key: K, decrement: Long): G[Long] = {
     val command = RedisCommand(DecrBy, Tuple2(ArbitraryKeyInput[K](), LongInput), LongOutput)
-    runCommand(command, (key, decrement))
+    command.run((key, decrement))
   }
 
   /**
@@ -176,7 +176,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def get[K: Schema](key: K): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(RedisCommand(Get, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]())), key)
+        RedisCommand(Get, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
     }
 
   /**
@@ -191,7 +191,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
    */
   final def getBit[K: Schema](key: K, offset: Long): G[Long] = {
     val command = RedisCommand(GetBit, Tuple2(ArbitraryKeyInput[K](), LongInput), LongOutput)
-    runCommand(command, (key, offset))
+    command.run((key, offset))
   }
 
   /**
@@ -205,7 +205,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def getDel[K: Schema](key: K): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(RedisCommand(GetDel, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]())), key)
+        RedisCommand(GetDel, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
     }
 
   /**
@@ -224,10 +224,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def getEx[K: Schema](key: K, expire: Expire, expireTime: Duration): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(
-          RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]())),
-          (key, expire, expireTime)
-        )
+        RedisCommand(GetEx, GetExInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expire, expireTime))
     }
 
   /**
@@ -246,10 +243,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def getEx[K: Schema](key: K, expiredAt: ExpiredAt, timestamp: Instant): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(
-          RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]())),
-          (key, expiredAt, timestamp)
-        )
+        RedisCommand(GetEx, GetExAtInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, expiredAt, timestamp))
     }
 
   /**
@@ -265,7 +259,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def getEx[K: Schema](key: K, persist: Boolean): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]())), (key, persist))
+        RedisCommand(GetEx, GetExPersistInput[K](), OptionalOutput(ArbitraryOutput[R]())).run((key, persist))
     }
 
   /**
@@ -281,10 +275,8 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def getRange[K: Schema](key: K, range: Range): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(
-          RedisCommand(GetRange, Tuple2(ArbitraryKeyInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]())),
-          (key, range)
-        )
+        RedisCommand(GetRange, Tuple2(ArbitraryKeyInput[K](), RangeInput), OptionalOutput(ArbitraryOutput[R]()))
+          .run((key, range))
     }
 
   /**
@@ -300,14 +292,11 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def getSet[K: Schema, V: Schema](key: K, value: V): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(
-          RedisCommand(
-            GetSet,
-            Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()),
-            OptionalOutput(ArbitraryOutput[R]())
-          ),
-          (key, value)
-        )
+        RedisCommand(
+          GetSet,
+          Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()),
+          OptionalOutput(ArbitraryOutput[R]())
+        ).run((key, value))
     }
 
   /**
@@ -320,7 +309,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
    */
   final def incr[K: Schema](key: K): G[Long] = {
     val command = RedisCommand(Incr, ArbitraryKeyInput[K](), LongOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -336,7 +325,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def incrBy[K: Schema](key: K, increment: Long): G[Long] = {
     val command =
       RedisCommand(IncrBy, Tuple2(ArbitraryKeyInput[K](), LongInput), LongOutput)
-    runCommand(command, (key, increment))
+    command.run((key, increment))
   }
 
   /**
@@ -351,7 +340,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
    */
   final def incrByFloat[K: Schema](key: K, increment: Double): G[Double] = {
     val command = RedisCommand(IncrByFloat, Tuple2(ArbitraryKeyInput[K](), DoubleInput), DoubleOutput)
-    runCommand(command, (key, increment))
+    command.run((key, increment))
   }
 
   /**
@@ -379,7 +368,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
       ),
       LcsOutput
     )
-    runCommand(redisCommand, (keyA, keyB, lcsQueryType))
+    redisCommand.run((keyA, keyB, lcsQueryType))
   }
 
   /**
@@ -400,7 +389,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
       def returning[V: Schema]: G[Chunk[Option[V]]] = {
         val command =
           RedisCommand(MGet, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(OptionalOutput(ArbitraryOutput[V]())))
-        runCommand(command, (key, keys.toList))
+        command.run((key, keys.toList))
       }
     }
 
@@ -415,7 +404,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def mSet[K: Schema, V: Schema](keyValue: (K, V), keyValues: (K, V)*): G[Unit] = {
     val command =
       RedisCommand(MSet, NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]())), UnitOutput)
-    runCommand(command, (keyValue, keyValues.toList))
+    command.run((keyValue, keyValues.toList))
   }
 
   /**
@@ -434,7 +423,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   ): G[Boolean] = {
     val command =
       RedisCommand(MSetNx, NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]())), BoolOutput)
-    runCommand(command, (keyValue, keyValues.toList))
+    command.run((keyValue, keyValues.toList))
   }
 
   /**
@@ -458,7 +447,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
         Tuple3(ArbitraryKeyInput[K](), DurationMillisecondsInput, ArbitraryValueInput[V]()),
         UnitOutput
       )
-    runCommand(command, (key, milliseconds, value))
+    command.run((key, milliseconds, value))
   }
 
   /**
@@ -495,7 +484,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
       )
 
     val command = RedisCommand(Set, input, SetOutput)
-    runCommand(command, (key, value, expireTime, update, keepTtl))
+    command.run((key, value, expireTime, update, keepTtl))
   }
 
   /**
@@ -513,7 +502,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def setBit[K: Schema](key: K, offset: Long, value: Boolean): G[Boolean] = {
     val command =
       RedisCommand(SetBit, Tuple3(ArbitraryKeyInput[K](), LongInput, BoolInput), BoolOutput)
-    runCommand(command, (key, offset, value))
+    command.run((key, offset, value))
   }
 
   /**
@@ -533,7 +522,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   ): G[Unit] = {
     val command =
       RedisCommand(SetEx, Tuple3(ArbitraryKeyInput[K](), DurationSecondsInput, ArbitraryValueInput[V]()), UnitOutput)
-    runCommand(command, (key, expiration, value))
+    command.run((key, expiration, value))
   }
 
   /**
@@ -571,7 +560,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
       )
 
     val command = RedisCommand(Set, input, OptionalOutput(ArbitraryOutput[V]()))
-    runCommand(command, (key, value, expireTime, update, keepTtl, GetKeyword))
+    command.run((key, value, expireTime, update, keepTtl, GetKeyword))
   }
 
   /**
@@ -587,7 +576,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def setNx[K: Schema, V: Schema](key: K, value: V): G[Boolean] = {
     val command =
       RedisCommand(SetNx, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()), BoolOutput)
-    runCommand(command, (key, value))
+    command.run((key, value))
   }
 
   /**
@@ -605,7 +594,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   final def setRange[K: Schema, V: Schema](key: K, offset: Long, value: V): G[Long] = {
     val command =
       RedisCommand(SetRange, Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[V]()), LongOutput)
-    runCommand(command, (key, offset, value))
+    command.run((key, offset, value))
   }
 
   /**
@@ -618,7 +607,7 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
    */
   final def strLen[K: Schema](key: K): G[Long] = {
     val command = RedisCommand(StrLen, ArbitraryKeyInput[K](), LongOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 }
 

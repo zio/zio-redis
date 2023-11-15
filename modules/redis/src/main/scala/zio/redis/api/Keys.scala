@@ -55,7 +55,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
       Tuple4(ArbitraryKeyInput[S](), ArbitraryKeyInput[D](), OptionalInput(DbInput), OptionalInput(ReplaceInput)),
       BoolOutput
     )
-    runCommand(command, (source, destination, database, replace))
+    command.run((source, destination, database, replace))
   }
 
   /**
@@ -73,7 +73,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def del[K: Schema](key: K, keys: K*): G[Long] = {
     val command = RedisCommand(Del, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput)
-    runCommand(command, (key, keys.toList))
+    command.run((key, keys.toList))
   }
 
   /**
@@ -86,7 +86,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def dump[K: Schema](key: K): G[Chunk[Byte]] = {
     val command = RedisCommand(Dump, ArbitraryKeyInput[K](), BulkStringOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -102,7 +102,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def exists[K: Schema](key: K, keys: K*): G[Long] = {
     val command = RedisCommand(Exists, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput)
-    runCommand(command, (key, keys.toList))
+    command.run((key, keys.toList))
   }
 
   /**
@@ -121,7 +121,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def expire[K: Schema](key: K, timeout: Duration): G[Boolean] = {
     val command =
       RedisCommand(Expire, Tuple2(ArbitraryKeyInput[K](), DurationSecondsInput), BoolOutput)
-    runCommand(command, (key, timeout))
+    command.run((key, timeout))
   }
 
   /**
@@ -139,7 +139,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def expireAt[K: Schema](key: K, timestamp: Instant): G[Boolean] = {
     val command = RedisCommand(ExpireAt, Tuple2(ArbitraryKeyInput[K](), TimeSecondsInput), BoolOutput)
-    runCommand(command, (key, timestamp))
+    command.run((key, timestamp))
   }
 
   /**
@@ -153,7 +153,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def keys(pattern: String): ResultBuilder1[Chunk, G] =
     new ResultBuilder1[Chunk, G] {
       def returning[V: Schema]: G[Chunk[V]] =
-        runCommand(RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]())), pattern)
+        RedisCommand(Keys.Keys, StringInput, ChunkOutput(ArbitraryOutput[V]())).run(pattern)
     }
 
   /**
@@ -207,7 +207,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
       ),
       StringOutput
     )
-    runCommand(command, (host, port, key, destinationDb, timeout.toMillis, copy, replace, auth, keys))
+    command.run((host, port, key, destinationDb, timeout.toMillis, copy, replace, auth, keys))
   }
 
   /**
@@ -223,7 +223,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def move[K: Schema](key: K, destinationDb: Long): G[Boolean] = {
     val command = RedisCommand(Move, Tuple2(ArbitraryKeyInput[K](), LongInput), BoolOutput)
-    runCommand(command, (key, destinationDb))
+    command.run((key, destinationDb))
   }
 
   /**
@@ -236,7 +236,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def persist[K: Schema](key: K): G[Boolean] = {
     val command = RedisCommand(Persist, ArbitraryKeyInput[K](), BoolOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -255,7 +255,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def pExpire[K: Schema](key: K, timeout: Duration): G[Boolean] = {
     val command =
       RedisCommand(PExpire, Tuple2(ArbitraryKeyInput[K](), DurationMillisecondsInput), BoolOutput)
-    runCommand(command, (key, timeout))
+    command.run((key, timeout))
   }
 
   /**
@@ -274,7 +274,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def pExpireAt[K: Schema](key: K, timestamp: Instant): G[Boolean] = {
     val command =
       RedisCommand(PExpireAt, Tuple2(ArbitraryKeyInput[K](), TimeMillisecondsInput), BoolOutput)
-    runCommand(command, (key, timestamp))
+    command.run((key, timestamp))
   }
 
   /**
@@ -287,7 +287,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def pTtl[K: Schema](key: K): G[Duration] = {
     val command = RedisCommand(PTtl, ArbitraryKeyInput[K](), DurationMillisecondsOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -299,7 +299,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def randomKey: ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]())), ())
+        RedisCommand(RandomKey, NoInput, OptionalOutput(ArbitraryOutput[V]())).run(())
     }
 
   /**
@@ -315,7 +315,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def rename[K: Schema](key: K, newKey: K): G[Unit] = {
     val command =
       RedisCommand(Rename, Tuple2(ArbitraryKeyInput[K](), ArbitraryKeyInput[K]()), UnitOutput)
-    runCommand(command, (key, newKey))
+    command.run((key, newKey))
   }
 
   /**
@@ -331,7 +331,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
   final def renameNx[K: Schema](key: K, newKey: K): G[Boolean] = {
     val command =
       RedisCommand(RenameNx, Tuple2(ArbitraryKeyInput[K](), ArbitraryKeyInput[K]()), BoolOutput)
-    runCommand(command, (key, newKey))
+    command.run((key, newKey))
   }
 
   /**
@@ -378,7 +378,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
       ),
       UnitOutput
     )
-    runCommand(command, (key, ttl, value, replace, absTtl, idleTime, freq))
+    command.run((key, ttl, value, replace, absTtl, idleTime, freq))
   }
 
   /**
@@ -410,7 +410,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
           Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
           Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
         )
-        runCommand(command, (cursor, pattern.map(Pattern(_)), count, `type`))
+        command.run((cursor, pattern.map(Pattern(_)), count, `type`))
       }
     }
 
@@ -454,7 +454,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
           ),
           ChunkOutput(ArbitraryOutput[V]())
         )
-        runCommand(command, (key, by, limit, get, order, alpha))
+        command.run((key, by, limit, get, order, alpha))
       }
     }
 
@@ -504,7 +504,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
       ),
       LongOutput
     )
-    runCommand(command, (key, by, limit, get, order, alpha, storeAt))
+    command.run((key, by, limit, get, order, alpha, storeAt))
   }
 
   /**
@@ -519,7 +519,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def touch[K: Schema](key: K, keys: K*): G[Long] = {
     val command = RedisCommand(Touch, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput)
-    runCommand(command, (key, keys.toList))
+    command.run((key, keys.toList))
   }
 
   /**
@@ -532,7 +532,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def ttl[K: Schema](key: K): G[Duration] = {
     val command = RedisCommand(Ttl, ArbitraryKeyInput[K](), DurationSecondsOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -545,7 +545,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def typeOf[K: Schema](key: K): G[RedisType] = {
     val command = RedisCommand(TypeOf, ArbitraryKeyInput[K](), TypeOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -564,7 +564,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def unlink[K: Schema](key: K, keys: K*): G[Long] = {
     val command = RedisCommand(Unlink, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput)
-    runCommand(command, (key, keys.toList))
+    command.run((key, keys.toList))
   }
 
   /**
@@ -580,7 +580,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
    */
   final def wait_(replicas: Long, timeout: Duration): G[Long] = {
     val command = RedisCommand(Wait, Tuple2(LongInput, LongInput), LongOutput)
-    runCommand(command, (replicas, timeout.toMillis))
+    command.run((replicas, timeout.toMillis))
   }
 }
 

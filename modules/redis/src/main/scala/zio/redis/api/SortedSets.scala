@@ -60,7 +60,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             OptionalOutput(memberScoreOutput)
           )
 
-        runCommand(command, ((key, keys.toList), timeout))
+        command.run(((key, keys.toList), timeout))
       }
     }
 
@@ -97,7 +97,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             OptionalOutput(memberScoreOutput)
           )
 
-        runCommand(command, ((key, keys.toList), timeout))
+        command.run(((key, keys.toList), timeout))
       }
     }
 
@@ -132,7 +132,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       ),
       LongOutput
     )
-    runCommand(command, (key, update, change, (memberScore, memberScores.toList)))
+    command.run((key, update, change, (memberScore, memberScores.toList)))
   }
 
   /**
@@ -170,7 +170,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       ),
       OptionalOutput(DoubleOutput)
     )
-    runCommand(command, (key, update, change, increment, (memberScore, memberScores.toList)))
+    command.run((key, update, change, increment, (memberScore, memberScores.toList)))
   }
 
   /**
@@ -183,7 +183,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    */
   final def zCard[K: Schema](key: K): G[Long] = {
     val command = RedisCommand(ZCard, ArbitraryKeyInput[K](), LongOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -198,7 +198,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    */
   final def zCount[K: Schema](key: K, range: Range): G[Long] = {
     val command = RedisCommand(ZCount, Tuple2(ArbitraryKeyInput[K](), RangeInput), LongOutput)
-    runCommand(command, (key, range))
+    command.run((key, range))
   }
 
   /**
@@ -223,7 +223,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ),
             ChunkOutput(ArbitraryOutput[M]())
           )
-        runCommand(command, (keys.size + 1, (key, keys.toList)))
+        command.run((keys.size + 1, (key, keys.toList)))
       }
     }
 
@@ -251,7 +251,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
               .map(_.map { case (m, s) => MemberScore(m, s) })
           )
-        runCommand(command, (keys.size + 1, (key, keys.toList), WithScores))
+        command.run((keys.size + 1, (key, keys.toList), WithScores))
       }
     }
 
@@ -278,7 +278,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         ),
         LongOutput
       )
-    runCommand(command, (destination, keys.size + 1, (key, keys.toList)))
+    command.run((destination, keys.size + 1, (key, keys.toList)))
   }
 
   /**
@@ -296,7 +296,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zIncrBy[K: Schema, M: Schema](key: K, increment: Long, member: M): G[Double] = {
     val command =
       RedisCommand(ZIncrBy, Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[M]()), DoubleOutput)
-    runCommand(command, (key, increment, member))
+    command.run((key, increment, member))
   }
 
   /**
@@ -331,7 +331,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ),
           ChunkOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (keys.size + 1, (key, keys.toList), aggregate, weights))
+        command.run((keys.size + 1, (key, keys.toList), aggregate, weights))
       }
     }
 
@@ -369,7 +369,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (keys.size + 1, (key, keys.toList), aggregate, weights, WithScores))
+        command.run((keys.size + 1, (key, keys.toList), aggregate, weights, WithScores))
       }
     }
 
@@ -406,7 +406,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       ),
       LongOutput
     )
-    runCommand(command, (destination, keys.size + 1, (key, keys.toList), aggregate, weights))
+    command.run((destination, keys.size + 1, (key, keys.toList), aggregate, weights))
   }
 
   /**
@@ -425,7 +425,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       LongOutput
     )
-    runCommand(command, (key, lexRange.min.asString, lexRange.max.asString))
+    command.run((key, lexRange.min.asString, lexRange.max.asString))
   }
 
   /**
@@ -441,7 +441,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zMScore[K: Schema](key: K, keys: K*): G[Chunk[Option[Double]]] = {
     val command =
       RedisCommand(ZMScore, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)))
-    runCommand(command, (key, keys.toList))
+    command.run((key, keys.toList))
   }
 
   /**
@@ -465,7 +465,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (key, count))
+        command.run((key, count))
       }
     }
 
@@ -490,7 +490,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (key, count))
+        command.run((key, count))
       }
     }
 
@@ -505,7 +505,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zRandMember[K: Schema](key: K): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[R]] =
-        runCommand(RedisCommand(ZRandMember, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]())), key)
+        RedisCommand(ZRandMember, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[R]())).run(key)
     }
 
   /**
@@ -527,7 +527,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           Tuple2(ArbitraryKeyInput[K](), LongInput),
           ZRandMemberOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (key, count))
+        command.run((key, count))
       }
     }
 
@@ -554,7 +554,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
 
-        runCommand(command, (key, count, WithScores))
+        command.run((key, count, WithScores))
       }
     }
 
@@ -573,7 +573,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       def returning[M: Schema]: G[Chunk[M]] = {
         val command =
           RedisCommand(ZRange, Tuple2(ArbitraryKeyInput[K](), RangeInput), ChunkOutput(ArbitraryOutput[M]()))
-        runCommand(command, (key, range))
+        command.run((key, range))
       }
     }
 
@@ -596,7 +596,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (key, range, WithScores))
+        command.run((key, range, WithScores))
       }
     }
 
@@ -626,7 +626,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ),
           ChunkOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (key, lexRange.min.asString, lexRange.max.asString, limit))
+        command.run((key, lexRange.min.asString, lexRange.max.asString, limit))
       }
     }
 
@@ -660,7 +660,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ),
           ChunkOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (key, scoreRange.min.asString, scoreRange.max.asString, limit))
+        command.run((key, scoreRange.min.asString, scoreRange.max.asString, limit))
       }
     }
 
@@ -696,7 +696,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (key, scoreRange.min.asString, scoreRange.max.asString, WithScores, limit))
+        command.run((key, scoreRange.min.asString, scoreRange.max.asString, WithScores, limit))
       }
     }
 
@@ -717,7 +717,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
         OptionalOutput(LongOutput)
       )
-    runCommand(command, (key, member))
+    command.run((key, member))
   }
 
   /**
@@ -737,7 +737,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[M](), WithScoreInput),
         OptionalOutput(Tuple2Output(LongOutput, DoubleOutput).map { case (r, s) => RankScore(r, s) })
       )
-    runCommand(command, (key, member, WithScore))
+    command.run((key, member, WithScore))
   }
 
   /**
@@ -755,7 +755,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zRem[K: Schema, M: Schema](key: K, member: M, members: M*): G[Long] = {
     val command =
       RedisCommand(ZRem, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), LongOutput)
-    runCommand(command, (key, (member, members.toList)))
+    command.run((key, (member, members.toList)))
   }
 
   /**
@@ -774,7 +774,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       LongOutput
     )
-    runCommand(command, (key, lexRange.min.asString, lexRange.max.asString))
+    command.run((key, lexRange.min.asString, lexRange.max.asString))
   }
 
   /**
@@ -789,7 +789,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    */
   final def zRemRangeByRank[K: Schema](key: K, range: Range): G[Long] = {
     val command = RedisCommand(ZRemRangeByRank, Tuple2(ArbitraryKeyInput[K](), RangeInput), LongOutput)
-    runCommand(command, (key, range))
+    command.run((key, range))
   }
 
   /**
@@ -808,7 +808,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       LongOutput
     )
-    runCommand(command, (key, scoreRange.min.asString, scoreRange.max.asString))
+    command.run((key, scoreRange.min.asString, scoreRange.max.asString))
   }
 
   /**
@@ -829,7 +829,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           Tuple2(ArbitraryKeyInput[K](), RangeInput),
           ChunkOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (key, range))
+        command.run((key, range))
       }
     }
 
@@ -852,7 +852,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (key, range, WithScores))
+        command.run((key, range, WithScores))
       }
     }
 
@@ -886,7 +886,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ),
           ChunkOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (key, lexRange.max.asString, lexRange.min.asString, limit))
+        command.run((key, lexRange.max.asString, lexRange.min.asString, limit))
       }
     }
 
@@ -920,7 +920,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ),
           ChunkOutput(ArbitraryOutput[M]())
         )
-        runCommand(command, (key, scoreRange.max.asString, scoreRange.min.asString, limit))
+        command.run((key, scoreRange.max.asString, scoreRange.min.asString, limit))
       }
     }
 
@@ -956,7 +956,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
           ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
-        runCommand(command, (key, scoreRange.max.asString, scoreRange.min.asString, WithScores, limit))
+        command.run((key, scoreRange.max.asString, scoreRange.min.asString, WithScores, limit))
       }
     }
 
@@ -976,7 +976,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
       OptionalOutput(LongOutput)
     )
-    runCommand(command, (key, member))
+    command.run((key, member))
   }
 
   /**
@@ -995,7 +995,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[M](), WithScoreInput),
       OptionalOutput(Tuple2Output(LongOutput, DoubleOutput).map { case (r, s) => RankScore(r, s) })
     )
-    runCommand(command, (key, member, WithScore))
+    command.run((key, member, WithScore))
   }
 
   /**
@@ -1030,7 +1030,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             Tuple2Output(MultiStringOutput.map(_.toLong), memberScoresOutput)
           )
 
-        runCommand(command, (key, cursor, pattern.map(Pattern(_)), count))
+        command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }
 
@@ -1050,7 +1050,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
       OptionalOutput(DoubleOutput)
     )
-    runCommand(command, (key, member))
+    command.run((key, member))
   }
 
   /**
@@ -1086,7 +1086,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ),
             ChunkOutput(ArbitraryOutput[M]())
           )
-        runCommand(command, (keys.size + 1, (key, keys.toList), weights, aggregate))
+        command.run((keys.size + 1, (key, keys.toList), weights, aggregate))
       }
     }
 
@@ -1125,7 +1125,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
               .map(_.map { case (m, s) => MemberScore(m, s) })
           )
-        runCommand(command, (keys.size + 1, (key, keys.toList), weights, aggregate, WithScores))
+        command.run((keys.size + 1, (key, keys.toList), weights, aggregate, WithScores))
       }
     }
 
@@ -1162,7 +1162,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       ),
       LongOutput
     )
-    runCommand(command, (destination, keys.size + 1, (key, keys.toList), weights, aggregate))
+    command.run((destination, keys.size + 1, (key, keys.toList), weights, aggregate))
   }
 }
 

@@ -61,7 +61,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
           OptionalOutput(ArbitraryOutput[V]())
         )
 
-        runCommand(command, (source, destination, sourceSide, destinationSide, timeout))
+        command.run((source, destination, sourceSide, destinationSide, timeout))
       }
     }
 
@@ -90,7 +90,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
           Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
           OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
         )
-        runCommand(command, ((key, keys.toList), timeout))
+        command.run(((key, keys.toList), timeout))
       }
     }
 
@@ -119,7 +119,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
           Tuple2(NonEmptyList(ArbitraryKeyInput[K]()), DurationSecondsInput),
           OptionalOutput(Tuple2Output(ArbitraryOutput[K](), ArbitraryOutput[V]()))
         )
-        runCommand(command, ((key, keys.toList), timeout))
+        command.run(((key, keys.toList), timeout))
       }
     }
 
@@ -150,7 +150,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
           OptionalOutput(ArbitraryOutput[V]())
         )
 
-        runCommand(command, (source, destination, timeout))
+        command.run((source, destination, timeout))
       }
     }
 
@@ -168,10 +168,8 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lIndex[K: Schema](key: K, index: Long): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(
-          RedisCommand(LIndex, Tuple2(ArbitraryKeyInput[K](), LongInput), OptionalOutput(ArbitraryOutput[V]())),
-          (key, index)
-        )
+        RedisCommand(LIndex, Tuple2(ArbitraryKeyInput[K](), LongInput), OptionalOutput(ArbitraryOutput[V]()))
+          .run((key, index))
     }
 
   /**
@@ -199,7 +197,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
       Tuple4(ArbitraryKeyInput[K](), PositionInput, ArbitraryValueInput[V](), ArbitraryValueInput[V]()),
       LongOutput
     )
-    runCommand(command, (key, position, pivot, element))
+    command.run((key, position, pivot, element))
   }
 
   /**
@@ -212,7 +210,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
    */
   final def lLen[K: Schema](key: K): G[Long] = {
     val command = RedisCommand(LLen, ArbitraryKeyInput[K](), LongOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -244,7 +242,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
           Tuple4(ArbitraryValueInput[S](), ArbitraryValueInput[D](), SideInput, SideInput),
           OptionalOutput(ArbitraryOutput[V]())
         )
-        runCommand(command, (source, destination, sourceSide, destinationSide))
+        command.run((source, destination, sourceSide, destinationSide))
       }
     }
 
@@ -259,7 +257,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lPop[K: Schema](key: K): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(RedisCommand(LPop, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]())), key)
+        RedisCommand(LPop, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
 
   /**
@@ -295,7 +293,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
       OptionalOutput(LongOutput)
     )
 
-    runCommand(command, (key, element, rank, maxLen))
+    command.run((key, element, rank, maxLen))
   }
 
   /**
@@ -335,7 +333,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
       ChunkOutput(LongOutput)
     )
 
-    runCommand(command, (key, element, count, rank, maxLen))
+    command.run((key, element, count, rank, maxLen))
   }
 
   /**
@@ -354,7 +352,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lPush[K: Schema, V: Schema](key: K, element: V, elements: V*): G[Long] = {
     val command =
       RedisCommand(LPush, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), LongOutput)
-    runCommand(command, (key, (element, elements.toList)))
+    command.run((key, (element, elements.toList)))
   }
 
   /**
@@ -373,7 +371,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): G[Long] = {
     val command =
       RedisCommand(LPushX, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), LongOutput)
-    runCommand(command, (key, (element, elements.toList)))
+    command.run((key, (element, elements.toList)))
   }
 
   /**
@@ -390,10 +388,8 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk, G] =
     new ResultBuilder1[Chunk, G] {
       def returning[V: Schema]: G[Chunk[V]] =
-        runCommand(
-          RedisCommand(LRange, Tuple2(ArbitraryKeyInput[K](), RangeInput), ChunkOutput(ArbitraryOutput[V]())),
-          (key, range)
-        )
+        RedisCommand(LRange, Tuple2(ArbitraryKeyInput[K](), RangeInput), ChunkOutput(ArbitraryOutput[V]()))
+          .run((key, range))
     }
 
   /**
@@ -416,7 +412,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lRem[K: Schema](key: K, count: Long, element: String): G[Long] = {
     val command =
       RedisCommand(LRem, Tuple3(ArbitraryKeyInput[K](), LongInput, StringInput), LongOutput)
-    runCommand(command, (key, count, element))
+    command.run((key, count, element))
   }
 
   /**
@@ -434,7 +430,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def lSet[K: Schema, V: Schema](key: K, index: Long, element: V): G[Unit] = {
     val command =
       RedisCommand(LSet, Tuple3(ArbitraryKeyInput[K](), LongInput, ArbitraryValueInput[V]()), UnitOutput)
-    runCommand(command, (key, index, element))
+    command.run((key, index, element))
   }
 
   /**
@@ -450,7 +446,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
    */
   final def lTrim[K: Schema](key: K, range: Range): G[Unit] = {
     val command = RedisCommand(LTrim, Tuple2(ArbitraryKeyInput[K](), RangeInput), UnitOutput)
-    runCommand(command, (key, range))
+    command.run((key, range))
   }
 
   /**
@@ -464,7 +460,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def rPop[K: Schema](key: K): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(RedisCommand(RPop, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]())), key)
+        RedisCommand(RPop, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
 
   /**
@@ -482,14 +478,11 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def rPopLPush[S: Schema, D: Schema](source: S, destination: D): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(
-          RedisCommand(
-            RPopLPush,
-            Tuple2(ArbitraryValueInput[S](), ArbitraryValueInput[D]()),
-            OptionalOutput(ArbitraryOutput[V]())
-          ),
-          (source, destination)
-        )
+        RedisCommand(
+          RPopLPush,
+          Tuple2(ArbitraryValueInput[S](), ArbitraryValueInput[D]()),
+          OptionalOutput(ArbitraryOutput[V]())
+        ).run((source, destination))
     }
 
   /**
@@ -508,7 +501,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def rPush[K: Schema, V: Schema](key: K, element: V, elements: V*): G[Long] = {
     val command =
       RedisCommand(RPush, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), LongOutput)
-    runCommand(command, (key, (element, elements.toList)))
+    command.run((key, (element, elements.toList)))
   }
 
   /**
@@ -527,7 +520,7 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
   final def rPushX[K: Schema, V: Schema](key: K, element: V, elements: V*): G[Long] = {
     val command =
       RedisCommand(RPushX, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), LongOutput)
-    runCommand(command, (key, (element, elements.toList)))
+    command.run((key, (element, elements.toList)))
   }
 }
 

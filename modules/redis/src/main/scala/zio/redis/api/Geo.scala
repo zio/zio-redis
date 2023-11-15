@@ -48,7 +48,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(LongLatInput, ArbitraryValueInput[M]()))),
       LongOutput
     )
-    runCommand(command, (key, (item, items.toList)))
+    command.run((key, (item, items.toList)))
   }
 
   /**
@@ -81,7 +81,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       OptionalOutput(DoubleOutput)
     )
-    runCommand(command, (key, member1, member2, radiusUnit))
+    command.run((key, member1, member2, radiusUnit))
   }
 
   /**
@@ -107,7 +107,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())),
       ChunkOutput(OptionalOutput(MultiStringOutput))
     )
-    runCommand(command, (key, (member, members.toList)))
+    command.run((key, (member, members.toList)))
   }
 
   /**
@@ -130,7 +130,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
   ): G[Chunk[Option[LongLat]]] = {
     val command =
       RedisCommand(GeoPos, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[M]())), GeoOutput)
-    runCommand(command, (key, (member, members.toList)))
+    command.run((key, (member, members.toList)))
   }
 
   /**
@@ -184,7 +184,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       GeoRadiusOutput
     )
-    runCommand(command, (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+    command.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
   }
 
   /**
@@ -247,8 +247,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       LongOutput
     )
-    runCommand(
-      command,
+    command.run(
       (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
   }
@@ -304,7 +303,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       GeoRadiusOutput
     )
-    runCommand(command, (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+    command.run((key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
   }
 
   /**
@@ -367,8 +366,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       LongOutput
     )
-    runCommand(
-      command,
+    command.run(
       (key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
     )
   }

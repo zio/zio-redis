@@ -42,7 +42,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hDel[K: Schema, F: Schema](key: K, field: F, fields: F*): G[Long] = {
     val command =
       RedisCommand(HDel, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[F]())), LongOutput)
-    runCommand(command, (key, (field, fields.toList)))
+    command.run((key, (field, fields.toList)))
   }
 
   /**
@@ -58,7 +58,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hExists[K: Schema, F: Schema](key: K, field: F): G[Boolean] = {
     val command =
       RedisCommand(HExists, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()), BoolOutput)
-    runCommand(command, (key, field))
+    command.run((key, field))
   }
 
   /**
@@ -74,14 +74,11 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hGet[K: Schema, F: Schema](key: K, field: F): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(
-          RedisCommand(
-            HGet,
-            Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()),
-            OptionalOutput(ArbitraryOutput[V]())
-          ),
-          (key, field)
-        )
+        RedisCommand(
+          HGet,
+          Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()),
+          OptionalOutput(ArbitraryOutput[V]())
+        ).run((key, field))
     }
 
   /**
@@ -100,7 +97,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
           ArbitraryKeyInput[K](),
           KeyValueOutput(ArbitraryOutput[F](), ArbitraryOutput[V]())
         )
-      runCommand(command, key)
+      command.run(key)
     }
   }
 
@@ -120,7 +117,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hIncrBy[K: Schema, F: Schema](key: K, field: F, increment: Long): G[Long] = {
     val command =
       RedisCommand(HIncrBy, Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), LongInput), LongOutput)
-    runCommand(command, (key, field, increment))
+    command.run((key, field, increment))
   }
 
   /**
@@ -147,7 +144,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
         Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), DoubleInput),
         DoubleOutput
       )
-    runCommand(command, (key, field, increment))
+    command.run((key, field, increment))
   }
 
   /**
@@ -161,7 +158,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hKeys[K: Schema](key: K): ResultBuilder1[Chunk, G] =
     new ResultBuilder1[Chunk, G] {
       def returning[F: Schema]: G[Chunk[F]] =
-        runCommand(RedisCommand(HKeys, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[F]())), key)
+        RedisCommand(HKeys, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[F]())).run(key)
     }
 
   /**
@@ -174,7 +171,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
    */
   final def hLen[K: Schema](key: K): G[Long] = {
     val command = RedisCommand(HLen, ArbitraryKeyInput[K](), LongOutput)
-    runCommand(command, key)
+    command.run(key)
   }
 
   /**
@@ -201,7 +198,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
           Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[F]())),
           ChunkOutput(OptionalOutput(ArbitraryOutput[V]()))
         )
-        runCommand(command, (key, (field, fields.toList)))
+        command.run((key, (field, fields.toList)))
       }
     }
 
@@ -216,7 +213,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hRandField[K: Schema](key: K): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[V: Schema]: G[Option[V]] =
-        runCommand(RedisCommand(HRandField, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]())), key)
+        RedisCommand(HRandField, ArbitraryKeyInput[K](), OptionalOutput(ArbitraryOutput[V]())).run(key)
     }
 
   /**
@@ -241,7 +238,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
           Tuple3(ArbitraryKeyInput[K](), LongInput, OptionalInput(StringInput)),
           ChunkOutput(ArbitraryOutput[V]())
         )
-        runCommand(command, (key, count, if (withValues) Some("WITHVALUES") else None))
+        command.run((key, count, if (withValues) Some("WITHVALUES") else None))
       }
     }
 
@@ -268,7 +265,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(ArbitraryValueInput[F](), ArbitraryValueInput[V]()))),
       UnitOutput
     )
-    runCommand(command, (key, (pair, pairs.toList)))
+    command.run((key, (pair, pairs.toList)))
   }
 
   /**
@@ -298,7 +295,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
           Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
           Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
         )
-        runCommand(command, (key, cursor, pattern.map(Pattern(_)), count))
+        command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
     }
 
@@ -324,7 +321,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
       Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(ArbitraryValueInput[F](), ArbitraryValueInput[V]()))),
       LongOutput
     )
-    runCommand(command, (key, (pair, pairs.toList)))
+    command.run((key, (pair, pairs.toList)))
   }
 
   /**
@@ -350,7 +347,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
         Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[F](), ArbitraryValueInput[V]()),
         BoolOutput
       )
-    runCommand(command, (key, field, value))
+    command.run((key, field, value))
   }
 
   /**
@@ -366,7 +363,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hStrLen[K: Schema, F: Schema](key: K, field: F): G[Long] = {
     val command =
       RedisCommand(HStrLen, Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[F]()), LongOutput)
-    runCommand(command, (key, field))
+    command.run((key, field))
   }
 
   /**
@@ -380,7 +377,7 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
   final def hVals[K: Schema](key: K): ResultBuilder1[Chunk, G] =
     new ResultBuilder1[Chunk, G] {
       def returning[V: Schema]: G[Chunk[V]] =
-        runCommand(RedisCommand(HVals, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[V]())), key)
+        RedisCommand(HVals, ArbitraryKeyInput[K](), ChunkOutput(ArbitraryOutput[V]())).run(key)
     }
 }
 

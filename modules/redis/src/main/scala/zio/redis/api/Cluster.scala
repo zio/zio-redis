@@ -34,7 +34,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
    *   the Unit value.
    */
   final def asking: G[Unit] =
-    runCommand(askingCommand, ())
+    askingCommand.run(())
 
   /**
    * Set a hash slot in importing state. Command should be executed on the node where hash slot will be migrated
@@ -53,7 +53,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
       Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput
     )
-    this.runCommand(command, (slot.number, Importing.asString, nodeId))
+    command.run((slot.number, Importing.asString, nodeId))
   }
 
   /**
@@ -73,7 +73,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
       Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput
     )
-    runCommand(command, (slot.number, Migrating.asString, nodeId))
+    command.run((slot.number, Migrating.asString, nodeId))
   }
 
   /**
@@ -93,7 +93,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
       Tuple3(LongInput, ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
       UnitOutput
     )
-    runCommand(command, (slot.number, Node.asString, nodeId))
+    command.run((slot.number, Node.asString, nodeId))
   }
 
   /**
@@ -107,7 +107,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
   final def setSlotStable(slot: Slot): G[Unit] = {
     val command =
       RedisCommand(ClusterSetSlots, Tuple2(LongInput, ArbitraryValueInput[String]()), UnitOutput)
-    runCommand(command, (slot.number, Stable.asString))
+    command.run((slot.number, Stable.asString))
   }
 
   /**
@@ -118,7 +118,7 @@ trait Cluster[G[+_]] extends RedisEnvironment[G] {
    */
   final def slots: G[Chunk[Partition]] = {
     val command = RedisCommand(ClusterSlots, NoInput, ChunkOutput(ClusterPartitionOutput))
-    runCommand(command, ())
+    command.run(())
   }
 }
 
