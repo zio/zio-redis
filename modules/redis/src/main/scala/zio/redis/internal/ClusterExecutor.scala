@@ -49,7 +49,7 @@ private[redis] final class ClusterExecutor private (
       val recover = execute(keySlot).flatMap {
         case e: RespValue.Error => ZIO.fail(e.asRedisError)
         case success            => ZIO.succeed(success)
-      }.catchSome {
+      }.catchSome[Any, RedisError, RespValue] {
         case e: RedisError.Ask   => executeAsk(e.address)
         case _: RedisError.Moved => refreshConnect *> execute(keySlot)
       }
