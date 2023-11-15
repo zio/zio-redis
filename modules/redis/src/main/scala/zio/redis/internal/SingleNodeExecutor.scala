@@ -20,11 +20,10 @@ import zio._
 import zio.redis.internal.SingleNodeExecutor._
 import zio.redis.{RedisConfig, RedisError}
 
-private[redis] final class SingleNodeExecutor[G[+_]] private (
+private[redis] sealed abstract class SingleNodeExecutor[G[+_]] private (
   connection: RedisConnection,
   requests: Queue[Request],
-  responses: Queue[Promise[RedisError, RespValue]],
-  val toG: ToG[G]
+  responses: Queue[Promise[RedisError, RespValue]]
 ) extends SingleNodeRunner
     with RedisExecutor[G] {
 
@@ -77,18 +76,20 @@ private[redis] object SingleNodeExecutor {
     for {
       requests     <- Queue.bounded[Request](RequestQueueSize)
       responses    <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor      = new SingleNodeExecutor(
+      executor      = new SingleNodeExecutor[RedisExecutor.Sync](
                         connection,
                         requests,
-                        responses,
-                        new ToG[RedisExecutor.Sync] { def apply[A](r: UIO[IO[RedisError, A]]) = r.flatten }
-                      )
-      asyncExecutor = new SingleNodeExecutor(
+                        responses
+                      ) {
+                        def toG[A](io: UIO[IO[RedisError, A]]): IO[RedisError, A] = RedisExecutor.sync(io)
+                      }
+      asyncExecutor = new SingleNodeExecutor[RedisExecutor.Async](
                         connection,
                         requests,
-                        responses,
-                        new ToG[RedisExecutor.Async] { def apply[A](r: UIO[IO[RedisError, A]]) = r }
-                      )
+                        responses
+                      ) {
+                        def toG[A](io: UIO[IO[RedisError, A]]): UIO[IO[RedisError, A]] = RedisExecutor.async(io)
+                      }
       _            <- executor.run.forkScoped
       _            <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield ZEnvironment[SingleNodeExecutor[RedisExecutor.Sync], SingleNodeExecutor[RedisExecutor.Async]](

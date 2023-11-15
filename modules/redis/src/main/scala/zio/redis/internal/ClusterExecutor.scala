@@ -30,9 +30,7 @@ private[redis] final class ClusterExecutor private (
 ) extends RedisExecutor[RedisExecutor.Sync] {
   import ClusterExecutor._
 
-  def toG: ToG[RedisExecutor.Sync] = new ToG[RedisExecutor.Sync] {
-    def apply[A](r: UIO[IO[RedisError, A]]): RedisExecutor.Sync[A] = r.flatten
-  }
+  def toG[A](io: UIO[IO[RedisError, A]]) = RedisExecutor.sync[A](io)
 
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] = {
 

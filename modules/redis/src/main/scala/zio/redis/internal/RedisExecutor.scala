@@ -19,16 +19,15 @@ package zio.redis.internal
 import zio.redis.RedisError
 import zio.{IO, UIO}
 
-private[redis] trait ToG[G[+_]] {
-  def apply[A](in: UIO[IO[RedisError, A]]): G[A]
-}
-
 private[redis] trait RedisExecutor[G[+_]] {
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]]
-  def toG: ToG[G]
+  def toG[A](in: UIO[IO[RedisError, A]]): G[A]
 }
 
 object RedisExecutor {
   type Async[+A] = IO[RedisError, IO[RedisError, A]]
-  type Sync[+A]  = IO[RedisError, A]
+  private[internal] def async[A](io: UIO[IO[RedisError, A]]) = io
+  type Sync[+A] = IO[RedisError, A]
+  private[internal] def sync[A](io: UIO[IO[RedisError, A]]) = io.flatten
+
 }
