@@ -29,9 +29,9 @@ object Redis {
       makeLayer
     )
 
-  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis & AsyncRedis]                  =
-      SingleNodeExecutor.layer >>> makeLayer
-  private def makeLayer: URLayer[CodecSupplier & RedisExecutor, AsyncRedis & Redis] =
+  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis & AsyncRedis] =
+    SingleNodeExecutor.layer >>> makeLayer
+  private def makeLayer: URLayer[CodecSupplier & RedisExecutor, AsyncRedis & Redis]                =
     ZLayer.fromZIOEnvironment {
       for {
         codecSupplier <- ZIO.service[CodecSupplier]
@@ -42,13 +42,11 @@ object Redis {
       )
     }
 
-  private final class SyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor)
-      extends Redis {
+  private final class SyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends Redis {
     def toG[A](in: UIO[IO[RedisError, A]]): GenRedis.Sync[A] = GenRedis.sync(in)
   }
 
-  private final class AsyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor)
-      extends AsyncRedis {
+  private final class AsyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends AsyncRedis {
     def toG[A](in: UIO[IO[RedisError, A]]): GenRedis.Async[A] = GenRedis.async(in)
   }
 }
