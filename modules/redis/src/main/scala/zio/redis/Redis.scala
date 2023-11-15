@@ -24,10 +24,7 @@ object Redis {
     ZLayer.makeSome[CodecSupplier & RedisClusterConfig, Redis](ClusterExecutor.layer, makeLayer)
 
   lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis & AsyncRedis] =
-    ZLayer.makeSome[CodecSupplier, Redis & AsyncRedis](
-      SingleNodeExecutor.local,
-      makeLayer
-    )
+    SingleNodeExecutor.local >>> makeLayer
 
   lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis & AsyncRedis] =
     SingleNodeExecutor.layer >>> makeLayer

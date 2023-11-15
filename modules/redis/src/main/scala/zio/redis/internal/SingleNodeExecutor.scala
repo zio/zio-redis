@@ -74,11 +74,7 @@ private[redis] object SingleNodeExecutor {
     for {
       requests  <- Queue.bounded[Request](RequestQueueSize)
       responses <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor   = new SingleNodeExecutor(
-                     connection,
-                     requests,
-                     responses
-                   )
+      executor   = new SingleNodeExecutor(connection, requests, responses)
       _         <- executor.run.forkScoped
       _         <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor

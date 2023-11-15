@@ -28,10 +28,7 @@ private[redis] trait RedisEnvironment[G[+_]] {
     def run(in: In): G[Out] = toG(
       executor
         .execute(cmd.resp(in))
-        .map(
-          _.flatMap[Any, Throwable, Out](out => ZIO.attempt(cmd.output.unsafeDecode(out)))
-            .refineToOrDie[RedisError]
-        )
+        .map(_.flatMap(out => ZIO.attempt(cmd.output.unsafeDecode(out))).refineToOrDie[RedisError])
     )
   }
 

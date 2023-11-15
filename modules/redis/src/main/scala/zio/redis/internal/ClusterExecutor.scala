@@ -73,7 +73,7 @@ private[redis] final class ClusterExecutor private (
     clusterConnection.modifyZIO { cc =>
       val executorOpt       = cc.executors.get(address).map(es => (es.executor, cc))
       val enrichedClusterIO =
-        scope.extend[Any](connectToNode(address)).map((es: ExecutorScope) => (es.executor, cc.addExecutor(address, es)))
+        scope.extend[Any](connectToNode(address)).map(es => (es.executor, cc.addExecutor(address, es)))
       ZIO.fromOption(executorOpt).catchAll(_ => enrichedClusterIO)
     }
 
@@ -145,9 +145,7 @@ private[redis] object ClusterExecutor {
     for {
       closableScope <- Scope.make
       connection    <- closableScope.extend[Any](RedisConnection.create(RedisConfig(address.host, address.port)))
-      executor      <-
-        closableScope
-          .extend[Any](SingleNodeExecutor.create(connection))
+      executor      <- closableScope.extend[Any](SingleNodeExecutor.create(connection))
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
