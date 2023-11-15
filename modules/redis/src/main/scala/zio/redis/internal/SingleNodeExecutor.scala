@@ -68,9 +68,7 @@ private[redis] object SingleNodeExecutor {
   lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     RedisConnection.local >>> makeLayer
 
-  def create(
-    connection: RedisConnection
-  ): URIO[Scope, SingleNodeExecutor] =
+  def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
     for {
       requests  <- Queue.bounded[Request](RequestQueueSize)
       responses <- Queue.unbounded[Promise[RedisError, RespValue]]
