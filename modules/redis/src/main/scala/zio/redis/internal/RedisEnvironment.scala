@@ -19,7 +19,7 @@ package zio.redis.internal
 import zio.redis.{CodecSupplier, RedisError}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
-import zio.{UIO, IO, ZIO}
+import zio.{IO, UIO, ZIO}
 
 private[redis] trait RedisEnvironment[G[+_]] {
   protected def codecSupplier: CodecSupplier

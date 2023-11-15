@@ -16,8 +16,8 @@
 
 package zio.redis
 
-import zio.redis.internal._
 import zio._
+import zio.redis.internal._
 
 object Redis {
   lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
