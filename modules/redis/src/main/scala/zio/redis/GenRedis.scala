@@ -1,7 +1,7 @@
 package zio.redis
 import zio.{IO, UIO}
 
-private trait GenRedis[G[+_]]
+private[redis] trait GenRedis[G[+_]]
     extends api.Connection[G]
     with api.Geo[G]
     with api.Hashes[G]
@@ -16,8 +16,8 @@ private trait GenRedis[G[+_]]
     with api.Cluster[G]
     with api.Publishing[G]
 
-private object GenRedis {
-  type Async[+A] = IO[RedisError, IO[RedisError, A]]
+private[redis] object GenRedis {
+  type Async[+A] = UIO[IO[RedisError, A]]
   type Sync[+A]  = IO[RedisError, A]
 
   def async[A](io: UIO[IO[RedisError, A]]) = io
