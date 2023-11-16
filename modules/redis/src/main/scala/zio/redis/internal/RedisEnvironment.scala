@@ -25,14 +25,14 @@ private[redis] trait RedisEnvironment[G[+_]] {
   protected def codecSupplier: CodecSupplier
   protected def executor: RedisExecutor
   protected implicit class RunOps[In, Out](cmd: RedisCommand[In, Out]) {
-    def run(in: In): G[Out] = toG(
+    def run(in: In): G[Out] = lift(
       executor
         .execute(cmd.resp(in))
         .map(_.flatMap[Any, Throwable, Out](out => ZIO.attempt(cmd.output.unsafeDecode(out))).refineToOrDie[RedisError])
     )
   }
 
-  def toG[A](in: UIO[IO[RedisError, A]]): G[A]
+  def lift[A](in: UIO[IO[RedisError, A]]): G[A]
 
   protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }
