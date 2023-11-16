@@ -24,7 +24,7 @@ import zio.{IO, UIO, ZIO}
 private[redis] trait RedisEnvironment[G[+_]] {
   protected def codecSupplier: CodecSupplier
   protected def executor: RedisExecutor
-  protected implicit class RunOps[In, Out](cmd: RedisCommand[In, Out]) {
+  protected implicit final class RunOps[In, Out](cmd: RedisCommand[In, Out]) {
     def run(in: In): G[Out] = lift(
       executor
         .execute(cmd.resp(in))
