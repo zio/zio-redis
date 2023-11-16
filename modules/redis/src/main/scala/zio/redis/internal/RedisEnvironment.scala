@@ -32,7 +32,7 @@ private[redis] trait RedisEnvironment[G[+_]] {
     )
   }
 
-  def lift[A](in: UIO[IO[RedisError, A]]): G[A]
+  protected def lift[A](in: UIO[IO[RedisError, A]]): G[A]
 
   protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }

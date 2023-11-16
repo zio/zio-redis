@@ -40,10 +40,10 @@ object Redis {
     }
 
   private final class SyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends Redis {
-    def lift[A](in: UIO[IO[RedisError, A]]): GenRedis.Sync[A] = GenRedis.sync(in)
+    protected def lift[A](in: UIO[IO[RedisError, A]]): GenRedis.Sync[A] = GenRedis.sync(in)
   }
 
   private final class AsyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends AsyncRedis {
-    def lift[A](in: UIO[IO[RedisError, A]]): GenRedis.Async[A] = GenRedis.async(in)
+    protected def lift[A](in: UIO[IO[RedisError, A]]): GenRedis.Async[A] = GenRedis.async(in)
   }
 }
