@@ -18,7 +18,8 @@ trait GenRedis[G[+_]]
 
 object GenRedis {
   type Async[+A] = IO[RedisError, IO[RedisError, A]]
+  type Sync[+A]  = IO[RedisError, A]
+  
   private[redis] def async[A](io: UIO[IO[RedisError, A]]) = io
-  type Sync[+A] = IO[RedisError, A]
-  private[redis] def sync[A](io: UIO[IO[RedisError, A]]) = io.flatten
+  private[redis] def sync[A](io: UIO[IO[RedisError, A]])  = io.flatten
 }
