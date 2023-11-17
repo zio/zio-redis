@@ -19,38 +19,31 @@ package zio.redis
 import zio._
 import zio.redis.internal._
 
-trait Redis
-    extends api.Connection
-    with api.Geo
-    with api.Hashes
-    with api.HyperLogLog
-    with api.Keys
-    with api.Lists
-    with api.Sets
-    with api.Strings
-    with api.SortedSets
-    with api.Streams
-    with api.Scripting
-    with api.Cluster
-    with api.Publishing
-
 object Redis {
   lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
-    ClusterExecutor.layer >>> makeLayer
+    ZLayer.makeSome[CodecSupplier & RedisClusterConfig, Redis](ClusterExecutor.layer, makeLayer)
 
-  lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis] =
+  lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis & AsyncRedis] =
     SingleNodeExecutor.local >>> makeLayer
 
-  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis] =
+  lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis & AsyncRedis] =
     SingleNodeExecutor.layer >>> makeLayer
-
-  private def makeLayer: URLayer[CodecSupplier & RedisExecutor, Redis] =
-    ZLayer {
+  private def makeLayer: URLayer[CodecSupplier & RedisExecutor, AsyncRedis & Redis]                =
+    ZLayer.fromZIOEnvironment {
       for {
         codecSupplier <- ZIO.service[CodecSupplier]
         executor      <- ZIO.service[RedisExecutor]
-      } yield new Live(codecSupplier, executor)
+      } yield ZEnvironment[AsyncRedis, Redis](
+        new AsyncLive(codecSupplier, executor),
+        new SyncLive(codecSupplier, executor)
+      )
     }
 
-  private final class Live(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends Redis
+  private final class SyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends Redis {
+    protected def lift[A](in: UIO[IO[RedisError, A]]): GenRedis.Sync[A] = GenRedis.sync(in)
+  }
+
+  private final class AsyncLive(val codecSupplier: CodecSupplier, val executor: RedisExecutor) extends AsyncRedis {
+    protected def lift[A](in: UIO[IO[RedisError, A]]): GenRedis.Async[A] = GenRedis.async(in)
+  }
 }

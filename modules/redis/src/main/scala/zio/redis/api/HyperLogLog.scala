@@ -16,13 +16,12 @@
 
 package zio.redis.api
 
-import zio.IO
 import zio.redis.Output._
 import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
-trait HyperLogLog extends RedisEnvironment {
+trait HyperLogLog[G[+_]] extends RedisEnvironment[G] {
   import HyperLogLog._
   import Input._
 
@@ -38,9 +37,9 @@ trait HyperLogLog extends RedisEnvironment {
    * @return
    *   boolean indicating if at least 1 HyperLogLog register was altered.
    */
-  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): IO[RedisError, Boolean] = {
+  final def pfAdd[K: Schema, V: Schema](key: K, element: V, elements: V*): G[Boolean] = {
     val command =
-      RedisCommand(PfAdd, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), BoolOutput, executor)
+      RedisCommand(PfAdd, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryValueInput[V]())), BoolOutput)
     command.run((key, (element, elements.toList)))
   }
 
@@ -54,8 +53,8 @@ trait HyperLogLog extends RedisEnvironment {
    * @return
    *   approximate number of unique elements observed via PFADD.
    */
-  final def pfCount[K: Schema](key: K, keys: K*): IO[RedisError, Long] = {
-    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput, executor)
+  final def pfCount[K: Schema](key: K, keys: K*): G[Long] = {
+    val command = RedisCommand(PfCount, NonEmptyList(ArbitraryKeyInput[K]()), LongOutput)
     command.run((key, keys.toList))
   }
 
@@ -69,9 +68,9 @@ trait HyperLogLog extends RedisEnvironment {
    * @param sourceKeys
    *   additional keys to merge
    */
-  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): IO[RedisError, Unit] = {
+  final def pfMerge[K: Schema](destKey: K, sourceKey: K, sourceKeys: K*): G[Unit] = {
     val command =
-      RedisCommand(PfMerge, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryKeyInput[K]())), UnitOutput, executor)
+      RedisCommand(PfMerge, Tuple2(ArbitraryKeyInput[K](), NonEmptyList(ArbitraryKeyInput[K]())), UnitOutput)
     command.run((destKey, (sourceKey, sourceKeys.toList)))
   }
 }

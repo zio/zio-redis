@@ -18,7 +18,7 @@ package zio.redis.internal
 
 import zio._
 import zio.redis._
-import zio.redis.api.Cluster.AskingCommand
+import zio.redis.api.Cluster.askingCommand
 import zio.redis.options.Cluster._
 
 import java.io.IOException
@@ -28,40 +28,41 @@ private[redis] final class ClusterExecutor private (
   config: RedisClusterConfig,
   scope: Scope.Closeable
 ) extends RedisExecutor {
-
   import ClusterExecutor._
 
-  def execute(command: RespCommand): IO[RedisError, RespValue] = {
+  def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] = {
 
-    def execute(keySlot: Slot) =
+    def execute(keySlot: Slot): GenRedis.Sync[RespValue] =
       for {
         executor <- executor(keySlot)
-        res      <- executor.execute(command)
+        res      <- GenRedis.sync(executor.execute(command))
       } yield res
 
-    def executeAsk(address: RedisUri) =
+    def executeAsk(address: RedisUri): GenRedis.Sync[RespValue] =
       for {
         executor <- executor(address)
-        _        <- executor.execute(AskingCommand(this).resp(()))
-        res      <- executor.execute(command)
+        _        <- GenRedis.sync(executor.execute(askingCommand.resp(())))
+        res      <- GenRedis.sync(executor.execute(command))
       } yield res
 
-    def executeSafe(keySlot: Slot) = {
+    def executeSafe(keySlot: Slot): IO[RedisError, RespValue] = {
       val recover = execute(keySlot).flatMap {
         case e: RespValue.Error => ZIO.fail(e.asRedisError)
         case success            => ZIO.succeed(success)
-      }.catchSome {
+      }.catchSome[Any, RedisError, RespValue] {
         case e: RedisError.Ask   => executeAsk(e.address)
         case _: RedisError.Moved => refreshConnect *> execute(keySlot)
       }
       recover.retry(retryPolicy)
     }
 
-    for {
-      keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespCommandArgument.Key => key })
-      keySlot = keyOpt.fold(Slot.Default)(key => Slot((key.asCRC16 & (SlotsAmount - 1)).toLong))
-      result <- executeSafe(keySlot)
-    } yield result
+    ZIO.succeed {
+      for {
+        keyOpt <- ZIO.succeed(command.args.collectFirst { case key: RespCommandArgument.Key => key })
+        keySlot = keyOpt.fold(Slot.Default)(key => Slot((key.asCRC16 & (SlotsAmount - 1)).toLong))
+        result <- executeSafe(keySlot)
+      } yield result
+    }
   }
 
   private def executor(slot: Slot): IO[RedisError.IOError, RedisExecutor] =

@@ -28,10 +28,10 @@ private[redis] final class SingleNodeExecutor private (
     with RedisExecutor {
 
   // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
-  def execute(command: RespCommand): IO[RedisError, RespValue] =
+  def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] =
     Promise
       .make[RedisError, RespValue]
-      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)) *> promise.await)
+      .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)).as(promise.await))
 
   def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 

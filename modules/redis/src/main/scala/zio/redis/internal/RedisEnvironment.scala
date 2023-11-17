@@ -16,13 +16,23 @@
 
 package zio.redis.internal
 
-import zio.redis.CodecSupplier
+import zio.redis.{CodecSupplier, RedisError}
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
+import zio.{IO, UIO, ZIO}
 
-private[redis] trait RedisEnvironment {
+private[redis] trait RedisEnvironment[G[+_]] {
   protected def codecSupplier: CodecSupplier
   protected def executor: RedisExecutor
+  protected implicit final class RunOps[In, Out](cmd: RedisCommand[In, Out]) {
+    def run(in: In): G[Out] = lift(
+      executor
+        .execute(cmd.resp(in))
+        .map(_.flatMap[Any, Throwable, Out](out => ZIO.attempt(cmd.output.unsafeDecode(out))).refineToOrDie[RedisError])
+    )
+  }
+
+  protected def lift[A](in: UIO[IO[RedisError, A]]): G[A]
 
   protected final implicit def codec[A: Schema]: BinaryCodec[A] = codecSupplier.get
 }

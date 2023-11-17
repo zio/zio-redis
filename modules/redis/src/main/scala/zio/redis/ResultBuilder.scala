@@ -31,20 +31,20 @@ object ResultBuilder {
   @annotation.implicitNotFound("Use `returning[A]` to specify method's return type")
   final abstract class NeedsReturnType
 
-  trait ResultBuilder1[+F[_]] extends ResultBuilder {
-    def returning[R: Schema]: IO[RedisError, F[R]]
+  trait ResultBuilder1[+F[_], G[+_]] extends ResultBuilder {
+    def returning[R: Schema]: G[F[R]]
   }
 
-  trait ResultBuilder2[+F[_, _]] extends ResultBuilder {
-    def returning[R1: Schema, R2: Schema]: IO[RedisError, F[R1, R2]]
+  trait ResultBuilder2[+F[_, _], G[+_]] extends ResultBuilder {
+    def returning[R1: Schema, R2: Schema]: G[F[R1, R2]]
   }
 
-  trait ResultBuilder3[+F[_, _, _]] extends ResultBuilder {
-    def returning[R1: Schema, R2: Schema, R3: Schema]: IO[RedisError, F[R1, R2, R3]]
+  trait ResultBuilder3[+F[_, _, _], G[+_]] extends ResultBuilder {
+    def returning[R1: Schema, R2: Schema, R3: Schema]: G[F[R1, R2, R3]]
   }
 
-  trait ResultOutputBuilder extends ResultBuilder {
-    def returning[R: Output]: IO[RedisError, R]
+  trait ResultOutputBuilder[G[+_]] extends ResultBuilder {
+    def returning[R: Output]: G[R]
   }
 
   trait ResultStreamBuilder1[+F[_]] extends ResultBuilder {
