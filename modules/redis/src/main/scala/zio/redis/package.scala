@@ -28,4 +28,7 @@ package object redis
     with options.Scripting {
 
   type Id[+A] = A
+
+  type AsyncRedis = GenRedis[GenRedis.Async]
+  type Redis      = GenRedis[GenRedis.Sync]
 }
