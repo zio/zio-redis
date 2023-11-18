@@ -89,6 +89,6 @@ lazy val integrationTest =
     .settings(
       libraryDependencies ++= Dependencies.redis(zioVersion.value),
       publish / skip := true,
-      Test / fork := false
+      Test / fork    := false
     )
     .dependsOn(client)
