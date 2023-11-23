@@ -17,6 +17,7 @@
 package zio.redis.internal
 
 import zio._
+import zio.redis.RedisError.IOError
 import zio.redis._
 import zio.stream.{Stream, ZStream}
 
@@ -73,8 +74,8 @@ private[redis] object RedisConnection {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisConnection] =
     ZLayer.scoped(ZIO.serviceWithZIO[RedisConfig](create))
 
-  lazy val local: ZLayer[Any, RedisError.IOError, RedisConnection] =
-    ZLayer.succeed(RedisConfig.Local) >>> layer
+  lazy val local: ZLayer[Any, IOError, RedisConfig & RedisConnection] =
+    ZLayer.succeed(RedisConfig.Local) >+> layer
 
   def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
     connect(new InetSocketAddress(uri.host, uri.port))
