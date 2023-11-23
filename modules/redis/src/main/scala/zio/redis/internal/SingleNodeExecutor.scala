@@ -67,7 +67,7 @@ private[redis] object SingleNodeExecutor {
     RedisConnection.layer >>> makeLayer
 
   def local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    ZLayer.succeed(RedisConfig.Local) >>> layer
+    ZLayer.make[RedisExecutor](ZLayer.succeed(RedisConfig.Local), layer)
 
   def create(connection: RedisConnection): URIO[Scope & RedisConfig, SingleNodeExecutor] =
     for {
