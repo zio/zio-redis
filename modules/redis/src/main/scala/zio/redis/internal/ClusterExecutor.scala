@@ -51,7 +51,7 @@ private[redis] final class ClusterExecutor private (
         case success            => ZIO.succeed(success)
       }.catchSome[Any, RedisError, RespValue] {
         case e: RedisError.Ask   => executeAsk(e.address)
-        case _: RedisError.Moved => refreshConnect(config.requestQueueSize) *> execute(keySlot)
+        case _: RedisError.Moved => refreshConnect *> execute(keySlot)
       }
       recover.retry(retryPolicy)
     }
@@ -79,11 +79,11 @@ private[redis] final class ClusterExecutor private (
       ZIO.fromOption(executorOpt).catchAll(_ => enrichedClusterIO)
     }
 
-  private def refreshConnect(requestQueueSize: Int): IO[RedisError, Unit] =
+  private def refreshConnect: IO[RedisError, Unit] =
     clusterConnection.updateZIO { connection =>
       val addresses = connection.partitions.flatMap(_.addresses)
       for {
-        cluster <- scope.extend[Any](initConnectToCluster(addresses, requestQueueSize))
+        cluster <- scope.extend[Any](initConnectToCluster(addresses, config.requestQueueSize))
         _       <- ZIO.foreachParDiscard(connection.executors) { case (_, es) => es.scope.close(Exit.unit) }
       } yield cluster
     }
