@@ -23,7 +23,8 @@ import zio.redis.{RedisConfig, RedisError}
 private[redis] final class SingleNodeExecutor private (
   connection: RedisConnection,
   requests: Queue[Request],
-  responses: Queue[Promise[RedisError, RespValue]]
+  responses: Queue[Promise[RedisError, RespValue]],
+  requestQueueSize: Int
 ) extends SingleNodeRunner
     with RedisExecutor {
 
@@ -36,7 +37,7 @@ private[redis] final class SingleNodeExecutor private (
   def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
 
   def send: IO[RedisError.IOError, Unit] =
-    requests.takeBetween(1, RequestQueueSize).flatMap { requests =>
+    requests.takeBetween(1, requestQueueSize).flatMap { requests =>
       val bytes =
         requests
           .foldLeft(new ChunkBuilder.Byte())((builder, req) => builder ++= RespValue.Array(req.command).asBytes)
@@ -65,20 +66,21 @@ private[redis] object SingleNodeExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisExecutor] =
     RedisConnection.layer >>> makeLayer
 
-  lazy val local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
-    RedisConnection.local >>> makeLayer
+  def local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
+    ZLayer.succeed(RedisConfig.Local) >>> layer
 
-  def create(connection: RedisConnection): URIO[Scope, SingleNodeExecutor] =
+  def create(connection: RedisConnection): URIO[Scope & RedisConfig, SingleNodeExecutor] =
     for {
-      requests  <- Queue.bounded[Request](RequestQueueSize)
-      responses <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor   = new SingleNodeExecutor(connection, requests, responses)
-      _         <- executor.run.forkScoped
-      _         <- logScopeFinalizer(s"$executor Node Executor is closed")
+      requestQueueSize <- ZIO.serviceWith[RedisConfig](_.requestQueueSize)
+      requests         <- Queue.bounded[Request](requestQueueSize)
+      responses        <- Queue.unbounded[Promise[RedisError, RespValue]]
+      executor          = new SingleNodeExecutor(connection, requests, responses, requestQueueSize)
+      _                <- executor.run.forkScoped
+      _                <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor
 
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
-  private def makeLayer: ZLayer[RedisConnection, RedisError.IOError, RedisExecutor] =
+  private def makeLayer: ZLayer[RedisConnection & RedisConfig, RedisError.IOError, RedisExecutor] =
     ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))
 }

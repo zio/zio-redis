@@ -18,13 +18,18 @@ package zio.redis
 
 import zio.{Chunk, Duration, durationInt}
 
-final case class RedisConfig(host: String, port: Int)
+final case class RedisConfig(host: String, port: Int, requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize)
 
 object RedisConfig {
-  lazy val Local: RedisConfig = RedisConfig("localhost", 6379)
+  lazy val Local: RedisConfig      = RedisConfig("localhost", 6379)
+  val DefaultRequestQueueSize: Int = 16
 }
 
-final case class RedisClusterConfig(addresses: Chunk[RedisUri], retry: RetryClusterConfig = RetryClusterConfig.Default)
+final case class RedisClusterConfig(
+  addresses: Chunk[RedisUri],
+  retry: RetryClusterConfig = RetryClusterConfig.Default,
+  requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize
+)
 
 final case class RetryClusterConfig(base: Duration, factor: Double, maxRecurs: Int)
 
