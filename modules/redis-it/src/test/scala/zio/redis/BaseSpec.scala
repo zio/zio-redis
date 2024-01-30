@@ -31,7 +31,7 @@ trait BaseSpec extends ZIOSpecDefault {
       for {
         docker      <- ZIO.service[DockerComposeContainer]
         hostAndPort <- docker.getHostAndPort(BaseSpec.MasterNode)(6379)
-        uri          = RedisUri(hostAndPort._1, hostAndPort._2)
+        uri          = RedisUri(hostAndPort._1, hostAndPort._2, false, None)
       } yield RedisClusterConfig(Chunk(uri))
     }
 

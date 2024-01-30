@@ -16,6 +16,8 @@
 
 package zio.redis.internal
 
+import tlschannel.ClientTlsChannel
+import tlschannel.async.{AsynchronousTlsChannel, AsynchronousTlsChannelGroup}
 import zio._
 import zio.redis.RedisError.IOError
 import zio.redis._
@@ -24,12 +26,14 @@ import zio.stream.{Stream, ZStream}
 import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
-import java.nio.channels.{AsynchronousSocketChannel, Channel, CompletionHandler}
+import java.nio.channels._
+import java.util.Arrays
+import javax.net.ssl.{SNIHostName, SNIServerName, SSLContext}
 
 private[redis] final class RedisConnection(
   readBuffer: ByteBuffer,
   writeBuffer: ByteBuffer,
-  channel: AsynchronousSocketChannel
+  channel: AsynchronousByteChannel
 ) {
   import RedisConnection._
 
@@ -78,15 +82,22 @@ private[redis] object RedisConnection {
     ZLayer.make[RedisConfig & RedisConnection](ZLayer.succeed(RedisConfig.Local), layer)
 
   def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
-    connect(new InetSocketAddress(uri.host, uri.port))
+    connect(new InetSocketAddress(uri.host, uri.port), uri.ssl, uri.sni)
 
-  def connect(address: => SocketAddress): ZIO[Scope, RedisError.IOError, RedisConnection] =
+  def connect(
+    address: => SocketAddress,
+    ssl: Boolean,
+    sni: Option[String]
+  ): ZIO[Scope, RedisError.IOError, RedisConnection] =
     (for {
       address     <- ZIO.succeed(address)
       makeBuffer   = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
       readBuffer  <- makeBuffer
       writeBuffer <- makeBuffer
-      channel     <- openChannel(address)
+      channel     <- ssl match {
+                       case true  => openTlsChannel(address, sni)
+                       case false => openChannel(address)
+                     }
       _           <- logScopeFinalizer("Redis connection is closed")
     } yield new RedisConnection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError(_))
 
@@ -119,6 +130,44 @@ private[redis] object RedisConnection {
                      channel
                    }
         _       <- closeWith[Void](channel)(channel.connect(address, null, _))
+        _       <- ZIO.logInfo(s"Connected to the redis server with address $address.")
+      } yield channel
+    }.refineToOrDie[IOException]
+
+  private def openTlsChannel(
+    address: SocketAddress,
+    sni: Option[String]
+  ): ZIO[Scope, IOException, AsynchronousTlsChannel] =
+    ZIO.fromAutoCloseable {
+      for {
+        channel <- ZIO.attempt {
+                     val sslContext        = SSLContext.getDefault()
+                     val sslEngine         = sslContext.createSSLEngine()
+                     val params            = sslEngine.getSSLParameters
+                     sni match {
+                       case Some(sni) =>
+                         val sniServerName: SNIServerName =
+                           new SNIHostName(sni)
+                         params.setServerNames(Arrays.asList(sniServerName))
+                       case None      => ()
+                     }
+                     sslEngine.setUseClientMode(true)
+                     sslEngine.setSSLParameters(params)
+                     val selector          = Selector.open()
+                     val rawChannel        = SocketChannel.open()
+                     rawChannel.configureBlocking(false)
+                     rawChannel.connect(address)
+                     rawChannel.register(selector, SelectionKey.OP_CONNECT)
+                     val tlsChannelBuilder = ClientTlsChannel.newBuilder(rawChannel, sslEngine)
+                     val tlsChannel        = tlsChannelBuilder.build()
+                     selector.select()
+                     rawChannel.finishConnect()
+                     rawChannel.register(selector, SelectionKey.OP_WRITE)
+                     val channelGroup      = new AsynchronousTlsChannelGroup()
+                     val channel           = new AsynchronousTlsChannel(channelGroup, tlsChannel, rawChannel)
+                     channel
+                   }
+        _       <- closeWith[Integer](channel)(channel.read(ByteBuffer.allocate(0), null, _))
         _       <- ZIO.logInfo(s"Connected to the redis server with address $address.")
       } yield channel
     }.refineToOrDie[IOException]

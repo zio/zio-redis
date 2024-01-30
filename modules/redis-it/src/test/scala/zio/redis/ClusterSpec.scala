@@ -16,7 +16,9 @@ trait ClusterSpec extends BaseSpec {
             expected <-
               ZIO
                 .foreach(0 to 5) { n =>
-                  ZIO.attempt(docker.getServiceHost(s"cluster-node-$n", port)).map(host => RedisUri(host, port))
+                  ZIO
+                    .attempt(docker.getServiceHost(s"cluster-node-$n", port))
+                    .map(host => RedisUri(host, port, false, None))
                 }
                 .orDie
             actual    = res.map(_.master.address) ++ res.flatMap(_.slaves.map(_.address))

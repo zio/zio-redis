@@ -6,6 +6,7 @@ object Dependencies {
     val EmbeddedRedis     = "0.6"
     val Redis4Cats        = "1.5.2"
     val Sttp              = "3.9.1"
+    val TlsChannel        = "0.8.1"
     val ZHttp             = "2.0.0-RC11"
     val ZioConfig         = "3.0.7"
     val ZioJson           = "0.6.2"
@@ -46,11 +47,12 @@ object Dependencies {
 
   def redis(zioVersion: String) =
     List(
-      "dev.zio"                 %% "zio-concurrent"      % zioVersion,
-      "dev.zio"                 %% "zio-schema"          % Versions.ZioSchema,
-      "dev.zio"                 %% "zio-schema-protobuf" % Versions.ZioSchema         % Test,
-      "dev.zio"                 %% "zio-test"            % zioVersion                 % Test,
-      "dev.zio"                 %% "zio-test-sbt"        % zioVersion                 % Test,
-      "com.github.sideeffffect" %% "zio-testcontainers"  % Versions.ZioTestContainers % Test
+      "com.github.marianobarrios" % "tls-channel"         % Versions.TlsChannel,
+      "dev.zio"                  %% "zio-concurrent"      % zioVersion,
+      "dev.zio"                  %% "zio-schema"          % Versions.ZioSchema,
+      "dev.zio"                  %% "zio-schema-protobuf" % Versions.ZioSchema         % Test,
+      "dev.zio"                  %% "zio-test"            % zioVersion                 % Test,
+      "dev.zio"                  %% "zio-test-sbt"        % zioVersion                 % Test,
+      "com.github.sideeffffect"  %% "zio-testcontainers"  % Versions.ZioTestContainers % Test
     )
 }
