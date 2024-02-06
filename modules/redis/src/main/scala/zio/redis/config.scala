@@ -21,8 +21,8 @@ import zio.{Chunk, Duration, durationInt}
 final case class RedisConfig(
   host: String,
   port: Int,
-  ssl: Boolean = false,
   sni: Option[String] = None,
+  ssl: Boolean = false,
   requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize
 )
 
