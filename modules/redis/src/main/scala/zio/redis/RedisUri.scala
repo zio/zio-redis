@@ -16,8 +16,9 @@
 
 package zio.redis
 
-final case class RedisUri(host: String, port: Int) {
-  override def toString: String = s"$host:$port"
+final case class RedisUri(host: String, port: Int, ssl: Boolean, sni: Option[String]) {
+  override def toString: String =
+    if (ssl) s"rediss://$host:$port" else s"redis://$host:$port"
 }
 
 object RedisUri {
@@ -25,6 +26,6 @@ object RedisUri {
     val splitting = hostAndPort.split(':')
     val host      = splitting(0)
     val port      = splitting(1).toInt
-    RedisUri(host, port)
+    RedisUri(s"$host:$port")
   }
 }
