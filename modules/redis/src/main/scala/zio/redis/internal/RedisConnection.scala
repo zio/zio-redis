@@ -151,7 +151,7 @@ private[redis] object RedisConnection {
       val sslContext        = SSLContext.getDefault()
       val sslEngine         = sslContext.createSSLEngine()
       val params            = sslEngine.getSSLParameters
-      sni.map(sni => params.setServerNames(Arrays.asList(new SNIHostName(sni))))
+      sni.foreach(sni => params.setServerNames(Arrays.asList(new SNIHostName(sni))))
       sslEngine.setUseClientMode(true)
       sslEngine.setSSLParameters(params)
       val selector          = Selector.open()
