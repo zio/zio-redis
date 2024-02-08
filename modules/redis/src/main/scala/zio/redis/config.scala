@@ -18,7 +18,13 @@ package zio.redis
 
 import zio.{Chunk, Duration, durationInt}
 
-final case class RedisConfig(host: String, port: Int, requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize)
+final case class RedisConfig(
+  host: String,
+  port: Int,
+  sni: Option[String] = None,
+  ssl: Boolean = false,
+  requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize
+)
 
 object RedisConfig {
   lazy val Local: RedisConfig      = RedisConfig("localhost", 6379)
