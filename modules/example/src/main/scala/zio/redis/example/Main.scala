@@ -26,11 +26,15 @@ import zio.schema.Schema
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
 object Main extends ZIOAppDefault {
+
+  override val bootstrap: Layer[Nothing, Unit] =
+    Runtime.setConfigProvider(AppConfig.provider)
+
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
       .start(9000, Api.routes)
       .provide(
-        AppConfig.layer,
+        ZLayer.fromZIO(ZIO.config(AppConfig.config).map(_.redis)),
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
         Redis.singleNode,
