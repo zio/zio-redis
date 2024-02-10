@@ -34,7 +34,7 @@ object Main extends ZIOAppDefault {
     Server
       .start(9000, Api.routes)
       .provide(
-        ZLayer.fromZIO(ZIO.config(AppConfig.config).map(_.redis)),
+        AppConfig.layer,
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
         Redis.singleNode,
