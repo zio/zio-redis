@@ -20,11 +20,13 @@ import com.typesafe.config.ConfigFactory
 import zio.config.magnolia.deriveConfig
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.redis.RedisConfig
-import zio.{ Config, ConfigProvider }
+import zio.{Config, ConfigProvider}
 
 final case class AppConfig(redis: RedisConfig)
 
 object AppConfig {
-  final val provider: ConfigProvider = TypesafeConfigProvider.fromTypesafeConfig(ConfigFactory.load.getConfig("example"))
-  final val config: Config[AppConfig]   = deriveConfig[AppConfig]
+  final val provider: ConfigProvider  =
+    TypesafeConfigProvider.fromTypesafeConfig(ConfigFactory.load.getConfig("example"))
+  final val config: Config[AppConfig] =
+    deriveConfig[AppConfig]
 }
