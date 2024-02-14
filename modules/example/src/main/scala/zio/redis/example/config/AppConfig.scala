@@ -27,6 +27,5 @@ object AppConfig {
 
   private[this] final val config = ZIO.config(deriveConfig[AppConfig])
 
-  final val layer: Layer[Config.Error, Env] =
-    ZLayer.fromZIO(config) ++ ZLayer.fromZIO(config.map(_.redis))
+  final val layer: Layer[Config.Error, Env] = ZLayer(config) ++ ZLayer(config.map(_.redis))
 }
