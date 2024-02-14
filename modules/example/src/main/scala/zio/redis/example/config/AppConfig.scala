@@ -25,8 +25,8 @@ final case class AppConfig(redis: RedisConfig)
 object AppConfig {
   type Env = AppConfig with RedisConfig
 
-  private[this] final val config = deriveConfig[AppConfig]
+  private[this] final val config = ZIO.config(deriveConfig[AppConfig])
 
   final val layer: Layer[Config.Error, Env] =
-    ZLayer.fromZIO(ZIO.config(config)) ++ ZLayer.fromZIO(ZIO.config(config).map(_.redis))
+    ZLayer.fromZIO(config) ++ ZLayer.fromZIO(config.map(_.redis))
 }
