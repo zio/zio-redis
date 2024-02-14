@@ -16,9 +16,11 @@
 
 package zio.redis.example
 
+import com.typesafe.config.ConfigFactory
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zhttp.service.Server
 import zio._
+import zio.config.typesafe.TypesafeConfigProvider
 import zio.redis._
 import zio.redis.example.api.Api
 import zio.redis.example.config.AppConfig
@@ -27,8 +29,10 @@ import zio.schema.codec.{BinaryCodec, ProtobufCodec}
 
 object Main extends ZIOAppDefault {
 
-  override val bootstrap: Layer[Nothing, Unit] =
-    Runtime.setConfigProvider(AppConfig.provider)
+  override val bootstrap: Layer[Nothing, Unit] = {
+    val provider = TypesafeConfigProvider.fromTypesafeConfig(ConfigFactory.load.getConfig("example"))
+    Runtime.setConfigProvider(provider)
+  }
 
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
