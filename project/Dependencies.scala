@@ -4,7 +4,7 @@ object Dependencies {
   private object Versions {
     val CatsEffect        = "3.5.3"
     val EmbeddedRedis     = "0.6"
-    val Redis4Cats        = "1.5.2"
+    val Redis4Cats        = "1.6.0"
     val Sttp              = "3.9.3"
     val TlsChannel        = "0.8.1"
     val ZHttp             = "2.0.0-RC11"
