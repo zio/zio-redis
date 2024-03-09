@@ -11,7 +11,7 @@ object Dependencies {
     val ZioConfig         = "4.0.1"
     val ZioJson           = "0.6.2"
     val ZioSchema         = "0.4.17"
-    val ZioTestContainers = "0.4.1"
+    val ZioTestContainers = "0.4.4"
   }
 
   lazy val Benchmarks =
