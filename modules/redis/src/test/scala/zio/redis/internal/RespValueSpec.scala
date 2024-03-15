@@ -12,9 +12,11 @@ object RespValueSpec extends ZIOSpecDefault {
       test("serializes and deserializes messages") {
         val values = Chunk(
           RespValue.SimpleString("OK"),
+          RespValue.SimpleString("ĀéţúǢ"),
           RespValue.bulkString("test1"),
           RespValue.array(
             RespValue.bulkString("test1"),
+            RespValue.bulkString("ĀéţúǢ"),
             RespValue.Integer(42L),
             RespValue.NullBulkString,
             RespValue.array(RespValue.SimpleString("a"), RespValue.Integer(0L)),
