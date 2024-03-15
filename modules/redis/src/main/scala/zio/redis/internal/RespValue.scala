@@ -81,7 +81,7 @@ private[redis] sealed trait RespValue extends Product with Serializable { self =
         builder.result()
     }
 
-  private[this] def encode(s: String) = s.getBytes(StandardCharsets.US_ASCII)
+  private[this] def encode(s: String) = s.getBytes(StandardCharsets.UTF_8)
 }
 
 private[redis] object RespValue {
