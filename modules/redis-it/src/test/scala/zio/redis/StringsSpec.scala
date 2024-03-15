@@ -711,7 +711,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true)
+            pos   <- redis.bitPos(key, bit = true)
           } yield assert(pos)(equalTo(1L))
         },
         test("of 0 when non-empty string") {
@@ -719,21 +719,21 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false)
+            pos   <- redis.bitPos(key, bit = false)
           } yield assert(pos)(equalTo(0L))
         },
         test("of 1 when empty string") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, true)
+            pos   <- redis.bitPos(key, bit = true)
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when empty string") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, false)
+            pos   <- redis.bitPos(key, bit = false)
           } yield assert(pos)(equalTo(0L))
         },
         test("of 1 when non-empty string with start") {
@@ -741,7 +741,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(2L, None)))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(2L, None)))
           } yield assert(pos)(equalTo(17L))
         },
         test("of 0 when non-empty string with start") {
@@ -749,7 +749,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(2L, None)))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(2L, None)))
           } yield assert(pos)(equalTo(16L))
         },
         test("of 1 when start is greater than non-empty string length") {
@@ -757,7 +757,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(10L, None)))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(10L, None)))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when start is greater than non-empty string length") {
@@ -765,21 +765,21 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(10L, None)))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(10L, None)))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 1 when empty string with start") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(1L, None)))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(1L, None)))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when empty string with start") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(10L, None)))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(10L, None)))
           } yield assert(pos)(equalTo(0L))
         },
         test("of 1 when non-empty string with start and end") {
@@ -787,7 +787,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(2L, Some(4L))))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(17L))
         },
         test("of 0 when non-empty string with start and end") {
@@ -795,7 +795,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(16L))
         },
         test("of 1 when start is greater than end with non-empty string") {
@@ -803,7 +803,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when start is greater than end with non-empty string") {
@@ -811,7 +811,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(4L, Some(2L))))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 1 when range is out of non-empty string") {
@@ -819,7 +819,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(10L, Some(15L))))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(10L, Some(15L))))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when range is out of non-empty string") {
@@ -827,7 +827,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(10L, Some(15L))))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(10L, Some(15L))))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 1 when start is equal to end with non-empty string") {
@@ -835,7 +835,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(1L, Some(1L))))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(1L, Some(1L))))
           } yield assert(pos)(equalTo(9L))
         },
         test("of 0 when start is equal to end with non-empty string") {
@@ -843,35 +843,35 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.set(key, "value")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(1L, Some(1L))))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(1L, Some(1L))))
           } yield assert(pos)(equalTo(8L))
         },
         test("of 1 when empty string with start and end") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(2L, Some(4L))))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when empty string with start and end") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(2L, Some(4L))))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(2L, Some(4L))))
           } yield assert(pos)(equalTo(0L))
         },
         test("of 1 when start is greater than end with empty string") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, true, Some(BitPosRange(4L, Some(2L))))
+            pos   <- redis.bitPos(key, bit = true, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(-1L))
         },
         test("of 0 when start is greater than end with empty string") {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(4L, Some(2L))))
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(4L, Some(2L))))
           } yield assert(pos)(equalTo(0L))
         },
         test("error when not string") {
@@ -879,7 +879,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.sAdd(key, "a")
-            pos   <- redis.bitPos(key, true).either
+            pos   <- redis.bitPos(key, bit = true).either
           } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
         },
         test("error when not string and start is greater than end") {
@@ -887,7 +887,7 @@ trait StringsSpec extends BaseSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             _     <- redis.sAdd(key, "a")
-            pos   <- redis.bitPos(key, false, Some(BitPosRange(4L, Some(2L)))).either
+            pos   <- redis.bitPos(key, bit = false, Some(BitPosRange(4L, Some(2L)))).either
           } yield assert(pos)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1587,14 +1587,14 @@ trait StringsSpec extends BaseSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.set(key, "value")
-            oldBit <- redis.setBit(key, 16L, true)
+            oldBit <- redis.setBit(key, 16L, value = true)
           } yield assert(oldBit)(isFalse)
         },
         test("for non-existent key") {
           for {
             redis  <- ZIO.service[Redis]
             key    <- uuid
-            oldBit <- redis.setBit(key, 16L, true)
+            oldBit <- redis.setBit(key, 16L, value = true)
           } yield assert(oldBit)(isFalse)
         },
         test("for offset that is out of string range") {
@@ -1602,7 +1602,7 @@ trait StringsSpec extends BaseSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.set(key, "value")
-            oldBit <- redis.setBit(key, 100L, true)
+            oldBit <- redis.setBit(key, 100L, value = true)
           } yield assert(oldBit)(isFalse)
         },
         test("error when negative offset") {
@@ -1610,7 +1610,7 @@ trait StringsSpec extends BaseSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.set(key, "value")
-            oldBit <- redis.setBit(key, -1L, false).either
+            oldBit <- redis.setBit(key, -1L, value = false).either
           } yield assert(oldBit)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when not string") {
@@ -1618,7 +1618,7 @@ trait StringsSpec extends BaseSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             _      <- redis.sAdd(key, "a")
-            oldBit <- redis.setBit(key, 10L, true).either
+            oldBit <- redis.setBit(key, 10L, value = true).either
           } yield assert(oldBit)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
@@ -1778,7 +1778,7 @@ trait StringsSpec extends BaseSpec {
             key    <- uuid
             value  <- uuid
             _      <- redis.pSetEx(key, 10.millis, value)
-            exists <- redis.getEx(key, true).returning[String]
+            exists <- redis.getEx(key, persist = true).returning[String]
             fiber  <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
             _      <- fiber.join
             res    <- redis.get(key).returning[String]
@@ -1843,7 +1843,7 @@ trait StringsSpec extends BaseSpec {
             expiresAt <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
             res       <- redis.getEx(value, ExpiredAt.SetExpireAtMilliseconds, expiresAt).returning[String]
             res2      <- redis.getEx(value, Expire.SetExpireMilliseconds, 10.millis).returning[String]
-            res3      <- redis.getEx(value, true).returning[String]
+            res3      <- redis.getEx(value, persist = true).returning[String]
           } yield assert(res)(equalTo(None)) && assert(res2)(equalTo(None)) && assert(res3)(equalTo(None))
         } @@ flaky
       ),
