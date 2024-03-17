@@ -163,6 +163,268 @@ trait StreamsSpec extends BaseSpec {
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
+      suite("xAutoClaim")(
+        test("one pending message") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaim(stream, group, second, 0.millis)(id).returning[String, String, String]
+          } yield assert(result)(equalTo(StreamClaimedEntries("0-0", Chunk(StreamEntry(id, Map("a" -> "b"))))))
+        },
+        test("multiple pending messages") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id1    <- redis.xAdd(stream, "*", "c" -> "d", "e" -> "f").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaim(stream, group, second, 0.millis)(id).returning[String, String, String]
+          } yield assert(result.entries)(
+            equalTo(Chunk(StreamEntry(id, Map("a" -> "b")), StreamEntry(id1, Map("c" -> "d", "e" -> "f"))))
+          )
+        },
+        test("non-existent message") {
+          for {
+            redis    <- ZIO.service[Redis]
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            result   <- redis.xAutoClaim(stream, group, consumer, 0.millis)("1-0").returning[String, String, String]
+          } yield assertTrue(result.streamId == "0-0", result.entries.isEmpty)
+        },
+        test("existing message that is not in pending state") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            result <- redis.xAutoClaim(stream, group, second, 0.millis)(id).returning[String, String, String]
+          } yield assertTrue(result.streamId == "0-0", result.entries.isEmpty)
+        },
+        test("with non-existent group") {
+          for {
+            redis    <- ZIO.service[Redis]
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            result   <-
+              redis.xAutoClaim(stream, group, consumer, 0.millis)("1-0").returning[String, String, String].either
+          } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
+        },
+        test("with positive min idle time") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaim(stream, group, second, 360000.millis)(id).returning[String, String, String]
+          } yield assertTrue(result.streamId == "0-0", result.entries.isEmpty)
+        },
+        test("with negative min idle time") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaim(stream, group, second, (-360000).millis)(id).returning[String, String, String]
+          } yield assert(result)(equalTo(StreamClaimedEntries("0-0", Chunk(StreamEntry(id, Map("a" -> "b"))))))
+        },
+        test("with positive count") {
+          for {
+            redis       <- ZIO.service[Redis]
+            stream      <- uuid
+            group       <- uuid
+            first       <- uuid
+            second      <- uuid
+            randomChars <- ZIO.loop(0)(_ < 100, _ + 1)(_ => zio.Random.nextPrintableChar)
+            entries      = randomChars.map(_.toString).map(char => char -> char)
+            _           <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id          <- redis.xAdd(stream, "*", "a" -> "a", entries: _*).returning[String]
+            _           <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result      <- redis
+                             .xAutoClaim(stream, group, second, 0.millis, count = Some(Count(1L)))(id)
+                             .returning[String, String, String]
+          } yield assertTrue(result.streamId == "0-0", result.entries.length <= 10)
+        },
+        test("with negative count") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "a").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis
+                        .xAutoClaim(stream, group, second, 0.millis, count = Some(Count(-1L)))(id)
+                        .returning[String, String, String]
+                        .either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        test("when not stream") {
+          for {
+            redis     <- ZIO.service[Redis]
+            nonStream <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- redis.set(nonStream, "value")
+            result    <-
+              redis.xAutoClaim(nonStream, group, consumer, 0.millis)("1-0").returning[String, String, String].either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xAutoClaimWithJustId")(
+        test("one pending message") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
+          } yield assertTrue(result.streamId == "0-0") && assert(result.claimedIds)(hasSameElements(List(id)))
+        },
+        test("multiple pending messages") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id1    <- redis.xAdd(stream, "*", "c" -> "d", "e" -> "f").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
+          } yield assertTrue(result.streamId == "0-0") && assert(result.claimedIds)(hasSameElements(List(id, id1)))
+        },
+        test("non-existent message") {
+          for {
+            redis    <- ZIO.service[Redis]
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            result   <- redis.xAutoClaimWithJustId(stream, group, consumer, 0.millis)("1-0").returning[String]
+          } yield assertTrue(result.streamId == "0-0", result.claimedIds.isEmpty)
+        },
+        test("existing message that is not in pending state") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            result <- redis.xAutoClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
+          } yield assertTrue(result.streamId == "0-0", result.claimedIds.isEmpty)
+        },
+        test("with non-existent group") {
+          for {
+            redis    <- ZIO.service[Redis]
+            stream   <- uuid
+            group    <- uuid
+            consumer <- uuid
+            result   <- redis.xAutoClaimWithJustId(stream, group, consumer, 0.millis)("1-0").returning[String].either
+          } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
+        },
+        test("with positive min idle time") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaimWithJustId(stream, group, second, 360000.millis)(id).returning[String]
+          } yield assertTrue(result.streamId == "0-0", result.claimedIds.isEmpty)
+        },
+        test("with negative min idle time") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis.xAutoClaimWithJustId(stream, group, second, (-360000).millis)(id).returning[String]
+          } yield assert(result.claimedIds)(hasSameElements(Chunk.single(id)))
+        },
+        test("with positive count") {
+          for {
+            redis       <- ZIO.service[Redis]
+            stream      <- uuid
+            group       <- uuid
+            first       <- uuid
+            second      <- uuid
+            randomChars <- ZIO.loop(0)(_ < 100, _ + 1)(_ => zio.Random.nextPrintableChar)
+            entries      = randomChars.map(_.toString).map(char => char -> char)
+            _           <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id          <- redis.xAdd(stream, "*", "a" -> "a", entries: _*).returning[String]
+            _           <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result      <-
+              redis.xAutoClaimWithJustId(stream, group, second, 0.millis, count = Some(Count(1L)))(id).returning[String]
+          } yield assertTrue(result.streamId == "0-0", result.claimedIds.length <= 10)
+        },
+        test("with negative count") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*", "a" -> "a").returning[String]
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <- redis
+                        .xAutoClaimWithJustId(stream, group, second, 0.millis, count = Some(Count(-1L)))(id)
+                        .returning[String]
+                        .either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        test("when not stream") {
+          for {
+            redis     <- ZIO.service[Redis]
+            nonStream <- uuid
+            group     <- uuid
+            consumer  <- uuid
+            _         <- redis.set(nonStream, "value")
+            result    <- redis
+                           .xAutoClaimWithJustId(nonStream, group, consumer, 0.millis)("0-0")
+                           .returning[String]
+                           .either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
       suite("xClaim")(
         test("one pending message") {
           for {

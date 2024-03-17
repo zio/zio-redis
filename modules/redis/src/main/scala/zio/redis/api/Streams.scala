@@ -137,6 +137,93 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     }
 
   /**
+   * Transfers ownership of pending stream entries that match the specified criteria.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @param consumer
+   *   ID of the consumer
+   * @param minIdleTime
+   *   minimum idle time of a message
+   * @param count
+   *   the upper limit of the number of entries that attempts to claim
+   * @param start
+   *   command will claim only IDs that are equal or greater than this ID
+   * @return
+   *   messages successfully claimed.
+   */
+  def xAutoClaim[SK: Schema, SG: Schema, SC: Schema, I: Schema](
+    key: SK,
+    group: SG,
+    consumer: SC,
+    minIdleTime: Duration,
+    count: Option[Count] = None
+  )(start: I): ResultBuilder3[({ type lambda[x, y, z] = StreamClaimedEntries[x, I, y, z] })#lambda, G] =
+    new ResultBuilder3[({ type lambda[x, y, z] = StreamClaimedEntries[x, I, y, z] })#lambda, G] {
+      def returning[RSI: Schema, RK: Schema, RV: Schema]: G[StreamClaimedEntries[RSI, I, RK, RV]] = {
+        val command = RedisCommand(
+          XAutoClaim,
+          Tuple6(
+            ArbitraryKeyInput[SK](),
+            ArbitraryValueInput[SG](),
+            ArbitraryValueInput[SC](),
+            DurationMillisecondsInput,
+            ArbitraryValueInput[I](),
+            OptionalInput(CountInput)
+          ),
+          StreamClaimedOutput[RSI, I, RK, RV]()
+        )
+        command.run((key, group, consumer, minIdleTime, start, count))
+      }
+    }
+
+  /**
+   * Transfers ownership of pending stream entries that match the specified criteria.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @param consumer
+   *   ID of the consumer
+   * @param minIdleTime
+   *   minimum idle time of a message
+   * @param count
+   *   the upper limit of the number of entries that attempts to claim
+   * @param start
+   *   command will claim only IDs that are equal or greater than this ID
+   * @return
+   *   IDs of the messages that are successfully claimed.
+   */
+  def xAutoClaimWithJustId[SK: Schema, SG: Schema, SC: Schema, I: Schema](
+    key: SK,
+    group: SG,
+    consumer: SC,
+    minIdleTime: Duration,
+    count: Option[Count] = None
+  )(start: I): ResultBuilder1[({ type lambda[x] = StreamClaimedIdChunk[x, I] })#lambda, G] =
+    new ResultBuilder1[({ type lambda[x] = StreamClaimedIdChunk[x, I] })#lambda, G] {
+      def returning[R: Schema]: G[StreamClaimedIdChunk[R, I]] = {
+        val command = RedisCommand(
+          XAutoClaim,
+          Tuple7(
+            ArbitraryKeyInput[SK](),
+            ArbitraryValueInput[SG](),
+            ArbitraryValueInput[SC](),
+            DurationMillisecondsInput,
+            ArbitraryValueInput[I](),
+            OptionalInput(CountInput),
+            WithJustIdInput
+          ),
+          StreamClaimedIdOutput[R, I]()
+        )
+        command.run((key, group, consumer, minIdleTime, start, count, WithJustId))
+      }
+    }
+
+  /**
    * Changes the ownership of a pending message.
    *
    * @param key
@@ -792,6 +879,7 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
 private object Streams {
   final val XAck           = "XACK"
   final val XAdd           = "XADD"
+  final val XAutoClaim     = "XAUTOCLAIM"
   final val XClaim         = "XCLAIM"
   final val XDel           = "XDEL"
   final val XGroup         = "XGROUP"

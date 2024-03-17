@@ -378,6 +378,30 @@ object Output {
       }
   }
 
+  final case class StreamClaimedOutput[SI: BinaryCodec, I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
+    streamIdSchema: Schema[SI],
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[StreamClaimedEntries[SI, I, K, V]] {
+    protected def tryDecode(respValue: RespValue): StreamClaimedEntries[SI, I, K, V] = {
+      val (streamId, entries) =
+        Tuple2Output(ArbitraryOutput[SI](), StreamEntriesOutput[I, K, V]()).unsafeDecode(respValue)
+      StreamClaimedEntries(streamId, entries)
+    }
+  }
+
+  final case class StreamClaimedIdOutput[SI: BinaryCodec, I: BinaryCodec]()(implicit
+    streamIdSchema: Schema[SI],
+    idSchema: Schema[I]
+  ) extends Output[StreamClaimedIdChunk[SI, I]] {
+    protected def tryDecode(respValue: RespValue): StreamClaimedIdChunk[SI, I] = {
+      val (streamId, messageIds) =
+        Tuple2Output(ArbitraryOutput[SI](), ChunkOutput(ArbitraryOutput[I]())).unsafeDecode(respValue)
+      StreamClaimedIdChunk(streamId, messageIds)
+    }
+  }
+
   final case class StreamEntriesOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
     idSchema: Schema[I],
     keySchema: Schema[K],
