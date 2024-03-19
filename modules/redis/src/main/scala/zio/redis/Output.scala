@@ -378,6 +378,48 @@ object Output {
       }
   }
 
+  final case class StreamClaimedOutput[SI: BinaryCodec, I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
+    streamIdSchema: Schema[SI],
+    idSchema: Schema[I],
+    keySchema: Schema[K],
+    valueSchema: Schema[V]
+  ) extends Output[StreamClaimedEntries[SI, I, K, V]] {
+    protected def tryDecode(respValue: RespValue): StreamClaimedEntries[SI, I, K, V] = {
+      val (streamId, entries, deletedIds) = respValue match {
+        case RespValue.ArrayValues(a, b, c) =>
+          (
+            ArbitraryOutput[SI]().unsafeDecode(a),
+            StreamEntriesOutput[I, K, V]().unsafeDecode(b),
+            ChunkOutput(ArbitraryOutput[I]()).unsafeDecode(c)
+          )
+        case RespValue.ArrayValues(a, b)    =>
+          (ArbitraryOutput[SI]().unsafeDecode(a), StreamEntriesOutput[I, K, V]().unsafeDecode(b), Chunk.empty[I])
+        case other                          => throw ProtocolError(s"$other isn't a valid array")
+      }
+      StreamClaimedEntries(streamId, entries, deletedIds)
+    }
+  }
+
+  final case class StreamClaimedIdOutput[SI: BinaryCodec, I: BinaryCodec]()(implicit
+    streamIdSchema: Schema[SI],
+    idSchema: Schema[I]
+  ) extends Output[StreamClaimedIdChunk[SI, I]] {
+    protected def tryDecode(respValue: RespValue): StreamClaimedIdChunk[SI, I] = {
+      val (streamId, messageIds, deletedIds) = respValue match {
+        case RespValue.ArrayValues(a, b, c) =>
+          (
+            ArbitraryOutput[SI]().unsafeDecode(a),
+            ChunkOutput(ArbitraryOutput[I]()).unsafeDecode(b),
+            ChunkOutput(ArbitraryOutput[I]()).unsafeDecode(c)
+          )
+        case RespValue.ArrayValues(a, b)    =>
+          (ArbitraryOutput[SI]().unsafeDecode(a), ChunkOutput(ArbitraryOutput[I]()).unsafeDecode(b), Chunk.empty[I])
+        case other                          => throw ProtocolError(s"$other isn't a valid array")
+      }
+      StreamClaimedIdChunk(streamId, messageIds, deletedIds)
+    }
+  }
+
   final case class StreamEntriesOutput[I: BinaryCodec, K: BinaryCodec, V: BinaryCodec]()(implicit
     idSchema: Schema[I],
     keySchema: Schema[K],
