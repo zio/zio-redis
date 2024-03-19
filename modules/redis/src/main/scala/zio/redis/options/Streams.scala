@@ -77,6 +77,14 @@ trait Streams {
 
   sealed case class StreamChunk[N, I, K, V](name: N, entries: Chunk[StreamEntry[I, K, V]])
 
+  sealed case class StreamClaimedEntries[SI, I, K, V](
+    streamId: SI,
+    entries: Chunk[StreamEntry[I, K, V]],
+    deletedIds: Chunk[I]
+  )
+
+  sealed case class StreamClaimedIdChunk[SI, I](streamId: SI, claimedIds: Chunk[I], deletedIds: Chunk[I])
+
   sealed case class StreamInfo[I, K, V](
     length: Long,
     radixTreeKeys: Long,
