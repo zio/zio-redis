@@ -6,7 +6,7 @@ import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 
-trait SetsSpec extends BaseSpec {
+trait SetsSpec extends IntegrationSpec {
   def setsSuite: Spec[Redis, RedisError] =
     suite("sets")(
       suite("sAdd")(

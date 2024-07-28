@@ -24,9 +24,9 @@ object ApiSpec
     suite("Redis commands")(ClusterSuite, SingleNodeSuite)
       .provideShared(
         compose(
-          service(BaseSpec.SingleNode0, ".*Ready to accept connections.*"),
-          service(BaseSpec.SingleNode1, ".*Ready to accept connections.*"),
-          service(BaseSpec.MasterNode, ".*Cluster correctly created.*")
+          service(IntegrationSpec.SingleNode0, ".*Ready to accept connections.*"),
+          service(IntegrationSpec.SingleNode1, ".*Ready to accept connections.*"),
+          service(IntegrationSpec.MasterNode, ".*Cluster correctly created.*")
         )
       ) @@ sequential @@ withLiveEnvironment
 
@@ -48,7 +48,7 @@ object ApiSpec
       Redis.cluster,
       masterNodeConfig,
       ZLayer.succeed(ProtobufCodecSupplier)
-    ).filterNotTags(_.contains(BaseSpec.ClusterExecutorUnsupported))
+    ).filterNotTags(_.contains(IntegrationSpec.ClusterExecutorUnsupported))
       .getOrElse(Spec.empty) @@ flaky @@ ifEnvNotSet("CI")
 
   private final val SingleNodeSuite =
@@ -68,7 +68,7 @@ object ApiSpec
     ).provideSomeShared[DockerComposeContainer](
       Redis.singleNode,
       RedisSubscription.singleNode,
-      singleNodeConfig(BaseSpec.SingleNode0),
+      singleNodeConfig(IntegrationSpec.SingleNode0),
       ZLayer.succeed(ProtobufCodecSupplier)
     )
 }
