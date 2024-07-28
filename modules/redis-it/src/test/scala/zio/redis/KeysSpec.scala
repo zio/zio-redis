@@ -7,7 +7,7 @@ import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{restore => _, _}
 import zio.test._
 
-trait KeysSpec extends BaseSpec {
+trait KeysSpec extends IntegrationSpec {
   def keysSuite: Spec[DockerComposeContainer & Redis, RedisError] = {
     suite("keys")(
       test("set followed by get") {
@@ -177,7 +177,7 @@ trait KeysSpec extends BaseSpec {
             _         <- redis.set(key, value)
             response  <- redis
                            .migrate(
-                             BaseSpec.SingleNode1,
+                             IntegrationSpec.SingleNode1,
                              6379,
                              key,
                              0L,
@@ -199,7 +199,7 @@ trait KeysSpec extends BaseSpec {
             redis     <- ZIO.service[Redis]
             _         <- redis.set(key, value)
             response  <- redis.migrate(
-                           BaseSpec.SingleNode1,
+                           IntegrationSpec.SingleNode1,
                            6379L,
                            key,
                            0L,
@@ -225,7 +225,7 @@ trait KeysSpec extends BaseSpec {
                           .provideLayer(secondExecutor) // also add to second Redis
             response <- redis
                           .migrate(
-                            BaseSpec.SingleNode1,
+                            IntegrationSpec.SingleNode1,
                             6379,
                             key,
                             0L,
@@ -515,7 +515,7 @@ trait KeysSpec extends BaseSpec {
   private val secondExecutor =
     ZLayer
       .makeSome[DockerComposeContainer, Redis](
-        singleNodeConfig(BaseSpec.SingleNode1),
+        singleNodeConfig(IntegrationSpec.SingleNode1),
         ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
         Redis.singleNode
       )

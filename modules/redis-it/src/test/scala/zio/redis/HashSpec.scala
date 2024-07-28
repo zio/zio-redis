@@ -4,7 +4,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.{Chunk, ZIO}
 
-trait HashSpec extends BaseSpec {
+trait HashSpec extends IntegrationSpec {
   def hashSuite: Spec[Redis, RedisError] =
     suite("hash")(
       suite("hSet, hGet, hGetAll and hDel")(

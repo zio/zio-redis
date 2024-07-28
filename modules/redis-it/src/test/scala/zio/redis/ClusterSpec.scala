@@ -4,7 +4,7 @@ import com.dimafeng.testcontainers.DockerComposeContainer
 import zio._
 import zio.test._
 
-trait ClusterSpec extends BaseSpec {
+trait ClusterSpec extends IntegrationSpec {
   def clusterSpec: Spec[DockerComposeContainer & Redis, RedisError] =
     suite("cluster")(
       suite("slots")(

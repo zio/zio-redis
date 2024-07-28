@@ -4,7 +4,7 @@ import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
 
-trait HyperLogLogSpec extends BaseSpec {
+trait HyperLogLogSpec extends IntegrationSpec {
   def hyperLogLogSuite: Spec[Redis, RedisError] =
     suite("hyperloglog")(
       suite("add elements")(

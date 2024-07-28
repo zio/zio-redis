@@ -11,7 +11,7 @@ import zio.test._
 
 import scala.util.Random
 
-trait ScriptingSpec extends BaseSpec {
+trait ScriptingSpec extends IntegrationSpec {
   def scriptingSpec: Spec[Redis, RedisError] =
     suite("scripting")(
       suite("eval")(
