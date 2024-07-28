@@ -12,7 +12,7 @@ import zio.{ULayer, _}
 import java.io.File
 import java.util.UUID
 
-trait BaseSpec extends ZIOSpecDefault {
+trait IntegrationSpec extends ZIOSpecDefault {
   implicit def summonCodec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
@@ -30,7 +30,7 @@ trait BaseSpec extends ZIOSpecDefault {
     ZLayer {
       for {
         docker      <- ZIO.service[DockerComposeContainer]
-        hostAndPort <- docker.getHostAndPort(BaseSpec.MasterNode)(6379)
+        hostAndPort <- docker.getHostAndPort(IntegrationSpec.MasterNode)(6379)
         uri          = RedisUri(s"${hostAndPort._1}:${hostAndPort._2}")
       } yield RedisClusterConfig(Chunk(uri))
     }
@@ -53,7 +53,7 @@ trait BaseSpec extends ZIOSpecDefault {
    *  - fork/join approach for commands that operate on keys with different slots
    */
   final val clusterExecutorUnsupported: TestAspectPoly =
-    tag(BaseSpec.ClusterExecutorUnsupported)
+    tag(IntegrationSpec.ClusterExecutorUnsupported)
 
   final val genStringRedisTypeOption: Gen[Any, Option[RedisType]] =
     Gen.option(Gen.constSample(Sample.noShrink(RedisType.String)))
@@ -68,7 +68,7 @@ trait BaseSpec extends ZIOSpecDefault {
     ZIO.succeed(UUID.randomUUID().toString)
 }
 
-object BaseSpec {
+object IntegrationSpec {
   final val ClusterExecutorUnsupported = "cluster executor not supported"
   final val MasterNode                 = "cluster-node-5"
   final val SingleNode0                = "single-node-0"

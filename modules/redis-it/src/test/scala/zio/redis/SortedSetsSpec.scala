@@ -6,7 +6,7 @@ import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 
-trait SortedSetsSpec extends BaseSpec {
+trait SortedSetsSpec extends IntegrationSpec {
   def sortedSetsSuite: Spec[Redis, RedisError] =
     suite("sorted sets")(
       suite("bzPopMax")(

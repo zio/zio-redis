@@ -8,7 +8,7 @@ import zio.test._
 
 import java.util.concurrent.TimeUnit
 
-trait ListSpec extends BaseSpec {
+trait ListSpec extends IntegrationSpec {
   def listSuite: Spec[Redis, Any] =
     suite("lists")(
       suite("pop")(

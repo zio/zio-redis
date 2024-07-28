@@ -6,7 +6,7 @@ import zio.test.Assertion._
 import zio.test.TestAspect.{flaky, ignore}
 import zio.test._
 
-trait StreamsSpec extends BaseSpec {
+trait StreamsSpec extends IntegrationSpec {
   def streamsSuite: Spec[Redis, RedisError] =
     suite("streams")(
       suite("xAck")(

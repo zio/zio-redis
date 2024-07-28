@@ -5,7 +5,7 @@ import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 
-trait ConnectionSpec extends BaseSpec {
+trait ConnectionSpec extends IntegrationSpec {
   def connectionSuite: Spec[Redis, RedisError] =
     suite("connection")(
       suite("authenticating")(

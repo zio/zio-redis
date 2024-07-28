@@ -6,7 +6,7 @@ import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{flaky, ignore}
 import zio.test._
 
-trait StringsSpec extends BaseSpec {
+trait StringsSpec extends IntegrationSpec {
   def stringsSuite: Spec[Redis, RedisError] =
     suite("strings")(
       suite("append")(
