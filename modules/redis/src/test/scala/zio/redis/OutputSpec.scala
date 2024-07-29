@@ -55,11 +55,47 @@ object OutputSpec extends BaseSpec {
             res <- ZIO.attempt(DoubleOutput.unsafeDecode(RespValue.bulkString(num.toString)))
           } yield assert(res)(equalTo(num))
         },
+        test("extract numbers in scientific notation") {
+          val num = 42.321e100d
+          for {
+            res <- ZIO.attempt(DoubleOutput.unsafeDecode(RespValue.bulkString(num.toString.toLowerCase)))
+          } yield assert(res)(equalTo(num))
+        },
         test("report number format exceptions as protocol errors") {
           val bad = "ok"
           for {
             res <- ZIO.attempt(DoubleOutput.unsafeDecode(RespValue.bulkString(bad))).either
           } yield assert(res)(isLeft(equalTo(ProtocolError(s"'$bad' isn't a double."))))
+        }
+      ),
+      suite("double or infinity")(
+        test("extract numbers") {
+          val num = 42.3
+          for {
+            res <- ZIO.attempt(DoubleOrInfinity.unsafeDecode(RespValue.bulkString(num.toString)))
+          } yield assert(res)(equalTo(num))
+        },
+        test("extract numbers in scientific notation") {
+          val num = 42.321e100d
+          for {
+            res <- ZIO.attempt(DoubleOrInfinity.unsafeDecode(RespValue.bulkString(num.toString.toLowerCase)))
+          } yield assert(res)(equalTo(num))
+        },
+        test("extract infinity") {
+          for {
+            res <- ZIO.attempt(DoubleOrInfinity.unsafeDecode(RespValue.bulkString("inf")))
+          } yield assert(res)(equalTo(Double.PositiveInfinity))
+        },
+        test("extract negative infinity") {
+          for {
+            res <- ZIO.attempt(DoubleOrInfinity.unsafeDecode(RespValue.bulkString("-inf")))
+          } yield assert(res)(equalTo(Double.NegativeInfinity))
+        },
+        test("report number format exceptions as protocol errors") {
+          val bad = "ok"
+          for {
+            res <- ZIO.attempt(DoubleOrInfinity.unsafeDecode(RespValue.bulkString(bad))).either
+          } yield assert(res)(isLeft(equalTo(ProtocolError(s"'$bad' isn't a double or an infinity."))))
         }
       ),
       suite("durations")(
