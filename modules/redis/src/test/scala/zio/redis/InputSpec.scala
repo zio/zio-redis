@@ -552,6 +552,11 @@ object InputSpec extends BaseSpec {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", 4.2d)))
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value(""))))
         },
+        test("with positive score in scientific notation and non-empty member") {
+          for {
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", 3.141592e100)))
+          } yield assert(result)(equalTo(RespCommand(Value("3.141592e100"), Value("member"))))
+        },
         test("with negative score and empty member") {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("", -4.2d)))
@@ -576,6 +581,16 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", 0d)))
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("member"))))
+        },
+        test("with positive infinity score and non-empty member") {
+          for {
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", Double.PositiveInfinity)))
+          } yield assert(result)(equalTo(RespCommand(Value("+inf"), Value("member"))))
+        },
+        test("with negative infinity score and non-empty member") {
+          for {
+            result <- ZIO.attempt(MemberScoreInput[String]().encode(MemberScore("member", Double.NegativeInfinity)))
+          } yield assert(result)(equalTo(RespCommand(Value("-inf"), Value("member"))))
         }
       ),
       suite("NoInput")(

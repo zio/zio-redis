@@ -28,6 +28,21 @@ trait SortedSetsSpec extends IntegrationSpec {
             result  <- redis.bzPopMax(duration, key1, key2, key3).returning[String]
           } yield assert(result)(isSome(equalTo((key1, tokyo))))
         ),
+        test("infinity score in set")(
+          for {
+            redis   <- ZIO.service[Redis]
+            key1    <- uuid
+            key2    <- uuid
+            duration = Duration.fromMillis(1000)
+            delhi    = MemberScore("Delhi", 1d)
+            london   = MemberScore("London", 3d)
+            tokyo    = MemberScore("Tokyo", 5d)
+            edge     = MemberScore("The edge of universe", Double.PositiveInfinity)
+            _       <- redis.zAdd(key1)(delhi, edge)
+            _       <- redis.zAdd(key2)(london, tokyo)
+            result  <- redis.bzPopMax(duration, key1, key2).returning[String]
+          } yield assert(result)(isSome(equalTo((key1, edge))))
+        ),
         test("empty set")(
           for {
             redis   <- ZIO.service[Redis]
@@ -52,6 +67,21 @@ trait SortedSetsSpec extends IntegrationSpec {
             _       <- redis.zAdd(key3)(london)
             result  <- redis.bzPopMin(duration, key1, key2, key3).returning[String]
           } yield assert(result)(isSome(equalTo((key2, delhi))))
+        ),
+        test("negative infinity score in set")(
+          for {
+            redis   <- ZIO.service[Redis]
+            key1    <- uuid
+            key2    <- uuid
+            duration = Duration.fromMillis(1000)
+            delhi    = MemberScore("Delhi", 1d)
+            london   = MemberScore("London", 3d)
+            paris    = MemberScore("Paris", 4d)
+            quark    = MemberScore("Quark", Double.NegativeInfinity)
+            _       <- redis.zAdd(key1)(delhi, quark)
+            _       <- redis.zAdd(key2)(london, paris)
+            result  <- redis.bzPopMin(duration, key1, key2).returning[String]
+          } yield assert(result)(isSome(equalTo((key1, quark))))
         ),
         test("empty set")(
           for {
@@ -94,7 +124,18 @@ trait SortedSetsSpec extends IntegrationSpec {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            added <- redis.zAdd(key)(MemberScore("a", 1d), MemberScore("b", 2d), MemberScore("c", 3d))
+            added <- redis.zAdd(key)(MemberScore("a", 1d), MemberScore("b", 3.1415e50), MemberScore("c", 3d))
+          } yield assert(added)(equalTo(3L))
+        },
+        test("multiple elements with negative & positive infinity") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            added <- redis.zAdd(key)(
+                       MemberScore("neg infinity", Double.NegativeInfinity),
+                       MemberScore("a", 1d),
+                       MemberScore("pos infinity", Double.PositiveInfinity)
+                     )
           } yield assert(added)(equalTo(3L))
         },
         test("error when not set") {
@@ -840,9 +881,15 @@ trait SortedSetsSpec extends IntegrationSpec {
             london  = MemberScore("London", 3d)
             paris   = MemberScore("Paris", 4d)
             tokyo   = MemberScore("Tokyo", 5d)
-            _      <- redis.zAdd(key)(delhi, mumbai, london, tokyo, paris)
+            edge    = MemberScore("The edge of universe", Double.PositiveInfinity)
+            quark   = MemberScore("Quark", Double.NegativeInfinity)
+            _      <- redis.zAdd(key)(edge, delhi, mumbai, london, tokyo, paris, quark)
             result <- redis.zRange(key, 0 to -1).returning[String]
-          } yield assert(result.toList)(equalTo(List("Delhi", "Mumbai", "London", "Paris", "Tokyo")))
+          } yield assert(result.toList)(
+            equalTo(
+              List("Quark", "Delhi", "Mumbai", "London", "Paris", "Tokyo", "The edge of universe")
+            )
+          )
         },
         test("empty set") {
           for {
@@ -862,10 +909,12 @@ trait SortedSetsSpec extends IntegrationSpec {
             london  = MemberScore("London", 3d)
             paris   = MemberScore("Paris", 4d)
             tokyo   = MemberScore("Tokyo", 5d)
-            _      <- redis.zAdd(key)(delhi, mumbai, london, tokyo, paris)
+            edge    = MemberScore("The edge of universe", Double.PositiveInfinity)
+            quark   = MemberScore("Quark", Double.NegativeInfinity)
+            _      <- redis.zAdd(key)(edge, delhi, mumbai, quark, london, tokyo, paris)
             result <- redis.zRangeWithScores(key, 0 to -1).returning[String]
           } yield assert(result.toList)(
-            equalTo(List(delhi, mumbai, london, paris, tokyo))
+            equalTo(List(quark, delhi, mumbai, london, paris, tokyo, edge))
           )
         },
         test("empty set") {
@@ -1398,6 +1447,18 @@ trait SortedSetsSpec extends IntegrationSpec {
             members <- scanAll(key)
           } yield assert(members)(equalTo(Chunk(a, b, c)))
         },
+        test("with infinity in set") {
+          for {
+            redis   <- ZIO.service[Redis]
+            key     <- uuid
+            a        = MemberScore("a", 1d)
+            b        = MemberScore("b", 2d)
+            inf      = MemberScore("inf", Double.PositiveInfinity)
+            negInf   = MemberScore("neg inf", Double.NegativeInfinity)
+            _       <- redis.zAdd(key)(a, b, inf, negInf)
+            members <- scanAll(key)
+          } yield assert(members)(equalTo(Chunk(negInf, a, b, inf)))
+        },
         test("empty set") {
           for {
             redis            <- ZIO.service[Redis]
@@ -1470,6 +1531,14 @@ trait SortedSetsSpec extends IntegrationSpec {
             result <- redis.zScore(key, "Delhi")
           } yield assert(result)(isSome(equalTo(10.0)))
         },
+        test("infinity score in set") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.zAdd(key)(MemberScore("Delhi", 10d), MemberScore("Infinity", Double.PositiveInfinity))
+            result <- redis.zScore(key, "Infinity")
+          } yield assert(result)(isSome(equalTo(Double.PositiveInfinity)))
+        },
         test("empty set") {
           for {
             redis  <- ZIO.service[Redis]
@@ -1499,6 +1568,27 @@ trait SortedSetsSpec extends IntegrationSpec {
             key    <- uuid
             result <- redis.zMScore(key, "Hyderabad")
           } yield assert(result)(equalTo(Chunk(None)))
+        },
+        test("infinity score") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.zAdd(key)(
+                        MemberScore("Delhi", 10d),
+                        MemberScore("Infinity", Double.PositiveInfinity),
+                        MemberScore("-Infinity", Double.NegativeInfinity)
+                      )
+            result <- redis.zMScore(key, "Infinity", "-Infinity", "Delhi", "Ankh-Morpork")
+          } yield assert(result)(
+            equalTo(
+              Chunk(
+                Some(Double.PositiveInfinity),
+                Some(Double.NegativeInfinity),
+                Some(10d),
+                None
+              )
+            )
+          )
         }
       ),
       suite("zUnion")(
