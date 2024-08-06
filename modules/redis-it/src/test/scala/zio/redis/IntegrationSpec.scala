@@ -70,7 +70,7 @@ trait IntegrationSpec extends ZIOSpecDefault {
 
 object IntegrationSpec {
   final val ClusterExecutorUnsupported = "cluster executor not supported"
-  final val MasterNode                 = "cluster-node-5"
-  final val SingleNode0                = "single-node-0"
-  final val SingleNode1                = "single-node-1"
+  final val MasterNode                 = "cluster-node5"
+  final val SingleNode0                = "single-node0"
+  final val SingleNode1                = "single-node1"
 }
