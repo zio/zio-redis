@@ -17,7 +17,7 @@ trait ClusterSpec extends IntegrationSpec {
               ZIO
                 .foreach(0 to 5) { n =>
                   ZIO
-                    .attempt(docker.getServiceHost(s"cluster-node-$n", port))
+                    .attempt(docker.getServiceHost(s"cluster-node$n", port))
                     .map(host => RedisUri(s"$host:$port"))
                 }
                 .orDie
