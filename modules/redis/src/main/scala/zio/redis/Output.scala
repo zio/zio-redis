@@ -101,7 +101,7 @@ object Output {
           val host   = MultiStringOutput.unsafeDecode(values(0))
           val port   = LongOutput.unsafeDecode(values(1))
           val nodeId = MultiStringOutput.unsafeDecode(values(2))
-          Node(nodeId, RedisUri(s"$host:$port"))
+          Node(nodeId, RedisUri(host, port.toInt))
         case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }

@@ -5,6 +5,7 @@ import zio.redis.Output._
 import zio.redis.RedisError._
 import zio.redis.internal.PubSub.{PushMessage, SubscriptionKey}
 import zio.redis.internal.RespValue
+import zio.redis.options.Cluster
 import zio.test.Assertion._
 import zio.test._
 
@@ -1027,6 +1028,136 @@ object OutputSpec extends BaseSpec {
           val expected = PushMessage.Message(SubscriptionKey.Pattern(pattern), channel, message)
 
           assertZIO(ZIO.attempt(PushMessageOutput.unsafeDecode(input)))(equalTo(expected))
+        }
+      ),
+      suite("ClusterPartition")(
+        test("3 masters cluster") {
+          val response =
+            RespValue.array(
+              RespValue.array(
+                RespValue.Integer(0L),
+                RespValue.Integer(5460L),
+                RespValue.array(
+                  RespValue.bulkString("127.0.0.1"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("node1"),
+                  RespValue.array()
+                )
+              ),
+              RespValue.array(
+                RespValue.Integer(5461L),
+                RespValue.Integer(10922L),
+                RespValue.array(
+                  RespValue.bulkString("127.0.0.2"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("node2"),
+                  RespValue.array()
+                )
+              ),
+              RespValue.array(
+                RespValue.Integer(10923L),
+                RespValue.Integer(16383L),
+                RespValue.array(
+                  RespValue.bulkString("127.0.0.3"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("node3"),
+                  RespValue.array()
+                )
+              )
+            )
+
+          val expected = Chunk(
+            Cluster.Partition(
+              Cluster.SlotRange(0L, 5460L),
+              Cluster.Node("node1", RedisUri("127.0.0.1", 6379)),
+              slaves = Chunk.empty
+            ),
+            Cluster.Partition(
+              Cluster.SlotRange(5461L, 10922L),
+              Cluster.Node("node2", RedisUri("127.0.0.2", 6379)),
+              slaves = Chunk.empty
+            ),
+            Cluster.Partition(
+              Cluster.SlotRange(10923L, 16383L),
+              Cluster.Node("node3", RedisUri("127.0.0.3", 6379)),
+              slaves = Chunk.empty
+            )
+          )
+
+          assertZIO(ZIO.attempt(ChunkOutput(ClusterPartitionOutput).unsafeDecode(response)))(hasSameElements(expected))
+        },
+        test("3 masters with 2 replicas cluster") {
+          val response =
+            RespValue.array(
+              RespValue.array(
+                RespValue.Integer(0L),
+                RespValue.Integer(5460L),
+                RespValue.array(
+                  RespValue.bulkString("127.0.0.1"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("node1"),
+                  RespValue.array()
+                ),
+                RespValue.array(
+                  RespValue.bulkString("127.0.1.1"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("replica1"),
+                  RespValue.array()
+                )
+              ),
+              RespValue.array(
+                RespValue.Integer(5461L),
+                RespValue.Integer(10922L),
+                RespValue.array(
+                  RespValue.bulkString("127.0.0.2"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("node2"),
+                  RespValue.array()
+                ),
+                RespValue.array(
+                  RespValue.bulkString("127.0.1.2"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("replica2"),
+                  RespValue.array()
+                )
+              ),
+              RespValue.array(
+                RespValue.Integer(10923L),
+                RespValue.Integer(16383L),
+                RespValue.array(
+                  RespValue.bulkString("127.0.0.3"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("node3"),
+                  RespValue.array()
+                ),
+                RespValue.array(
+                  RespValue.bulkString("127.0.1.3"),
+                  RespValue.Integer(6379L),
+                  RespValue.bulkString("replica3"),
+                  RespValue.array()
+                )
+              )
+            )
+
+          val expected = Chunk(
+            Cluster.Partition(
+              Cluster.SlotRange(0L, 5460L),
+              Cluster.Node("node1", RedisUri("127.0.0.1", 6379)),
+              slaves = Chunk.single(Cluster.Node("replica1", RedisUri("127.0.1.1", 6379)))
+            ),
+            Cluster.Partition(
+              Cluster.SlotRange(5461L, 10922L),
+              Cluster.Node("node2", RedisUri("127.0.0.2", 6379)),
+              slaves = Chunk.single(Cluster.Node("replica2", RedisUri("127.0.1.2", 6379)))
+            ),
+            Cluster.Partition(
+              Cluster.SlotRange(10923L, 16383L),
+              Cluster.Node("node3", RedisUri("127.0.0.3", 6379)),
+              slaves = Chunk.single(Cluster.Node("replica3", RedisUri("127.0.1.3", 6379)))
+            )
+          )
+
+          assertZIO(ZIO.attempt(ChunkOutput(ClusterPartitionOutput).unsafeDecode(response)))(hasSameElements(expected))
         }
       )
     )

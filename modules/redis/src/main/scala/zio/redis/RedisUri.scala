@@ -26,6 +26,9 @@ object RedisUri {
     val splitting = hostAndPort.split(':')
     val host      = splitting(0)
     val port      = splitting(1).toInt
-    RedisUri(s"$host:$port")
+    RedisUri(host, port, ssl = false, sni = None)
   }
+
+  def apply(host: String, port: Int): RedisUri =
+    RedisUri(host, port, ssl = false, sni = None)
 }
