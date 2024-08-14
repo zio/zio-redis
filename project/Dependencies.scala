@@ -10,7 +10,7 @@ object Dependencies {
     val ZHttp             = "2.0.0-RC11"
     val ZioConfig         = "4.0.2"
     val ZioJson           = "0.6.2"
-    val ZioSchema         = "1.2.2"
+    val ZioSchema         = "1.3.0"
     val ZioTestContainers = "0.5.0"
   }
 
