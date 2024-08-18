@@ -649,23 +649,43 @@ object InputSpec extends BaseSpec {
       suite("Range")(
         test("with positive start and positive end") {
           for {
-            result <- ZIO.attempt(RangeInput.encode(Range(1, 5)))
+            result <- ZIO.attempt(RangeInput.encode(1 to 5))
           } yield assert(result)(equalTo(RespCommand(Value("1"), Value("5"))))
         },
         test("with negative start and positive end") {
           for {
-            result <- ZIO.attempt(RangeInput.encode(Range(-1, 5)))
+            result <- ZIO.attempt(RangeInput.encode(-1 to 5))
           } yield assert(result)(equalTo(RespCommand(Value("-1"), Value("5"))))
         },
         test("with positive start and negative end") {
           for {
-            result <- ZIO.attempt(RangeInput.encode(Range(1, -5)))
+            result <- ZIO.attempt(RangeInput.encode(1 to -5))
           } yield assert(result)(equalTo(RespCommand(Value("1"), Value("-5"))))
         },
         test("with negative start and negative end") {
           for {
-            result <- ZIO.attempt(RangeInput.encode(Range(-1, -5)))
+            result <- ZIO.attempt(RangeInput.encode(-1 to -5))
           } yield assert(result)(equalTo(RespCommand(Value("-1"), Value("-5"))))
+        },
+        test("with positive start and exclusive positive end") {
+          for {
+            result <- ZIO.attempt(RangeInput.encode(1 until 3))
+          } yield assert(result)(equalTo(RespCommand(Value("1"), Value("2"))))
+        },
+        test("with positive start and exclusive negative end") {
+          for {
+            result <- ZIO.attempt(RangeInput.encode(1 until -1))
+          } yield assert(result)(equalTo(RespCommand(Value("1"), Value("-2"))))
+        },
+        test("with negative start and exclusive positive end") {
+          for {
+            result <- ZIO.attempt(RangeInput.encode(-5 until 8))
+          } yield assert(result)(equalTo(RespCommand(Value("-5"), Value("7"))))
+        },
+        test("with negative start and exclusive negative end") {
+          for {
+            result <- ZIO.attempt(RangeInput.encode(-5 until -3))
+          } yield assert(result)(equalTo(RespCommand(Value("-5"), Value("-4"))))
         }
       ),
       suite("Pattern")(

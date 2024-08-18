@@ -872,7 +872,7 @@ trait SortedSetsSpec extends IntegrationSpec {
         } yield assert(result.toList)(isEmpty))
       ),
       suite("zRange")(
-        test("non-empty set") {
+        test("all members for non-empty set") {
           for {
             redis  <- ZIO.service[Redis]
             key    <- uuid
@@ -890,6 +890,45 @@ trait SortedSetsSpec extends IntegrationSpec {
               List("Quark", "Delhi", "Mumbai", "London", "Paris", "Tokyo", "The edge of universe")
             )
           )
+        },
+        test("some members for non-empty set by inclusive range with negative bounds") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            delhi   = MemberScore("Delhi", 1d)
+            mumbai  = MemberScore("Mumbai", 2d)
+            london  = MemberScore("London", 3d)
+            paris   = MemberScore("Paris", 4d)
+            tokyo   = MemberScore("Tokyo", 5d)
+            _      <- redis.zAdd(key)(delhi, mumbai, london, tokyo, paris)
+            result <- redis.zRange(key, -3 to -2).returning[String]
+          } yield assert(result.toList)(equalTo(List("London", "Paris")))
+        },
+        test("some members for non-empty set by inclusive range with positive bounds") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            delhi   = MemberScore("Delhi", 1d)
+            mumbai  = MemberScore("Mumbai", 2d)
+            london  = MemberScore("London", 3d)
+            paris   = MemberScore("Paris", 4d)
+            tokyo   = MemberScore("Tokyo", 5d)
+            _      <- redis.zAdd(key)(delhi, mumbai, london, tokyo, paris)
+            result <- redis.zRange(key, 0 to 2).returning[String]
+          } yield assert(result.toList)(equalTo(List("Delhi", "Mumbai", "London")))
+        },
+        test("some members for non-empty set by exclusive range") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            delhi   = MemberScore("Delhi", 1d)
+            mumbai  = MemberScore("Mumbai", 2d)
+            london  = MemberScore("London", 3d)
+            paris   = MemberScore("Paris", 4d)
+            tokyo   = MemberScore("Tokyo", 5d)
+            _      <- redis.zAdd(key)(delhi, mumbai, london, tokyo, paris)
+            result <- redis.zRange(key, 1 until -2).returning[String]
+          } yield assert(result.toList)(equalTo(List("Mumbai", "London")))
         },
         test("empty set") {
           for {
