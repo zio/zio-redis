@@ -387,8 +387,10 @@ object Input {
   }
 
   case object RangeInput extends Input[Range] {
-    def encode(data: Range): RespCommand =
-      RespCommand(RespCommandArgument.Value(data.start.toString), RespCommandArgument.Value(data.end.toString))
+    def encode(data: Range): RespCommand = {
+      val end = if (data.isInclusive) data.end else data.end - 1
+      RespCommand(RespCommandArgument.Value(data.start.toString), RespCommandArgument.Value(end.toString))
+    }
   }
 
   case object RankInput extends Input[Rank] {

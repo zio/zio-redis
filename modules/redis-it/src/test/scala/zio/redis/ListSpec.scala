@@ -341,6 +341,14 @@ trait ListSpec extends IntegrationSpec {
             range <- redis.lRange(key, 0 to 1).returning[String]
           } yield assert(range)(equalTo(Chunk("hello", "world")))
         },
+        test("lRange elements by exclusive range") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _     <- redis.lPush(key, "c", "b", "a")
+            range <- redis.lRange(key, 0 until 2).returning[String]
+          } yield assert(range)(equalTo(Chunk("a", "b")))
+        },
         test("lRange two elements negative indices") {
           for {
             redis <- ZIO.service[Redis]
@@ -348,6 +356,14 @@ trait ListSpec extends IntegrationSpec {
             _     <- redis.lPush(key, "world", "hello")
             range <- redis.lRange(key, -2 to -1).returning[String]
           } yield assert(range)(equalTo(Chunk("hello", "world")))
+        },
+        test("lRange elements by exclusive range with negative indices") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _     <- redis.lPush(key, "d", "c", "b", "a")
+            range <- redis.lRange(key, -3 until -1).returning[String]
+          } yield assert(range)(equalTo(Chunk("b", "c")))
         },
         test("lRange start out of bounds") {
           for {
