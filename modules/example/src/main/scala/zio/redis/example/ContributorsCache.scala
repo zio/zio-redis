@@ -30,7 +30,7 @@ trait ContributorsCache {
 
 object ContributorsCache {
   lazy val layer: URLayer[Redis with Sttp, ContributorsCache] =
-    ZLayer.fromFunction[Redis with Sttp](Live.apply _)
+    ZLayer.fromFunction(Live.apply _)
 
   private final case class Live(redis: Redis, sttp: Sttp) extends ContributorsCache {
     def fetchAll(repository: Repository): IO[ApiError, Contributors] =
