@@ -6,7 +6,7 @@ import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{flaky, ignore}
 import zio.test._
 
-trait StringsSpec extends BaseSpec {
+trait StringsSpec extends IntegrationSpec {
   def stringsSuite: Spec[Redis, RedisError] =
     suite("strings")(
       suite("append")(
@@ -77,8 +77,16 @@ trait StringsSpec extends BaseSpec {
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
-            _     <- redis.set(key, "value")
+            _     <- redis.set(key, "value") // "alu" => 01100001 01101100 01110101
             count <- redis.bitCount(key, Some(1 to 3))
+          } yield assert(count)(equalTo(12L))
+        },
+        test("over non-empty string with exclusive range") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            _     <- redis.set(key, "value")
+            count <- redis.bitCount(key, Some(1 until 4))
           } yield assert(count)(equalTo(12L))
         },
         test("over non-empty string with range that is too large") {
@@ -1046,6 +1054,14 @@ trait StringsSpec extends BaseSpec {
             _      <- redis.set(key, "value")
             substr <- redis.getRange(key, 1 to 3).returning[String]
           } yield assert(substr)(isSome(equalTo("alu")))
+        },
+        test("from non-empty string by exclusive range") {
+          for {
+            redis  <- ZIO.service[Redis]
+            key    <- uuid
+            _      <- redis.set(key, "value")
+            substr <- redis.getRange(key, 1 until 3).returning[String]
+          } yield assert(substr)(isSome(equalTo("al")))
         },
         test("with range that exceeds non-empty string length") {
           for {

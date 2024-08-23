@@ -39,7 +39,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   A three-element Chunk with the first element being the name of the key where a member was popped, the second
    *   element is the popped member itself, and the third element is the score of the popped element. An empty chunk is
-   *   returned when no element could be popped and the timeout expired.
+   *   returned when no element could be popped and the timeout expired. Double.PositiveInfinity and
+   *   Double.NegativeInfinity are valid scores as well.
    */
   final def bzPopMax[K: Schema](
     timeout: Duration,
@@ -49,7 +50,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
     new ResultBuilder1[({ type lambda[x] = Option[(K, MemberScore[x])] })#lambda, G] {
       def returning[M: Schema]: G[Option[(K, MemberScore[M])]] = {
         val memberScoreOutput =
-          Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
+          Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOrInfinity).map { case (k, m, s) =>
             (k, MemberScore(m, s))
           }
 
@@ -76,7 +77,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   A three-element Chunk with the first element being the name of the key where a member was popped, the second
    *   element is the popped member itself, and the third element is the score of the popped element. An empty chunk is
-   *   returned when no element could be popped and the timeout expired.
+   *   returned when no element could be popped and the timeout expired. Double.PositiveInfinity and
+   *   Double.NegativeInfinity are valid scores as well.
    */
   final def bzPopMin[K: Schema](
     timeout: Duration,
@@ -86,7 +88,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
     new ResultBuilder1[({ type lambda[x] = Option[(K, MemberScore[x])] })#lambda, G] {
       def returning[M: Schema]: G[Option[(K, MemberScore[M])]] = {
         val memberScoreOutput =
-          Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOutput).map { case (k, m, s) =>
+          Tuple3Output(ArbitraryOutput[K](), ArbitraryOutput[M](), DoubleOrInfinity).map { case (k, m, s) =>
             (k, MemberScore(m, s))
           }
 
@@ -248,7 +250,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
               NonEmptyList(ArbitraryKeyInput[K]()),
               WithScoresInput
             ),
-            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
               .map(_.map { case (m, s) => MemberScore(m, s) })
           )
         command.run((keys.size + 1, (key, keys.toList), WithScores))
@@ -366,7 +368,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             OptionalInput(WeightsInput),
             WithScoresInput
           ),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((keys.size + 1, (key, keys.toList), aggregate, weights, WithScores))
@@ -437,10 +439,11 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    *   Keys of the rest sets
    * @return
    *   List of scores or None associated with the specified member values (a double precision floating point number).
+   *   Double.PositiveInfinity and Double.NegativeInfinity are valid scores as well.
    */
   final def zMScore[K: Schema](key: K, keys: K*): G[Chunk[Option[Double]]] = {
     val command =
-      RedisCommand(ZMScore, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(OptionalOutput(DoubleOutput)))
+      RedisCommand(ZMScore, NonEmptyList(ArbitraryKeyInput[K]()), ChunkOutput(OptionalOutput(DoubleOrInfinity)))
     command.run((key, keys.toList))
   }
 
@@ -462,7 +465,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           ZPopMax,
           Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((key, count))
@@ -487,7 +490,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           ZPopMin,
           Tuple2(ArbitraryKeyInput[K](), OptionalInput(LongInput)),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((key, count))
@@ -550,7 +553,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           ZRandMember,
           Tuple3(ArbitraryKeyInput[K](), LongInput, WithScoresInput),
-          ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ZRandMemberTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
 
@@ -593,7 +596,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           ZRange,
           Tuple3(ArbitraryKeyInput[K](), RangeInput, WithScoresInput),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((key, range, WithScores))
@@ -693,7 +696,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             WithScoresInput,
             OptionalInput(LimitInput)
           ),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((key, scoreRange.min.asString, scoreRange.max.asString, WithScores, limit))
@@ -735,7 +738,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       RedisCommand(
         ZRank,
         Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[M](), WithScoreInput),
-        OptionalOutput(Tuple2Output(LongOutput, DoubleOutput).map { case (r, s) => RankScore(r, s) })
+        OptionalOutput(Tuple2Output(LongOutput, DoubleOrInfinity).map { case (r, s) => RankScore(r, s) })
       )
     command.run((key, member, WithScore))
   }
@@ -849,7 +852,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           ZRevRange,
           Tuple3(ArbitraryKeyInput[K](), RangeInput, WithScoresInput),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((key, range, WithScores))
@@ -953,7 +956,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             WithScoresInput,
             OptionalInput(LimitInput)
           ),
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
             .map(_.map { case (m, s) => MemberScore(m, s) })
         )
         command.run((key, scoreRange.max.asString, scoreRange.min.asString, WithScores, limit))
@@ -993,7 +996,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
     val command = RedisCommand(
       ZRevRank,
       Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[M](), WithScoreInput),
-      OptionalOutput(Tuple2Output(LongOutput, DoubleOutput).map { case (r, s) => RankScore(r, s) })
+      OptionalOutput(Tuple2Output(LongOutput, DoubleOrInfinity).map { case (r, s) => RankScore(r, s) })
     )
     command.run((key, member, WithScore))
   }
@@ -1021,7 +1024,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
     new ResultBuilder1[({ type lambda[x] = (Long, MemberScores[x]) })#lambda, G] {
       def returning[M: Schema]: G[(Long, Chunk[MemberScore[M]])] = {
         val memberScoresOutput =
-          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput).map(_.map { case (m, s) => MemberScore(m, s) })
+          ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity).map(_.map { case (m, s) => MemberScore(m, s) })
 
         val command =
           RedisCommand(
@@ -1042,13 +1045,14 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @param member
    *   Member of sorted set
    * @return
-   *   The score of member (a double precision floating point number.
+   *   The score of member (a double precision floating point number).
+   *   Double.PositiveInfinity and Double.NegativeInfinity are valid scores as well.
    */
   final def zScore[K: Schema, M: Schema](key: K, member: M): G[Option[Double]] = {
     val command = RedisCommand(
       ZScore,
       Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[M]()),
-      OptionalOutput(DoubleOutput)
+      OptionalOutput(DoubleOrInfinity)
     )
     command.run((key, member))
   }
@@ -1122,7 +1126,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
               OptionalInput(AggregateInput),
               WithScoresInput
             ),
-            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOutput)
+            ChunkTuple2Output(ArbitraryOutput[M](), DoubleOrInfinity)
               .map(_.map { case (m, s) => MemberScore(m, s) })
           )
         command.run((keys.size + 1, (key, keys.toList), weights, aggregate, WithScores))

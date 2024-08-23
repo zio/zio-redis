@@ -337,8 +337,14 @@ object Input {
   }
 
   final case class MemberScoreInput[M: BinaryCodec]() extends Input[MemberScore[M]] {
-    def encode(data: MemberScore[M]): RespCommand =
-      RespCommand(RespCommandArgument.Value(data.score.toString), RespCommandArgument.Value(data.member))
+    def encode(data: MemberScore[M]): RespCommand = {
+      val score = data.score match {
+        case Double.NegativeInfinity => "-inf"
+        case Double.PositiveInfinity => "+inf"
+        case d: Double               => d.toString.toLowerCase
+      }
+      RespCommand(RespCommandArgument.Value(score), RespCommandArgument.Value(data.member))
+    }
   }
 
   case object NoAckInput extends Input[NoAck] {
@@ -381,8 +387,10 @@ object Input {
   }
 
   case object RangeInput extends Input[Range] {
-    def encode(data: Range): RespCommand =
-      RespCommand(RespCommandArgument.Value(data.start.toString), RespCommandArgument.Value(data.end.toString))
+    def encode(data: Range): RespCommand = {
+      val end = if (data.isInclusive) data.end else data.end - 1
+      RespCommand(RespCommandArgument.Value(data.start.toString), RespCommandArgument.Value(end.toString))
+    }
   }
 
   case object RankInput extends Input[Rank] {

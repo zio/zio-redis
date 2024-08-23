@@ -7,7 +7,7 @@ import zio.{Promise, ZIO}
 
 import scala.util.Random
 
-trait PubSubSpec extends BaseSpec {
+trait PubSubSpec extends IntegrationSpec {
   def pubSubSuite: Spec[Redis with RedisSubscription, RedisError] =
     suite("pubSubs")(
       suite("subscribe")(

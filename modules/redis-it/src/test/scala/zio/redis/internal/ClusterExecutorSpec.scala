@@ -6,7 +6,7 @@ import zio.redis.options.Cluster.{Slot, SlotsAmount}
 import zio.test.TestAspect.{flaky, ifEnvNotSet}
 import zio.test._
 
-object ClusterExecutorSpec extends BaseSpec {
+object ClusterExecutorSpec extends IntegrationSpec {
   def spec: Spec[TestEnvironment, Any] =
     suite("Cluster executor")(
       test("check cluster responsiveness when ASK redirect happens") {
@@ -62,7 +62,7 @@ object ClusterExecutorSpec extends BaseSpec {
       }
     ).provideShared(
       Redis.cluster,
-      compose(service(BaseSpec.MasterNode, ".*Cluster correctly created.*")),
+      compose(service(IntegrationSpec.MasterNode, ".*Cluster correctly created.*")),
       masterNodeConfig,
       ZLayer.succeed(ProtobufCodecSupplier)
     ) @@ flaky @@ ifEnvNotSet("CI")

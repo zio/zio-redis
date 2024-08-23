@@ -4,7 +4,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.{Chunk, ZIO}
 
-trait GeoSpec extends BaseSpec {
+trait GeoSpec extends IntegrationSpec {
   def geoSuite: Spec[Redis, RedisError] =
     suite("geo")(
       test("geoAdd followed by geoPos") {

@@ -101,7 +101,7 @@ object Output {
           val host   = MultiStringOutput.unsafeDecode(values(0))
           val port   = LongOutput.unsafeDecode(values(1))
           val nodeId = MultiStringOutput.unsafeDecode(values(2))
-          Node(nodeId, RedisUri(s"$host:$port"))
+          Node(nodeId, RedisUri(host, port.toInt))
         case other                   => throw ProtocolError(s"$other isn't an array")
       }
   }
@@ -125,6 +125,14 @@ object Output {
       respValue match {
         case RespValue.BulkString(bytes) => decodeDouble(bytes)
         case other                       => throw ProtocolError(s"$other isn't a double.")
+      }
+  }
+
+  case object DoubleOrInfinity extends Output[Double] {
+    protected def tryDecode(respValue: RespValue): Double =
+      respValue match {
+        case RespValue.BulkString(bytes) => decodeDouble(bytes, withInfinity = true)
+        case other                       => throw ProtocolError(s"$other isn't a double or an infinity.")
       }
   }
 
@@ -729,11 +737,19 @@ object Output {
       }
   }
 
-  private def decodeDouble(bytes: Chunk[Byte]): Double = {
+  private def decodeDouble(bytes: Chunk[Byte], withInfinity: Boolean = false): Double = {
     val text = new String(bytes.toArray, StandardCharsets.UTF_8)
-    try text.toDouble
-    catch {
-      case _: NumberFormatException => throw ProtocolError(s"'$text' isn't a double.")
+    text match {
+      case "inf" if withInfinity  => Double.PositiveInfinity
+      case "-inf" if withInfinity => Double.NegativeInfinity
+      case _                      =>
+        try text.toDouble
+        catch {
+          case _: NumberFormatException =>
+            throw ProtocolError(
+              if (withInfinity) s"'$text' isn't a double or an infinity." else s"'$text' isn't a double."
+            )
+        }
     }
   }
 
