@@ -11,6 +11,7 @@ inThisBuild(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
+    scala213          := "2.13.14",
     startYear         := Some(2021)
   )
 )
