@@ -4,13 +4,13 @@ object Dependencies {
   private object Versions {
     val CatsEffect        = "3.5.4"
     val EmbeddedRedis     = "0.6"
-    val Redis4Cats        = "1.6.0"
+    val Redis4Cats        = "1.7.1"
     val Sttp              = "3.9.8"
     val TlsChannel        = "0.9.1"
     val ZHttp             = "2.0.0-RC11"
     val ZioConfig         = "4.0.2"
-    val ZioJson           = "0.6.2"
-    val ZioSchema         = "1.2.2"
+    val ZioJson           = "0.7.2"
+    val ZioSchema         = "1.4.1"
     val ZioTestContainers = "0.5.0"
   }
 
