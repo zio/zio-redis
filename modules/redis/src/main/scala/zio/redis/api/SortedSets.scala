@@ -122,21 +122,27 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    *   The number of elements added to the sorted set, not including elements already existing for which the score was
    *   updated.
    */
-  final def zAdd[K: Schema, M: Schema](key: K, update: Option[Update] = None, change: Option[Changed] = None)(
+  final def zAdd[K: Schema, M: Schema](
+    key: K,
+    update: Option[Update] = None,
+    updateByScore: Option[UpdateByScore] = None,
+    change: Option[Changed] = None
+  )(
     memberScore: MemberScore[M],
     memberScores: MemberScore[M]*
   ): G[Long] = {
     val command = RedisCommand(
       ZAdd,
-      Tuple4(
+      Tuple5(
         ArbitraryKeyInput[K](),
         OptionalInput(UpdateInput),
+        OptionalInput(UpdateByScoreInput),
         OptionalInput(ChangedInput),
         NonEmptyList(MemberScoreInput[M]())
       ),
       LongOutput
     )
-    command.run((key, update, change, (memberScore, memberScores.toList)))
+    command.run((key, update, updateByScore, change, (memberScore, memberScores.toList)))
   }
 
   /**
@@ -160,23 +166,29 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    *   The new score of member (a double precision floating point number), or None if the operation was aborted (when
    *   called with either the XX or the NX option).
    */
-  final def zAddWithIncr[K: Schema, M: Schema](key: K, update: Option[Update] = None, change: Option[Changed] = None)(
+  final def zAddWithIncr[K: Schema, M: Schema](
+    key: K,
+    update: Option[Update] = None,
+    updateByScore: Option[UpdateByScore] = None,
+    change: Option[Changed] = None
+  )(
     increment: Increment,
     memberScore: MemberScore[M],
     memberScores: MemberScore[M]*
   ): G[Option[Double]] = {
     val command = RedisCommand(
       ZAdd,
-      Tuple5(
+      Tuple6(
         ArbitraryKeyInput[K](),
         OptionalInput(UpdateInput),
+        OptionalInput(UpdateByScoreInput),
         OptionalInput(ChangedInput),
         IncrementInput,
         NonEmptyList(MemberScoreInput[M]())
       ),
       OptionalOutput(DoubleOutput)
     )
-    command.run((key, update, change, increment, (memberScore, memberScores.toList)))
+    command.run((key, update, updateByScore, change, increment, (memberScore, memberScores.toList)))
   }
 
   /**

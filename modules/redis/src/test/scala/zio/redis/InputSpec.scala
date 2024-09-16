@@ -1022,6 +1022,18 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Value("NX"))))
         }
       ),
+      suite("UpdateByScore")(
+        test("set greater than") {
+          for {
+            result <- ZIO.attempt(UpdateByScoreInput.encode(UpdateByScore.SetGreaterThan))
+          } yield assert(result)(equalTo(RespCommand(Value("XX"))))
+        },
+        test("set less than") {
+          for {
+            result <- ZIO.attempt(UpdateByScoreInput.encode(UpdateByScore.SetLessThan))
+          } yield assert(result)(equalTo(RespCommand(Value("NX"))))
+        }
+      ),
       suite("Id")(
         test("valid value") {
           for {

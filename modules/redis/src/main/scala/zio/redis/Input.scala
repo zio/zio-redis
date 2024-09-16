@@ -584,6 +584,11 @@ object Input {
       RespCommand(RespCommandArgument.Value(data.asString))
   }
 
+  case object UpdateByScoreInput extends Input[UpdateByScore] {
+    def encode(data: UpdateByScore): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.asString))
+  }
+
   case object ValueInput extends Input[Chunk[Byte]] {
     def encode(data: Chunk[Byte]): RespCommand =
       RespCommand(RespCommandArgument.Value(data))

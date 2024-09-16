@@ -41,18 +41,27 @@ trait Shared {
   sealed trait Update { self =>
     private[redis] final def asString: String =
       self match {
-        case Update.SetExisting    => "XX"
-        case Update.SetNew         => "NX"
-        case Update.SetLessThan    => "LT"
-        case Update.SetGreaterThan => "GT"
+        case Update.SetExisting => "XX"
+        case Update.SetNew      => "NX"
       }
   }
 
   object Update {
-    case object SetExisting    extends Update
-    case object SetNew         extends Update
-    case object SetLessThan    extends Update
-    case object SetGreaterThan extends Update
+    case object SetExisting extends Update
+    case object SetNew      extends Update
+  }
+
+  sealed trait UpdateByScore { self =>
+    private[redis] final def asString: String =
+      self match {
+        case UpdateByScore.SetLessThan    => "LT"
+        case UpdateByScore.SetGreaterThan => "GT"
+      }
+  }
+
+  object UpdateByScore {
+    case object SetLessThan    extends UpdateByScore
+    case object SetGreaterThan extends UpdateByScore
   }
 
 }
