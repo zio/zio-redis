@@ -215,27 +215,27 @@ object Input {
   final case class GetExInput[K: BinaryCodec]() extends Input[(K, GetExpire)] {
     def encode(data: (K, GetExpire)): RespCommand =
       data match {
-        case (key, GetExpire.Milliseconds(milliseconds))         =>
+        case (key, GetExpire.GetExpireMilliseconds(milliseconds))         =>
           RespCommand(
             RespCommandArgument.Key(key),
             RespCommandArgument.Literal("PX"),
             RespCommandArgument.Value(milliseconds.toString)
           )
-        case (key, GetExpire.Persist)                            =>
+        case (key, GetExpire.Persist)                                     =>
           RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PERSIST"))
-        case (key, GetExpire.Seconds(seconds))                   =>
+        case (key, GetExpire.GetExpireSeconds(seconds))                   =>
           RespCommand(
             RespCommandArgument.Key(key),
             RespCommandArgument.Literal("EX"),
             RespCommandArgument.Value(seconds.toString)
           )
-        case (key, GetExpire.UnixTimeMilliseconds(milliseconds)) =>
+        case (key, GetExpire.GetExpireUnixTimeMilliseconds(milliseconds)) =>
           RespCommand(
             RespCommandArgument.Key(key),
             RespCommandArgument.Literal("PXAT"),
             RespCommandArgument.Value(milliseconds.toString)
           )
-        case (key, GetExpire.UnixTimeSeconds(seconds))           =>
+        case (key, GetExpire.GetExpireUnixTimeSeconds(seconds))           =>
           RespCommand(
             RespCommandArgument.Key(key),
             RespCommandArgument.Literal("EXAT"),
@@ -419,15 +419,15 @@ object Input {
   case object SetExpireInput extends Input[SetExpire] {
     def encode(data: SetExpire): RespCommand =
       data match {
-        case SetExpire.KeepTtl                            =>
+        case SetExpire.KeepTtl                                     =>
           RespCommand(RespCommandArgument.Literal("KEEPTTL"))
-        case SetExpire.Milliseconds(milliseconds)         =>
+        case SetExpire.SetExpireMilliseconds(milliseconds)         =>
           RespCommand(RespCommandArgument.Literal("PX"), RespCommandArgument.Value(milliseconds.toString))
-        case SetExpire.Seconds(seconds)                   =>
+        case SetExpire.SetExpireSeconds(seconds)                   =>
           RespCommand(RespCommandArgument.Literal("EX"), RespCommandArgument.Value(seconds.toString))
-        case SetExpire.UnixTimeMilliseconds(milliseconds) =>
+        case SetExpire.SetExpireUnixTimeMilliseconds(milliseconds) =>
           RespCommand(RespCommandArgument.Literal("PXAT"), RespCommandArgument.Value(milliseconds.toString))
-        case SetExpire.UnixTimeSeconds(seconds)           =>
+        case SetExpire.SetExpireUnixTimeSeconds(seconds)           =>
           RespCommand(RespCommandArgument.Literal("EXAT"), RespCommandArgument.Value(seconds.toString))
       }
   }
