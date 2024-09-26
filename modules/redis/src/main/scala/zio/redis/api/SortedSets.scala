@@ -117,7 +117,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @param memberScore
    *   Score that should be added to specific element for a given sorted set key
    * @param memberScores
-   *   Rest scores that should be added to specific elements fr a given sorted set key
+   *   Rest scores that should be added to specific elements for a given sorted set key
    * @return
    *   The number of elements added to the sorted set, not including elements already existing for which the score was
    *   updated.
@@ -769,7 +769,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @param members
    *   Rest members to be removed
    * @return
-   *   The number of members removed from the sorted set, not including non existing members.
+   *   The number of members removed from the sorted set, not including non-existing members.
    */
   final def zRem[K: Schema, M: Schema](key: K, member: M, members: M*): G[Long] = {
     val command =
