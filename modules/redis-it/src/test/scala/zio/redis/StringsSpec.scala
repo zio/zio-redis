@@ -1425,56 +1425,6 @@ trait StringsSpec extends IntegrationSpec {
           } yield assert(set)(isFalse)
         }
       ) @@ clusterExecutorUnsupported,
-      suite("pSetEx")(
-        test("new value with 1000 milliseconds") {
-          for {
-            redis        <- ZIO.service[Redis]
-            key          <- uuid
-            value        <- uuid
-            _            <- redis.pSetEx(key, 1000.millis, value)
-            existsBefore <- redis.exists(key)
-            fiber        <- ZIO.sleep(1010.millis).fork <* TestClock.adjust(1010.millis)
-            _            <- fiber.join
-            existsAfter  <- redis.exists(key)
-          } yield assert(existsBefore)(equalTo(1L)) && assert(existsAfter)(equalTo(0L))
-        } @@ flaky,
-        test("override existing string") {
-          for {
-            redis      <- ZIO.service[Redis]
-            key        <- uuid
-            value      <- uuid
-            _          <- redis.set(key, "value")
-            _          <- redis.pSetEx(key, 1000.millis, value)
-            currentVal <- redis.get(key).returning[String]
-          } yield assert(currentVal)(isSome(equalTo(value)))
-        },
-        test("override not string") {
-          for {
-            redis      <- ZIO.service[Redis]
-            key        <- uuid
-            value      <- uuid
-            _          <- redis.sAdd(key, "a")
-            _          <- redis.pSetEx(key, 1000.millis, value)
-            currentVal <- redis.get(key).returning[String]
-          } yield assert(currentVal)(isSome(equalTo(value)))
-        },
-        test("error when 0 milliseconds") {
-          for {
-            redis  <- ZIO.service[Redis]
-            key    <- uuid
-            value  <- uuid
-            result <- redis.pSetEx(key, 0.millis, value).either
-          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
-        },
-        test("error when negative milliseconds") {
-          for {
-            redis  <- ZIO.service[Redis]
-            key    <- uuid
-            value  <- uuid
-            result <- redis.pSetEx(key, (-1).millis, value).either
-          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
-        }
-      ),
       suite("set")(
         test("new value") {
           for {

@@ -244,7 +244,7 @@ trait KeysSpec extends IntegrationSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
-            _     <- redis.pSetEx(key, 1000.millis, value)
+            _     <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(1000)))
             ttl   <- redis.ttl(key).either
           } yield assert(ttl)(isRight)
         } @@ flaky,
@@ -260,7 +260,7 @@ trait KeysSpec extends IntegrationSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
-            _     <- redis.pSetEx(key, 1000.millis, value)
+            _     <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(1000)))
             pTtl  <- redis.pTtl(key).either
           } yield assert(pTtl)(isRight)
         } @@ flaky,

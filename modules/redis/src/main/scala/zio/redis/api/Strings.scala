@@ -388,30 +388,6 @@ trait Strings[G[+_]] extends RedisEnvironment[G] {
   }
 
   /**
-   * Set the value and expiration in milliseconds of a key.
-   *
-   * @param key
-   *   Key of the string to set the expiry time on
-   * @param milliseconds
-   *   Time in milliseconds until the string should expire
-   * @param value
-   *   Value to set
-   */
-  final def pSetEx[K: Schema, V: Schema](
-    key: K,
-    milliseconds: Duration,
-    value: V
-  ): G[Unit] = {
-    val command =
-      RedisCommand(
-        PSetEx,
-        Tuple3(ArbitraryKeyInput[K](), DurationMillisecondsInput, ArbitraryValueInput[V]()),
-        UnitOutput
-      )
-    command.run((key, milliseconds, value))
-  }
-
-  /**
    * Set the string value of a key.
    *
    * @param key
@@ -545,7 +521,6 @@ private[redis] object Strings {
   final val MGet        = "MGET"
   final val MSet        = "MSET"
   final val MSetNx      = "MSETNX"
-  final val PSetEx      = "PSETEX"
   final val Set         = "SET"
   final val SetBit      = "SETBIT"
   final val SetRange    = "SETRANGE"
