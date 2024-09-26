@@ -215,22 +215,32 @@ object Input {
   final case class GetExInput[K: BinaryCodec]() extends Input[(K, GetExpire)] {
     def encode(data: (K, GetExpire)): RespCommand =
       data match {
-        case (key, GetExpire.GetExpireSeconds(duration))             =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EX")) ++ DurationSecondsInput.encode(
-            duration
+        case (key, GetExpire.Milliseconds(milliseconds))         =>
+          RespCommand(
+            RespCommandArgument.Key(key),
+            RespCommandArgument.Literal("PX"),
+            RespCommandArgument.Value(milliseconds.toString)
           )
-        case (key, GetExpire.GetExpireMilliseconds(duration))        =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PX")) ++ DurationMillisecondsInput
-            .encode(duration)
-        case (key, GetExpire.GetExpireUnixTimeMilliseconds(instant)) =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PXAT")) ++ TimeMillisecondsInput
-            .encode(instant)
-        case (key, GetExpire.GetExpireUnixTimeSeconds(instant))      =>
-          RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("EXAT")) ++ TimeSecondsInput.encode(
-            instant
-          )
-        case (key, GetExpire.Persist)                                =>
+        case (key, GetExpire.Persist)                            =>
           RespCommand(RespCommandArgument.Key(key), RespCommandArgument.Literal("PERSIST"))
+        case (key, GetExpire.Seconds(seconds))                   =>
+          RespCommand(
+            RespCommandArgument.Key(key),
+            RespCommandArgument.Literal("EX"),
+            RespCommandArgument.Value(seconds.toString)
+          )
+        case (key, GetExpire.UnixTimeMilliseconds(milliseconds)) =>
+          RespCommand(
+            RespCommandArgument.Key(key),
+            RespCommandArgument.Literal("PXAT"),
+            RespCommandArgument.Value(milliseconds.toString)
+          )
+        case (key, GetExpire.UnixTimeSeconds(seconds))           =>
+          RespCommand(
+            RespCommandArgument.Key(key),
+            RespCommandArgument.Literal("EXAT"),
+            RespCommandArgument.Value(seconds.toString)
+          )
       }
   }
 
@@ -409,16 +419,16 @@ object Input {
   case object SetExpireInput extends Input[SetExpire] {
     def encode(data: SetExpire): RespCommand =
       data match {
-        case SetExpire.KeepTtl                                =>
+        case SetExpire.KeepTtl                            =>
           RespCommand(RespCommandArgument.Literal("KEEPTTL"))
-        case SetExpire.SetExpireSeconds(duration)             =>
-          RespCommand(RespCommandArgument.Literal("EX")) ++ DurationSecondsInput.encode(duration)
-        case SetExpire.SetExpireMilliseconds(duration)        =>
-          RespCommand(RespCommandArgument.Literal("PX")) ++ DurationMillisecondsInput.encode(duration)
-        case SetExpire.SetExpireUnixTimeMilliseconds(instant) =>
-          RespCommand(RespCommandArgument.Literal("PXAT")) ++ TimeMillisecondsInput.encode(instant)
-        case SetExpire.SetExpireUnixTimeSeconds(instant)      =>
-          RespCommand(RespCommandArgument.Literal("EXAT")) ++ TimeSecondsInput.encode(instant)
+        case SetExpire.Milliseconds(milliseconds)         =>
+          RespCommand(RespCommandArgument.Literal("PX"), RespCommandArgument.Value(milliseconds.toString))
+        case SetExpire.Seconds(seconds)                   =>
+          RespCommand(RespCommandArgument.Literal("EX"), RespCommandArgument.Value(seconds.toString))
+        case SetExpire.UnixTimeMilliseconds(milliseconds) =>
+          RespCommand(RespCommandArgument.Literal("PXAT"), RespCommandArgument.Value(milliseconds.toString))
+        case SetExpire.UnixTimeSeconds(seconds)           =>
+          RespCommand(RespCommandArgument.Literal("EXAT"), RespCommandArgument.Value(seconds.toString))
       }
   }
 

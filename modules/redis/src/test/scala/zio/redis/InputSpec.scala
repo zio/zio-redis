@@ -1300,28 +1300,30 @@ object InputSpec extends BaseSpec {
         test("GetExInput - valid value") {
           for {
             resultSeconds              <-
-              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.GetExpireSeconds(1.second))))
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Seconds(1))))
             resultMilliseconds         <-
-              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.GetExpireMilliseconds(100.millis))))
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Milliseconds(100))))
             resultUnixTimeSeconds      <-
               ZIO.attempt(
                 GetExInput[String]().encode(
-                  scala.Tuple2("key", GetExpire.GetExpireUnixTimeSeconds(Instant.parse("2021-04-06T00:00:00Z")))
+                  scala.Tuple2("key", GetExpire.UnixTimeSeconds(Instant.parse("2021-04-06T00:00:00Z").getEpochSecond))
                 )
               )
             resultUnixTimeMilliseconds <-
               ZIO.attempt(
                 GetExInput[String]().encode(
-                  scala.Tuple2("key", GetExpire.GetExpireUnixTimeMilliseconds(Instant.parse("2021-04-06T00:00:00Z")))
+                  scala
+                    .Tuple2("key", GetExpire.UnixTimeMilliseconds(Instant.parse("2021-04-06T00:00:00Z").toEpochMilli))
                 )
               )
             resultPersist              <- ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Persist)))
-          } yield assert(resultSeconds)(equalTo(RespCommand(Key("key"), Literal("EX"), Value("1")))) &&
-            assert(resultMilliseconds)(equalTo(RespCommand(Key("key"), Literal("PX"), Value("100")))) &&
-            assert(resultUnixTimeSeconds)(equalTo(RespCommand(Key("key"), Literal("EXAT"), Value("1617667200")))) &&
-            assert(resultUnixTimeMilliseconds)(
-              equalTo(RespCommand(Key("key"), Literal("PXAT"), Value("1617667200000")))
-            ) && assert(resultPersist)(equalTo(RespCommand(Key("key"), Literal("PERSIST"))))
+          } yield assertTrue(
+            resultSeconds == RespCommand(Key("key"), Literal("EX"), Value("1")),
+            resultMilliseconds == RespCommand(Key("key"), Literal("PX"), Value("100")),
+            resultUnixTimeSeconds == RespCommand(Key("key"), Literal("EXAT"), Value("1617667200")),
+            resultUnixTimeMilliseconds == RespCommand(Key("key"), Literal("PXAT"), Value("1617667200000")),
+            resultPersist == RespCommand(Key("key"), Literal("PERSIST"))
+          )
         }
       )
     )
