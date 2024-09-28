@@ -16,8 +16,6 @@
 
 package zio.redis.options
 
-import java.time.Instant
-
 trait Strings {
 
   sealed trait Lcs
@@ -98,21 +96,21 @@ trait Strings {
   sealed trait SetExpire
 
   object SetExpire {
-    case object KeepTtl                                                extends SetExpire
-    final case class SetExpireMilliseconds(milliseconds: Long)         extends SetExpire
-    final case class SetExpireSeconds(seconds: Long)                   extends SetExpire
-    final case class SetExpireUnixTimeMilliseconds(milliseconds: Long) extends SetExpire
-    final case class SetExpireUnixTimeSeconds(seconds: Instant)        extends SetExpire
+    case object KeepTtl                                       extends SetExpire
+    final case class Milliseconds(milliseconds: Long)         extends SetExpire
+    final case class Seconds(seconds: Long)                   extends SetExpire
+    final case class UnixTimeMilliseconds(milliseconds: Long) extends SetExpire
+    final case class UnixTimeSeconds(seconds: Long)           extends SetExpire
   }
 
   sealed trait GetExpire
 
   object GetExpire {
-    final case class GetExpireMilliseconds(milliseconds: Long)         extends GetExpire
-    final case class GetExpireSeconds(seconds: Long)                   extends GetExpire
-    final case class GetExpireUnixTimeMilliseconds(milliseconds: Long) extends GetExpire
-    final case class GetExpireUnixTimeSeconds(seconds: Long)           extends GetExpire
-    case object Persist                                                extends GetExpire
+    final case class Milliseconds(milliseconds: Long)         extends GetExpire
+    case object Persist                                       extends GetExpire
+    final case class Seconds(seconds: Long)                   extends GetExpire
+    final case class UnixTimeMilliseconds(milliseconds: Long) extends GetExpire
+    final case class UnixTimeSeconds(seconds: Long)           extends GetExpire
   }
 
   case object GetKeyword {
