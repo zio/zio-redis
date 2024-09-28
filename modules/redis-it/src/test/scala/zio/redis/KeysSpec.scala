@@ -3,7 +3,7 @@ package zio.redis
 import com.dimafeng.testcontainers.DockerComposeContainer
 import zio._
 import zio.redis.RedisError.ProtocolError
-import zio.redis.options.NonNegativeLong
+import zio.redis.options.PositiveLong
 import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.{restore => _, _}
 import zio.test._
@@ -245,7 +245,7 @@ trait KeysSpec extends IntegrationSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
-            _     <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(NonNegativeLong(1000))))
+            _     <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(PositiveLong(1000))))
             ttl   <- redis.ttl(key).either
           } yield assert(ttl)(isRight)
         } @@ flaky,
@@ -261,7 +261,7 @@ trait KeysSpec extends IntegrationSpec {
             redis <- ZIO.service[Redis]
             key   <- uuid
             value <- uuid
-            _     <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(NonNegativeLong(1000))))
+            _     <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(PositiveLong(1000))))
             pTtl  <- redis.pTtl(key).either
           } yield assert(pTtl)(isRight)
         } @@ flaky,

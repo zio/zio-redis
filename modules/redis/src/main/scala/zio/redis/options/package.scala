@@ -4,9 +4,9 @@ import zio.prelude.Assertion.greaterThanOrEqualTo
 import zio.prelude.Newtype
 
 package object options {
-  object NonNegativeLong extends Newtype[Long] {
-    override def assertion = assert(greaterThanOrEqualTo(0L)) // scalafix:ok
+  object PositiveLong extends Newtype[Long] {
+    override def assertion = assert(greaterThanOrEqualTo(1L)) // scalafix:ok
   }
 
-  type NonNegativeLong = NonNegativeLong.Type
+  type PositiveLong = PositiveLong.Type
 }
