@@ -21,20 +21,20 @@ trait Strings {
   sealed trait Lcs
 
   object Lcs {
-    case class PlainLcs(lcs: String)                       extends Lcs
-    case class Length(length: Long)                        extends Lcs
-    case class Matches(matches: List[Match], length: Long) extends Lcs
+    final case class PlainLcs(lcs: String)                       extends Lcs
+    final case class Length(length: Long)                        extends Lcs
+    final case class Matches(matches: List[Match], length: Long) extends Lcs
   }
 
   sealed trait LcsQueryType
 
   object LcsQueryType {
-    case object Len                                                           extends LcsQueryType
-    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends LcsQueryType
+    case object Len                                                                 extends LcsQueryType
+    final case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends LcsQueryType
   }
 
-  case class MatchIdx(start: Long, end: Long)
-  case class Match(matchIdxA: MatchIdx, matchIdxB: MatchIdx, matchLength: Option[Long] = None)
+  final case class MatchIdx(start: Long, end: Long)
+  final case class Match(matchIdxA: MatchIdx, matchIdxB: MatchIdx, matchLength: Option[Long] = None)
 
   sealed trait BitFieldCommand
 
@@ -106,8 +106,8 @@ trait Strings {
   sealed trait GetExpire
 
   object GetExpire {
-    final case class Milliseconds(milliseconds: Long)         extends GetExpire
     case object Persist                                       extends GetExpire
+    final case class Milliseconds(milliseconds: Long)         extends GetExpire
     final case class Seconds(seconds: Long)                   extends GetExpire
     final case class UnixTimeMilliseconds(milliseconds: Long) extends GetExpire
     final case class UnixTimeSeconds(seconds: Long)           extends GetExpire
