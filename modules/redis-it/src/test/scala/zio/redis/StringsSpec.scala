@@ -1,7 +1,9 @@
 package zio.redis
 
 import zio._
+import zio.prelude.Newtype.unsafeWrap
 import zio.redis.RedisError.{ProtocolError, WrongType}
+import zio.redis.options.NonNegativeLong
 import zio.test.Assertion.{exists => _, _}
 import zio.test.TestAspect.flaky
 import zio.test._
@@ -1457,7 +1459,7 @@ trait StringsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             value  <- uuid
-            result <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(1)))
+            result <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(NonNegativeLong(1))))
           } yield assert(result)(isTrue)
         },
         test("new value with ttl 100 milliseconds") {
@@ -1465,16 +1467,8 @@ trait StringsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             value  <- uuid
-            result <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(100)))
+            result <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(NonNegativeLong(100))))
           } yield assert(result)(isTrue)
-        },
-        test("error when negative ttl") {
-          for {
-            redis  <- ZIO.service[Redis]
-            key    <- uuid
-            value  <- uuid
-            result <- redis.set(key, value, expireAt = Some(SetExpire.Milliseconds(-1))).either
-          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("new value with SetNew parameter") {
           for {
@@ -1533,7 +1527,7 @@ trait StringsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             value  <- uuid
-            _      <- redis.set(key, "value", expireAt = Some(SetExpire.Seconds(1)))
+            _      <- redis.set(key, "value", expireAt = Some(SetExpire.Seconds(NonNegativeLong(1))))
             result <- redis.set(key, value, expireAt = Some(SetExpire.KeepTtl))
           } yield assert(result)(isTrue)
         }
@@ -1585,7 +1579,7 @@ trait StringsSpec extends IntegrationSpec {
             redis        <- ZIO.service[Redis]
             key          <- uuid
             value        <- uuid
-            _            <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(1)))
+            _            <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(NonNegativeLong(1))))
             existsBefore <- redis.exists(key)
             fiber        <- ZIO.sleep(1010.millis).fork <* TestClock.adjust(1010.millis)
             _            <- fiber.join
@@ -1598,7 +1592,7 @@ trait StringsSpec extends IntegrationSpec {
             key          <- uuid
             value        <- uuid
             _            <- redis.set(key, "value")
-            _            <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(1)))
+            _            <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(NonNegativeLong(1))))
             existsBefore <- redis.exists(key)
             fiber        <- ZIO.sleep(1010.millis).fork <* TestClock.adjust(1010.millis)
             _            <- fiber.join
@@ -1611,7 +1605,7 @@ trait StringsSpec extends IntegrationSpec {
             key          <- uuid
             value        <- uuid
             _            <- redis.sAdd(key, "a")
-            _            <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(1)))
+            _            <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(NonNegativeLong(1))))
             existsBefore <- redis.exists(key)
             fiber        <- ZIO.sleep(1010.millis).fork <* TestClock.adjust(1010.millis)
             _            <- fiber.join
@@ -1623,15 +1617,7 @@ trait StringsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             value  <- uuid
-            result <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(0))).either
-          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
-        },
-        test("error when negative ttl") {
-          for {
-            redis  <- ZIO.service[Redis]
-            key    <- uuid
-            value  <- uuid
-            result <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(-1))).either
+            result <- redis.set(key, value, expireAt = Some(SetExpire.Seconds(NonNegativeLong(1)))).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ),
@@ -1735,7 +1721,7 @@ trait StringsSpec extends IntegrationSpec {
             key    <- uuid
             value  <- uuid
             _      <- redis.set(key, value)
-            exists <- redis.getEx(key, GetExpire.Seconds(1)).returning[String]
+            exists <- redis.getEx(key, GetExpire.Seconds(NonNegativeLong(1))).returning[String]
             fiber  <- ZIO.sleep(1020.millis).fork <* TestClock.adjust(1020.millis)
             _      <- fiber.join
             res    <- redis.get(key).returning[String]
@@ -1747,7 +1733,7 @@ trait StringsSpec extends IntegrationSpec {
             key    <- uuid
             value  <- uuid
             _      <- redis.set(key, value)
-            exists <- redis.getEx(key, GetExpire.Milliseconds(10)).returning[String]
+            exists <- redis.getEx(key, GetExpire.Milliseconds(NonNegativeLong(10))).returning[String]
             fiber  <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
             _      <- fiber.join
             res    <- redis.get(key).returning[String]
@@ -1755,40 +1741,42 @@ trait StringsSpec extends IntegrationSpec {
         } @@ flaky,
         test("not found value when set seconds timestamp") {
           for {
-            redis     <- ZIO.service[Redis]
-            key       <- uuid
-            value     <- uuid
-            _         <- redis.set(key, value)
-            expiresAt <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
-            exists    <- redis.getEx(key, GetExpire.UnixTimeSeconds(expiresAt.getEpochSecond)).returning[String]
-            fiber     <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
-            _         <- fiber.join
-            res       <- redis.get(key).returning[String]
+            redis          <- ZIO.service[Redis]
+            key            <- uuid
+            value          <- uuid
+            _              <- redis.set(key, value)
+            expiresAt      <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
+            expiresAtMillis = unsafeWrap(NonNegativeLong)(expiresAt.toEpochMilli)
+            exists         <- redis.getEx(key, GetExpire.UnixTimeSeconds(expiresAtMillis)).returning[String]
+            fiber          <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
+            _              <- fiber.join
+            res            <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(isSome(equalTo(value)))
         } @@ flaky,
         test("not found value when set milliseconds timestamp") {
           for {
-            redis     <- ZIO.service[Redis]
-            key       <- uuid
-            value     <- uuid
-            _         <- redis.set(key, value)
-            expiresAt <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
-            exists    <-
-              redis.getEx(key, GetExpire.UnixTimeMilliseconds(expiresAt.toEpochMilli)).returning[String]
-            fiber     <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
-            _         <- fiber.join
-            res       <- redis.get(key).returning[String]
+            redis          <- ZIO.service[Redis]
+            key            <- uuid
+            value          <- uuid
+            _              <- redis.set(key, value)
+            expiresAt      <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
+            expiresAtMillis = unsafeWrap(NonNegativeLong)(expiresAt.toEpochMilli)
+            exists         <- redis.getEx(key, GetExpire.UnixTimeMilliseconds(expiresAtMillis)).returning[String]
+            fiber          <- ZIO.sleep(20.millis).fork <* TestClock.adjust(20.millis)
+            _              <- fiber.join
+            res            <- redis.get(key).returning[String]
           } yield assert(res.isDefined)(equalTo(false)) && assert(exists)(isSome(equalTo(value)))
         } @@ flaky,
         test("key not found") {
           for {
-            redis     <- ZIO.service[Redis]
-            key       <- uuid
-            value     <- uuid
-            _         <- redis.set(key, value)
-            expiresAt <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
-            res       <- redis.getEx(value, GetExpire.UnixTimeMilliseconds(expiresAt.toEpochMilli)).returning[String]
-            res2      <- redis.getEx(value, GetExpire.Milliseconds(10)).returning[String]
+            redis          <- ZIO.service[Redis]
+            key            <- uuid
+            value          <- uuid
+            _              <- redis.set(key, value)
+            expiresAt      <- Clock.instant.map(_.plusMillis(10.millis.toMillis))
+            expiresAtMillis = unsafeWrap(NonNegativeLong)(expiresAt.toEpochMilli)
+            res            <- redis.getEx(value, GetExpire.UnixTimeMilliseconds(expiresAtMillis)).returning[String]
+            res2           <- redis.getEx(value, GetExpire.Milliseconds(NonNegativeLong(10))).returning[String]
           } yield assert(res)(isNone) && assert(res2)(isNone)
         } @@ flaky
       ),

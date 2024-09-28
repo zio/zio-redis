@@ -96,21 +96,21 @@ trait Strings {
   sealed trait SetExpire
 
   object SetExpire {
-    case object KeepTtl                                        extends SetExpire
-    sealed case class Milliseconds(milliseconds: Long)         extends SetExpire
-    sealed case class Seconds(seconds: Long)                   extends SetExpire
-    sealed case class UnixTimeMilliseconds(milliseconds: Long) extends SetExpire
-    sealed case class UnixTimeSeconds(seconds: Long)           extends SetExpire
+    case object KeepTtl                                                   extends SetExpire
+    sealed case class Milliseconds(milliseconds: NonNegativeLong)         extends SetExpire
+    sealed case class Seconds(seconds: NonNegativeLong)                   extends SetExpire
+    sealed case class UnixTimeMilliseconds(milliseconds: NonNegativeLong) extends SetExpire
+    sealed case class UnixTimeSeconds(seconds: NonNegativeLong)           extends SetExpire
   }
 
   sealed trait GetExpire
 
   object GetExpire {
-    case object Persist                                        extends GetExpire
-    sealed case class Milliseconds(milliseconds: Long)         extends GetExpire
-    sealed case class Seconds(seconds: Long)                   extends GetExpire
-    sealed case class UnixTimeMilliseconds(milliseconds: Long) extends GetExpire
-    sealed case class UnixTimeSeconds(seconds: Long)           extends GetExpire
+    case object Persist                                                   extends GetExpire
+    sealed case class Milliseconds(milliseconds: NonNegativeLong)         extends GetExpire
+    sealed case class Seconds(seconds: NonNegativeLong)                   extends GetExpire
+    sealed case class UnixTimeMilliseconds(milliseconds: NonNegativeLong) extends GetExpire
+    sealed case class UnixTimeSeconds(seconds: NonNegativeLong)           extends GetExpire
   }
 
   case object GetKeyword {

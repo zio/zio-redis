@@ -1,9 +1,11 @@
 package zio.redis
 
 import zio._
+import zio.prelude.Newtype.unsafeWrap
 import zio.redis.Input._
 import zio.redis.internal.RespCommand
 import zio.redis.internal.RespCommandArgument._
+import zio.redis.options.NonNegativeLong
 import zio.test.Assertion._
 import zio.test._
 
@@ -1300,27 +1302,18 @@ object InputSpec extends BaseSpec {
         test("GetExInput - valid value") {
           for {
             resultSeconds              <-
-              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Seconds(1))))
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Seconds(NonNegativeLong(1)))))
             resultMilliseconds         <-
-              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Milliseconds(100))))
-            resultUnixTimeSeconds      <-
               ZIO.attempt(
-                GetExInput[String]().encode(
-                  scala.Tuple2(
-                    "key",
-                    GetExpire.UnixTimeSeconds(Instant.parse("2021-04-06T00:00:00Z").getEpochSecond)
-                  )
-                )
+                GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Milliseconds(NonNegativeLong(100))))
               )
+            unixTimeSeconds             = unsafeWrap(NonNegativeLong)(Instant.parse("2021-04-06T00:00:00Z").getEpochSecond)
+            resultUnixTimeSeconds      <-
+              ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.UnixTimeSeconds(unixTimeSeconds))))
+            unixTimeMilliseconds        = unsafeWrap(NonNegativeLong)(Instant.parse("2021-04-06T00:00:00Z").toEpochMilli)
             resultUnixTimeMilliseconds <-
               ZIO.attempt(
-                GetExInput[String]().encode(
-                  scala
-                    .Tuple2(
-                      "key",
-                      GetExpire.UnixTimeMilliseconds(Instant.parse("2021-04-06T00:00:00Z").toEpochMilli)
-                    )
-                )
+                GetExInput[String]().encode(scala.Tuple2("key", GetExpire.UnixTimeMilliseconds(unixTimeMilliseconds)))
               )
             resultPersist              <- ZIO.attempt(GetExInput[String]().encode(scala.Tuple2("key", GetExpire.Persist)))
           } yield assertTrue(
