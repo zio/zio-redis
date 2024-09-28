@@ -40,6 +40,7 @@ libraryDependencies ++= Seq(
 ```scala mdoc:compile-only
 import zio._
 import zio.redis._
+import zio.redis.options.NonNegativeLong
 import zio.schema._
 import zio.schema.codec._
 
@@ -52,7 +53,7 @@ object ZIORedisExample extends ZIOAppDefault {
   val myApp: ZIO[Redis, RedisError, Unit] =
     for {
       redis <- ZIO.service[Redis]
-      _     <- redis.set("myKey", 8L, expireAt = Some(SetExpire.Seconds(60)))
+      _     <- redis.set("myKey", 8L, expireAt = Some(SetExpire.Seconds(NonNegativeLong(60))))
       v     <- redis.get("myKey").returning[Long]
       _     <- Console.printLine(s"Value of myKey: $v").orDie
       _     <- redis.hSet("myHash", ("k1", 6), ("k2", 2))
