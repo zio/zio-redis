@@ -21,20 +21,20 @@ trait Strings {
   sealed trait Lcs
 
   object Lcs {
-    case class Length(length: Long)                        extends Lcs
-    case class Matches(matches: List[Match], length: Long) extends Lcs
-    case class PlainLcs(lcs: String)                       extends Lcs
+    sealed case class Length(length: Long)                        extends Lcs
+    sealed case class Matches(matches: List[Match], length: Long) extends Lcs
+    sealed case class PlainLcs(lcs: String)                       extends Lcs
   }
 
   sealed trait LcsQueryType
 
   object LcsQueryType {
-    case object Len                                                                 extends LcsQueryType
-    case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends LcsQueryType
+    case object Len                                                                  extends LcsQueryType
+    sealed case class Idx(minMatchLength: Int = 1, withMatchLength: Boolean = false) extends LcsQueryType
   }
 
-  case class MatchIdx(start: Long, end: Long)
-  case class Match(matchIdxA: MatchIdx, matchIdxB: MatchIdx, matchLength: Option[Long] = None)
+  sealed case class MatchIdx(start: Long, end: Long)
+  sealed case class Match(matchIdxA: MatchIdx, matchIdxB: MatchIdx, matchLength: Option[Long] = None)
 
   sealed trait BitFieldCommand
 
@@ -96,21 +96,21 @@ trait Strings {
   sealed trait SetExpire
 
   object SetExpire {
-    case object KeepTtl                                       extends SetExpire
-    case class Milliseconds(milliseconds: Long)         extends SetExpire
-    case class Seconds(seconds: Long)                   extends SetExpire
-    case class UnixTimeMilliseconds(milliseconds: Long) extends SetExpire
-    case class UnixTimeSeconds(seconds: Long)           extends SetExpire
+    case object KeepTtl                                        extends SetExpire
+    sealed case class Milliseconds(milliseconds: Long)         extends SetExpire
+    sealed case class Seconds(seconds: Long)                   extends SetExpire
+    sealed case class UnixTimeMilliseconds(milliseconds: Long) extends SetExpire
+    sealed case class UnixTimeSeconds(seconds: Long)           extends SetExpire
   }
 
   sealed trait GetExpire
 
   object GetExpire {
-    case object Persist                                       extends GetExpire
-    case class Milliseconds(milliseconds: Long)         extends GetExpire
-    case class Seconds(seconds: Long)                   extends GetExpire
-    case class UnixTimeMilliseconds(milliseconds: Long) extends GetExpire
-    case class UnixTimeSeconds(seconds: Long)           extends GetExpire
+    case object Persist                                        extends GetExpire
+    sealed case class Milliseconds(milliseconds: Long)         extends GetExpire
+    sealed case class Seconds(seconds: Long)                   extends GetExpire
+    sealed case class UnixTimeMilliseconds(milliseconds: Long) extends GetExpire
+    sealed case class UnixTimeSeconds(seconds: Long)           extends GetExpire
   }
 
   case object GetKeyword {
