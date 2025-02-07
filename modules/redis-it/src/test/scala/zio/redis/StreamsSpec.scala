@@ -651,6 +651,22 @@ trait StreamsSpec extends IntegrationSpec {
               redis.xClaim(stream, group, second, 0.millis, time = Some(360000.millis))(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
+        test("with positive time and lastId") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <-
+              redis
+                .xClaim(stream, group, second, 0.millis, time = Some(360000.millis), lastId = Some("0-1"))(id)
+                .returning[String, String]
+          } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
+        },
         test("with negative time") {
           for {
             redis  <- ZIO.service[Redis]
@@ -740,6 +756,21 @@ trait StreamsSpec extends IntegrationSpec {
             id1    <- redis.xAdd(stream, "*")("c" -> "d", "e" -> "f").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaimWithJustId(stream, group, second, 0.millis)(id, id1).returning[String]
+          } yield assert(result)(hasSameElements(Chunk(id, id1)))
+        },
+        test("multiple pending messages with lastId") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            first  <- uuid
+            second <- uuid
+            _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            id1    <- redis.xAdd(stream, "*")("c" -> "d", "e" -> "f").returning[String].some
+            _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
+            result <-
+              redis.xClaimWithJustId(stream, group, second, 0.millis, lastId = Some(id))(id, id1).returning[String]
           } yield assert(result)(hasSameElements(Chunk(id, id1)))
         },
         test("non-existent message") {

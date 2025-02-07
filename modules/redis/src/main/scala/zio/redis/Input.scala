@@ -662,6 +662,13 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  final case class LastIdInput[I: BinaryCodec]() extends Input[LastId[I]] {
+    override private[redis] def encode(data: LastId[I]): RespCommand = {
+      val chunk = Chunk(RespCommandArgument.Literal("LASTID"), RespCommandArgument.Value(data.lastId))
+      RespCommand(chunk)
+    }
+  }
+
   case object WithHashInput extends Input[WithHash] {
     def encode(data: WithHash): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))
