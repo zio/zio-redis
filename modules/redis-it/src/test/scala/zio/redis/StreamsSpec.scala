@@ -7,7 +7,7 @@ import zio.test.TestAspect.{flaky, ignore}
 import zio.test._
 
 trait StreamsSpec extends IntegrationSpec {
-  def streamsSuite: Spec[Redis, RedisError] =
+  def streamsSuite: Spec[Redis, Any] =
     suite("streams")(
       suite("xAck")(
         test("one message") {
@@ -17,7 +17,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xAck(stream, group, id)
           } yield assert(result)(equalTo(1L))
@@ -29,8 +29,8 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            second   <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            first    <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            second   <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xAck(stream, group, first, second)
           } yield assert(result)(equalTo(2L))
@@ -49,7 +49,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xAck(stream, group, id)
           } yield assert(result)(equalTo(0L))
         },
@@ -60,7 +60,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xAck(stream, group, "0-0")
           } yield assert(result)(equalTo(0L))
@@ -92,23 +92,23 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAdd(stream, id, "a" -> "b").returning[String]
-          } yield assert(result)(equalTo(id))
+            result <- redis.xAdd(stream, id)("a" -> "b").returning[String]
+          } yield assert(result)(equalTo(Some(id)))
         },
         test("object with multiple fields") {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAdd(stream, id, "a" -> "b", "c" -> "d").returning[String]
-          } yield assert(result)(equalTo(id))
+            result <- redis.xAdd(stream, id)("a" -> "b", "c" -> "d").returning[String]
+          } yield assert(result)(equalTo(Some(id)))
         },
         test("error when ID should be greater") {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "0-0"
-            result <- redis.xAdd(stream, id, "a" -> "b").returning[String].either
+            result <- redis.xAdd(stream, id)("a" -> "b").returning[String].either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when invalid ID format") {
@@ -116,7 +116,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id     <- uuid
-            result <- redis.xAdd(stream, id, "a" -> "b").returning[String].either
+            result <- redis.xAdd(stream, id)("a" -> "b").returning[String].either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when not stream") {
@@ -125,8 +125,15 @@ trait StreamsSpec extends IntegrationSpec {
             nonStream <- uuid
             id         = "1-0"
             _         <- redis.set(nonStream, "value")
-            result    <- redis.xAdd(nonStream, id, "a" -> "b").returning[String].either
+            result    <- redis.xAdd(nonStream, id)("a" -> "b").returning[String].either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        },
+        test("Null reply with NOMKSTREAM option") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            result <- redis.xAdd(stream, "*", noMakeStream = true)("a" -> "b").returning[String]
+          } yield assert(result)(isNone)
         }
       ),
       suite("xAddWithMaxLen")(
@@ -135,7 +142,15 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAddWithMaxLen(stream, id, 10)("a" -> "b").returning[String]
+            result <- redis.xAddWithMaxLen(stream, id, 10)("a" -> "b").returning[String].some
+          } yield assert(result)(equalTo(id))
+        },
+        test("with positive count and without approximate but with limit") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis.xAddWithMaxLen(stream, id, 10, limit = Some(100L))("a" -> "b").returning[String].some
           } yield assert(result)(equalTo(id))
         },
         test("with positive count and with approximate") {
@@ -143,7 +158,18 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAddWithMaxLen(stream, id, 10, approximate = true)("a" -> "b").returning[String]
+            result <- redis.xAddWithMaxLen(stream, id, 10, approximate = true)("a" -> "b").returning[String].some
+          } yield assert(result)(equalTo(id))
+        },
+        test("with positive count and with approximate and limit") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis
+                        .xAddWithMaxLen(stream, id, 10, approximate = true, limit = Some(100L))("a" -> "b")
+                        .returning[String]
+                        .some
           } yield assert(result)(equalTo(id))
         },
         test("error with negative count and without approximate") {
@@ -161,6 +187,77 @@ trait StreamsSpec extends IntegrationSpec {
             id      = "1-0"
             result <- redis.xAddWithMaxLen(stream, id, -10, approximate = true)("a" -> "b").returning[String].either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        test("Null reply with NOMKSTREAM option") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            result <- redis
+                        .xAddWithMaxLen(stream, "*", 10, approximate = true, noMakeStream = true)("a" -> "b")
+                        .returning[String]
+          } yield assert(result)(isNone)
+        }
+      ),
+      suite("xAddWithMinId")(
+        test("with positive minId and without approximate") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis.xAddWithMinId(stream, id, 10)("a" -> "b").returning[String].some
+          } yield assert(result)(equalTo(id))
+        },
+        test("with positive minId and without approximate but with limit") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis.xAddWithMinId(stream, id, 10, limit = Some(100L))("a" -> "b").returning[String].some
+          } yield assert(result)(equalTo(id))
+        },
+        test("with positive minId and with approximate") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis.xAddWithMinId(stream, id, 10, approximate = true)("a" -> "b").returning[String].some
+          } yield assert(result)(equalTo(id))
+        },
+        test("with positive minId and with approximate and limit") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis
+                        .xAddWithMinId(stream, id, 10, approximate = true, limit = Some(100L))("a" -> "b")
+                        .returning[String]
+                        .some
+          } yield assert(result)(equalTo(id))
+        },
+        test("error with negative minId and without approximate") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis.xAddWithMinId(stream, id, -10)("a" -> "b").returning[String].either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        test("error with negative minId and with approximate") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id      = "1-0"
+            result <- redis.xAddWithMinId(stream, id, -10, approximate = true)("a" -> "b").returning[String].either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        test("Null reply with NOMKSTREAM option") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            result <- redis
+                        .xAddWithMinId(stream, "*", 10, approximate = true, noMakeStream = true)("a" -> "b")
+                        .returning[String]
+          } yield assert(result)(isNone)
         }
       ),
       suite("xAutoClaim")(
@@ -172,7 +269,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaim(stream, group, second, 0.millis)(id).returning[String, String, String]
           } yield assertTrue(result.streamId == "0-0", result.entries == Chunk(StreamEntry(id, Map("a" -> "b"))))
@@ -185,8 +282,8 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            id1    <- redis.xAdd(stream, "*", "c" -> "d", "e" -> "f").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            id1    <- redis.xAdd(stream, "*")("c" -> "d", "e" -> "f").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaim(stream, group, second, 0.millis)(id).returning[String, String, String]
           } yield assert(result.entries)(
@@ -210,7 +307,7 @@ trait StreamsSpec extends IntegrationSpec {
             group  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xAutoClaim(stream, group, second, 0.millis)(id).returning[String, String, String]
           } yield assertTrue(result.streamId == "0-0", result.entries.isEmpty, result.deletedIds.isEmpty)
         },
@@ -232,7 +329,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaim(stream, group, second, 360000.millis)(id).returning[String, String, String]
           } yield assertTrue(result.streamId == "0-0", result.entries.isEmpty, result.deletedIds.isEmpty)
@@ -245,7 +342,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaim(stream, group, second, (-360000).millis)(id).returning[String, String, String]
           } yield assertTrue(result.streamId == "0-0", result.deletedIds.isEmpty) && assert(result.entries)(
@@ -262,7 +359,7 @@ trait StreamsSpec extends IntegrationSpec {
             randomChars <- ZIO.loop(0)(_ < 100, _ + 1)(_ => zio.Random.nextPrintableChar)
             entries      = randomChars.map(_.toString).map(char => char -> char)
             _           <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id          <- redis.xAdd(stream, "*", "a" -> "a", entries: _*).returning[String]
+            id          <- redis.xAdd(stream, "*")("a" -> "a", entries: _*).returning[String].some
             _           <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result      <- redis
                              .xAutoClaim(stream, group, second, 0.millis, count = Some(Count(1L)))(id)
@@ -277,7 +374,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "a").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "a").returning[String]
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis
                         .xAutoClaim(stream, group, second, 0.millis, count = Some(Count(-1L)))(id)
@@ -306,7 +403,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
           } yield assertTrue(result.streamId == "0-0") && assert(result.claimedIds)(hasSameElements(List(id)))
@@ -319,8 +416,8 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            id1    <- redis.xAdd(stream, "*", "c" -> "d", "e" -> "f").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            id1    <- redis.xAdd(stream, "*")("c" -> "d", "e" -> "f").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
           } yield assertTrue(result.streamId == "0-0") && assert(result.claimedIds)(hasSameElements(List(id, id1)))
@@ -342,7 +439,7 @@ trait StreamsSpec extends IntegrationSpec {
             group  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xAutoClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
           } yield assertTrue(result.streamId == "0-0", result.claimedIds.isEmpty, result.deletedIds.isEmpty)
         },
@@ -363,7 +460,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaimWithJustId(stream, group, second, 360000.millis)(id).returning[String]
           } yield assertTrue(result.streamId == "0-0", result.claimedIds.isEmpty, result.deletedIds.isEmpty)
@@ -376,7 +473,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xAutoClaimWithJustId(stream, group, second, (-360000).millis)(id).returning[String]
           } yield assert(result.claimedIds)(hasSameElements(Chunk.single(id)))
@@ -391,7 +488,7 @@ trait StreamsSpec extends IntegrationSpec {
             randomChars <- ZIO.loop(0)(_ < 100, _ + 1)(_ => zio.Random.nextPrintableChar)
             entries      = randomChars.map(_.toString).map(char => char -> char)
             _           <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id          <- redis.xAdd(stream, "*", "a" -> "a", entries: _*).returning[String]
+            id          <- redis.xAdd(stream, "*")("a" -> "a", entries: _*).returning[String].some
             _           <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result      <-
               redis.xAutoClaimWithJustId(stream, group, second, 0.millis, count = Some(Count(1L)))(id).returning[String]
@@ -405,7 +502,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "a").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "a").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis
                         .xAutoClaimWithJustId(stream, group, second, 0.millis, count = Some(Count(-1L)))(id)
@@ -436,7 +533,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, 0.millis)(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
@@ -449,8 +546,8 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            id1    <- redis.xAdd(stream, "*", "c" -> "d", "e" -> "f").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            id1    <- redis.xAdd(stream, "*")("c" -> "d", "e" -> "f").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, 0.millis)(id, id1).returning[String, String]
           } yield assert(result)(
@@ -474,7 +571,7 @@ trait StreamsSpec extends IntegrationSpec {
             group  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xClaim(stream, group, second, 0.millis)(id).returning[String, String]
           } yield assert(result)(isEmpty)
         },
@@ -495,7 +592,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, 360000.millis)(id).returning[String, String]
           } yield assert(result)(isEmpty)
@@ -508,7 +605,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, (-360000).millis)(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
@@ -521,7 +618,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, 0.millis, Some(360000.millis))(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
@@ -534,7 +631,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <-
               redis.xClaim(stream, group, second, 0.millis, Some((-360000).millis))(id).returning[String, String]
@@ -548,7 +645,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <-
               redis.xClaim(stream, group, second, 0.millis, time = Some(360000.millis))(id).returning[String, String]
@@ -562,7 +659,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <-
               redis.xClaim(stream, group, second, 0.millis, time = Some((-360000).millis))(id).returning[String, String]
@@ -576,7 +673,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, 0.millis, retryCount = Some(3))(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
@@ -589,7 +686,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaim(stream, group, second, 0.millis, retryCount = Some(-3))(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
@@ -601,7 +698,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xClaim(stream, group, consumer, 0.millis, force = true)(id).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
@@ -626,7 +723,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
           } yield assert(result)(hasSameElements(Chunk.single(id)))
@@ -639,8 +736,8 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            id1    <- redis.xAdd(stream, "*", "c" -> "d", "e" -> "f").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            id1    <- redis.xAdd(stream, "*")("c" -> "d", "e" -> "f").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaimWithJustId(stream, group, second, 0.millis)(id, id1).returning[String]
           } yield assert(result)(hasSameElements(Chunk(id, id1)))
@@ -662,7 +759,7 @@ trait StreamsSpec extends IntegrationSpec {
             group  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xClaimWithJustId(stream, group, second, 0.millis)(id).returning[String]
           } yield assert(result)(isEmpty)
         },
@@ -683,7 +780,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaimWithJustId(stream, group, second, 360000.millis)(id).returning[String]
           } yield assert(result)(isEmpty)
@@ -696,7 +793,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaimWithJustId(stream, group, second, (-360000).millis)(id).returning[String]
           } yield assert(result)(hasSameElements(Chunk.single(id)))
@@ -709,7 +806,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis.xClaimWithJustId(stream, group, second, 0.millis, Some(360000.millis))(id).returning[String]
           } yield assert(result)(hasSameElements(Chunk.single(id)))
@@ -722,7 +819,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <-
               redis.xClaimWithJustId(stream, group, second, 0.millis, Some((-360000).millis))(id).returning[String]
@@ -736,7 +833,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis
                         .xClaimWithJustId(stream, group, second, 0.millis, time = Some(360000.millis))(id)
@@ -751,7 +848,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <- redis
                         .xClaimWithJustId(stream, group, second, 0.millis, time = Some((-360000).millis))(id)
@@ -766,7 +863,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <-
               redis.xClaimWithJustId(stream, group, second, 0.millis, retryCount = Some(3))(id).returning[String]
@@ -780,7 +877,7 @@ trait StreamsSpec extends IntegrationSpec {
             first  <- uuid
             second <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
             result <-
               redis.xClaimWithJustId(stream, group, second, 0.millis, retryCount = Some(-3))(id).returning[String]
@@ -793,7 +890,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xClaimWithJustId(stream, group, consumer, 0.millis, force = true)(id).returning[String]
           } yield assert(result)(hasSameElements(Chunk.single(id)))
         },
@@ -816,7 +913,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xDel(stream, id)
           } yield assert(result)(equalTo(1L))
         },
@@ -895,7 +992,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xGroupCreate(stream, group, "$")
             result <- redis.xGroupSetId(stream, group, id).either
           } yield assert(result)(isRight)
@@ -905,7 +1002,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xGroupSetId(stream, group, id).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
@@ -942,7 +1039,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xGroupDestroy(stream, group)
           } yield assert(result)(isFalse)
         },
@@ -1013,7 +1110,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xGroupDelConsumer(stream, group, consumer)
           } yield assert(result)(equalTo(1L))
@@ -1025,8 +1122,8 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xGroupDelConsumer(stream, group, consumer)
           } yield assert(result)(equalTo(2L))
@@ -1046,7 +1143,7 @@ trait StreamsSpec extends IntegrationSpec {
             stream   <- uuid
             group    <- uuid
             consumer <- uuid
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xGroupDelConsumer(stream, group, consumer).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
@@ -1075,7 +1172,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xLen(stream)
           } yield assert(result)(equalTo(1L))
         },
@@ -1105,10 +1202,10 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xPending(stream, group)
-          } yield assert(result)(equalTo(PendingInfo(1L, Some(id), Some(id), Map(consumer -> 1L))))
+          } yield assert(result)(equalTo(PendingInfo(1L, id, id, Map(consumer -> 1L))))
         },
         test("with multiple consumers and multiple messages") {
           for {
@@ -1118,13 +1215,13 @@ trait StreamsSpec extends IntegrationSpec {
             first    <- uuid
             second   <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            firstMsg <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            firstMsg <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             _        <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
-            lastMsg  <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            lastMsg  <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             _        <- redis.xReadGroup(group, second)(stream -> ">").returning[String, String]
             result   <- redis.xPending(stream, group)
           } yield assert(result)(
-            equalTo(PendingInfo(2L, Some(firstMsg), Some(lastMsg), Map(first -> 1L, second -> 1L)))
+            equalTo(PendingInfo(2L, firstMsg, lastMsg, Map(first -> 1L, second -> 1L)))
           )
         },
         test("with 0ms idle time") {
@@ -1134,7 +1231,7 @@ trait StreamsSpec extends IntegrationSpec {
             group               <- uuid
             consumer            <- uuid
             _                   <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id                  <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id                  <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _                   <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             cons: Option[String] = None
             result              <- redis.xPending(stream, group, "-", "+", 10L, cons, Some(0.millis))
@@ -1150,7 +1247,7 @@ trait StreamsSpec extends IntegrationSpec {
             group               <- uuid
             consumer            <- uuid
             _                   <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            _                   <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _                   <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _                   <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             cons: Option[String] = None
             result              <- redis.xPending(stream, group, "-", "+", 10L, cons, Some(1.minute))
@@ -1161,7 +1258,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xPending(stream, group).either
           } yield assert(result)(isLeft(isSubtype[NoGroup](anything)))
         },
@@ -1181,7 +1278,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             messages <- redis.xPending[String, String, String, String](stream, group, "-", "+", 10L)
             result    = messages.head
@@ -1199,9 +1296,9 @@ trait StreamsSpec extends IntegrationSpec {
             first                      <- uuid
             second                     <- uuid
             _                          <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            firstMsg                   <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            firstMsg                   <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _                          <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
-            secondMsg                  <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            secondMsg                  <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _                          <- redis.xReadGroup(group, second)(stream -> ">").returning[String, String]
             messages                   <- redis.xPending[String, String, String, String](stream, group, "-", "+", 10L)
             (firstResult, secondResult) = (messages(0), messages(1))
@@ -1223,9 +1320,9 @@ trait StreamsSpec extends IntegrationSpec {
             first    <- uuid
             second   <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, first)(stream -> ">").returning[String, String]
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, second)(stream -> ">").returning[String, String]
             messages <- redis.xPending[String, String, String, String](stream, group, "-", "+", 10L, Some(first))
             result    = messages.head
@@ -1249,7 +1346,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xRange(stream, "-", "+").returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
@@ -1257,8 +1354,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            first  <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            first  <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRange(stream, "-", "+", 1L).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(first, Map("a" -> "b")))))
         },
@@ -1266,8 +1363,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRange(stream, "-", "+", -1L).returning[String, String]
           } yield assert(result)(isEmpty)
         },
@@ -1275,8 +1372,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRange(stream, "-", "+", 0L).returning[String, String]
           } yield assert(result)(isEmpty)
         },
@@ -1315,7 +1412,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xRead()(stream -> "0-0").returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
@@ -1331,8 +1428,8 @@ trait StreamsSpec extends IntegrationSpec {
             redis     <- ZIO.service[Redis]
             first     <- uuid
             second    <- uuid
-            firstMsg  <- redis.xAdd(first, "*", "a" -> "b").returning[String]
-            secondMsg <- redis.xAdd(second, "*", "a" -> "b").returning[String]
+            firstMsg  <- redis.xAdd(first, "*")("a" -> "b").returning[String].some
+            secondMsg <- redis.xAdd(second, "*")("a" -> "b").returning[String].some
             result    <- redis.xRead()(first -> "0-0", second -> "0-0").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1347,8 +1444,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRead(Some(1L))(stream -> "0-0").returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
@@ -1356,8 +1453,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis     <- ZIO.service[Redis]
             stream    <- uuid
-            firstMsg  <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            secondMsg <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            firstMsg  <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            secondMsg <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result    <- redis.xRead(Some(0L))(stream -> "0-0").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1374,8 +1471,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis     <- ZIO.service[Redis]
             stream    <- uuid
-            firstMsg  <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            secondMsg <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            firstMsg  <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            secondMsg <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result    <- redis.xRead(Some(-1L))(stream -> "0-0").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1393,7 +1490,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRead(block = Some(1.second))(stream -> "$").returning[String, String]
           } yield assert(result)(isEmpty)
         } @@ ignore,
@@ -1401,7 +1498,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRead(block = Some(0.second))(stream -> "$").returning[String, String]
           } yield assert(result)(isEmpty)
         } @@ ignore,
@@ -1409,7 +1506,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRead(block = Some((-1).second))(stream -> "$").returning[String, String]
           } yield assert(result)(isEmpty)
         } @@ ignore,
@@ -1417,7 +1514,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRead()(stream -> "invalid").returning[String, String].either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
@@ -1438,7 +1535,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(id, Map("a" -> "b")))))))
         },
@@ -1449,8 +1546,8 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            second   <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            first    <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            second   <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1479,8 +1576,8 @@ trait StreamsSpec extends IntegrationSpec {
             consumer  <- uuid
             _         <- redis.xGroupCreate(first, group, "$", mkStream = true)
             _         <- redis.xGroupCreate(second, group, "$", mkStream = true)
-            firstMsg  <- redis.xAdd(first, "*", "a" -> "b").returning[String]
-            secondMsg <- redis.xAdd(second, "*", "a" -> "b").returning[String]
+            firstMsg  <- redis.xAdd(first, "*")("a" -> "b").returning[String].some
+            secondMsg <- redis.xAdd(second, "*")("a" -> "b").returning[String].some
             result    <- redis.xReadGroup(group, consumer)(first -> ">", second -> ">").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1498,8 +1595,8 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            first    <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result   <- redis.xReadGroup(group, consumer, Some(1L))(stream -> ">").returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamChunk(stream, Chunk(StreamEntry(first, Map("a" -> "b")))))))
         },
@@ -1510,8 +1607,8 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            second   <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            first    <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            second   <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xReadGroup(group, consumer, Some(0L))(stream -> ">").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1528,8 +1625,8 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            first    <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            second   <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            first    <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            second   <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result   <- redis.xReadGroup(group, consumer, Some(-1L))(stream -> ">").returning[String, String]
           } yield assert(result)(
             equalTo(
@@ -1585,7 +1682,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xRevRange(stream, "+", "-").returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(id, Map("a" -> "b")))))
         },
@@ -1593,8 +1690,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            second <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            second <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xRevRange(stream, "+", "-", 1L).returning[String, String]
           } yield assert(result)(equalTo(Chunk(StreamEntry(second, Map("a" -> "b")))))
         },
@@ -1602,8 +1699,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRevRange(stream, "+", "-", -1L).returning[String, String]
           } yield assert(result)(isEmpty)
         },
@@ -1611,8 +1708,8 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xRevRange(stream, "+", "-", 0L).returning[String, String]
           } yield assert(result)(isEmpty)
         },
@@ -1658,7 +1755,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String].repeatN(3)
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String].repeatN(3)
             result <- redis.xTrim(stream, 2L)
           } yield assert(result)(equalTo(2L))
         },
@@ -1666,7 +1763,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xTrim(stream, 1000L, approximate = true)
           } yield assert(result)(equalTo(0L))
         },
@@ -1674,7 +1771,7 @@ trait StreamsSpec extends IntegrationSpec {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xTrim(stream, -1000L).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
@@ -1694,7 +1791,7 @@ trait StreamsSpec extends IntegrationSpec {
             stream <- uuid
             group  <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id     <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             result <- redis.xInfoStream(stream).returning[String, String, String]
           } yield assert(result.lastEntry.map(_.id))(isSome(equalTo(id)))
         },
@@ -1721,7 +1818,7 @@ trait StreamsSpec extends IntegrationSpec {
             stream <- uuid
             group  <- uuid
             _      <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            _      <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             result <- redis.xInfoGroups[String](stream)
           } yield assert(result.toList.head.name)(equalTo(group))
         },
@@ -1749,7 +1846,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            _        <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            _        <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xInfoConsumers(stream, group)
           } yield assert(result.toList.head.name)(equalTo(consumer))
@@ -1780,7 +1877,7 @@ trait StreamsSpec extends IntegrationSpec {
             group    <- uuid
             consumer <- uuid
             _        <- redis.xGroupCreate(stream, group, "$", mkStream = true)
-            id       <- redis.xAdd(stream, "*", "a" -> "b").returning[String]
+            id       <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _        <- redis.xReadGroup(group, consumer)(stream -> ">").returning[String, String]
             result   <- redis.xInfoStreamFull(stream).returning[String, String, String]
           } yield assert {

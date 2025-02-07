@@ -418,7 +418,7 @@ trait KeysSpec extends IntegrationSpec {
             key    <- uuid
             field  <- uuid
             value  <- uuid
-            _      <- redis.xAdd(key, "*", (field, value)).returning[String]
+            _      <- redis.xAdd(key, "*")((field, value)).returning[String]
             stream <- redis.typeOf(key)
           } yield assert(stream)(equalTo(RedisType.Stream))
         }

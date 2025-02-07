@@ -47,6 +47,12 @@ trait Streams {
 
   type MkStream = MkStream.type
 
+  case object NoMkStream {
+    private[redis] def asString = "NOMKSTREAM"
+  }
+
+  type NoMkStream = NoMkStream.type
+
   sealed case class PendingInfo(
     total: Long,
     first: Option[String],
@@ -72,6 +78,15 @@ trait Streams {
   type StreamChunks[N, I, K, V] = Chunk[StreamChunk[N, I, K, V]]
 
   sealed case class StreamMaxLen(approximate: Boolean, count: Long)
+
+  sealed trait CapType
+
+  sealed case class MaxLenApprox(count: Long, limit: Option[Long]) extends CapType
+  sealed case class MaxLenExact(count: Long)                       extends CapType
+  sealed case class MinIdApprox(id: Long, limit: Option[Long])     extends CapType
+  sealed case class MinIdExact(id: Long)                           extends CapType
+
+  sealed case class CappedStream(capType: CapType)
 
   sealed case class StreamEntry[I, K, V](id: I, fields: Map[K, V])
 

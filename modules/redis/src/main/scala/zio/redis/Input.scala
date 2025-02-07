@@ -126,7 +126,7 @@ object Input {
 
   case object DbInput extends Input[Long] {
     def encode(db: Long): RespCommand =
-      RespCommand(RespCommandArgument.Literal("DB"), RespCommandArgument.Value(db.toString()))
+      RespCommand(RespCommandArgument.Literal("DB"), RespCommandArgument.Value(db.toString))
   }
 
   case object BoolInput extends Input[Boolean] {
@@ -446,6 +446,49 @@ object Input {
 
       RespCommand(chunk :+ RespCommandArgument.Value(data.count.toString))
     }
+  }
+
+  case object CappedStreamInput extends Input[CappedStream] {
+    private val maxLenLiteral = RespCommandArgument.Literal("MAXLEN")
+    private val minIdLiteral  = RespCommandArgument.Literal("MINID")
+    private val approxLiteral = RespCommandArgument.Literal("~")
+    private val exactLiteral  = RespCommandArgument.Literal("=")
+
+    override def encode(data: CappedStream): RespCommand = {
+      val chunk = data.capType match {
+        case MaxLenApprox(count, Some(limit)) =>
+          Chunk(
+            maxLenLiteral,
+            approxLiteral,
+            RespCommandArgument.Value(count.toString),
+            RespCommandArgument.Literal("LIMIT"),
+            RespCommandArgument.Value(limit.toString)
+          )
+        case MaxLenApprox(count, None)        =>
+          Chunk(maxLenLiteral, approxLiteral, RespCommandArgument.Value(count.toString))
+        case MaxLenExact(count)               =>
+          Chunk(maxLenLiteral, exactLiteral, RespCommandArgument.Value(count.toString))
+        case MinIdApprox(id, Some(limit))     =>
+          Chunk(
+            minIdLiteral,
+            approxLiteral,
+            RespCommandArgument.Value(id.toString),
+            RespCommandArgument.Literal("LIMIT"),
+            RespCommandArgument.Value(limit.toString)
+          )
+        case MinIdApprox(id, None)            =>
+          Chunk(minIdLiteral, approxLiteral, RespCommandArgument.Value(id.toString))
+        case MinIdExact(id)                   =>
+          Chunk(minIdLiteral, exactLiteral, RespCommandArgument.Value(id.toString))
+      }
+
+      RespCommand(chunk)
+    }
+  }
+
+  case object NoMkStreamInput extends Input[NoMkStream] {
+    def encode(data: NoMkStream): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   final case class StreamsInput[K: BinaryCodec, V: BinaryCodec]() extends Input[((K, V), Chunk[(K, V)])] {
