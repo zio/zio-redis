@@ -31,6 +31,8 @@ trait Streams {
 
   type WithJustId = WithJustId.type
 
+  sealed case class LastId[I](lastId: I)
+
   sealed trait XGroupCommand
 
   object XGroupCommand {

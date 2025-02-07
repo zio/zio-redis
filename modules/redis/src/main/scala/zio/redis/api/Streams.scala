@@ -20,8 +20,8 @@ import zio._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder._
-import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
+import zio.redis.{Input, _}
 import zio.schema.Schema
 
 trait Streams[G[+_]] extends RedisEnvironment[G] {
@@ -328,14 +328,15 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     idle: Option[Duration] = None,
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
-    force: Boolean = false
+    force: Boolean = false,
+    lastId: Option[I] = None
   )(id: I, ids: I*): ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda, G] =
     new ResultBuilder2[({ type lambda[x, y] = StreamEntries[I, x, y] })#lambda, G] {
       def returning[RK: Schema, RV: Schema]: G[StreamEntries[I, RK, RV]] = {
         val command =
           RedisCommand(
             XClaim,
-            Tuple9(
+            Tuple10(
               ArbitraryKeyInput[SK](),
               ArbitraryValueInput[SG](),
               ArbitraryValueInput[SC](),
@@ -344,13 +345,16 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
               OptionalInput(IdleInput),
               OptionalInput(TimeInput),
               OptionalInput(RetryCountInput),
-              OptionalInput(WithForceInput)
+              OptionalInput(WithForceInput),
+              Input.OptionalInput(LastIdInput[I]())
             ),
             StreamEntriesOutput[I, RK, RV]()
           )
 
         val forceOpt = if (force) Some(WithForce) else None
-        command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt))
+        command.run(
+          (key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt, lastId.map(LastId(_)))
+        )
       }
     }
 
@@ -389,13 +393,14 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     idle: Option[Duration] = None,
     time: Option[Duration] = None,
     retryCount: Option[Long] = None,
-    force: Boolean = false
+    force: Boolean = false,
+    lastId: Option[I] = None
   )(id: I, ids: I*): ResultBuilder1[Chunk, G] =
     new ResultBuilder1[Chunk, G] {
       def returning[R: Schema]: G[Chunk[R]] = {
         val command  = RedisCommand(
           XClaim,
-          Tuple10(
+          Tuple11(
             ArbitraryKeyInput[SK](),
             ArbitraryValueInput[SG](),
             ArbitraryValueInput[SC](),
@@ -405,12 +410,27 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
             OptionalInput(TimeInput),
             OptionalInput(RetryCountInput),
             OptionalInput(WithForceInput),
-            WithJustIdInput
+            WithJustIdInput,
+            OptionalInput(LastIdInput[I]())
           ),
           ChunkOutput(ArbitraryOutput[R]())
         )
         val forceOpt = if (force) Some(WithForce) else None
-        command.run((key, group, consumer, minIdleTime, (id, ids.toList), idle, time, retryCount, forceOpt, WithJustId))
+        command.run(
+          (
+            key,
+            group,
+            consumer,
+            minIdleTime,
+            (id, ids.toList),
+            idle,
+            time,
+            retryCount,
+            forceOpt,
+            WithJustId,
+            lastId.map(LastId(_))
+          )
+        )
       }
     }
 
