@@ -64,6 +64,8 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *   ID of the stream
    * @param id
    *   ID of the message
+   * @param noMakeStream
+   *   The creation of stream's key can be disabled with the noMakeStream option
    * @param pair
    *   field and value pair
    * @param pairs
@@ -71,25 +73,25 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   ID of the added entry.
    */
-  final def xAdd[SK: Schema, I: Schema, K: Schema, V: Schema](
-    key: SK,
-    id: I,
+  final def xAdd[SK: Schema, I: Schema, K: Schema, V: Schema](key: SK, id: I, noMakeStream: Boolean = false)(
     pair: (K, V),
     pairs: (K, V)*
-  ): ResultBuilder1[Id, G] =
-    new ResultBuilder1[Id, G] {
-      def returning[R: Schema]: G[Id[R]] = {
+  ): ResultBuilder1[Option, G] =
+    new ResultBuilder1[Option, G] {
+      def returning[R: Schema]: G[Option[Id[R]]] = {
         val command = RedisCommand(
           XAdd,
           Tuple4(
             ArbitraryKeyInput[SK](),
-            OptionalInput(StreamMaxLenInput),
+            OptionalInput(NoMkStreamInput),
             ArbitraryValueInput[I](),
             NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
           ),
-          ArbitraryOutput[R]()
+          OptionalOutput(ArbitraryOutput[R]())
         )
-        command.run((key, None, id, (pair, pairs.toList)))
+
+        val noMkStreamOpt = if (noMakeStream) Some(NoMkStream) else None
+        command.run((key, noMkStreamOpt, id, (pair, pairs.toList)))
       }
     }
 
@@ -104,6 +106,10 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *   maximum number of elements in a stream
    * @param approximate
    *   flag that indicates if a stream should be limited to the exact number of elements
+   * @param limit
+   *  limit parameter
+   * @param noMakeStream
+   *  the creation of stream's key can be disabled with the NOMKSTREAM option.
    * @param pair
    *   field and value pair
    * @param pairs
@@ -115,24 +121,88 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     key: SK,
     id: I,
     count: Long,
-    approximate: Boolean = false
+    approximate: Boolean = false,
+    limit: Option[Long] = None,
+    noMakeStream: Boolean = false
   )(
     pair: (K, V),
     pairs: (K, V)*
-  ): ResultBuilder1[Id, G] =
-    new ResultBuilder1[Id, G] {
-      def returning[R: Schema]: G[Id[R]] = {
+  ): ResultBuilder1[Option, G] =
+    new ResultBuilder1[Option, G] {
+      def returning[R: Schema]: G[Option[Id[R]]] = {
         val command = RedisCommand(
           XAdd,
-          Tuple4(
+          Tuple5(
             ArbitraryKeyInput[SK](),
-            OptionalInput(StreamMaxLenInput),
+            OptionalInput(NoMkStreamInput),
+            OptionalInput(CappedStreamInput),
             ArbitraryValueInput[I](),
             NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
           ),
-          ArbitraryOutput[R]()
+          OptionalOutput(ArbitraryOutput[R]())
         )
-        command.run((key, Some(StreamMaxLen(approximate, count)), id, (pair, pairs.toList)))
+
+        val noMkStreamOpt   = if (noMakeStream) Some(NoMkStream) else None
+        val cappedStreamOpt = CappedStream(
+          if (approximate) MaxLenApprox(count, limit) else MaxLenExact(count)
+        )
+
+        command.run((key, noMkStreamOpt, Some(cappedStreamOpt), id, (pair, pairs.toList)))
+      }
+    }
+
+  /**
+   * Appends the specified stream entry to the stream at the specified key while limiting the size of the stream.
+   *
+   * @param key
+   *   ID of the stream
+   * @param id
+   *   ID of the message
+   * @param minId
+   *   Evicts entries with IDs lower than minId, where minId is a stream ID.
+   * @param approximate
+   *   flag that indicates if a stream should be limited to the exact number of elements
+   * @param limit
+   *  limit parameter
+   * @param noMakeStream
+   *  the creation of stream's key can be disabled with the NOMKSTREAM option.
+   * @param pair
+   *   field and value pair
+   * @param pairs
+   *   rest of the field and value pairs
+   * @return
+   *   ID of the added entry.
+   */
+  final def xAddWithMinId[SK: Schema, I: Schema, K: Schema, V: Schema](
+    key: SK,
+    id: I,
+    minId: Long,
+    approximate: Boolean = false,
+    limit: Option[Long] = None,
+    noMakeStream: Boolean = false
+  )(
+    pair: (K, V),
+    pairs: (K, V)*
+  ): ResultBuilder1[Option, G] =
+    new ResultBuilder1[Option, G] {
+      def returning[R: Schema]: G[Option[Id[R]]] = {
+        val command = RedisCommand(
+          XAdd,
+          Tuple5(
+            ArbitraryKeyInput[SK](),
+            OptionalInput(NoMkStreamInput),
+            OptionalInput(CappedStreamInput),
+            ArbitraryValueInput[I](),
+            NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
+          ),
+          OptionalOutput(ArbitraryOutput[R]())
+        )
+
+        val noMkStreamOpt   = if (noMakeStream) Some(NoMkStream) else None
+        val cappedStreamOpt = CappedStream(
+          if (approximate) MinIdApprox(minId, limit) else MinIdExact(minId)
+        )
+        command.run((key, noMkStreamOpt, Some(cappedStreamOpt), id, (pair, pairs.toList)))
       }
     }
 

@@ -1257,6 +1257,46 @@ object InputSpec extends BaseSpec {
             .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Value("10")))))
         }
       ),
+      suite("CappedStreamOption")(
+        test("MaxLen with approx") {
+          ZIO
+            .attempt(CappedStreamInput.encode(CappedStream(MaxLenApprox(10, None))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10")))))
+        },
+        test("MaxLen with approx and Limit") {
+          ZIO
+            .attempt(CappedStreamInput.encode(CappedStream(MaxLenApprox(10, Some(100)))))
+            .map(
+              assert(_)(
+                equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
+              )
+            )
+        },
+        test("MaxLen with exact") {
+          ZIO
+            .attempt(CappedStreamInput.encode(CappedStream(MaxLenExact(10))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("="), Value("10")))))
+        },
+        test("MinId with approx") {
+          ZIO
+            .attempt(CappedStreamInput.encode(CappedStream(MinIdApprox(10, None))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10")))))
+        },
+        test("MinId with approx and Limit") {
+          ZIO
+            .attempt(CappedStreamInput.encode(CappedStream(MinIdApprox(10, Some(100)))))
+            .map(
+              assert(_)(
+                equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
+              )
+            )
+        },
+        test("MinId with exact") {
+          ZIO
+            .attempt(CappedStreamInput.encode(CappedStream(MinIdExact(10))))
+            .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("="), Value("10")))))
+        }
+      ),
       suite("WithForce")(
         test("valid value") {
           ZIO.attempt(WithForceInput.encode(WithForce)).map(assert(_)(equalTo(RespCommand(Literal("FORCE")))))
