@@ -130,24 +130,37 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
   ): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[Id[R]]] = {
-        val command = RedisCommand(
-          XAdd,
-          Tuple5(
-            ArbitraryKeyInput[SK](),
-            OptionalInput(NoMkStreamInput),
-            OptionalInput(CappedStreamInput),
-            ArbitraryValueInput[I](),
-            NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
-          ),
-          OptionalOutput(ArbitraryOutput[R]())
-        )
+        val noMkStreamOpt = if (noMakeStream) Some(NoMkStream) else None
 
-        val noMkStreamOpt   = if (noMakeStream) Some(NoMkStream) else None
-        val cappedStreamOpt = CappedStream(
-          if (approximate) MaxLenApprox(count, limit) else MaxLenExact(count)
-        )
+        if (approximate) {
+          val command = RedisCommand(
+            XAdd,
+            Tuple5(
+              ArbitraryKeyInput[SK](),
+              OptionalInput(NoMkStreamInput),
+              OptionalInput(MaxLenApproxInput),
+              ArbitraryValueInput[I](),
+              NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
+            ),
+            OptionalOutput(ArbitraryOutput[R]())
+          )
 
-        command.run((key, noMkStreamOpt, Some(cappedStreamOpt), id, (pair, pairs.toList)))
+          command.run((key, noMkStreamOpt, Some(CappedStreamType.MaxLenApprox(count, limit)), id, (pair, pairs.toList)))
+        } else {
+          val command = RedisCommand(
+            XAdd,
+            Tuple5(
+              ArbitraryKeyInput[SK](),
+              OptionalInput(NoMkStreamInput),
+              OptionalInput(MaxLenExactInput),
+              ArbitraryValueInput[I](),
+              NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
+            ),
+            OptionalOutput(ArbitraryOutput[R]())
+          )
+
+          command.run((key, noMkStreamOpt, Some(CappedStreamType.MaxLenExact(count)), id, (pair, pairs.toList)))
+        }
       }
     }
 
@@ -176,7 +189,7 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
   final def xAddWithMinId[SK: Schema, I: Schema, K: Schema, V: Schema](
     key: SK,
     id: I,
-    minId: Long,
+    minId: I,
     approximate: Boolean = false,
     limit: Option[Long] = None,
     noMakeStream: Boolean = false
@@ -186,23 +199,37 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
   ): ResultBuilder1[Option, G] =
     new ResultBuilder1[Option, G] {
       def returning[R: Schema]: G[Option[Id[R]]] = {
-        val command = RedisCommand(
-          XAdd,
-          Tuple5(
-            ArbitraryKeyInput[SK](),
-            OptionalInput(NoMkStreamInput),
-            OptionalInput(CappedStreamInput),
-            ArbitraryValueInput[I](),
-            NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
-          ),
-          OptionalOutput(ArbitraryOutput[R]())
-        )
+        val noMkStreamOpt = if (noMakeStream) Some(NoMkStream) else None
 
-        val noMkStreamOpt   = if (noMakeStream) Some(NoMkStream) else None
-        val cappedStreamOpt = CappedStream(
-          if (approximate) MinIdApprox(minId, limit) else MinIdExact(minId)
-        )
-        command.run((key, noMkStreamOpt, Some(cappedStreamOpt), id, (pair, pairs.toList)))
+        if (approximate) {
+          val command = RedisCommand(
+            XAdd,
+            Tuple5(
+              ArbitraryKeyInput[SK](),
+              OptionalInput(NoMkStreamInput),
+              OptionalInput(MinIdApproxInput[I]),
+              ArbitraryValueInput[I](),
+              NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
+            ),
+            OptionalOutput(ArbitraryOutput[R]())
+          )
+
+          command.run((key, noMkStreamOpt, Some(CappedStreamType.MinIdApprox(minId, limit)), id, (pair, pairs.toList)))
+        } else {
+          val command = RedisCommand(
+            XAdd,
+            Tuple5(
+              ArbitraryKeyInput[SK](),
+              OptionalInput(NoMkStreamInput),
+              OptionalInput(MinIdExactInput[I]),
+              ArbitraryValueInput[I](),
+              NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
+            ),
+            OptionalOutput(ArbitraryOutput[R]())
+          )
+
+          command.run((key, noMkStreamOpt, Some(CappedStreamType.MinIdExact(minId)), id, (pair, pairs.toList)))
+        }
       }
     }
 
@@ -956,14 +983,45 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   the number of entries deleted from the stream.
    */
-  final def xTrim[SK: Schema](
+  final def xTrimWithMaxLen[SK: Schema](
     key: SK,
     count: Long,
-    approximate: Boolean = false
-  ): G[Long] = {
-    val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), StreamMaxLenInput), LongOutput)
-    command.run((key, StreamMaxLen(approximate, count)))
-  }
+    approximate: Boolean = false,
+    limit: Option[Long] = None
+  ): G[Long] =
+    if (approximate) {
+      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MaxLenApproxInput), LongOutput)
+      command.run((key, CappedStreamType.MaxLenApprox(count, limit)))
+    } else {
+      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MaxLenExactInput), LongOutput)
+      command.run((key, CappedStreamType.MaxLenExact(count)))
+    }
+
+  /**
+   * Trims the stream to a given number of items, evicting older items (items with lower IDs) if needed.
+   *
+   * @param key
+   *   ID of the stream
+   * @param minId
+   *   minimal stream id
+   * @param approximate
+   *   flag that indicates if the stream length should be exactly count or few tens of entries more
+   * @return
+   *   the number of entries deleted from the stream.
+   */
+  final def xTrimWithMinId[SK: Schema, I: Schema](
+    key: SK,
+    minId: I,
+    approximate: Boolean = false,
+    limit: Option[Long] = None
+  ): G[Long] =
+    if (approximate) {
+      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdApproxInput[I]), LongOutput)
+      command.run((key, CappedStreamType.MinIdApprox(minId, limit)))
+    } else {
+      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdExactInput[I]), LongOutput)
+      command.run((key, CappedStreamType.MinIdExact(minId)))
+    }
 }
 
 private object Streams {

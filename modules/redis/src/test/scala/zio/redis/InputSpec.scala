@@ -14,9 +14,9 @@ object InputSpec extends BaseSpec {
   import BitFieldCommand._
   import BitFieldType._
   import BitOperation._
+  import LcsQueryType._
   import Order._
   import RadiusUnit._
-  import LcsQueryType._
 
   def spec: Spec[Any, Throwable] =
     suite("Input encoders")(
@@ -1245,27 +1245,15 @@ object InputSpec extends BaseSpec {
           ZIO.attempt(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(RespCommand(Value("NOACK")))))
         }
       ),
-      suite("MaxLen")(
-        test("with approximate") {
-          ZIO
-            .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
-            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10")))))
-        },
-        test("without approximate") {
-          ZIO
-            .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
-            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Value("10")))))
-        }
-      ),
       suite("CappedStreamOption")(
         test("MaxLen with approx") {
           ZIO
-            .attempt(CappedStreamInput.encode(CappedStream(MaxLenApprox(10, None))))
+            .attempt(MaxLenApproxInput.encode(CappedStreamType.MaxLenApprox(10, None)))
             .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10")))))
         },
         test("MaxLen with approx and Limit") {
           ZIO
-            .attempt(CappedStreamInput.encode(CappedStream(MaxLenApprox(10, Some(100)))))
+            .attempt(MaxLenApproxInput.encode(CappedStreamType.MaxLenApprox(10, Some(100))))
             .map(
               assert(_)(
                 equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
@@ -1274,17 +1262,17 @@ object InputSpec extends BaseSpec {
         },
         test("MaxLen with exact") {
           ZIO
-            .attempt(CappedStreamInput.encode(CappedStream(MaxLenExact(10))))
+            .attempt(MaxLenExactInput.encode(CappedStreamType.MaxLenExact(10)))
             .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("="), Value("10")))))
         },
         test("MinId with approx") {
           ZIO
-            .attempt(CappedStreamInput.encode(CappedStream(MinIdApprox(10, None))))
+            .attempt(MinIdApproxInput[Long]().encode(CappedStreamType.MinIdApprox(10, None)))
             .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10")))))
         },
         test("MinId with approx and Limit") {
           ZIO
-            .attempt(CappedStreamInput.encode(CappedStream(MinIdApprox(10, Some(100)))))
+            .attempt(MinIdApproxInput[Long]().encode(CappedStreamType.MinIdApprox(10, Some(100))))
             .map(
               assert(_)(
                 equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
@@ -1293,7 +1281,7 @@ object InputSpec extends BaseSpec {
         },
         test("MinId with exact") {
           ZIO
-            .attempt(CappedStreamInput.encode(CappedStream(MinIdExact(10))))
+            .attempt(MinIdExactInput[Long]().encode(CappedStreamType.MinIdExact(10)))
             .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("="), Value("10")))))
         }
       ),
