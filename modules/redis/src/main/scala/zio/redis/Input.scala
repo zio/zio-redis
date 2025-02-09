@@ -717,7 +717,12 @@ object Input {
         RespCommandArgument.Value(data.id)
       )
 
-      RespCommand(if (data.mkStream) chunk :+ RespCommandArgument.Literal(MkStream.asString) else chunk)
+      val mkStreamChunk = if (data.mkStream) Chunk(RespCommandArgument.Literal(MkStream.asString)) else Chunk.empty
+      val entriesReadChunk = data.entriesRead.fold(Chunk.empty[RespCommandArgument])(id =>
+        Chunk(RespCommandArgument.Literal("ENTRIESREAD"), RespCommandArgument.Value(id))
+      )
+
+      RespCommand(chunk ++ mkStreamChunk ++ entriesReadChunk)
     }
   }
 

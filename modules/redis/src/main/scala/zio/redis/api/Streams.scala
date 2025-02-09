@@ -490,16 +490,40 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *   ID of the last item in the stream to consider already delivered
    * @param mkStream
    *   ID of the last item in the stream to consider already delivered
+   * @param entriesRead
+   *   Enable consumer group lag tracking
    */
   final def xGroupCreate[SK: Schema, SG: Schema, I: Schema](
     key: SK,
     group: SG,
     id: I,
-    mkStream: Boolean = false
+    mkStream: Boolean = false,
+    entriesRead: Option[I] = None
   ): G[Unit] = {
     val command = RedisCommand(XGroup, XGroupCreateInput[SK, SG, I](), UnitOutput)
-    command.run(Create(key, group, id, mkStream))
+    command.run(Create(key, group, id, mkStream, entriesRead))
   }
+
+  /**
+   * Create a new consumer group associated with a stream.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @param id
+   *   ID of the last item in the stream to consider already delivered
+   * @param mkStream
+   *   ID of the last item in the stream to consider already delivered
+   * @param entriesRead
+   *   Enable consumer group lag tracking
+   */
+  final def xGroupCreateLastEntry[SK: Schema, SG: Schema](
+    key: SK,
+    group: SG,
+    mkStream: Boolean = false,
+    entriesRead: Option[String] = None
+  ): G[Unit] = xGroupCreate(key, group, "$", mkStream, entriesRead)
 
   /**
    * Create a new consumer associated with a consumer group.
