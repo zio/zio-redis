@@ -79,16 +79,14 @@ trait Streams {
 
   type StreamChunks[N, I, K, V] = Chunk[StreamChunk[N, I, K, V]]
 
-  sealed case class StreamMaxLen(approximate: Boolean, count: Long)
+  sealed trait CappedStreamType
 
-  sealed trait CapType
-
-  sealed case class MaxLenApprox(count: Long, limit: Option[Long]) extends CapType
-  sealed case class MaxLenExact(count: Long)                       extends CapType
-  sealed case class MinIdApprox(id: Long, limit: Option[Long])     extends CapType
-  sealed case class MinIdExact(id: Long)                           extends CapType
-
-  sealed case class CappedStream(capType: CapType)
+  object CappedStreamType {
+    sealed case class MaxLenApprox(count: Long, limit: Option[Long]) extends CappedStreamType
+    sealed case class MaxLenExact(count: Long)                       extends CappedStreamType
+    sealed case class MinIdApprox[I](id: I, limit: Option[Long])     extends CappedStreamType
+    sealed case class MinIdExact[I](id: I)                           extends CappedStreamType
+  }
 
   sealed case class StreamEntry[I, K, V](id: I, fields: Map[K, V])
 

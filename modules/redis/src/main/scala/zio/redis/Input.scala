@@ -438,52 +438,59 @@ object Input {
       RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Value(data.key))
   }
 
-  case object StreamMaxLenInput extends Input[StreamMaxLen] {
-    def encode(data: StreamMaxLen): RespCommand = {
-      val chunk =
-        if (data.approximate) Chunk(RespCommandArgument.Literal("MAXLEN"), RespCommandArgument.Literal("~"))
-        else Chunk.single(RespCommandArgument.Literal("MAXLEN"))
+  sealed trait CappedStreamLiterals {
+    val maxLenLiteral: RespCommandArgument.Literal = RespCommandArgument.Literal("MAXLEN")
+    val minIdLiteral: RespCommandArgument.Literal  = RespCommandArgument.Literal("MINID")
+    val approxLiteral: RespCommandArgument.Literal = RespCommandArgument.Literal("~")
+    val exactLiteral: RespCommandArgument.Literal  = RespCommandArgument.Literal("=")
+    val limitLiteral: RespCommandArgument.Literal  = RespCommandArgument.Literal("LIMIT")
+  }
 
-      RespCommand(chunk :+ RespCommandArgument.Value(data.count.toString))
+  case object MaxLenApproxInput extends Input[CappedStreamType.MaxLenApprox] with CappedStreamLiterals {
+    override private[redis] def encode(data: CappedStreamType.MaxLenApprox): RespCommand = {
+      val maxLenChunk: Chunk[RespCommandArgument] = Chunk(
+        maxLenLiteral,
+        approxLiteral,
+        RespCommandArgument.Value(data.count.toString)
+      )
+
+      val limitChunk = data.limit.fold(Chunk.empty[RespCommandArgument])(limit =>
+        Chunk(limitLiteral, RespCommandArgument.Value(limit.toString))
+      )
+
+      RespCommand(maxLenChunk ++ limitChunk)
     }
   }
 
-  case object CappedStreamInput extends Input[CappedStream] {
-    private val maxLenLiteral = RespCommandArgument.Literal("MAXLEN")
-    private val minIdLiteral  = RespCommandArgument.Literal("MINID")
-    private val approxLiteral = RespCommandArgument.Literal("~")
-    private val exactLiteral  = RespCommandArgument.Literal("=")
+  case object MaxLenExactInput extends Input[CappedStreamType.MaxLenExact] with CappedStreamLiterals {
+    override private[redis] def encode(data: CappedStreamType.MaxLenExact): RespCommand =
+      RespCommand(Chunk(maxLenLiteral, exactLiteral, RespCommandArgument.Value(data.count.toString)))
+  }
 
-    override def encode(data: CappedStream): RespCommand = {
-      val chunk = data.capType match {
-        case MaxLenApprox(count, Some(limit)) =>
-          Chunk(
-            maxLenLiteral,
-            approxLiteral,
-            RespCommandArgument.Value(count.toString),
-            RespCommandArgument.Literal("LIMIT"),
-            RespCommandArgument.Value(limit.toString)
-          )
-        case MaxLenApprox(count, None)        =>
-          Chunk(maxLenLiteral, approxLiteral, RespCommandArgument.Value(count.toString))
-        case MaxLenExact(count)               =>
-          Chunk(maxLenLiteral, exactLiteral, RespCommandArgument.Value(count.toString))
-        case MinIdApprox(id, Some(limit))     =>
-          Chunk(
-            minIdLiteral,
-            approxLiteral,
-            RespCommandArgument.Value(id.toString),
-            RespCommandArgument.Literal("LIMIT"),
-            RespCommandArgument.Value(limit.toString)
-          )
-        case MinIdApprox(id, None)            =>
-          Chunk(minIdLiteral, approxLiteral, RespCommandArgument.Value(id.toString))
-        case MinIdExact(id)                   =>
-          Chunk(minIdLiteral, exactLiteral, RespCommandArgument.Value(id.toString))
-      }
+  final case class MinIdApproxInput[I: BinaryCodec]()
+      extends Input[CappedStreamType.MinIdApprox[I]]
+      with CappedStreamLiterals {
+    override private[redis] def encode(data: CappedStreamType.MinIdApprox[I]): RespCommand = {
+      val minIdChunk =
+        Chunk(
+          minIdLiteral,
+          approxLiteral,
+          RespCommandArgument.Value(data.id)
+        )
 
-      RespCommand(chunk)
+      val limitChunk = data.limit.fold(Chunk.empty[RespCommandArgument])(limit =>
+        Chunk(limitLiteral, RespCommandArgument.Value(limit.toString))
+      )
+
+      RespCommand(minIdChunk ++ limitChunk)
     }
+  }
+
+  final case class MinIdExactInput[I: BinaryCodec]()
+      extends Input[CappedStreamType.MinIdExact[I]]
+      with CappedStreamLiterals {
+    override private[redis] def encode(data: _root_.zio.redis.CappedStreamType.MinIdExact[I]): RespCommand =
+      RespCommand(Chunk(minIdLiteral, exactLiteral, RespCommandArgument.Value(data.id)))
   }
 
   case object NoMkStreamInput extends Input[NoMkStream] {

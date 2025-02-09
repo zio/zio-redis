@@ -204,7 +204,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAddWithMinId(stream, id, 10)("a" -> "b").returning[String].some
+            result <- redis.xAddWithMinId(stream, id, "0-0")("a" -> "b").returning[String].some
           } yield assert(result)(equalTo(id))
         },
         test("with positive minId and without approximate but with limit") {
@@ -212,7 +212,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAddWithMinId(stream, id, 10, limit = Some(100L))("a" -> "b").returning[String].some
+            result <- redis.xAddWithMinId(stream, id, "0-0", limit = Some(100L))("a" -> "b").returning[String].some
           } yield assert(result)(equalTo(id))
         },
         test("with positive minId and with approximate") {
@@ -220,7 +220,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             id      = "1-0"
-            result <- redis.xAddWithMinId(stream, id, 10, approximate = true)("a" -> "b").returning[String].some
+            result <- redis.xAddWithMinId(stream, id, "0-0", approximate = true)("a" -> "b").returning[String].some
           } yield assert(result)(equalTo(id))
         },
         test("with positive minId and with approximate and limit") {
@@ -229,33 +229,17 @@ trait StreamsSpec extends IntegrationSpec {
             stream <- uuid
             id      = "1-0"
             result <- redis
-                        .xAddWithMinId(stream, id, 10, approximate = true, limit = Some(100L))("a" -> "b")
+                        .xAddWithMinId(stream, id, "0-0", approximate = true, limit = Some(100L))("a" -> "b")
                         .returning[String]
                         .some
           } yield assert(result)(equalTo(id))
-        },
-        test("error with negative minId and without approximate") {
-          for {
-            redis  <- ZIO.service[Redis]
-            stream <- uuid
-            id      = "1-0"
-            result <- redis.xAddWithMinId(stream, id, -10)("a" -> "b").returning[String].either
-          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
-        },
-        test("error with negative minId and with approximate") {
-          for {
-            redis  <- ZIO.service[Redis]
-            stream <- uuid
-            id      = "1-0"
-            result <- redis.xAddWithMinId(stream, id, -10, approximate = true)("a" -> "b").returning[String].either
-          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("Null reply with NOMKSTREAM option") {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             result <- redis
-                        .xAddWithMinId(stream, "*", 10, approximate = true, noMakeStream = true)("a" -> "b")
+                        .xAddWithMinId(stream, "*", "0-0", approximate = true, noMakeStream = true)("a" -> "b")
                         .returning[String]
           } yield assert(result)(isNone)
         }
@@ -1774,12 +1758,12 @@ trait StreamsSpec extends IntegrationSpec {
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
-      suite("xTrim")(
+      suite("xTrimWithMaxLen")(
         test("an empty stream") {
           for {
             redis  <- ZIO.service[Redis]
             stream <- uuid
-            result <- redis.xTrim(stream, 1000L)
+            result <- redis.xTrimWithMaxLen(stream, 1000L)
           } yield assert(result)(equalTo(0L))
         },
         test("a non-empty stream") {
@@ -1787,7 +1771,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String].repeatN(3)
-            result <- redis.xTrim(stream, 2L)
+            result <- redis.xTrimWithMaxLen(stream, 2L)
           } yield assert(result)(equalTo(2L))
         },
         test("a non-empty stream with an approximate") {
@@ -1795,7 +1779,15 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
-            result <- redis.xTrim(stream, 1000L, approximate = true)
+            result <- redis.xTrimWithMaxLen(stream, 1000L, approximate = true)
+          } yield assert(result)(equalTo(0L))
+        },
+        test("a non-empty stream with an approximate and limit") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            result <- redis.xTrimWithMaxLen(stream, 1000L, approximate = true, limit = Some(100))
           } yield assert(result)(equalTo(0L))
         },
         test("error when negative count") {
@@ -1803,7 +1795,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
-            result <- redis.xTrim(stream, -1000L).either
+            result <- redis.xTrimWithMaxLen(stream, -1000L).either
           } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
         },
         test("error when not stream") {
@@ -1811,7 +1803,57 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             _      <- redis.set(stream, "value")
-            result <- redis.xTrim(stream, 1000L).either
+            result <- redis.xTrimWithMaxLen(stream, 1000L).either
+          } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
+        }
+      ),
+      suite("xTrimWithMinId")(
+        test("an empty stream") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            result <- redis.xTrimWithMinId(stream, "0-0")
+          } yield assert(result)(equalTo(0L))
+        },
+        test("a non-empty stream") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].repeatN(2).some
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            result <- redis.xTrimWithMinId(stream, id)
+          } yield assert(result)(equalTo(2L))
+        },
+        test("a non-empty stream with an approximate") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            result <- redis.xTrimWithMinId(stream, "0-0", approximate = true)
+          } yield assert(result)(equalTo(0L))
+        },
+        test("a non-empty stream with an approximate and limit") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            result <- redis.xTrimWithMinId(stream, "0-0", approximate = true, limit = Some(100))
+          } yield assert(result)(equalTo(0L))
+        },
+        test("error when invalid id") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            result <- redis.xTrimWithMinId(stream, "-100").either
+          } yield assert(result)(isLeft(isSubtype[ProtocolError](anything)))
+        },
+        test("error when not stream") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            _      <- redis.set(stream, "value")
+            result <- redis.xTrimWithMinId(stream, "0-0").either
           } yield assert(result)(isLeft(isSubtype[WrongType](anything)))
         }
       ),
