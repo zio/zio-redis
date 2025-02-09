@@ -962,6 +962,16 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
+            result <- redis.xGroupCreateLastEntry(stream, group, mkStream = true).either
+          } yield assert(result)(isRight)
+        }
+      ),
+      suite("xGroupCreate")(
+        test("new group") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
             result <- redis.xGroupCreate(stream, group, "$", mkStream = true).either
           } yield assert(result)(isRight)
         },
