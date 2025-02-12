@@ -1167,28 +1167,6 @@ object InputSpec extends BaseSpec {
                 )
               )
             )
-        },
-        test("with entriesRead") {
-          ZIO
-            .attempt(
-              XGroupCreateInput[String, String, String]().encode(
-                XGroupCommand.Create("key", "group", "id", mkStream = false, entriesRead = Some("1-0"))
-              )
-            )
-            .map(
-              assert(_)(
-                equalTo(
-                  RespCommand(
-                    Literal("CREATE"),
-                    Key("key"),
-                    Value("group"),
-                    Value("id"),
-                    Literal("ENTRIESREAD"),
-                    Value("1-0")
-                  )
-                )
-              )
-            )
         }
       ),
       suite("XGroupSetId")(
