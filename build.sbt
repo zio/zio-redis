@@ -1,19 +1,23 @@
+import Dependencies.Versions
+
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 enablePlugins(ZioSbtEcosystemPlugin)
 
 inThisBuild(
   List(
-    name       := "ZIO Redis",
-    developers := List(
+    name               := "ZIO Redis",
+    developers         := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
-    scala212   := "2.12.20",
-    scala213   := "2.13.16",
-    scala3     := "3.3.5",
-    startYear  := Some(2021),
-    zioVersion := "2.1.15"
+    startYear          := Some(2021),
+    scala212           := "2.12.20",
+    scala213           := "2.13.16",
+    scala3             := "3.3.5",
+    zioVersion         := Versions.Zio,
+    crossScalaVersions := List(scala212.value, scala213.value, scala3.value),
+    scalaVersion       := scala213.value
   )
 )
 
@@ -38,13 +42,13 @@ lazy val benchmarks =
   project
     .in(file("modules/benchmarks"))
     .enablePlugins(JmhPlugin)
-    .dependsOn(client)
     .settings(stdSettings(name = Some("benchmarks"), packageName = Some("zio.redis.benchmarks")))
     .settings(
       crossScalaVersions -= scala3.value,
       libraryDependencies ++= Dependencies.Benchmarks,
       publish / skip := true
     )
+    .dependsOn(client)
 
 lazy val client =
   project
@@ -52,12 +56,12 @@ lazy val client =
     .settings(addOptionsOn("2.13")("-Xlint:-infer-any"))
     .settings(stdSettings(name = Some("zio-redis"), packageName = Some("zio.redis")))
     .settings(enableZIO(enableStreaming = true))
-    .settings(libraryDependencies ++= Dependencies.redis(zioVersion.value))
+    .settings(libraryDependencies ++= Dependencies.redis)
 
 lazy val docs = project
   .in(file("zio-redis-docs"))
   .settings(
-    libraryDependencies ++= Dependencies.docs(zioVersion.value),
+    libraryDependencies ++= Dependencies.docs,
     scalacOptions --= List("-Yno-imports", "-Xfatal-warnings"),
     publish / skip := true
   )
@@ -96,7 +100,7 @@ lazy val integrationTest =
     .settings(stdSettings(name = Some("zio-redis-it")))
     .settings(enableZIO(enableStreaming = true))
     .settings(
-      libraryDependencies ++= Dependencies.redis(zioVersion.value),
+      libraryDependencies ++= Dependencies.redis,
       publish / skip := true,
       Test / fork    := false
     )

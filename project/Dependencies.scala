@@ -1,7 +1,9 @@
 import sbt.*
 
 object Dependencies {
-  private object Versions {
+
+  object Versions {
+    val Zio               = "2.1.15"
     val CatsEffect        = "3.5.7"
     val EmbeddedRedis     = "0.6"
     val Redis4Cats        = "1.7.2"
@@ -39,20 +41,20 @@ object Dependencies {
       "dev.zio"                       %% "zio-http"            % "3.0.1"
     )
 
-  def docs(zioVersion: String) =
+  val docs =
     List(
       "dev.zio" %% "zio-schema-protobuf" % Versions.ZioSchema,
-      "dev.zio" %% "zio-test"            % zioVersion
+      "dev.zio" %% "zio-test"            % Versions.Zio
     )
 
-  def redis(zioVersion: String) =
+  val redis =
     List(
       "com.github.marianobarrios" % "tls-channel"         % Versions.TlsChannel,
-      "dev.zio"                  %% "zio-concurrent"      % zioVersion,
+      "dev.zio"                  %% "zio-concurrent"      % Versions.Zio,
       "dev.zio"                  %% "zio-schema"          % Versions.ZioSchema,
       "dev.zio"                  %% "zio-schema-protobuf" % Versions.ZioSchema         % Test,
-      "dev.zio"                  %% "zio-test"            % zioVersion                 % Test,
-      "dev.zio"                  %% "zio-test-sbt"        % zioVersion                 % Test,
+      "dev.zio"                  %% "zio-test"            % Versions.Zio               % Test,
+      "dev.zio"                  %% "zio-test-sbt"        % Versions.Zio               % Test,
       "com.github.sideeffffect"  %% "zio-testcontainers"  % Versions.ZioTestContainers % Test
     )
 }
