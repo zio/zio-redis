@@ -44,5 +44,5 @@ object Api {
     `GET /repositories/:owner/:name/contributors`.implementHandler(handler(fetchAll))
   }
 
-  val routes = Routes(fetchContributors)
+  val routes: Routes[ContributorsCache, Nothing] = Routes(fetchContributors)
 }
