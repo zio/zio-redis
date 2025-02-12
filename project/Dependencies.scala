@@ -1,4 +1,4 @@
-import sbt._
+import sbt.*
 
 object Dependencies {
   private object Versions {
@@ -36,7 +36,7 @@ object Dependencies {
       "dev.zio"                       %% "zio-config-typesafe" % Versions.ZioConfig,
       "dev.zio"                       %% "zio-schema-protobuf" % Versions.ZioSchema,
       "dev.zio"                       %% "zio-json"            % Versions.ZioJson,
-      "io.d11"                        %% "zhttp"               % Versions.ZHttp
+      "dev.zio"                       %% "zio-http"            % "3.0.1"
     )
 
   def docs(zioVersion: String) =

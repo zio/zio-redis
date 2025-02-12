@@ -18,7 +18,9 @@ package zio.redis.example
 
 import zio.json._
 import zio.prelude.Newtype
+import zio.schema.Schema
 
 object Contributions extends Newtype[Int] {
-  implicit val codec: JsonCodec[Contributions] = JsonCodec.int.transform(Contributions(_), Contributions.unwrap)
+  implicit val codec: JsonCodec[Contributions] = derive
+  implicit val Schema: Schema[Contributions]   = derive
 }

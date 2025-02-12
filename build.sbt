@@ -25,7 +25,14 @@ lazy val root =
       crossScalaVersions := Nil,
       publish / skip     := true
     )
-    .aggregate(benchmarks, client, docs, embedded, example, integrationTest)
+    .aggregate(
+      benchmarks,
+      client,
+      docs,
+      embedded,
+      example,
+      integrationTest
+    )
 
 lazy val benchmarks =
   project
