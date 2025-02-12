@@ -4,14 +4,14 @@ object Dependencies {
   private object Versions {
     val CatsEffect        = "3.5.7"
     val EmbeddedRedis     = "0.6"
-    val Redis4Cats        = "1.7.1"
-    val Sttp              = "3.10.1"
+    val Redis4Cats        = "1.7.2"
+    val Sttp              = "3.10.3"
     val TlsChannel        = "0.9.1"
     val ZHttp             = "2.0.0-RC11"
-    val ZioConfig         = "4.0.2"
-    val ZioJson           = "0.7.3"
-    val ZioSchema         = "1.5.0"
-    val ZioTestContainers = "0.5.0"
+    val ZioConfig         = "4.0.3"
+    val ZioJson           = "0.7.17"
+    val ZioSchema         = "1.6.1"
+    val ZioTestContainers = "0.6.0"
   }
 
   lazy val Benchmarks =

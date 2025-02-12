@@ -1,18 +1,19 @@
-import zio.sbt.githubactions.Job
-import zio.sbt.githubactions.Step.SingleStep
+Global / onChangedBuildSource := ReloadOnSourceChanges
 
-enablePlugins(ZioSbtEcosystemPlugin, ZioSbtCiPlugin)
+enablePlugins(ZioSbtEcosystemPlugin)
 
 inThisBuild(
   List(
-    name              := "ZIO Redis",
-    ciEnabledBranches := List("master"),
-    developers        := List(
+    name       := "ZIO Redis",
+    developers := List(
       Developer("jdegoes", "John De Goes", "john@degoes.net", url("https://degoes.net")),
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
-    scala213          := "2.13.15",
-    startYear         := Some(2021)
+    scala212   := "2.12.20",
+    scala213   := "2.13.16",
+    scala3     := "3.3.5",
+    startYear  := Some(2021),
+    zioVersion := "2.1.15"
   )
 )
 
