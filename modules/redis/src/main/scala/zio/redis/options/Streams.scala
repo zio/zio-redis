@@ -33,11 +33,12 @@ trait Streams {
 
   sealed case class LastId[I](lastId: I)
 
+  sealed case class WithEntriesRead(entries: Long)
+
   sealed trait XGroupCommand
 
   object XGroupCommand {
-    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I, mkStream: Boolean, entriesRead: Option[I])
-        extends XGroupCommand
+    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I)                 extends XGroupCommand
     sealed case class SetId[SK, SG, I](key: SK, group: SG, id: I)                  extends XGroupCommand
     sealed case class Destroy[SK, SG](key: SK, group: SG)                          extends XGroupCommand
     sealed case class CreateConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC) extends XGroupCommand

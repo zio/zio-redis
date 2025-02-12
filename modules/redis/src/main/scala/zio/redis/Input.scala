@@ -493,6 +493,11 @@ object Input {
       RespCommand(Chunk(minIdLiteral, exactLiteral, RespCommandArgument.Value(data.id)))
   }
 
+  case object MkStreamInput extends Input[MkStream] {
+    override private[redis] def encode(data: MkStream): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.asString))
+  }
+
   case object NoMkStreamInput extends Input[NoMkStream] {
     def encode(data: NoMkStream): RespCommand =
       RespCommand(RespCommandArgument.Value(data.asString))
@@ -696,6 +701,11 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  case object WithEntriesReadInput extends Input[WithEntriesRead] {
+    override private[redis] def encode(data: WithEntriesRead): RespCommand =
+      RespCommand(RespCommandArgument.Literal("ENTRIESREAD"), RespCommandArgument.Value(data.entries.toString))
+  }
+
   final case class XGroupCreateConsumerInput[K: BinaryCodec, G: BinaryCodec, C: BinaryCodec]()
       extends Input[XGroupCommand.CreateConsumer[K, G, C]] {
     def encode(data: XGroupCommand.CreateConsumer[K, G, C]): RespCommand =
@@ -709,21 +719,13 @@ object Input {
 
   final case class XGroupCreateInput[K: BinaryCodec, G: BinaryCodec, I: BinaryCodec]()
       extends Input[XGroupCommand.Create[K, G, I]] {
-    def encode(data: XGroupCommand.Create[K, G, I]): RespCommand = {
-      val chunk = Chunk(
+    def encode(data: XGroupCommand.Create[K, G, I]): RespCommand =
+      RespCommand(
         RespCommandArgument.Literal("CREATE"),
         RespCommandArgument.Key(data.key),
         RespCommandArgument.Value(data.group),
         RespCommandArgument.Value(data.id)
       )
-
-      val mkStreamChunk = if (data.mkStream) Chunk(RespCommandArgument.Literal(MkStream.asString)) else Chunk.empty
-      val entriesReadChunk = data.entriesRead.fold(Chunk.empty[RespCommandArgument])(id =>
-        Chunk(RespCommandArgument.Literal("ENTRIESREAD"), RespCommandArgument.Value(id))
-      )
-
-      RespCommand(chunk ++ mkStreamChunk ++ entriesReadChunk)
-    }
   }
 
   final case class XGroupDelConsumerInput[K: BinaryCodec, G: BinaryCodec, C: BinaryCodec]()
@@ -755,5 +757,6 @@ object Input {
         RespCommandArgument.Value(data.group),
         RespCommandArgument.Value(data.id)
       )
+
   }
 }
