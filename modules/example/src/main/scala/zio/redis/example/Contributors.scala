@@ -18,9 +18,11 @@ package zio.redis.example
 
 import zio.Chunk
 import zio.json.{DeriveJsonCodec, JsonCodec}
+import zio.schema.{DeriveSchema, Schema}
 
 final case class Contributors(contributors: Chunk[Contributor])
 
 object Contributors {
   implicit val codec: JsonCodec[Contributors] = DeriveJsonCodec.gen[Contributors]
+  implicit val Schema: Schema[Contributors]   = DeriveSchema.gen[Contributors]
 }

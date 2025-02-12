@@ -16,17 +16,33 @@
 
 package zio.redis.example.api
 
-import zhttp.http._
 import zio._
-import zio.json._
+import zio.http.codec.HttpCodec
+import zio.http.codec.PathCodec.string
+import zio.http.endpoint.AuthType.None
+import zio.http.endpoint.Endpoint
+import zio.http.{Method, Routes, Status, handler}
 import zio.redis.example._
 
 object Api {
-  val routes: HttpApp[ContributorsCache, Nothing] =
-    Http.collectZIO { case Method.GET -> !! / "repositories" / owner / name / "contributors" =>
-      ZIO
-        .serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
-        .mapBoth(_.asResponse, r => Response.json(r.toJson))
-        .merge
-    }
+  private val `GET /repositories/:owner/:name/contributors`
+    : Endpoint[(String, String), (String, String), ApiError, Contributors, None] =
+    Endpoint(Method.GET / "repositories" / string("owner") / string("name") / "contributors")
+      .out[Contributors]
+      .outErrors[ApiError](
+        HttpCodec.error[ApiError.UnknownProject](Status.NotFound),
+        HttpCodec.error[ApiError.CacheMiss](Status.NotFound),
+        HttpCodec.error[ApiError.CorruptedData](Status.InternalServerError),
+        HttpCodec.error[ApiError.GithubUnreachable](Status.InternalServerError)
+      )
+
+  private val fetchContributors = {
+    // Had to extract this function to a val otherwise the compiler would complain about the type of the handler
+    val fetchAll: (String, String) => ZIO[ContributorsCache, ApiError, Contributors] =
+      (owner, name) => ZIO.serviceWithZIO[ContributorsCache](_.fetchAll(Repository(Owner(owner), Name(name))))
+
+    `GET /repositories/:owner/:name/contributors`.implementHandler(handler(fetchAll))
+  }
+
+  val routes: Routes[ContributorsCache, Nothing] = Routes(fetchContributors)
 }

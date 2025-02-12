@@ -18,9 +18,9 @@ package zio.redis.example
 
 import com.typesafe.config.ConfigFactory
 import sttp.client3.httpclient.zio.HttpClientZioBackend
-import zhttp.service.Server
 import zio._
 import zio.config.typesafe.TypesafeConfigProvider
+import zio.http.Server
 import zio.redis._
 import zio.redis.example.api.Api
 import zio.redis.example.config.AppConfig
@@ -36,13 +36,14 @@ object Main extends ZIOAppDefault {
 
   def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
     Server
-      .start(9000, Api.routes)
+      .serve(Api.routes)
       .provide(
+        Server.defaultWithPort(9000),
         AppConfig.layer,
         ContributorsCache.layer,
         HttpClientZioBackend.layer(),
         Redis.singleNode,
-        ZLayer.succeed[CodecSupplier](new CodecSupplier {
+        ZLayer.succeed(new CodecSupplier {
           def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
         })
       )

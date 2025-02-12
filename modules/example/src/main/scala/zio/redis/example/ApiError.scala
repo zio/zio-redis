@@ -16,24 +16,22 @@
 
 package zio.redis.example
 
-import zhttp.http._
+import zio.schema.{DeriveSchema, Schema}
 
 import scala.util.control.NoStackTrace
 
-sealed trait ApiError extends NoStackTrace { self =>
-  import ApiError._
-
-  final def asResponse: Response =
-    self match {
-      case CorruptedData | GithubUnreachable => Response.fromHttpError(HttpError.InternalServerError())
-      case CacheMiss(key)                    => Response.fromHttpError(HttpError.NotFound((Path.empty / key).encode))
-      case UnknownProject(path)              => Response.fromHttpError(HttpError.NotFound((Path.root / path).encode))
-    }
-}
-
+sealed trait ApiError extends NoStackTrace
 object ApiError {
   final case class CacheMiss(key: String)       extends ApiError
   case object CorruptedData                     extends ApiError
   case object GithubUnreachable                 extends ApiError
   final case class UnknownProject(path: String) extends ApiError
+
+  type CorruptedData     = CorruptedData.type
+  type GithubUnreachable = GithubUnreachable.type
+
+  implicit val schemaCacheMiss: Schema[CacheMiss]                 = DeriveSchema.gen[CacheMiss]
+  implicit val schemaCorruptedData: Schema[CorruptedData]         = DeriveSchema.gen[CorruptedData]
+  implicit val schemaGithubUnreachable: Schema[GithubUnreachable] = DeriveSchema.gen[GithubUnreachable]
+  implicit val schemaUnknownProject: Schema[UnknownProject]       = DeriveSchema.gen[UnknownProject]
 }
