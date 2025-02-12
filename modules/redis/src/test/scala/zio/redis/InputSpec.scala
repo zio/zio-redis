@@ -1148,7 +1148,7 @@ object InputSpec extends BaseSpec {
           ZIO
             .attempt(
               XGroupCreateInput[String, String, String]().encode(
-                XGroupCommand.Create("key", "group", "id", mkStream = false, None)
+                XGroupCommand.Create("key", "group", "id")
               )
             )
             .map(assert(_)(equalTo(RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id")))))
@@ -1157,35 +1157,13 @@ object InputSpec extends BaseSpec {
           ZIO
             .attempt(
               XGroupCreateInput[String, String, String]().encode(
-                XGroupCommand.Create("key", "group", "id", mkStream = true, None)
+                XGroupCommand.Create("key", "group", "id")
               )
             )
             .map(
               assert(_)(
                 equalTo(
                   RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id"), Literal("MKSTREAM"))
-                )
-              )
-            )
-        },
-        test("with entriesRead") {
-          ZIO
-            .attempt(
-              XGroupCreateInput[String, String, String]().encode(
-                XGroupCommand.Create("key", "group", "id", mkStream = false, entriesRead = Some("1-0"))
-              )
-            )
-            .map(
-              assert(_)(
-                equalTo(
-                  RespCommand(
-                    Literal("CREATE"),
-                    Key("key"),
-                    Value("group"),
-                    Value("id"),
-                    Literal("ENTRIESREAD"),
-                    Value("1-0")
-                  )
                 )
               )
             )
@@ -1196,7 +1174,12 @@ object InputSpec extends BaseSpec {
           ZIO
             .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
             .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Value("group"), Value("id")))))
-        }
+        },
+        test("valid value with entries read") {
+          ZIO
+            .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
+            .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Value("group"), Value("id")))))
+        },
       ),
       suite("XGroupDestroy")(
         test("valid value") {

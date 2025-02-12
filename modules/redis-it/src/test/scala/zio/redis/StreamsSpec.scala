@@ -1022,6 +1022,28 @@ trait StreamsSpec extends IntegrationSpec {
             result <- redis.xGroupSetId(stream, group, id).either
           } yield assert(result)(isRight)
         },
+        test("for an existing group and message with entries read option") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String]
+            _      <- redis.xGroupCreate(stream, group, "$")
+            result <- redis.xGroupSetId(stream, group, id, entriesRead = Some(2L)).either
+          } yield assert(result)(isRight)
+        },
+        test("for an existing group and message last entry") {
+          for {
+            redis  <- ZIO.service[Redis]
+            stream <- uuid
+            group  <- uuid
+            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _      <- redis.xGroupCreate(stream, group, "$")
+            result <- redis.xGroupSetIdLastEntry(stream, group).either
+          } yield assert(result)(isRight)
+        },
         test("error when non-existent group and an existing message") {
           for {
             redis  <- ZIO.service[Redis]

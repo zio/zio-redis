@@ -498,10 +498,17 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     group: SG,
     id: I,
     mkStream: Boolean = false,
-    entriesRead: Option[I] = None
+    entriesRead: Option[Long] = None
   ): G[Unit] = {
-    val command = RedisCommand(XGroup, XGroupCreateInput[SK, SG, I](), UnitOutput)
-    command.run(Create(key, group, id, mkStream, entriesRead))
+    val command =
+      RedisCommand(
+        XGroup,
+        Tuple3(XGroupCreateInput[SK, SG, I](), OptionalInput(MkStreamInput), OptionalInput(WithEntriesReadInput)),
+        UnitOutput
+      )
+    command.run(
+      (Create(key, group, id), if (mkStream) Some(MkStream) else None, entriesRead.map(WithEntriesRead(_)))
+    )
   }
 
   /**
@@ -511,8 +518,6 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *   ID of the stream
    * @param group
    *   ID of the consumer group
-   * @param id
-   *   ID of the last item in the stream to consider already delivered
    * @param mkStream
    *   ID of the last item in the stream to consider already delivered
    * @param entriesRead
@@ -522,7 +527,7 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     key: SK,
     group: SG,
     mkStream: Boolean = false,
-    entriesRead: Option[String] = None
+    entriesRead: Option[Long] = None
   ): G[Unit] = xGroupCreate(key, group, "$", mkStream, entriesRead)
 
   /**
@@ -589,15 +594,37 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *   ID of the consumer group
    * @param id
    *   last delivered ID to set
+   * @param entriesRead
+   *   Enable consumer group lag tracking
    */
   final def xGroupSetId[SK: Schema, SG: Schema, I: Schema](
     key: SK,
     group: SG,
-    id: I
+    id: I,
+    entriesRead: Option[Long] = None
   ): G[Unit] = {
-    val command = RedisCommand(XGroup, XGroupSetIdInput[SK, SG, I](), UnitOutput)
-    command.run(SetId(key, group, id))
+    val command =
+      RedisCommand(XGroup, Tuple2(XGroupSetIdInput[SK, SG, I](), OptionalInput(WithEntriesReadInput)), UnitOutput)
+    command.run((SetId(key, group, id), entriesRead.map(WithEntriesRead(_))))
   }
+
+  /**
+   * Set the consumer group last delivered ID to something else.
+   *
+   * @param key
+   *   ID of the stream
+   * @param group
+   *   ID of the consumer group
+   * @param id
+   *   last delivered ID to set
+   * @param entriesRead
+   *   Enable consumer group lag tracking
+   */
+  final def xGroupSetIdLastEntry[SK: Schema, SG: Schema](
+    key: SK,
+    group: SG,
+    entriesRead: Option[Long] = None
+  ): G[Unit] = xGroupSetId(key, group, "$", entriesRead)
 
   /**
    * An introspection command used in order to retrieve different information about the consumers.
