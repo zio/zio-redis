@@ -736,6 +736,8 @@ object OutputSpec extends BaseSpec {
                 RespValue.bulkString("pending"),
                 RespValue.Integer(1),
                 RespValue.bulkString("idle"),
+                RespValue.Integer(100),
+                RespValue.bulkString("inactive"),
                 RespValue.Integer(100)
               ),
               RespValue.array(
@@ -744,6 +746,8 @@ object OutputSpec extends BaseSpec {
                 RespValue.bulkString("pending"),
                 RespValue.Integer(2),
                 RespValue.bulkString("idle"),
+                RespValue.Integer(200),
+                RespValue.bulkString("inactive"),
                 RespValue.Integer(200)
               )
             )
@@ -751,8 +755,8 @@ object OutputSpec extends BaseSpec {
             assertZIO(ZIO.attempt(StreamConsumersInfoOutput.unsafeDecode(resp)))(
               equalTo(
                 Chunk(
-                  StreamConsumersInfo("consumer1", 1, 100.millis),
-                  StreamConsumersInfo("consumer2", 2, 200.millis)
+                  StreamConsumersInfo("consumer1", 1, 100.millis, 100.millis),
+                  StreamConsumersInfo("consumer2", 2, 200.millis, 200.millis)
                 )
               )
             )
