@@ -120,11 +120,13 @@ trait Streams {
     name: String,
     consumers: Long,
     pending: Long,
-    lastDeliveredId: String
+    lastDeliveredId: String,
+    entriesRead: Long,
+    lag: Long
   )
 
   object StreamGroupsInfo {
-    def empty: StreamGroupsInfo = StreamGroupsInfo("", 0, 0, "")
+    def empty: StreamGroupsInfo = StreamGroupsInfo("", 0, 0, "", 0, 0)
   }
 
   sealed case class StreamConsumersInfo(
@@ -184,6 +186,8 @@ trait Streams {
 
     val Consumers: String       = "consumers"
     val LastDeliveredId: String = "last-delivered-id"
+    val EntriesRead: String = "entries-read"
+    val Lag: String = "lag"
 
     val Length: String          = "length"
     val RadixTreeKeys: String   = "radix-tree-keys"

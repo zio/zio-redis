@@ -478,6 +478,10 @@ object Output {
                       streamGroupsInfo = streamGroupsInfo.copy(pending = value.value)
                     else if (key.asString == XInfoFields.Consumers)
                       streamGroupsInfo = streamGroupsInfo.copy(consumers = value.value)
+                    else if (key.asString == XInfoFields.EntriesRead)
+                      streamGroupsInfo = streamGroupsInfo.copy(entriesRead = value.value)
+                    else if (key.asString == XInfoFields.Lag)
+                      streamGroupsInfo = streamGroupsInfo.copy(lag = value.value)
                   case _                                                                =>
                 }
                 pos += 2
