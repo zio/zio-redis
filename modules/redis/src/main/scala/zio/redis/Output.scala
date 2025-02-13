@@ -370,6 +370,8 @@ object Output {
                       streamConsumersInfo = streamConsumersInfo.copy(pending = value.value)
                     else if (key.asString == XInfoFields.Idle)
                       streamConsumersInfo = streamConsumersInfo.copy(idle = value.value.millis)
+                    else if (key.asString == XInfoFields.Inactive)
+                      streamConsumersInfo = streamConsumersInfo.copy(inactive = value.value.millis)
                   case _                                                             =>
                 }
                 pos += 2

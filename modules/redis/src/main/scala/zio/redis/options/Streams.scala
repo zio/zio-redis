@@ -130,11 +130,12 @@ trait Streams {
   sealed case class StreamConsumersInfo(
     name: String,
     pending: Long,
-    idle: Duration
+    idle: Duration,
+    inactive: Duration
   )
 
   object StreamConsumersInfo {
-    def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis)
+    def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis, 0.millis)
   }
 
   object StreamInfoWithFull {
@@ -179,6 +180,7 @@ trait Streams {
     val Name: String    = "name"
     val Idle: String    = "idle"
     val Pending: String = "pending"
+    val Inactive: String = "inactive"
 
     val Consumers: String       = "consumers"
     val LastDeliveredId: String = "last-delivered-id"
