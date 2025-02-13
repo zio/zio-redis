@@ -698,7 +698,11 @@ object OutputSpec extends BaseSpec {
                 RespValue.bulkString("pending"),
                 RespValue.Integer(1),
                 RespValue.bulkString("last-delivered-id"),
-                RespValue.bulkString("1-0")
+                RespValue.bulkString("1-0"),
+                RespValue.bulkString("entries-read"),
+                RespValue.Integer(1),
+                RespValue.bulkString("lag"),
+                RespValue.Integer(1),
               ),
               RespValue.array(
                 RespValue.bulkString("name"),
@@ -708,15 +712,19 @@ object OutputSpec extends BaseSpec {
                 RespValue.bulkString("pending"),
                 RespValue.Integer(2),
                 RespValue.bulkString("last-delivered-id"),
-                RespValue.bulkString("2-0")
+                RespValue.bulkString("2-0"),
+                RespValue.bulkString("entries-read"),
+                RespValue.Integer(2),
+                RespValue.bulkString("lag"),
+                RespValue.Integer(2),
               )
             )
 
             assertZIO(ZIO.attempt(StreamGroupsInfoOutput.unsafeDecode(resp)))(
               equalTo(
                 Chunk(
-                  StreamGroupsInfo("group1", 1, 1, "1-0"),
-                  StreamGroupsInfo("group2", 2, 2, "2-0")
+                  StreamGroupsInfo("group1", 1, 1, "1-0", 1, 1),
+                  StreamGroupsInfo("group2", 2, 2, "2-0", 2, 2)
                 )
               )
             )
