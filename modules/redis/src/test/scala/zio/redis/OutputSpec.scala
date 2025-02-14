@@ -632,10 +632,16 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(2),
               RespValue.bulkString("radix-tree-nodes"),
               RespValue.Integer(3),
-              RespValue.bulkString("groups"),
-              RespValue.Integer(2),
               RespValue.bulkString("last-generated-id"),
               RespValue.bulkString("2-0"),
+              RespValue.bulkString("max-deleted-entry-id"),
+              RespValue.bulkString("3-0"),
+              RespValue.bulkString("entries-added"),
+              RespValue.Integer(5),
+              RespValue.bulkString("recorded-first-entry-id"),
+              RespValue.bulkString("1-0"),
+              RespValue.bulkString("groups"),
+              RespValue.Integer(2),
               RespValue.bulkString("first-entry"),
               RespValue.array(
                 RespValue.bulkString("1-0"),
@@ -660,8 +666,11 @@ object OutputSpec extends BaseSpec {
                   1,
                   2,
                   3,
-                  2,
                   "2-0",
+                  "3-0",
+                  5,
+                  "1-0",
+                  2,
                   Some(StreamEntry("1-0", Map("key1" -> "value1"))),
                   Some(StreamEntry("2-0", Map("key2" -> "value2")))
                 )
@@ -676,14 +685,20 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(2),
               RespValue.bulkString("radix-tree-nodes"),
               RespValue.Integer(3),
-              RespValue.bulkString("groups"),
-              RespValue.Integer(1),
               RespValue.bulkString("last-generated-id"),
-              RespValue.bulkString("0-0")
+              RespValue.bulkString("2-0"),
+              RespValue.bulkString("max-deleted-entry-id"),
+              RespValue.bulkString("3-0"),
+              RespValue.bulkString("entries-added"),
+              RespValue.Integer(5),
+              RespValue.bulkString("recorded-first-entry-id"),
+              RespValue.bulkString("1-0"),
+              RespValue.bulkString("groups"),
+              RespValue.Integer(2)
             )
 
             assertZIO(ZIO.attempt(StreamInfoOutput[String, String, String]().unsafeDecode(resp)))(
-              equalTo(StreamInfo[String, String, String](1, 2, 3, 1, "0-0", None, None))
+              equalTo(StreamInfo[String, String, String](1, 2, 3, "2-0", "3-0", 5, "1-0", 2, None, None))
             )
           }
         ),
@@ -702,7 +717,7 @@ object OutputSpec extends BaseSpec {
                 RespValue.bulkString("entries-read"),
                 RespValue.Integer(1),
                 RespValue.bulkString("lag"),
-                RespValue.Integer(1),
+                RespValue.Integer(1)
               ),
               RespValue.array(
                 RespValue.bulkString("name"),
@@ -716,7 +731,7 @@ object OutputSpec extends BaseSpec {
                 RespValue.bulkString("entries-read"),
                 RespValue.Integer(2),
                 RespValue.bulkString("lag"),
-                RespValue.Integer(2),
+                RespValue.Integer(2)
               )
             )
 
@@ -786,6 +801,12 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(3),
               RespValue.bulkString("last-generated-id"),
               RespValue.bulkString("0-0"),
+              RespValue.bulkString("max-deleted-entry-id"),
+              RespValue.bulkString("1-0"),
+              RespValue.bulkString("entries-added"),
+              RespValue.Integer(4),
+              RespValue.bulkString("recorded-first-entry-id"),
+              RespValue.bulkString("2-0"),
               RespValue.bulkString("entries"),
               RespValue.array(
                 RespValue.array(
@@ -812,6 +833,9 @@ object OutputSpec extends BaseSpec {
                   2,
                   3,
                   "0-0",
+                  "1-0",
+                  4,
+                  "2-0",
                   Chunk(StreamEntry("3-0", Map("key1" -> "value1")), StreamEntry("4-0", Map("key1" -> "value1"))),
                   Chunk.empty
                 )
@@ -827,11 +851,17 @@ object OutputSpec extends BaseSpec {
               RespValue.bulkString("radix-tree-nodes"),
               RespValue.Integer(3),
               RespValue.bulkString("last-generated-id"),
-              RespValue.bulkString("0-0")
+              RespValue.bulkString("0-0"),
+              RespValue.bulkString("max-deleted-entry-id"),
+              RespValue.bulkString("1-0"),
+              RespValue.bulkString("entries-added"),
+              RespValue.Integer(4),
+              RespValue.bulkString("recorded-first-entry-id"),
+              RespValue.bulkString("2-0")
             )
             assertZIO(ZIO.attempt(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
-                StreamInfoWithFull.FullStreamInfo[String, String, String](1, 2, 3, "0-0", Chunk.empty, Chunk.empty)
+                StreamInfoWithFull.FullStreamInfo[String, String, String](1, 2, 3, "0-0", "1-0", 4, "2-0", Chunk.empty, Chunk.empty)
               )
             )
           },
@@ -839,7 +869,7 @@ object OutputSpec extends BaseSpec {
             val resp = RespValue.array()
             assertZIO(ZIO.attempt(StreamConsumersInfoOutput.unsafeDecode(resp)))(isEmpty)
           },
-          test("extract a valid value with groups") {
+          test("extract a valid value with groups and entries") {
             val resp = RespValue.array(
               RespValue.bulkString("length"),
               RespValue.Integer(1),
@@ -849,6 +879,12 @@ object OutputSpec extends BaseSpec {
               RespValue.Integer(3),
               RespValue.bulkString("last-generated-id"),
               RespValue.bulkString("0-0"),
+              RespValue.bulkString("max-deleted-entry-id"),
+              RespValue.bulkString("1-0"),
+              RespValue.bulkString("entries-added"),
+              RespValue.Integer(4),
+              RespValue.bulkString("recorded-first-entry-id"),
+              RespValue.bulkString("2-0"),
               RespValue.bulkString("entries"),
               RespValue.array(
                 RespValue.array(
@@ -873,8 +909,12 @@ object OutputSpec extends BaseSpec {
                   RespValue.bulkString("name1"),
                   RespValue.bulkString("last-delivered-id"),
                   RespValue.bulkString("lastDeliveredId"),
-                  RespValue.bulkString("pel-count"),
+                  RespValue.bulkString("entries-read"),
                   RespValue.Integer(1),
+                  RespValue.bulkString("lag"),
+                  RespValue.Integer(2),
+                  RespValue.bulkString("pel-count"),
+                  RespValue.Integer(3),
                   RespValue.bulkString("pending"),
                   RespValue.array(
                     RespValue.array(
@@ -896,6 +936,8 @@ object OutputSpec extends BaseSpec {
                       RespValue.bulkString("name"),
                       RespValue.bulkString("Alice"),
                       RespValue.bulkString("seen-time"),
+                      RespValue.Integer(1588152520299L),
+                      RespValue.bulkString("active-time"),
                       RespValue.Integer(1588152520299L),
                       RespValue.bulkString("pel-count"),
                       RespValue.Integer(1),
@@ -920,12 +962,17 @@ object OutputSpec extends BaseSpec {
                   2,
                   3,
                   "0-0",
+                  "1-0",
+                  4,
+                  "2-0",
                   Chunk(StreamEntry("3-0", Map("key1" -> "value1")), StreamEntry("4-0", Map("key1" -> "value1"))),
                   Chunk(
                     StreamInfoWithFull.ConsumerGroups(
                       "name1",
                       "lastDeliveredId",
                       1,
+                      2,
+                      3,
                       Chunk(
                         StreamInfoWithFull.GroupPel("entryId1", "consumerName1", 1588152520299L.millis, 1L),
                         StreamInfoWithFull.GroupPel("entryId2", "consumerName2", 1588152520299L.millis, 1L)
@@ -933,6 +980,7 @@ object OutputSpec extends BaseSpec {
                       Chunk(
                         StreamInfoWithFull.Consumers(
                           "Alice",
+                          1588152520299L.millis,
                           1588152520299L.millis,
                           1,
                           Chunk(
