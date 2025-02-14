@@ -513,14 +513,26 @@ object Output {
               // Get the basic information of the outermost stream.
               case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))                                  =>
                 key.asString match {
-                  case XInfoFields.Length         => streamInfoFull = streamInfoFull.copy(length = value.value)
-                  case XInfoFields.RadixTreeNodes => streamInfoFull = streamInfoFull.copy(radixTreeNodes = value.value)
-                  case XInfoFields.RadixTreeKeys  => streamInfoFull = streamInfoFull.copy(radixTreeKeys = value.value)
+                  case XInfoFields.Length         =>
+                    streamInfoFull = streamInfoFull.copy(length = value.value)
+                  case XInfoFields.RadixTreeNodes =>
+                    streamInfoFull = streamInfoFull.copy(radixTreeNodes = value.value)
+                  case XInfoFields.RadixTreeKeys  =>
+                    streamInfoFull = streamInfoFull.copy(radixTreeKeys = value.value)
+                  case XInfoFields.EntriesAdded   =>
+                    streamInfoFull = streamInfoFull.copy(entriesAdded = value.value)
                   case _                          =>
                 }
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
-                  if key.asString == XInfoFields.LastGeneratedId =>
-                streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
+              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))                               =>
+                key.asString match {
+                  case XInfoFields.LastGeneratedId      =>
+                    streamInfoFull = streamInfoFull.copy(lastGeneratedId = value.asString)
+                  case XInfoFields.MaxDeletedEntryId    =>
+                    streamInfoFull = streamInfoFull.copy(maxDeletedEntryId = value.asString)
+                  case XInfoFields.RecordedFirstEntryId =>
+                    streamInfoFull = streamInfoFull.copy(recordedFirstEntryId = value.asString)
+                  case _                                =>
+                }
               case (key @ RespValue.BulkString(_), value) if key.asString == XInfoFields.Entries                  =>
                 streamInfoFull = streamInfoFull.copy(entries = StreamEntriesOutput[I, K, V]().unsafeDecode(value))
               case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Groups =>
@@ -550,7 +562,7 @@ object Output {
           var pos = 0
           while (pos < len) {
             (elements(pos), elements(pos + 1)) match {
-              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_)) =>
+              case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))    =>
                 if (key.asString == XInfoFields.Length)
                   streamInfo = streamInfo.copy(length = value.value)
                 else if (key.asString == XInfoFields.RadixTreeNodes)
@@ -559,15 +571,21 @@ object Output {
                   streamInfo = streamInfo.copy(radixTreeKeys = value.value)
                 else if (key.asString == XInfoFields.Groups)
                   streamInfo = streamInfo.copy(groups = value.value)
-              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_))
-                  if key.asString == XInfoFields.LastGeneratedId =>
-                streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
-              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_))   =>
+                else if (key.asString == XInfoFields.EntriesAdded)
+                  streamInfo = streamInfo.copy(entriesAdded = value.value)
+              case (key @ RespValue.BulkString(_), value @ RespValue.BulkString(_)) =>
+                if (key.asString == XInfoFields.LastGeneratedId)
+                  streamInfo = streamInfo.copy(lastGeneratedId = value.asString)
+                else if (key.asString == XInfoFields.MaxDeletedEntryId)
+                  streamInfo = streamInfo.copy(maxDeletedEntryId = value.asString)
+                else if (key.asString == XInfoFields.RecordedFirstEntryId)
+                  streamInfo = streamInfo.copy(recordedFirstEntryId = value.asString)
+              case (key @ RespValue.BulkString(_), value @ RespValue.Array(_))      =>
                 if (key.asString == XInfoFields.FirstEntry)
                   streamInfo = streamInfo.copy(firstEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
                 else if (key.asString == XInfoFields.LastEntry)
                   streamInfo = streamInfo.copy(lastEntry = Some(StreamEntryOutput[I, K, V]().unsafeDecode(value)))
-              case _                                                             =>
+              case _                                                                =>
             }
             pos += 2
           }
@@ -773,9 +791,13 @@ object Output {
                 case XInfoFields.Name            => readyGroup = readyGroup.copy(name = value.asString)
                 case _                           =>
               }
-            case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))
-                if XInfoFields.PelCount == key.asString =>
-              readyGroup = readyGroup.copy(pelCount = value.value)
+            case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))    =>
+              key.asString match {
+                case XInfoFields.PelCount    => readyGroup = readyGroup.copy(pelCount = value.value)
+                case XInfoFields.Lag         => readyGroup = readyGroup.copy(lag = value.value)
+                case XInfoFields.EntriesRead => readyGroup = readyGroup.copy(entriesRead = value.value)
+                case _                       =>
+              }
             case (key @ RespValue.BulkString(_), RespValue.Array(values))         =>
               // Get the consumer list of the current group.
               key.asString match {
@@ -827,9 +849,10 @@ object Output {
               readyConsumer = readyConsumer.copy(name = value.asString)
             case (key @ RespValue.BulkString(_), value @ RespValue.Integer(_))                                        =>
               key.asString match {
-                case XInfoFields.PelCount => readyConsumer = readyConsumer.copy(pelCount = value.value)
-                case XInfoFields.SeenTime => readyConsumer = readyConsumer.copy(seenTime = value.value.millis)
-                case _                    =>
+                case XInfoFields.PelCount   => readyConsumer = readyConsumer.copy(pelCount = value.value)
+                case XInfoFields.SeenTime   => readyConsumer = readyConsumer.copy(seenTime = value.value.millis)
+                case XInfoFields.ActiveTime => readyConsumer = readyConsumer.copy(activeTime = value.value.millis)
+                case _                      =>
               }
             // Get the pel list of the current consumer.
             case (key @ RespValue.BulkString(_), RespValue.Array(values)) if key.asString == XInfoFields.Pending      =>

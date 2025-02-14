@@ -106,14 +106,17 @@ trait Streams {
     length: Long,
     radixTreeKeys: Long,
     radixTreeNodes: Long,
-    groups: Long,
     lastGeneratedId: String,
+    maxDeletedEntryId: String,
+    entriesAdded: Long,
+    recordedFirstEntryId: String,
+    groups: Long,
     firstEntry: Option[StreamEntry[I, K, V]],
     lastEntry: Option[StreamEntry[I, K, V]]
   )
 
   object StreamInfo {
-    def empty[I, K, V]: StreamInfo[I, K, V] = StreamInfo(0, 0, 0, 0, "", None, None)
+    def empty[I, K, V]: StreamInfo[I, K, V] = StreamInfo(0, 0, 0, "", "", 0, "", 0, None, None)
   }
 
   sealed case class StreamGroupsInfo(
@@ -147,32 +150,37 @@ trait Streams {
       radixTreeKeys: Long,
       radixTreeNodes: Long,
       lastGeneratedId: String,
+      maxDeletedEntryId: String,
+      entriesAdded: Long,
+      recordedFirstEntryId: String,
       entries: Chunk[StreamEntry[I, K, V]],
       groups: Chunk[ConsumerGroups]
     )
 
     object FullStreamInfo {
-      def empty[I, K, V]: FullStreamInfo[I, K, V] = FullStreamInfo(0, 0, 0, "", Chunk.empty, Chunk.empty)
+      def empty[I, K, V]: FullStreamInfo[I, K, V] = FullStreamInfo(0, 0, 0, "", "", 0, "", Chunk.empty, Chunk.empty)
     }
 
     sealed case class ConsumerGroups(
       name: String,
       lastDeliveredId: String,
+      entriesRead: Long,
+      lag: Long,
       pelCount: Long,
       pending: Chunk[GroupPel],
       consumers: Chunk[Consumers]
     )
 
     object ConsumerGroups {
-      def empty: ConsumerGroups = ConsumerGroups("", "", 0, Chunk.empty, Chunk.empty)
+      def empty: ConsumerGroups = ConsumerGroups("", "", 0, 0, 0, Chunk.empty, Chunk.empty)
     }
 
     sealed case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
 
-    sealed case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
+    sealed case class Consumers(name: String, seenTime: Duration, activeTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
 
     object Consumers {
-      def empty: Consumers = Consumers("", 0.millis, 0, Chunk.empty)
+      def empty: Consumers = Consumers("", 0.millis, 0.millis, 0, Chunk.empty)
     }
 
     sealed case class ConsumerPel(entryId: String, deliveryTime: Duration, deliveryCount: Long)
@@ -197,8 +205,13 @@ trait Streams {
     val FirstEntry: String      = "first-entry"
     val LastEntry: String       = "last-entry"
 
+    val MaxDeletedEntryId: String = "max-deleted-entry-id"
+    val EntriesAdded: String = "entries-added"
+    val RecordedFirstEntryId: String = "recorded-first-entry-id"
+
     val Entries: String  = "entries"
     val PelCount: String = "pel-count"
     val SeenTime: String = "seen-time"
+    val ActiveTime: String = "active-time"
   }
 }
