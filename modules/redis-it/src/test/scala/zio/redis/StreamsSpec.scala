@@ -1039,7 +1039,7 @@ trait StreamsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             stream <- uuid
             group  <- uuid
-            id     <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
+            _      <- redis.xAdd(stream, "*")("a" -> "b").returning[String].some
             _      <- redis.xGroupCreate(stream, group, "$")
             result <- redis.xGroupSetIdLastEntry(stream, group).either
           } yield assert(result)(isRight)
