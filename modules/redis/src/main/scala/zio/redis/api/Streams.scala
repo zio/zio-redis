@@ -207,7 +207,7 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
             Tuple5(
               ArbitraryKeyInput[SK](),
               OptionalInput(NoMkStreamInput),
-              OptionalInput(MinIdApproxInput[I]),
+              OptionalInput(MinIdApproxInput[I]()),
               ArbitraryValueInput[I](),
               NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
             ),
@@ -221,7 +221,7 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
             Tuple5(
               ArbitraryKeyInput[SK](),
               OptionalInput(NoMkStreamInput),
-              OptionalInput(MinIdExactInput[I]),
+              OptionalInput(MinIdExactInput[I]()),
               ArbitraryValueInput[I](),
               NonEmptyList(Tuple2(ArbitraryKeyInput[K](), ArbitraryValueInput[V]()))
             ),
@@ -1067,10 +1067,10 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
     limit: Option[Long] = None
   ): G[Long] =
     if (approximate) {
-      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdApproxInput[I]), LongOutput)
+      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdApproxInput[I]()), LongOutput)
       command.run((key, CappedStreamType.MinIdApprox(minId, limit)))
     } else {
-      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdExactInput[I]), LongOutput)
+      val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdExactInput[I]()), LongOutput)
       command.run((key, CappedStreamType.MinIdExact(minId)))
     }
 }
