@@ -861,7 +861,8 @@ object OutputSpec extends BaseSpec {
             )
             assertZIO(ZIO.attempt(StreamInfoFullOutput[String, String, String]().unsafeDecode(resp)))(
               equalTo(
-                StreamInfoWithFull.FullStreamInfo[String, String, String](1, 2, 3, "0-0", "1-0", 4, "2-0", Chunk.empty, Chunk.empty)
+                StreamInfoWithFull
+                  .FullStreamInfo[String, String, String](1, 2, 3, "0-0", "1-0", 4, "2-0", Chunk.empty, Chunk.empty)
               )
             )
           },

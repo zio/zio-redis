@@ -1179,7 +1179,7 @@ object InputSpec extends BaseSpec {
           ZIO
             .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
             .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Value("group"), Value("id")))))
-        },
+        }
       ),
       suite("XGroupDestroy")(
         test("valid value") {
