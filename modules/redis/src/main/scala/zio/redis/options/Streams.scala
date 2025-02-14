@@ -177,7 +177,13 @@ trait Streams {
 
     sealed case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
 
-    sealed case class Consumers(name: String, seenTime: Duration, activeTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
+    sealed case class Consumers(
+      name: String,
+      seenTime: Duration,
+      activeTime: Duration,
+      pelCount: Long,
+      pending: Chunk[ConsumerPel]
+    )
 
     object Consumers {
       def empty: Consumers = Consumers("", 0.millis, 0.millis, 0, Chunk.empty)
@@ -187,15 +193,15 @@ trait Streams {
   }
 
   private[redis] object XInfoFields {
-    val Name: String    = "name"
-    val Idle: String    = "idle"
-    val Pending: String = "pending"
+    val Name: String     = "name"
+    val Idle: String     = "idle"
+    val Pending: String  = "pending"
     val Inactive: String = "inactive"
 
     val Consumers: String       = "consumers"
     val LastDeliveredId: String = "last-delivered-id"
-    val EntriesRead: String = "entries-read"
-    val Lag: String = "lag"
+    val EntriesRead: String     = "entries-read"
+    val Lag: String             = "lag"
 
     val Length: String          = "length"
     val RadixTreeKeys: String   = "radix-tree-keys"
@@ -205,13 +211,13 @@ trait Streams {
     val FirstEntry: String      = "first-entry"
     val LastEntry: String       = "last-entry"
 
-    val MaxDeletedEntryId: String = "max-deleted-entry-id"
-    val EntriesAdded: String = "entries-added"
+    val MaxDeletedEntryId: String    = "max-deleted-entry-id"
+    val EntriesAdded: String         = "entries-added"
     val RecordedFirstEntryId: String = "recorded-first-entry-id"
 
-    val Entries: String  = "entries"
-    val PelCount: String = "pel-count"
-    val SeenTime: String = "seen-time"
+    val Entries: String    = "entries"
+    val PelCount: String   = "pel-count"
+    val SeenTime: String   = "seen-time"
     val ActiveTime: String = "active-time"
   }
 }

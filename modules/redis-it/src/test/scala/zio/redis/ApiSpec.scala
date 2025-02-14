@@ -21,7 +21,7 @@ object ApiSpec
     with PubSubSpec {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("Redis commands")(SingleNodeSuite)
+    suite("Redis commands")(ClusterSuite, SingleNodeSuite)
       .provideShared(
         compose(
           service(IntegrationSpec.SingleNode0, ".*Ready to accept connections.*"),
