@@ -1163,7 +1163,7 @@ object InputSpec extends BaseSpec {
             .map(
               assert(_)(
                 equalTo(
-                  RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id"), Literal("MKSTREAM"))
+                  RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id"))
                 )
               )
             )
@@ -1272,12 +1272,12 @@ object InputSpec extends BaseSpec {
         },
         test("MinId with approx") {
           ZIO
-            .attempt(MinIdApproxInput[Long]().encode(CappedStreamType.MinIdApprox(10, None)))
+            .attempt(MinIdApproxInput[String]().encode(CappedStreamType.MinIdApprox("10", None)))
             .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10")))))
         },
         test("MinId with approx and Limit") {
           ZIO
-            .attempt(MinIdApproxInput[Long]().encode(CappedStreamType.MinIdApprox(10, Some(100))))
+            .attempt(MinIdApproxInput[String]().encode(CappedStreamType.MinIdApprox("10", Some(100))))
             .map(
               assert(_)(
                 equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
@@ -1286,7 +1286,7 @@ object InputSpec extends BaseSpec {
         },
         test("MinId with exact") {
           ZIO
-            .attempt(MinIdExactInput[Long]().encode(CappedStreamType.MinIdExact(10)))
+            .attempt(MinIdExactInput[String]().encode(CappedStreamType.MinIdExact("10")))
             .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("="), Value("10")))))
         }
       ),
