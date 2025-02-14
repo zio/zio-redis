@@ -17,9 +17,11 @@
 package zio.redis.example
 
 import zio.json.{DeriveJsonCodec, JsonCodec}
+import zio.schema.{DeriveSchema, Schema}
 
 final case class Contributor(login: Login, contributions: Contributions)
 
 object Contributor {
   implicit val codec: JsonCodec[Contributor] = DeriveJsonCodec.gen[Contributor]
+  implicit val Schema: Schema[Contributor]   = DeriveSchema.gen[Contributor]
 }
