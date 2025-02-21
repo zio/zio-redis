@@ -31,14 +31,18 @@ trait Streams {
 
   type WithJustId = WithJustId.type
 
+  sealed case class LastId[I](lastId: I)
+
+  sealed case class WithEntriesRead(entries: Long)
+
   sealed trait XGroupCommand
 
   object XGroupCommand {
-    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I, mkStream: Boolean) extends XGroupCommand
-    sealed case class SetId[SK, SG, I](key: SK, group: SG, id: I)                     extends XGroupCommand
-    sealed case class Destroy[SK, SG](key: SK, group: SG)                             extends XGroupCommand
-    sealed case class CreateConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC)    extends XGroupCommand
-    sealed case class DelConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC)       extends XGroupCommand
+    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I)                 extends XGroupCommand
+    sealed case class SetId[SK, SG, I](key: SK, group: SG, id: I)                  extends XGroupCommand
+    sealed case class Destroy[SK, SG](key: SK, group: SG)                          extends XGroupCommand
+    sealed case class CreateConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC) extends XGroupCommand
+    sealed case class DelConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC)    extends XGroupCommand
   }
 
   case object MkStream {
@@ -46,6 +50,12 @@ trait Streams {
   }
 
   type MkStream = MkStream.type
+
+  case object NoMkStream {
+    private[redis] def asString = "NOMKSTREAM"
+  }
+
+  type NoMkStream = NoMkStream.type
 
   sealed case class PendingInfo(
     total: Long,
@@ -71,7 +81,14 @@ trait Streams {
 
   type StreamChunks[N, I, K, V] = Chunk[StreamChunk[N, I, K, V]]
 
-  sealed case class StreamMaxLen(approximate: Boolean, count: Long)
+  sealed trait CappedStreamType
+
+  object CappedStreamType {
+    sealed case class MaxLenApprox(count: Long, limit: Option[Long]) extends CappedStreamType
+    sealed case class MaxLenExact(count: Long)                       extends CappedStreamType
+    sealed case class MinIdApprox[I](id: I, limit: Option[Long])     extends CappedStreamType
+    sealed case class MinIdExact[I](id: I)                           extends CappedStreamType
+  }
 
   sealed case class StreamEntry[I, K, V](id: I, fields: Map[K, V])
 
@@ -89,35 +106,41 @@ trait Streams {
     length: Long,
     radixTreeKeys: Long,
     radixTreeNodes: Long,
-    groups: Long,
     lastGeneratedId: String,
+    maxDeletedEntryId: String,
+    entriesAdded: Long,
+    recordedFirstEntryId: String,
+    groups: Long,
     firstEntry: Option[StreamEntry[I, K, V]],
     lastEntry: Option[StreamEntry[I, K, V]]
   )
 
   object StreamInfo {
-    def empty[I, K, V]: StreamInfo[I, K, V] = StreamInfo(0, 0, 0, 0, "", None, None)
+    def empty[I, K, V]: StreamInfo[I, K, V] = StreamInfo(0, 0, 0, "", "", 0, "", 0, None, None)
   }
 
   sealed case class StreamGroupsInfo(
     name: String,
     consumers: Long,
     pending: Long,
-    lastDeliveredId: String
+    lastDeliveredId: String,
+    entriesRead: Long,
+    lag: Long
   )
 
   object StreamGroupsInfo {
-    def empty: StreamGroupsInfo = StreamGroupsInfo("", 0, 0, "")
+    def empty: StreamGroupsInfo = StreamGroupsInfo("", 0, 0, "", 0, 0)
   }
 
   sealed case class StreamConsumersInfo(
     name: String,
     pending: Long,
-    idle: Duration
+    idle: Duration,
+    inactive: Duration
   )
 
   object StreamConsumersInfo {
-    def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis)
+    def empty: StreamConsumersInfo = StreamConsumersInfo("", 0, 0.millis, 0.millis)
   }
 
   object StreamInfoWithFull {
@@ -127,44 +150,58 @@ trait Streams {
       radixTreeKeys: Long,
       radixTreeNodes: Long,
       lastGeneratedId: String,
+      maxDeletedEntryId: String,
+      entriesAdded: Long,
+      recordedFirstEntryId: String,
       entries: Chunk[StreamEntry[I, K, V]],
       groups: Chunk[ConsumerGroups]
     )
 
     object FullStreamInfo {
-      def empty[I, K, V]: FullStreamInfo[I, K, V] = FullStreamInfo(0, 0, 0, "", Chunk.empty, Chunk.empty)
+      def empty[I, K, V]: FullStreamInfo[I, K, V] = FullStreamInfo(0, 0, 0, "", "", 0, "", Chunk.empty, Chunk.empty)
     }
 
     sealed case class ConsumerGroups(
       name: String,
       lastDeliveredId: String,
+      entriesRead: Long,
+      lag: Long,
       pelCount: Long,
       pending: Chunk[GroupPel],
       consumers: Chunk[Consumers]
     )
 
     object ConsumerGroups {
-      def empty: ConsumerGroups = ConsumerGroups("", "", 0, Chunk.empty, Chunk.empty)
+      def empty: ConsumerGroups = ConsumerGroups("", "", 0, 0, 0, Chunk.empty, Chunk.empty)
     }
 
     sealed case class GroupPel(entryId: String, consumerName: String, deliveryTime: Duration, deliveryCount: Long)
 
-    sealed case class Consumers(name: String, seenTime: Duration, pelCount: Long, pending: Chunk[ConsumerPel])
+    sealed case class Consumers(
+      name: String,
+      seenTime: Duration,
+      activeTime: Duration,
+      pelCount: Long,
+      pending: Chunk[ConsumerPel]
+    )
 
     object Consumers {
-      def empty: Consumers = Consumers("", 0.millis, 0, Chunk.empty)
+      def empty: Consumers = Consumers("", 0.millis, 0.millis, 0, Chunk.empty)
     }
 
     sealed case class ConsumerPel(entryId: String, deliveryTime: Duration, deliveryCount: Long)
   }
 
   private[redis] object XInfoFields {
-    val Name: String    = "name"
-    val Idle: String    = "idle"
-    val Pending: String = "pending"
+    val Name: String     = "name"
+    val Idle: String     = "idle"
+    val Pending: String  = "pending"
+    val Inactive: String = "inactive"
 
     val Consumers: String       = "consumers"
     val LastDeliveredId: String = "last-delivered-id"
+    val EntriesRead: String     = "entries-read"
+    val Lag: String             = "lag"
 
     val Length: String          = "length"
     val RadixTreeKeys: String   = "radix-tree-keys"
@@ -174,8 +211,13 @@ trait Streams {
     val FirstEntry: String      = "first-entry"
     val LastEntry: String       = "last-entry"
 
-    val Entries: String  = "entries"
-    val PelCount: String = "pel-count"
-    val SeenTime: String = "seen-time"
+    val MaxDeletedEntryId: String    = "max-deleted-entry-id"
+    val EntriesAdded: String         = "entries-added"
+    val RecordedFirstEntryId: String = "recorded-first-entry-id"
+
+    val Entries: String    = "entries"
+    val PelCount: String   = "pel-count"
+    val SeenTime: String   = "seen-time"
+    val ActiveTime: String = "active-time"
   }
 }

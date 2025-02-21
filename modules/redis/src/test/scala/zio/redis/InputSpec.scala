@@ -14,9 +14,9 @@ object InputSpec extends BaseSpec {
   import BitFieldCommand._
   import BitFieldType._
   import BitOperation._
+  import LcsQueryType._
   import Order._
   import RadiusUnit._
-  import LcsQueryType._
 
   def spec: Spec[Any, Throwable] =
     suite("Input encoders")(
@@ -1148,7 +1148,7 @@ object InputSpec extends BaseSpec {
           ZIO
             .attempt(
               XGroupCreateInput[String, String, String]().encode(
-                XGroupCommand.Create("key", "group", "id", mkStream = false)
+                XGroupCommand.Create("key", "group", "id")
               )
             )
             .map(assert(_)(equalTo(RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id")))))
@@ -1157,13 +1157,13 @@ object InputSpec extends BaseSpec {
           ZIO
             .attempt(
               XGroupCreateInput[String, String, String]().encode(
-                XGroupCommand.Create("key", "group", "id", mkStream = true)
+                XGroupCommand.Create("key", "group", "id")
               )
             )
             .map(
               assert(_)(
                 equalTo(
-                  RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id"), Literal("MKSTREAM"))
+                  RespCommand(Literal("CREATE"), Key("key"), Value("group"), Value("id"))
                 )
               )
             )
@@ -1171,6 +1171,11 @@ object InputSpec extends BaseSpec {
       ),
       suite("XGroupSetId")(
         test("valid value") {
+          ZIO
+            .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
+            .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Value("group"), Value("id")))))
+        },
+        test("valid value with entries read") {
           ZIO
             .attempt(XGroupSetIdInput[String, String, String]().encode(XGroupCommand.SetId("key", "group", "id")))
             .map(assert(_)(equalTo(RespCommand(Literal("SETID"), Key("key"), Value("group"), Value("id")))))
@@ -1245,16 +1250,44 @@ object InputSpec extends BaseSpec {
           ZIO.attempt(NoAckInput.encode(NoAck)).map(assert(_)(equalTo(RespCommand(Value("NOACK")))))
         }
       ),
-      suite("MaxLen")(
-        test("with approximate") {
+      suite("CappedStreamOption")(
+        test("MaxLen with approx") {
           ZIO
-            .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = true, 10)))
+            .attempt(MaxLenApproxInput.encode(CappedStreamType.MaxLenApprox(10, None)))
             .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10")))))
         },
-        test("without approximate") {
+        test("MaxLen with approx and Limit") {
           ZIO
-            .attempt(StreamMaxLenInput.encode(StreamMaxLen(approximate = false, 10)))
-            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Value("10")))))
+            .attempt(MaxLenApproxInput.encode(CappedStreamType.MaxLenApprox(10, Some(100))))
+            .map(
+              assert(_)(
+                equalTo(RespCommand(Literal("MAXLEN"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
+              )
+            )
+        },
+        test("MaxLen with exact") {
+          ZIO
+            .attempt(MaxLenExactInput.encode(CappedStreamType.MaxLenExact(10)))
+            .map(assert(_)(equalTo(RespCommand(Literal("MAXLEN"), Literal("="), Value("10")))))
+        },
+        test("MinId with approx") {
+          ZIO
+            .attempt(MinIdApproxInput[String]().encode(CappedStreamType.MinIdApprox("10", None)))
+            .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10")))))
+        },
+        test("MinId with approx and Limit") {
+          ZIO
+            .attempt(MinIdApproxInput[String]().encode(CappedStreamType.MinIdApprox("10", Some(100))))
+            .map(
+              assert(_)(
+                equalTo(RespCommand(Literal("MINID"), Literal("~"), Value("10"), Literal("LIMIT"), Value("100")))
+              )
+            )
+        },
+        test("MinId with exact") {
+          ZIO
+            .attempt(MinIdExactInput[String]().encode(CappedStreamType.MinIdExact("10")))
+            .map(assert(_)(equalTo(RespCommand(Literal("MINID"), Literal("="), Value("10")))))
         }
       ),
       suite("WithForce")(

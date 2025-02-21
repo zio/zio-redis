@@ -126,7 +126,7 @@ object Input {
 
   case object DbInput extends Input[Long] {
     def encode(db: Long): RespCommand =
-      RespCommand(RespCommandArgument.Literal("DB"), RespCommandArgument.Value(db.toString()))
+      RespCommand(RespCommandArgument.Literal("DB"), RespCommandArgument.Value(db.toString))
   }
 
   case object BoolInput extends Input[Boolean] {
@@ -438,14 +438,69 @@ object Input {
       RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Value(data.key))
   }
 
-  case object StreamMaxLenInput extends Input[StreamMaxLen] {
-    def encode(data: StreamMaxLen): RespCommand = {
-      val chunk =
-        if (data.approximate) Chunk(RespCommandArgument.Literal("MAXLEN"), RespCommandArgument.Literal("~"))
-        else Chunk.single(RespCommandArgument.Literal("MAXLEN"))
+  case object MaxLenApproxInput extends Input[CappedStreamType.MaxLenApprox] {
+    def encode(data: CappedStreamType.MaxLenApprox): RespCommand = {
+      val maxLenChunk: Chunk[RespCommandArgument] = Chunk(
+        RespCommandArgument.Literal("MAXLEN"),
+        RespCommandArgument.Literal("~"),
+        RespCommandArgument.Value(data.count.toString)
+      )
 
-      RespCommand(chunk :+ RespCommandArgument.Value(data.count.toString))
+      val limitChunk = data.limit.fold(Chunk.empty[RespCommandArgument])(limit =>
+        Chunk(RespCommandArgument.Literal("LIMIT"), RespCommandArgument.Value(limit.toString))
+      )
+
+      RespCommand(maxLenChunk ++ limitChunk)
     }
+  }
+
+  case object MaxLenExactInput extends Input[CappedStreamType.MaxLenExact] {
+    def encode(data: CappedStreamType.MaxLenExact): RespCommand =
+      RespCommand(
+        Chunk(
+          RespCommandArgument.Literal("MAXLEN"),
+          RespCommandArgument.Literal("="),
+          RespCommandArgument.Value(data.count.toString)
+        )
+      )
+  }
+
+  final case class MinIdApproxInput[I: BinaryCodec]() extends Input[CappedStreamType.MinIdApprox[I]] {
+    def encode(data: CappedStreamType.MinIdApprox[I]): RespCommand = {
+      val minIdChunk =
+        Chunk(
+          RespCommandArgument.Literal("MINID"),
+          RespCommandArgument.Literal("~"),
+          RespCommandArgument.Value(data.id)
+        )
+
+      val limitChunk = data.limit.fold(Chunk.empty[RespCommandArgument])(limit =>
+        Chunk(RespCommandArgument.Literal("LIMIT"), RespCommandArgument.Value(limit.toString))
+      )
+
+      RespCommand(minIdChunk ++ limitChunk)
+    }
+  }
+
+  final case class MinIdExactInput[I: BinaryCodec]() extends Input[CappedStreamType.MinIdExact[I]] {
+    def encode(data: _root_.zio.redis.CappedStreamType.MinIdExact[I]): RespCommand =
+      RespCommand(
+        Chunk(
+          RespCommandArgument.Literal("MINID"),
+          RespCommandArgument.Literal("="),
+          RespCommandArgument.Value(data.id)
+        )
+      )
+  }
+
+  case object MkStreamInput extends Input[MkStream] {
+    def encode(data: MkStream): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.asString))
+  }
+
+  case object NoMkStreamInput extends Input[NoMkStream] {
+    def encode(data: NoMkStream): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.asString))
   }
 
   final case class StreamsInput[K: BinaryCodec, V: BinaryCodec]() extends Input[((K, V), Chunk[(K, V)])] {
@@ -619,6 +674,13 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  final case class LastIdInput[I: BinaryCodec]() extends Input[LastId[I]] {
+    def encode(data: LastId[I]): RespCommand = {
+      val chunk = Chunk(RespCommandArgument.Literal("LASTID"), RespCommandArgument.Value(data.lastId))
+      RespCommand(chunk)
+    }
+  }
+
   case object WithHashInput extends Input[WithHash] {
     def encode(data: WithHash): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))
@@ -639,6 +701,11 @@ object Input {
       RespCommand(RespCommandArgument.Literal(data.asString))
   }
 
+  case object WithEntriesReadInput extends Input[WithEntriesRead] {
+    def encode(data: WithEntriesRead): RespCommand =
+      RespCommand(RespCommandArgument.Literal("ENTRIESREAD"), RespCommandArgument.Value(data.entries.toString))
+  }
+
   final case class XGroupCreateConsumerInput[K: BinaryCodec, G: BinaryCodec, C: BinaryCodec]()
       extends Input[XGroupCommand.CreateConsumer[K, G, C]] {
     def encode(data: XGroupCommand.CreateConsumer[K, G, C]): RespCommand =
@@ -652,16 +719,13 @@ object Input {
 
   final case class XGroupCreateInput[K: BinaryCodec, G: BinaryCodec, I: BinaryCodec]()
       extends Input[XGroupCommand.Create[K, G, I]] {
-    def encode(data: XGroupCommand.Create[K, G, I]): RespCommand = {
-      val chunk = Chunk(
+    def encode(data: XGroupCommand.Create[K, G, I]): RespCommand =
+      RespCommand(
         RespCommandArgument.Literal("CREATE"),
         RespCommandArgument.Key(data.key),
         RespCommandArgument.Value(data.group),
         RespCommandArgument.Value(data.id)
       )
-
-      RespCommand(if (data.mkStream) chunk :+ RespCommandArgument.Literal(MkStream.asString) else chunk)
-    }
   }
 
   final case class XGroupDelConsumerInput[K: BinaryCodec, G: BinaryCodec, C: BinaryCodec]()
@@ -693,5 +757,6 @@ object Input {
         RespCommandArgument.Value(data.group),
         RespCommandArgument.Value(data.id)
       )
+
   }
 }
