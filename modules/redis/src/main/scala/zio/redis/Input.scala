@@ -438,63 +438,63 @@ object Input {
       RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Value(data.key))
   }
 
-  sealed trait CappedStreamLiterals {
-    val maxLenLiteral: RespCommandArgument.Literal = RespCommandArgument.Literal("MAXLEN")
-    val minIdLiteral: RespCommandArgument.Literal  = RespCommandArgument.Literal("MINID")
-    val approxLiteral: RespCommandArgument.Literal = RespCommandArgument.Literal("~")
-    val exactLiteral: RespCommandArgument.Literal  = RespCommandArgument.Literal("=")
-    val limitLiteral: RespCommandArgument.Literal  = RespCommandArgument.Literal("LIMIT")
-  }
-
-  case object MaxLenApproxInput extends Input[CappedStreamType.MaxLenApprox] with CappedStreamLiterals {
-    override private[redis] def encode(data: CappedStreamType.MaxLenApprox): RespCommand = {
+  case object MaxLenApproxInput extends Input[CappedStreamType.MaxLenApprox] {
+    def encode(data: CappedStreamType.MaxLenApprox): RespCommand = {
       val maxLenChunk: Chunk[RespCommandArgument] = Chunk(
-        maxLenLiteral,
-        approxLiteral,
+        RespCommandArgument.Literal("MAXLEN"),
+        RespCommandArgument.Literal("~"),
         RespCommandArgument.Value(data.count.toString)
       )
 
       val limitChunk = data.limit.fold(Chunk.empty[RespCommandArgument])(limit =>
-        Chunk(limitLiteral, RespCommandArgument.Value(limit.toString))
+        Chunk(RespCommandArgument.Literal("LIMIT"), RespCommandArgument.Value(limit.toString))
       )
 
       RespCommand(maxLenChunk ++ limitChunk)
     }
   }
 
-  case object MaxLenExactInput extends Input[CappedStreamType.MaxLenExact] with CappedStreamLiterals {
-    override private[redis] def encode(data: CappedStreamType.MaxLenExact): RespCommand =
-      RespCommand(Chunk(maxLenLiteral, exactLiteral, RespCommandArgument.Value(data.count.toString)))
+  case object MaxLenExactInput extends Input[CappedStreamType.MaxLenExact] {
+    def encode(data: CappedStreamType.MaxLenExact): RespCommand =
+      RespCommand(
+        Chunk(
+          RespCommandArgument.Literal("MAXLEN"),
+          RespCommandArgument.Literal("="),
+          RespCommandArgument.Value(data.count.toString)
+        )
+      )
   }
 
-  final case class MinIdApproxInput[I: BinaryCodec]()
-      extends Input[CappedStreamType.MinIdApprox[I]]
-      with CappedStreamLiterals {
-    override private[redis] def encode(data: CappedStreamType.MinIdApprox[I]): RespCommand = {
+  final case class MinIdApproxInput[I: BinaryCodec]() extends Input[CappedStreamType.MinIdApprox[I]] {
+    def encode(data: CappedStreamType.MinIdApprox[I]): RespCommand = {
       val minIdChunk =
         Chunk(
-          minIdLiteral,
-          approxLiteral,
+          RespCommandArgument.Literal("MINID"),
+          RespCommandArgument.Literal("~"),
           RespCommandArgument.Value(data.id)
         )
 
       val limitChunk = data.limit.fold(Chunk.empty[RespCommandArgument])(limit =>
-        Chunk(limitLiteral, RespCommandArgument.Value(limit.toString))
+        Chunk(RespCommandArgument.Literal("LIMIT"), RespCommandArgument.Value(limit.toString))
       )
 
       RespCommand(minIdChunk ++ limitChunk)
     }
   }
 
-  final case class MinIdExactInput[I: BinaryCodec]()
-      extends Input[CappedStreamType.MinIdExact[I]]
-      with CappedStreamLiterals {
-    override private[redis] def encode(data: _root_.zio.redis.CappedStreamType.MinIdExact[I]): RespCommand =
-      RespCommand(Chunk(minIdLiteral, exactLiteral, RespCommandArgument.Value(data.id)))
+  final case class MinIdExactInput[I: BinaryCodec]() extends Input[CappedStreamType.MinIdExact[I]] {
+    def encode(data: _root_.zio.redis.CappedStreamType.MinIdExact[I]): RespCommand =
+      RespCommand(
+        Chunk(
+          RespCommandArgument.Literal("MINID"),
+          RespCommandArgument.Literal("="),
+          RespCommandArgument.Value(data.id)
+        )
+      )
   }
 
   case object MkStreamInput extends Input[MkStream] {
-    override private[redis] def encode(data: MkStream): RespCommand =
+    def encode(data: MkStream): RespCommand =
       RespCommand(RespCommandArgument.Value(data.asString))
   }
 
@@ -675,7 +675,7 @@ object Input {
   }
 
   final case class LastIdInput[I: BinaryCodec]() extends Input[LastId[I]] {
-    override private[redis] def encode(data: LastId[I]): RespCommand = {
+    def encode(data: LastId[I]): RespCommand = {
       val chunk = Chunk(RespCommandArgument.Literal("LASTID"), RespCommandArgument.Value(data.lastId))
       RespCommand(chunk)
     }
@@ -702,7 +702,7 @@ object Input {
   }
 
   case object WithEntriesReadInput extends Input[WithEntriesRead] {
-    override private[redis] def encode(data: WithEntriesRead): RespCommand =
+    def encode(data: WithEntriesRead): RespCommand =
       RespCommand(RespCommandArgument.Literal("ENTRIESREAD"), RespCommandArgument.Value(data.entries.toString))
   }
 

@@ -20,8 +20,8 @@ import zio._
 import zio.redis.Input._
 import zio.redis.Output._
 import zio.redis.ResultBuilder._
+import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
-import zio.redis.{Input, _}
 import zio.schema.Schema
 
 trait Streams[G[+_]] extends RedisEnvironment[G] {
