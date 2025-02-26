@@ -3,7 +3,7 @@ import sbt.*
 object Dependencies {
 
   object Versions {
-    val Zio               = "2.1.15"
+    val Zio               = "2.1.16"
     val CatsEffect        = "3.5.7"
     val EmbeddedRedis     = "0.6"
     val Redis4Cats        = "1.7.2"
