@@ -15,7 +15,6 @@
  */
 
 package zio.redis.api
-
 import zio._
 import zio.redis.Input._
 import zio.redis.Output._
@@ -1027,8 +1026,8 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *
    * @param key
    *   ID of the stream
-   * @param count
-   *   stream length
+   * @param threshold
+   *   Evicts entries as long as the stream's length exceeds the specified threshold
    * @param approximate
    *   flag that indicates if the stream length should be exactly count or few tens of entries more
    * @return
@@ -1036,16 +1035,16 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    */
   final def xTrimWithMaxLen[SK: Schema](
     key: SK,
-    count: Long,
+    threshold: Long,
     approximate: Boolean = false,
     limit: Option[Long] = None
   ): G[Long] =
     if (approximate) {
       val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MaxLenApproxInput), LongOutput)
-      command.run((key, CappedStreamType.MaxLenApprox(count, limit)))
+      command.run((key, CappedStreamType.MaxLenApprox(threshold, limit)))
     } else {
       val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MaxLenExactInput), LongOutput)
-      command.run((key, CappedStreamType.MaxLenExact(count)))
+      command.run((key, CappedStreamType.MaxLenExact(threshold)))
     }
 
   /**
@@ -1053,8 +1052,8 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    *
    * @param key
    *   ID of the stream
-   * @param minId
-   *   minimal stream id
+   * @param threshold
+   *   Evicts entries with IDs lower than threshold, where threshold is a stream ID
    * @param approximate
    *   flag that indicates if the stream length should be exactly count or few tens of entries more
    * @return
@@ -1062,16 +1061,16 @@ trait Streams[G[+_]] extends RedisEnvironment[G] {
    */
   final def xTrimWithMinId[SK: Schema, I: Schema](
     key: SK,
-    minId: I,
+    threshold: I,
     approximate: Boolean = false,
     limit: Option[Long] = None
   ): G[Long] =
     if (approximate) {
       val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdApproxInput[I]()), LongOutput)
-      command.run((key, CappedStreamType.MinIdApprox(minId, limit)))
+      command.run((key, CappedStreamType.MinIdApprox(threshold, limit)))
     } else {
       val command = RedisCommand(XTrim, Tuple2(ArbitraryKeyInput[SK](), MinIdExactInput[I]()), LongOutput)
-      command.run((key, CappedStreamType.MinIdExact(minId)))
+      command.run((key, CappedStreamType.MinIdExact(threshold)))
     }
 }
 
