@@ -21,6 +21,8 @@ import zio.redis.Output._
 import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 
+import java.nio.charset.StandardCharsets
+
 trait Connection[G[+_]] extends RedisEnvironment[G] {
   import Connection.{Auth => _, _}
 
@@ -108,11 +110,13 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   PONG if no argument is provided, otherwise return a copy of the argument
    */
-  final def ping(message: Option[String] = None): G[String] = {
-    val command = RedisCommand(Ping, OptionalInput(StringInput), StringOutput)
-
-    command.run(message)
-  }
+  final def ping(message: Option[String] = None): G[String] =
+    message match {
+      case None        => RedisCommand(Ping, NoInput, StringOutput).run(())
+      case Some(value) =>
+        RedisCommand(Ping, StringInput, BulkStringOutput.map(v => new String(v.toArray, StandardCharsets.UTF_8)))
+          .run(value)
+    }
 
   /**
    * Changes the database for the current connection to the database having the specified numeric index. The currently
