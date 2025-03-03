@@ -106,7 +106,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   /**
    * @param message
    *   expected response payload
-   *  
+   *
    * @return
    *   PONG if no argument is provided, otherwise return a copy of the argument
    */
