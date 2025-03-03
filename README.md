@@ -17,7 +17,7 @@ instances.
 To use ZIO Redis, add the following line to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "1.1.1"
+libraryDependencies += "dev.zio" %% "zio-redis" % "1.1.2"
 ```
 
 ## Example
@@ -32,7 +32,7 @@ To run this example we should put following dependencies in our `build.sbt` file
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "1.1.1",
+  "dev.zio" %% "zio-redis" % "1.1.2",
   "dev.zio" %% "zio-schema-protobuf" % "1.6.1"
 )
 ```
@@ -70,7 +70,7 @@ object ZIORedisExample extends ZIOAppDefault {
 To test you can use the embedded redis instance by adding to your build:
 
 ```scala
-libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "1.1.1"
+libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "1.1.2"
 ```
 
 Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
