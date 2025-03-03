@@ -21,8 +21,6 @@ import zio.redis.Output._
 import zio.redis._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 
-import java.nio.charset.StandardCharsets
-
 trait Connection[G[+_]] extends RedisEnvironment[G] {
   import Connection.{Auth => _, _}
 
@@ -113,9 +111,7 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   final def ping(message: Option[String] = None): G[String] =
     message match {
       case None        => RedisCommand(Ping, NoInput, StringOutput).run(())
-      case Some(value) =>
-        RedisCommand(Ping, StringInput, BulkStringOutput.map(v => new String(v.toArray, StandardCharsets.UTF_8)))
-          .run(value)
+      case Some(value) => RedisCommand(Ping, StringInput, MultiStringOutput).run(value)
     }
 
   /**
