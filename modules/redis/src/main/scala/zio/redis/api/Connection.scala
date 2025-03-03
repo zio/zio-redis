@@ -102,7 +102,11 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   }
 
   /**
-   * https://redis.io/docs/latest/commands/ping/
+   * @param message
+   *   expected response payload
+   *  
+   * @return
+   *   PONG if no argument is provided, otherwise return a copy of the argument
    */
   final def ping(message: Option[String] = None): G[String] = {
     val command = RedisCommand(Ping, OptionalInput(StringInput), StringOutput)
