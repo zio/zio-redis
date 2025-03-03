@@ -102,6 +102,15 @@ trait Connection[G[+_]] extends RedisEnvironment[G] {
   }
 
   /**
+   * https://redis.io/docs/latest/commands/ping/
+   */
+  final def ping(message: Option[String] = None): G[String] = {
+    val command = RedisCommand(Ping, OptionalInput(StringInput), StringOutput)
+
+    command.run(message)
+  }
+
+  /**
    * Changes the database for the current connection to the database having the specified numeric index. The currently
    * selected database is a property of the connection; clients should track the selected database and re-select it on
    * reconnection.
@@ -123,5 +132,6 @@ private[redis] object Connection {
   final val ClientGetName = "CLIENT GETNAME"
   final val ClientId      = "CLIENT ID"
   final val ClientSetName = "CLIENT SETNAME"
+  final val Ping          = "PING"
   final val Select        = "SELECT"
 }

@@ -29,6 +29,18 @@ trait ConnectionSpec extends IntegrationSpec {
           _     <- redis.clientSetName("foo")
           name  <- redis.clientGetName
         } yield assert(name.getOrElse(""))(equalTo("foo"))
-      } @@ clusterExecutorUnsupported
+      } @@ clusterExecutorUnsupported,
+      suite("ping")(
+        test("without argument, returns PONG") {
+          for {
+            pong <- ZIO.serviceWithZIO[Redis](_.ping())
+          } yield assertTrue(pong == "PONG")
+        },
+        test("with an argument, returns the argument") {
+          for {
+            pong <- ZIO.serviceWithZIO[Redis](_.ping(Some("toto")))
+          } yield assertTrue(pong == "toto")
+        }
+      )
     ) @@ sequential
 }
