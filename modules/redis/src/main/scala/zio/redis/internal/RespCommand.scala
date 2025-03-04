@@ -25,7 +25,7 @@ private[redis] final case class RespCommand(args: Chunk[RespCommandArgument]) ex
 }
 
 private[redis] object RespCommand {
-  def empty: RespCommand = new RespCommand(Chunk.empty)
+  val empty: RespCommand = new RespCommand(Chunk.empty)
 
   def apply(args: Chunk[RespCommandArgument]): RespCommand = new RespCommand(args)
 
