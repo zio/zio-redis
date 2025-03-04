@@ -444,12 +444,12 @@ object InputSpec extends BaseSpec {
         test("inclusive value") {
           for {
             result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMaximum.Inclusive(10L).asString))
-          } yield assert(result)(equalTo(RespCommand(Value("11"))))
+          } yield assert(result)(equalTo(RespCommand(Value("10"))))
         },
         test("exclusive value") {
           for {
             result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMaximum.Exclusive(10L).asString))
-          } yield assert(result)(equalTo(RespCommand(Value("10"))))
+          } yield assert(result)(equalTo(RespCommand(Value("9"))))
         }
       ),
       suite("LexRange")(

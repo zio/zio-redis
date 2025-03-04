@@ -806,15 +806,17 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ChunkOutput(ArbitraryOutput[M]())
           )
 
+        val revOpt = if (rev) Some("REV") else None
+
         range match {
           case SortedSetRange.Range(min: RangeMinimum, max: RangeMaximum) =>
-            command.run((key, min.asString, max.asString, None, Option.when(rev)("REV"), limit))
+            command.run((key, min.asString, max.asString, None, revOpt, limit))
 
           case SortedSetRange.LexRange(min: LexMinimum, max: LexMaximum) =>
-            command.run((key, min.asString, max.asString, Some("BYLEX"), Option.when(rev)("REV"), limit))
+            command.run((key, min.asString, max.asString, Some("BYLEX"), revOpt, limit))
 
           case SortedSetRange.ScoreRange(min: ScoreMinimum, max: ScoreMaximum) =>
-            command.run((key, min.asString, max.asString, Some("BYSCORE"), Option.when(rev)("REV"), limit))
+            command.run((key, min.asString, max.asString, Some("BYSCORE"), revOpt, limit))
         }
       }
     }
@@ -857,15 +859,17 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
               .map(_.map { case (m, s) => MemberScore(m, s) })
           )
 
+        val revOpt = if (rev) Some("REV") else None
+
         range match {
           case SortedSetRange.Range(min: RangeMinimum, max: RangeMaximum) =>
-            command.run((key, min.asString, max.asString, None, Option.when(rev)("REV"), limit, WithScores))
+            command.run((key, min.asString, max.asString, None, revOpt, limit, WithScores))
 
           case SortedSetRange.LexRange(min: LexMinimum, max: LexMaximum) =>
-            command.run((key, min.asString, max.asString, Some("BYLEX"), Option.when(rev)("REV"), limit, WithScores))
+            command.run((key, min.asString, max.asString, Some("BYLEX"), revOpt, limit, WithScores))
 
           case SortedSetRange.ScoreRange(min: ScoreMinimum, max: ScoreMaximum) =>
-            command.run((key, min.asString, max.asString, Some("BYSCORE"), Option.when(rev)("REV"), limit, WithScores))
+            command.run((key, min.asString, max.asString, Some("BYSCORE"), revOpt, limit, WithScores))
         }
       }
     }
@@ -909,15 +913,17 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         LongOutput
       )
 
+    val revOpt = if (rev) Some("REV") else None
+
     range match {
       case SortedSetRange.Range(min: RangeMinimum, max: RangeMaximum) =>
-        command.run((dst, src, min.asString, max.asString, None, Option.when(rev)("REV"), limit))
+        command.run((dst, src, min.asString, max.asString, None, revOpt, limit))
 
       case SortedSetRange.LexRange(min: LexMinimum, max: LexMaximum) =>
-        command.run((dst, src, min.asString, max.asString, Some("BYLEX"), Option.when(rev)("REV"), limit))
+        command.run((dst, src, min.asString, max.asString, Some("BYLEX"), revOpt, limit))
 
       case SortedSetRange.ScoreRange(min: ScoreMinimum, max: ScoreMaximum) =>
-        command.run((dst, src, min.asString, max.asString, Some("BYSCORE"), Option.when(rev)("REV"), limit))
+        command.run((dst, src, min.asString, max.asString, Some("BYSCORE"), revOpt, limit))
     }
   }
 
