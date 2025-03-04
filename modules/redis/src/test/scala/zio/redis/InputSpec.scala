@@ -53,6 +53,18 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("AGGREGATE"), Literal("SUM"))))
         }
       ),
+      suite("MinMax")(
+        test("max") {
+          for {
+            result <- ZIO.attempt(MaxInput.encode(Max))
+          } yield assert(result)(equalTo(RespCommand(Literal("MAX"))))
+        },
+        test("min") {
+          for {
+            result <- ZIO.attempt(MinInput.encode(Min))
+          } yield assert(result)(equalTo(RespCommand(Literal("MIN"))))
+        }
+      ),
       suite("Alpha")(
         test("alpha") {
           for {
@@ -421,12 +433,31 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("KEEPTTL"))))
         }
       ),
+      suite("RangeMinimum")(
+        test("valid value") {
+          for {
+            result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMinimum(10L).asString))
+          } yield assert(result)(equalTo(RespCommand(Value("10"))))
+        }
+      ),
+      suite("RangeMaximum")(
+        test("inclusive value") {
+          for {
+            result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMaximum.Inclusive(10L).asString))
+          } yield assert(result)(equalTo(RespCommand(Value("11"))))
+        },
+        test("exclusive value") {
+          for {
+            result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMaximum.Exclusive(10L).asString))
+          } yield assert(result)(equalTo(RespCommand(Value("10"))))
+        }
+      ),
       suite("LexRange")(
         test("with unbound min and unbound max") {
           for {
             result <- ZIO.attempt(
                         Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
-                          .encode((LexMinimum.Unbounded.asString, LexMaximum.Unbounded.asString))
+                          .encode((LexMinimum.UnboundedNegative.asString, LexMaximum.UnboundedPositive.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-"), Value("+"))))
         },
@@ -434,7 +465,7 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(
                         Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
-                          .encode((LexMinimum.Open("a").asString, LexMaximum.Unbounded.asString))
+                          .encode((LexMinimum.Open("a").asString, LexMaximum.UnboundedPositive.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(a"), Value("+"))))
         },
@@ -442,7 +473,7 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(
                         Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
-                          .encode((LexMinimum.Closed("a").asString, LexMaximum.Unbounded.asString))
+                          .encode((LexMinimum.Closed("a").asString, LexMaximum.UnboundedPositive.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("[a"), Value("+"))))
         },
@@ -450,7 +481,7 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(
                         Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
-                          .encode((LexMinimum.Unbounded.asString, LexMaximum.Open("z").asString))
+                          .encode((LexMinimum.UnboundedNegative.asString, LexMaximum.Open("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-"), Value("(z"))))
         },
@@ -474,7 +505,7 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(
                         Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
-                          .encode((LexMinimum.Unbounded.asString, LexMaximum.Closed("z").asString))
+                          .encode((LexMinimum.UnboundedNegative.asString, LexMaximum.Closed("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-"), Value("[z"))))
         },
@@ -510,6 +541,13 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(LimitInput.encode(Limit(0L, 0L)))
           } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Value("0"), Value("0"))))
+        }
+      ),
+      suite("SimpleLimit")(
+        test("Limit") {
+          for {
+            result <- ZIO.attempt(SimpleLimitInput.encode(SimpleLimit(10)))
+          } yield assert(result)(equalTo(RespCommand(Literal("LIMIT"), Value("10"))))
         }
       ),
       suite("Long")(
