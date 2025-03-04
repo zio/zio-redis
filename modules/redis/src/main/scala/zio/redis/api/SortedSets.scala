@@ -44,8 +44,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    */
   final def zmPopMin[K: Schema](
     count: Option[Long] = None
-  )(key: K, keys: K*): ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] =
-    new ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] {
+  )(key: K, keys: K*): ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] =
+    new ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] {
       override def returning[M: Schema]: G[Option[(K, Chunk[MemberScore[M]])]] = {
         val memberScoreOutput: Output[(K, Chunk[MemberScore[M]])] =
           Tuple2Output(ArbitraryOutput[K](), ChunkOutput(Tuple2Output(ArbitraryOutput[M](), DoubleOrInfinity))).map {
@@ -80,8 +80,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    */
   final def zmPopMax[K: Schema](
     count: Option[Long] = None
-  )(key: K, keys: K*): ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] =
-    new ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] {
+  )(key: K, keys: K*): ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] =
+    new ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] {
       override def returning[M: Schema]: G[Option[(K, Chunk[MemberScore[M]])]] = {
         val memberScoreOutput: Output[(K, Chunk[MemberScore[M]])] =
           Tuple2Output(ArbitraryOutput[K](), ChunkOutput(Tuple2Output(ArbitraryOutput[M](), DoubleOrInfinity))).map {
@@ -117,8 +117,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def bZmPopMin[K: Schema](
     timeout: Duration,
     count: Option[Long] = None
-  )(key: K, keys: K*): ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] =
-    new ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] {
+  )(key: K, keys: K*): ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] =
+    new ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] {
       override def returning[M: Schema]: G[Option[(K, Chunk[MemberScore[M]])]] = {
         val memberScoreOutput: Output[(K, Chunk[MemberScore[M]])] =
           Tuple2Output(ArbitraryOutput[K](), ChunkOutput(Tuple2Output(ArbitraryOutput[M](), DoubleOrInfinity))).map {
@@ -160,8 +160,8 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def bZmPopMax[K: Schema](
     timeout: Duration,
     count: Option[Long] = None
-  )(key: K, keys: K*): ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] =
-    new ResultBuilder1[Lambda[x => Option[(K, Chunk[MemberScore[x]])]], G] {
+  )(key: K, keys: K*): ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] =
+    new ResultBuilder1[({ type lambda[x] = Option[(K, Chunk[MemberScore[x]])] })#lambda, G] {
       override def returning[M: Schema]: G[Option[(K, Chunk[MemberScore[M]])]] = {
         val memberScoreOutput: Output[(K, Chunk[MemberScore[M]])] =
           Tuple2Output(ArbitraryOutput[K](), ChunkOutput(Tuple2Output(ArbitraryOutput[M](), DoubleOrInfinity))).map {
