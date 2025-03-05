@@ -50,6 +50,16 @@ object Input {
       RespCommand(RespCommandArgument.Literal("AGGREGATE"), RespCommandArgument.Literal(data.asString))
   }
 
+  case object MaxInput extends Input[Max] {
+    override private[redis] def encode(data: Max): RespCommand =
+      RespCommand(RespCommandArgument.Literal(data.asSring))
+  }
+
+  case object MinInput extends Input[Min] {
+    override private[redis] def encode(data: Min): RespCommand =
+      RespCommand(RespCommandArgument.Literal(data.asString))
+  }
+
   case object AlphaInput extends Input[Alpha] {
     def encode(data: Alpha): RespCommand =
       RespCommand(RespCommandArgument.Literal(data.asString))
@@ -316,6 +326,11 @@ object Input {
         RespCommandArgument.Value(data.offset.toString),
         RespCommandArgument.Value(data.count.toString)
       )
+  }
+
+  case object SimpleLimitInput extends Input[SimpleLimit] {
+    def encode(data: SimpleLimit): RespCommand =
+      RespCommand(RespCommandArgument.Literal("LIMIT"), RespCommandArgument.Value(data.limit.toString))
   }
 
   case object ListMaxLenInput extends Input[ListMaxLen] {
