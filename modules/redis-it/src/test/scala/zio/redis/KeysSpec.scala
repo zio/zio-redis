@@ -263,7 +263,7 @@ trait KeysSpec extends IntegrationSpec {
             key   <- uuid
             value <- uuid
             _     <- redis.set(key, value)
-            -     <- redis.flushall(sync = true)
+            _     <- redis.flushall(sync = true)
             keys  <- redis.keys("*").returning[String]
           } yield assert(keys)(isEmpty)
         }
