@@ -408,11 +408,29 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           Scan,
           Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
-          Tuple2Output(ArbitraryOutput[Long](), ChunkOutput(ArbitraryOutput[K]()))
+          ScanOutput(ArbitraryOutput[K]())
         )
         command.run((cursor, pattern.map(Pattern(_)), count, `type`))
       }
     }
+
+  /**
+   * Delete all the keys of all the existing databases, not just the currently selected one. This command never fails.
+   *
+   * @param sync
+   *  flushes the databases synchronously
+   * @return
+   *  Simple string reply: OK.
+   */
+  final def flushall(sync: Boolean = false): G[Unit] = {
+    val command = RedisCommand(
+      FlushAll,
+      ArbitraryValueInput[String](),
+      UnitOutput
+    )
+
+    command.run(if (sync) "SYNC" else "ASYNC")
+  }
 
   /**
    * Sorts the list, set, or sorted set stored at key. Returns the sorted elements.
@@ -609,4 +627,5 @@ private[redis] object Keys {
   final val TypeOf    = "TYPE"
   final val Unlink    = "UNLINK"
   final val Wait      = "WAIT"
+  final val FlushAll  = "FLUSHALL"
 }
