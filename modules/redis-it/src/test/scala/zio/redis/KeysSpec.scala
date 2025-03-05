@@ -146,6 +146,24 @@ trait KeysSpec extends IntegrationSpec {
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
         }
       ) @@ flaky @@ clusterExecutorUnsupported,
+      test("scan should terminate") {
+
+        def loop(redis: Redis)(cursor: Long, acc: Chunk[String]): ZIO[Any, RedisError, Chunk[String]] =
+          redis.scan(cursor).returning[String].flatMap { case (nextCursor, keys) =>
+            if (nextCursor == 0L)
+              ZIO.succeed((acc ++ keys).distinct)
+            else
+              loop(redis)(nextCursor, acc ++ keys)
+          }
+
+        for {
+          redis  <- ZIO.service[Redis]
+          key    <- uuid
+          value  <- uuid
+          _      <- redis.set(key, value)
+          result <- loop(redis)(0L, Chunk.empty).timeout(10.seconds)
+        } yield assert(result)(isSome(isNonEmpty))
+      } @@ clusterExecutorUnsupported,
       test("fetch random key") {
         for {
           redis     <- ZIO.service[Redis]
@@ -238,6 +256,18 @@ trait KeysSpec extends IntegrationSpec {
           } yield assert(response)(isLeft(isSubtype[ProtocolError](anything)))
         }
       ) @@ clusterExecutorUnsupported,
+      suite("flushall")(
+        test("all keys removed") {
+          for {
+            redis <- ZIO.service[Redis]
+            key   <- uuid
+            value <- uuid
+            _     <- redis.set(key, value)
+            -     <- redis.flushall(sync = true)
+            keys  <- redis.keys("*").returning[String]
+          } yield assert(keys)(isEmpty)
+        }
+      ),
       suite("ttl")(
         test("check ttl for existing key") {
           for {
