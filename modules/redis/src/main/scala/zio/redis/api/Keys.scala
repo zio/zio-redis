@@ -409,7 +409,6 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
           Scan,
           Tuple4(LongInput, OptionalInput(PatternInput), OptionalInput(CountInput), OptionalInput(RedisTypeInput)),
           ScanOutput(ArbitraryOutput[K]())
-          // Tuple2Output(BulkStringOutput.map(c => new String(c.toArray, StandardCharsets.UTF_8).toLong), ChunkOutput(ArbitraryOutput[K]()))
         )
         command.run((cursor, pattern.map(Pattern(_)), count, `type`))
       }
