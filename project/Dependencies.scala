@@ -37,7 +37,7 @@ object Dependencies {
       "dev.zio"                       %% "zio-config-typesafe" % Versions.ZioConfig,
       "dev.zio"                       %% "zio-schema-protobuf" % Versions.ZioSchema,
       "dev.zio"                       %% "zio-json"            % Versions.ZioJson,
-      "dev.zio"                       %% "zio-http"            % "3.0.1"
+      "dev.zio"                       %% "zio-http"            % "3.1.0"
     )
 
   val docs =
