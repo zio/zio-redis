@@ -9,9 +9,9 @@ object Dependencies {
     val Redis4Cats        = "1.7.2"
     val Sttp              = "3.10.3"
     val TlsChannel        = "0.9.1"
-    val ZioConfig         = "4.0.3"
+    val ZioConfig         = "4.0.4"
     val ZioJson           = "0.7.39"
-    val ZioSchema         = "1.6.4"
+    val ZioSchema         = "1.6.6"
     val ZioTestContainers = "0.6.0"
   }
 
@@ -37,7 +37,7 @@ object Dependencies {
       "dev.zio"                       %% "zio-config-typesafe" % Versions.ZioConfig,
       "dev.zio"                       %% "zio-schema-protobuf" % Versions.ZioSchema,
       "dev.zio"                       %% "zio-json"            % Versions.ZioJson,
-      "dev.zio"                       %% "zio-http"            % "3.0.1"
+      "dev.zio"                       %% "zio-http"            % "3.1.0"
     )
 
   val docs =
