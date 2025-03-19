@@ -1294,7 +1294,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             result <- redis
                         .zRange(
                           key,
-                          SortedSetRange.LexRange(min = LexMinimum.Closed("c"), max = LexMaximum.UnboundedNegative),
+                          SortedSetRange.LexRange(min = LexMinimum.UnboundedNegative, max = LexMaximum.Closed("c")),
                           rev = true
                         )
                         .returning[String]
@@ -1366,7 +1366,7 @@ trait SortedSetsSpec extends IntegrationSpec {
                       )
             result <-
               redis
-                .zRange(key, SortedSetRange.ScoreRange(ScoreMinimum.Closed(1900), ScoreMaximum.Open(1500)), rev = true)
+                .zRange(key, SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900)), rev = true)
                 .returning[String]
           } yield assert(result.toList)(equalTo(List("Micromax", "MicroSoft", "Samsung")))
         },
@@ -1411,7 +1411,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             quark   = MemberScore("Quark", Double.NegativeInfinity)
             _      <- redis.zAdd(key)(edge, delhi, mumbai, quark, london, tokyo, paris)
             result <- redis
-                        .zRangeWithScore(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Inclusive(-1)))
+                        .zRangeWithScores(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Inclusive(-1)))
                         .returning[String]
           } yield assert(result.toList)(
             equalTo(List(quark, delhi, mumbai, london, paris, tokyo, edge))
@@ -1422,7 +1422,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             result <- redis
-                        .zRangeWithScore(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Exclusive(-1)))
+                        .zRangeWithScores(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Exclusive(-1)))
                         .returning[String]
           } yield assert(result.toList)(isEmpty)
         }
@@ -1440,7 +1440,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             lg         = MemberScore("LG", 2500d)
             _         <- redis.zAdd(key)(samsung, nokia, micromax, sunsui, microSoft, lg)
             scoreRange = SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900))
-            result    <- redis.zRangeWithScore(key, scoreRange).returning[String]
+            result    <- redis.zRangeWithScores(key, scoreRange).returning[String]
           } yield assert(result.toList)(equalTo(List(samsung, microSoft, micromax)))
         },
         test("non-empty set, with limit") {
@@ -1456,7 +1456,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             _         <- redis.zAdd(key)(samsung, nokia, micromax, sunsui, microSoft, lg)
             scoreRange = SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(2500))
             result    <-
-              redis.zRangeWithScore(key, scoreRange, limit = Some(Limit(offset = 1, count = 3))).returning[String]
+              redis.zRangeWithScores(key, scoreRange, limit = Some(Limit(offset = 1, count = 3))).returning[String]
           } yield assert(result.toList)(equalTo(List(microSoft, micromax, nokia)))
         },
         test("empty set") {
@@ -1464,7 +1464,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             redis     <- ZIO.service[Redis]
             key       <- uuid
             scoreRange = SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900))
-            result    <- redis.zRangeWithScore(key, scoreRange).returning[String]
+            result    <- redis.zRangeWithScores(key, scoreRange).returning[String]
           } yield assert(result.toList)(isEmpty)
         }
       ),
@@ -1762,7 +1762,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             quark   = MemberScore("Quark", Double.NegativeInfinity)
             _      <- redis.zAdd(key)(edge, delhi, mumbai, quark, london, tokyo, paris)
             result <- redis
-                        .zRangeWithScore(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Inclusive(-1)))
+                        .zRangeWithScores(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Inclusive(-1)))
                         .returning[String]
           } yield assert(result.toList)(
             equalTo(List(quark, delhi, mumbai, london, paris, tokyo, edge))
@@ -1773,7 +1773,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             redis  <- ZIO.service[Redis]
             key    <- uuid
             result <- redis
-                        .zRangeWithScore(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Exclusive(-1)))
+                        .zRangeWithScores(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Exclusive(-1)))
                         .returning[String]
           } yield assert(result.toList)(isEmpty)
         }
@@ -1791,7 +1791,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             lg         = MemberScore("LG", 2500d)
             _         <- redis.zAdd(key)(samsung, nokia, micromax, sunsui, microSoft, lg)
             scoreRange = SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900))
-            result    <- redis.zRangeWithScore(key, scoreRange).returning[String]
+            result    <- redis.zRangeWithScores(key, scoreRange).returning[String]
           } yield assert(result.toList)(equalTo(List(samsung, microSoft, micromax)))
         },
         test("non-empty set, with limit") {
@@ -1807,7 +1807,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             _         <- redis.zAdd(key)(samsung, nokia, micromax, sunsui, microSoft, lg)
             scoreRange = SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(2500))
             result    <-
-              redis.zRangeWithScore(key, scoreRange, limit = Some(Limit(offset = 1, count = 3))).returning[String]
+              redis.zRangeWithScores(key, scoreRange, limit = Some(Limit(offset = 1, count = 3))).returning[String]
           } yield assert(result.toList)(equalTo(List(microSoft, micromax, nokia)))
         },
         test("empty set") {
@@ -1815,7 +1815,7 @@ trait SortedSetsSpec extends IntegrationSpec {
             redis     <- ZIO.service[Redis]
             key       <- uuid
             scoreRange = SortedSetRange.ScoreRange(ScoreMinimum.Open(1500), ScoreMaximum.Closed(1900))
-            result    <- redis.zRangeWithScore(key, scoreRange).returning[String]
+            result    <- redis.zRangeWithScores(key, scoreRange).returning[String]
           } yield assert(result.toList)(isEmpty)
         }
       ),
@@ -1832,7 +1832,9 @@ trait SortedSetsSpec extends IntegrationSpec {
             edge    = MemberScore("The edge of universe", Double.PositiveInfinity)
             quark   = MemberScore("Quark", Double.NegativeInfinity)
             _      <- redis.zAdd(key)(edge, delhi, mumbai, quark, london, tokyo, paris)
-            result <- redis.zRangeWithScores(key, 0 to -1).returning[String]
+            result <- redis
+                        .zRangeWithScores(key, SortedSetRange.Range(RangeMinimum(0), RangeMaximum.Inclusive(-1)))
+                        .returning[String]
           } yield assert(result.toList)(
             equalTo(List(quark, delhi, mumbai, london, paris, tokyo, edge))
           )
