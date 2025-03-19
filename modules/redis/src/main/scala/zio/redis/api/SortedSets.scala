@@ -760,13 +760,13 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified range.
    */
-  @deprecated("Use the new version of zRange")
+  @deprecated("Use the new version of zRange", "1.1.2")
   final def zRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk, G] =
     zRange(
       key,
       SortedSetRange.Range(
-        RangeMinimum(range.start),
-        if (range.isInclusive) RangeMaximum.Inclusive(range.end) else RangeMaximum.Exclusive(range.end)
+        RangeMinimum(range.start.toLong),
+        if (range.isInclusive) RangeMaximum.Inclusive(range.end.toLong) else RangeMaximum.Exclusive(range.end.toLong)
       )
     )
 
@@ -950,13 +950,13 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  @deprecated("Use the new version of zRangeWithScores")
+  @deprecated("Use the new version of zRangeWithScores", "1.1.2")
   final def zRangeWithScores[K: Schema](key: K, range: Range): ResultBuilder1[MemberScores, G] =
     zRangeWithScores(
       key,
       SortedSetRange.Range(
-        RangeMinimum(range.start),
-        if (range.isInclusive) RangeMaximum.Inclusive(range.end) else RangeMaximum.Exclusive(range.end)
+        RangeMinimum(range.start.toLong),
+        if (range.isInclusive) RangeMaximum.Inclusive(range.end.toLong) else RangeMaximum.Exclusive(range.end.toLong)
       )
     )
 
@@ -973,7 +973,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  @deprecated("Use the new version of zRange")
+  @deprecated("Use the new version of zRange", "1.1.2")
   final def zRangeByLex[K: Schema](
     key: K,
     lexRange: SortedSetRange.LexRange,
@@ -994,7 +994,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  @deprecated("Use the new version of zRange")
+  @deprecated("Use the new version of zRange", "1.1.2")
   final def zRangeByScore[K: Schema](
     key: K,
     scoreRange: SortedSetRange.ScoreRange,
@@ -1015,7 +1015,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements with their scores in the specified score range.
    */
-  @deprecated("Use the new version of zRangeWithScores")
+  @deprecated("Use the new version of zRangeWithScores", "1.1.2")
   final def zRangeByScoreWithScores[K: Schema](
     key: K,
     scoreRange: SortedSetRange.ScoreRange,
@@ -1144,13 +1144,13 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified range.
    */
-  @deprecated("Use the new version of zRange with rev = true")
+  @deprecated("Use the new version of zRange with rev = true", "1.1.2")
   final def zRevRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk, G] =
     zRange(
       key,
       SortedSetRange.Range(
-        RangeMinimum(range.start),
-        if (range.isInclusive) RangeMaximum.Inclusive(range.end) else RangeMaximum.Exclusive(range.end)
+        RangeMinimum(range.start.toLong),
+        if (range.isInclusive) RangeMaximum.Inclusive(range.end.toLong) else RangeMaximum.Exclusive(range.end.toLong)
       ),
       rev = true
     )
@@ -1165,13 +1165,13 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  @deprecated("Use the new version of zRangeWithScores with rev = true")
+  @deprecated("Use the new version of zRangeWithScores with rev = true", "1.1.2")
   final def zRevRangeWithScores[K: Schema](key: K, range: Range): ResultBuilder1[MemberScores, G] =
     zRangeWithScores(
       key,
       SortedSetRange.Range(
-        RangeMinimum(range.start),
-        if (range.isInclusive) RangeMaximum.Inclusive(range.end) else RangeMaximum.Exclusive(range.end)
+        RangeMinimum(range.start.toLong),
+        if (range.isInclusive) RangeMaximum.Inclusive(range.end.toLong) else RangeMaximum.Exclusive(range.end.toLong)
       ),
       rev = true
     )
@@ -1189,7 +1189,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified score range.
    */
-  @deprecated("Use the new version of zRange with rev = true")
+  @deprecated("Use the new version of zRange with rev = true", "1.1.2")
   final def zRevRangeByLex[K: Schema](
     key: K,
     lexRange: SortedSetRange.LexRange,
@@ -1210,7 +1210,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements in the specified range.
    */
-  @deprecated("Use the new version of zRange with rev = true")
+  @deprecated("Use the new version of zRange with rev = true", "1.1.2")
   final def zRevRangeByScore[K: Schema](
     key: K,
     scoreRange: SortedSetRange.ScoreRange,
@@ -1231,7 +1231,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @return
    *   Chunk of elements with their scores in the specified range.
    */
-  @deprecated("Use the new version of zRangeWithScores with rev = true")
+  @deprecated("Use the new version of zRangeWithScores with rev = true", "1.1.2")
   final def zRevRangeByScoreWithScores[K: Schema](
     key: K,
     scoreRange: SortedSetRange.ScoreRange,
