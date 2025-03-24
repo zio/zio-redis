@@ -4,7 +4,7 @@ object Dependencies {
 
   object Versions {
     val Zio               = "2.1.16"
-    val CatsEffect        = "3.5.7"
+    val CatsEffect        = "3.6.0"
     val EmbeddedRedis     = "0.6"
     val Redis4Cats        = "1.7.2"
     val Sttp              = "3.10.3"
