@@ -1,7 +1,7 @@
 pull_request_rules:
   - name: assign and label scala-steward's PRs
     conditions:
-      - author=zio-scala-steward
+      - author=zio-scala-steward[bot]
     actions:
       assign:
         users: ["@zio/zio-redis"]
@@ -9,14 +9,14 @@ pull_request_rules:
         add: ["type: dependencies"]
   - name: label scala-steward's breaking PRs
     conditions:
-      - author=zio-scala-steward
+      - author=zio-scala-steward[bot]
       - "body~=(labels: library-update, early-semver-major)|(labels: sbt-plugin-update, early-semver-major)"
     actions:
       label:
         add: ["type: breaking"]
   - name: merge Scala Steward's PRs
     conditions:
-      - author=zio-scala-steward
+      - author=zio-scala-steward[bot]
       - "body~=(labels: library-update, early-semver-minor)|(labels: library-update, early-semver-patch)|(labels: sbt-plugin-update, early-semver-minor)|(labels: sbt-plugin-update, early-semver-patch)|(labels: scalafix-rule-update)|(labels: test-library-update)"
       - "status-success=license/cla"
       - "status-success=ci"
