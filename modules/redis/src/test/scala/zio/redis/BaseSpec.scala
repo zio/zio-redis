@@ -9,5 +9,5 @@ trait BaseSpec extends ZIOSpecDefault {
   implicit def summonCodec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk(fibers, silentLogging)
+    Chunk(silentLogging)
 }
