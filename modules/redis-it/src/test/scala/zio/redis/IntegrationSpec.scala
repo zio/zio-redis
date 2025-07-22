@@ -4,7 +4,7 @@ import com.dimafeng.testcontainers.{DockerComposeContainer, ExposedService}
 import org.testcontainers.containers.wait.strategy.Wait
 import zio.schema.Schema
 import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test.TestAspect.{fibers, silentLogging, tag}
+import zio.test.TestAspect.{silentLogging, tag}
 import zio.test._
 import zio.testcontainers._
 import zio.{ULayer, _}
@@ -16,7 +16,7 @@ trait IntegrationSpec extends ZIOSpecDefault {
   implicit def summonCodec[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
 
   override def aspects: Chunk[TestAspectAtLeastR[Live]] =
-    Chunk(fibers, silentLogging)
+    Chunk(silentLogging)
 
   final def compose(services: ExposedService*): ULayer[DockerComposeContainer] =
     ZLayer.fromTestContainer {
