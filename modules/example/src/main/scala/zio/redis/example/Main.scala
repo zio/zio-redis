@@ -34,7 +34,7 @@ object Main extends ZIOAppDefault {
     Runtime.setConfigProvider(provider)
   }
 
-  def run: ZIO[ZIOAppArgs with Scope, Any, ExitCode] =
+  override def run: ZIO[ZIOAppArgs with Scope, Any, Any] =
     Server
       .serve(Api.routes)
       .provide(
@@ -47,5 +47,4 @@ object Main extends ZIOAppDefault {
           def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
         })
       )
-      .exitCode
 }
