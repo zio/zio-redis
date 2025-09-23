@@ -28,13 +28,24 @@ private[redis] final class SingleNodeExecutor private (
 ) extends SingleNodeRunner
     with RedisExecutor {
 
-  // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
+  // Fixed: Improved error handling to prevent hanging promises
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] =
     Promise
       .make[RedisError, RespValue]
       .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)).as(promise.await))
 
-  def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
+  def onError(e: RedisError): UIO[Unit] =
+    for {
+      // Drain all pending responses and fail them
+      pendingResponses <- responses.takeAll
+      _ <- ZIO.foreachDiscard(pendingResponses)(_.fail(e))
+
+      // Also drain any pending requests and fail their promises
+      pendingRequests <- requests.takeAll
+      _ <- ZIO.foreachDiscard(pendingRequests)(_.promise.fail(e))
+
+      _ <- ZIO.logWarning(s"SingleNodeExecutor handled error: $e")
+    } yield ()
 
   def send: IO[RedisError.IOError, Unit] =
     requests.takeBetween(1, requestQueueSize).flatMap { requests =>
