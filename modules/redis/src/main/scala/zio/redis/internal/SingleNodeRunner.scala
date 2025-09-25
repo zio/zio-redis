@@ -32,11 +32,11 @@ private[redis] trait SingleNodeRunner {
    * connection. Only exits by interruption or defect.
    */
   private[internal] final val run: IO[RedisError, AnyVal] =
-    ZIO.logTrace(s"$this sender and reader has been started") *>
+    ZIO.logInfo(s"[REDIS-RUNNER] Starting sender and receiver fibers") *>
       (send.repeat(Schedule.forever) race receive)
-        .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> onError(e))
+        .tapError(e => ZIO.logError(s"[REDIS-RUNNER] Fiber failed, triggering error handling and reconnect: $e") *> onError(e))
         .retryWhile(True)
-        .tapError(e => ZIO.logError(s"Executor exiting: $e"))
+        .tapError(e => ZIO.logError(s"[REDIS-RUNNER] Executor fiber exiting permanently: $e"))
 }
 
 private[redis] object SingleNodeRunner {
