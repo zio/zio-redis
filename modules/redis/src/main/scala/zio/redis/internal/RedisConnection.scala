@@ -33,7 +33,9 @@ import javax.net.ssl.{SNIHostName, SSLContext}
 private[redis] final class RedisConnection(
   readBuffer: ByteBuffer,
   writeBuffer: ByteBuffer,
-  channel: AsynchronousByteChannel
+  channelRef: ScopedRef[AsynchronousByteChannel],
+  config: RedisConfig,
+  scope: Scope
 ) {
   import RedisConnection._
 
@@ -41,15 +43,16 @@ private[redis] final class RedisConnection(
     ZStream.repeatZIOChunkOption {
       val receive =
         for {
-          _     <- ZIO.succeed(readBuffer.clear())
-          _     <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
-          chunk <- ZIO.succeed {
-                     readBuffer.flip()
-                     val count = readBuffer.remaining()
-                     val array = Array.ofDim[Byte](count)
-                     readBuffer.get(array)
-                     Chunk.fromArray(array)
-                   }
+          _       <- ZIO.succeed(readBuffer.clear())
+          channel <- channelRef.get
+          _       <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+          chunk   <- ZIO.succeed {
+                       readBuffer.flip()
+                       val count = readBuffer.remaining()
+                       val array = Array.ofDim[Byte](count)
+                       readBuffer.get(array)
+                       Chunk.fromArray(array)
+                     }
         } yield chunk
 
       receive.mapError {
@@ -60,18 +63,25 @@ private[redis] final class RedisConnection(
 
   def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
     ZIO.when(chunk.nonEmpty) {
-      ZIO.suspendSucceed {
-        writeBuffer.clear()
-        val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
-        writeBuffer.put(c.toArray)
-        writeBuffer.flip()
+      channelRef.get.flatMap { channel =>
+        ZIO.suspendSucceed {
+          writeBuffer.clear()
+          val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
+          writeBuffer.put(c.toArray)
+          writeBuffer.flip()
 
-        closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
-          .repeatWhile(_ => writeBuffer.hasRemaining)
-          .zipRight(write(remainder))
-          .map(_.getOrElse(()))
+          closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
+            .repeatWhile(_ => writeBuffer.hasRemaining)
+            .zipRight(write(remainder))
+            .map(_.getOrElse(()))
+        }
       }
     }
+
+  def reconnect: IO[IOException, Unit] =
+    channelRef
+      .set(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
+      .provideLayer(ZLayer.succeed(scope))
 }
 
 private[redis] object RedisConnection {
@@ -81,22 +91,28 @@ private[redis] object RedisConnection {
   lazy val local: ZLayer[Any, IOError, RedisConfig & RedisConnection] =
     ZLayer.make[RedisConfig & RedisConnection](ZLayer.succeed(RedisConfig.Local), layer)
 
-  def create(uri: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] =
-    connect(new InetSocketAddress(uri.host, uri.port), uri.sni, uri.ssl)
+  def create(config: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] = {
+    val makeBuffer = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
+    (for {
+      readBuffer  <- makeBuffer
+      writeBuffer <- makeBuffer
+      scope       <- ZIO.scope
+      channelRef  <-
+        ScopedRef
+          .fromAcquire(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
+      _           <- logScopeFinalizer("Redis connection is closed")
+    } yield new RedisConnection(readBuffer, writeBuffer, channelRef, config, scope)).mapError(RedisError.IOError(_))
+  }
 
   def connect(
     address: => SocketAddress,
     sni: Option[String],
     ssl: Boolean
-  ): ZIO[Scope, RedisError.IOError, RedisConnection] =
+  ): ZIO[Scope, IOException, AsynchronousByteChannel] =
     (for {
-      address     <- ZIO.succeed(address)
-      makeBuffer   = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
-      readBuffer  <- makeBuffer
-      writeBuffer <- makeBuffer
-      channel     <- if (ssl) openTlsChannel(address, sni) else openChannel(address)
-      _           <- logScopeFinalizer("Redis connection is closed")
-    } yield new RedisConnection(readBuffer, writeBuffer, channel)).mapError(RedisError.IOError(_))
+      address <- ZIO.succeed(address)
+      channel <- if (ssl) openTlsChannel(address, sni) else openChannel(address)
+    } yield channel)
 
   private final val ResponseBufferSize = 1024
 
