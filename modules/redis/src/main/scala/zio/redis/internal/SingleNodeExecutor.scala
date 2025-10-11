@@ -28,13 +28,17 @@ private[redis] final class SingleNodeExecutor private (
 ) extends SingleNodeRunner
     with RedisExecutor {
 
-  // NodeExecutor should stop hanging forever, but onError should reopen a new connection
+  // onError try to reopen a new connection
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] =
     Promise
       .make[RedisError, RespValue]
       .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)).as(promise.await))
 
-  def onError(e: RedisError): UIO[Unit] = responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e)))
+  def onError(e: RedisError): UIO[Unit] =
+    responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e))) *>
+      connection.reconnect.catchAll { e =>
+        ZIO.logError(s"Unable to reconnect to redis server: ${e}")
+      }
 
   def send: IO[RedisError.IOError, Unit] =
     requests.takeBetween(1, requestQueueSize).flatMap { requests =>
