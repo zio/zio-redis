@@ -19,7 +19,6 @@ package zio.redis.internal
 import tlschannel.ClientTlsChannel
 import tlschannel.async.{AsynchronousTlsChannel, AsynchronousTlsChannelGroup}
 import zio._
-import zio.redis.RedisError.IOError
 import zio.redis._
 import zio.stream.{Stream, ZStream}
 
@@ -30,78 +29,81 @@ import java.nio.channels._
 import java.util.Arrays
 import javax.net.ssl.{SNIHostName, SSLContext}
 
-private[redis] final class RedisConnection(
-  readBuffer: ByteBuffer,
-  writeBuffer: ByteBuffer,
-  channelRef: ScopedRef[AsynchronousByteChannel],
-  config: RedisConfig,
-  scope: Scope
-) {
-  import RedisConnection._
+trait RedisConnection {
+  def read: Stream[IOException, Byte]
 
-  val read: Stream[IOException, Byte] =
-    ZStream.repeatZIOChunkOption {
-      val receive =
-        for {
-          _       <- ZIO.succeed(readBuffer.clear())
-          channel <- channelRef.get
-          _       <- closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
-          chunk   <- ZIO.succeed {
-                       readBuffer.flip()
-                       val count = readBuffer.remaining()
-                       val array = Array.ofDim[Byte](count)
-                       readBuffer.get(array)
-                       Chunk.fromArray(array)
-                     }
-        } yield chunk
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
 
-      receive.mapError {
-        case e: EOFException => Some(new IOException(e))
-        case e: IOException  => Some(e)
-      }
-    }
-
-  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
-    ZIO.when(chunk.nonEmpty) {
-      channelRef.get.flatMap { channel =>
-        ZIO.suspendSucceed {
-          writeBuffer.clear()
-          val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
-          writeBuffer.put(c.toArray)
-          writeBuffer.flip()
-
-          closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
-            .repeatWhile(_ => writeBuffer.hasRemaining)
-            .zipRight(write(remainder))
-            .map(_.getOrElse(()))
-        }
-      }
-    }
-
-  def reconnect: IO[IOException, Unit] =
-    channelRef
-      .set(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
-      .provideLayer(ZLayer.succeed(scope))
+  def reconnect: IO[IOException, Unit]
 }
 
 private[redis] object RedisConnection {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, RedisConnection] =
     ZLayer.scoped(ZIO.serviceWithZIO[RedisConfig](create))
 
-  lazy val local: ZLayer[Any, IOError, RedisConfig & RedisConnection] =
+  lazy val local: ZLayer[Any, RedisError.IOError, RedisConfig & RedisConnection] =
     ZLayer.make[RedisConfig & RedisConnection](ZLayer.succeed(RedisConfig.Local), layer)
 
   def create(config: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] = {
     val makeBuffer = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
-    (for {
+    for {
       readBuffer  <- makeBuffer
       writeBuffer <- makeBuffer
       scope       <- ZIO.scope
       channelRef  <-
         ScopedRef
-          .fromAcquire(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
+          .fromAcquire(
+            connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl)
+              .mapError(RedisError.IOError(_))
+          )
       _           <- logScopeFinalizer("Redis connection is closed")
-    } yield new RedisConnection(readBuffer, writeBuffer, channelRef, config, scope)).mapError(RedisError.IOError(_))
+    } yield new RedisConnection {
+      override def read: Stream[IOException, Byte] =
+        ZStream.repeatZIOChunkOption {
+          val receive =
+            for {
+              _       <- ZIO.succeed(readBuffer.clear())
+              channel <- channelRef.get
+              _       <-
+                closeWith[Integer](channel)(channel.read(readBuffer, null, _)).filterOrFail(_ >= 0)(new EOFException())
+              chunk   <- ZIO.succeed {
+                           readBuffer.flip()
+                           val count = readBuffer.remaining()
+                           val array = Array.ofDim[Byte](count)
+                           readBuffer.get(array)
+                           Chunk.fromArray(array)
+                         }
+            } yield chunk
+
+          receive.mapError {
+            case e: EOFException => Some(new IOException(e))
+            case e: IOException  => Some(e)
+          }
+        }
+
+      override def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
+        ZIO.when(chunk.nonEmpty) {
+          channelRef.get.flatMap { channel =>
+            ZIO.suspendSucceed {
+              writeBuffer.clear()
+              val (c, remainder) = chunk.splitAt(writeBuffer.capacity())
+              writeBuffer.put(c.toArray)
+              writeBuffer.flip()
+
+              closeWith[Integer](channel)(channel.write(writeBuffer, null, _))
+                .repeatWhile(_ => writeBuffer.hasRemaining)
+                .zipRight(write(remainder))
+                .map(_.getOrElse(()))
+            }
+          }
+        }
+
+      override def reconnect: IO[IOException, Unit] =
+        channelRef
+          .set(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
+          .provideLayer(ZLayer.succeed(scope))
+
+    }
   }
 
   def connect(
