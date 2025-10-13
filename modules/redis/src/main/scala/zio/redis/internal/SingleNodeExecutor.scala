@@ -73,9 +73,10 @@ private[redis] object SingleNodeExecutor {
   def local: ZLayer[Any, RedisError.IOError, RedisExecutor] =
     ZLayer.make[RedisExecutor](ZLayer.succeed(RedisConfig.Local), layer)
 
-  def create(connection: RedisConnection): URIO[Scope & RedisConfig, SingleNodeExecutor] =
+  def create: URIO[Scope & RedisConfig & RedisConnection, SingleNodeExecutor] =
     for {
       requestQueueSize <- ZIO.serviceWith[RedisConfig](_.requestQueueSize)
+      connection       <- ZIO.service[RedisConnection]
       requests         <- Queue.bounded[Request](requestQueueSize)
       responses        <- Queue.unbounded[Promise[RedisError, RespValue]]
       executor          = new SingleNodeExecutor(connection, requests, responses, requestQueueSize)
@@ -86,5 +87,5 @@ private[redis] object SingleNodeExecutor {
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])
 
   private def makeLayer: ZLayer[RedisConnection & RedisConfig, RedisError.IOError, RedisExecutor] =
-    ZLayer.scoped(ZIO.serviceWithZIO[RedisConnection](create))
+    ZLayer.scoped(create)
 }

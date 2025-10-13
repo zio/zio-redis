@@ -29,12 +29,12 @@ import java.nio.channels._
 import java.util.Arrays
 import javax.net.ssl.{SNIHostName, SSLContext}
 
-trait RedisConnection {
+private[redis] trait RedisConnection {
   def read: Stream[IOException, Byte]
 
-  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
-
   def reconnect: IO[IOException, Unit]
+
+  def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]]
 }
 
 private[redis] object RedisConnection {
@@ -44,7 +44,7 @@ private[redis] object RedisConnection {
   lazy val local: ZLayer[Any, RedisError.IOError, RedisConfig & RedisConnection] =
     ZLayer.make[RedisConfig & RedisConnection](ZLayer.succeed(RedisConfig.Local), layer)
 
-  def create(config: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] = {
+  private def create(config: RedisConfig): ZIO[Scope, RedisError.IOError, RedisConnection] = {
     val makeBuffer = ZIO.succeed(ByteBuffer.allocateDirect(ResponseBufferSize))
     for {
       readBuffer  <- makeBuffer
@@ -58,7 +58,7 @@ private[redis] object RedisConnection {
           )
       _           <- logScopeFinalizer("Redis connection is closed")
     } yield new RedisConnection {
-      override def read: Stream[IOException, Byte] =
+      def read: Stream[IOException, Byte] =
         ZStream.repeatZIOChunkOption {
           val receive =
             for {
@@ -81,7 +81,12 @@ private[redis] object RedisConnection {
           }
         }
 
-      override def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
+      def reconnect: IO[IOException, Unit] =
+        channelRef
+          .set(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
+          .provideLayer(ZLayer.succeed(scope))
+
+      def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
         ZIO.when(chunk.nonEmpty) {
           channelRef.get.flatMap { channel =>
             ZIO.suspendSucceed {
@@ -97,12 +102,6 @@ private[redis] object RedisConnection {
             }
           }
         }
-
-      override def reconnect: IO[IOException, Unit] =
-        channelRef
-          .set(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
-          .provideLayer(ZLayer.succeed(scope))
-
     }
   }
 
@@ -111,10 +110,7 @@ private[redis] object RedisConnection {
     sni: Option[String],
     ssl: Boolean
   ): ZIO[Scope, IOException, AsynchronousByteChannel] =
-    (for {
-      address <- ZIO.succeed(address)
-      channel <- if (ssl) openTlsChannel(address, sni) else openChannel(address)
-    } yield channel)
+    if (ssl) openTlsChannel(address, sni) else openChannel(address)
 
   private final val ResponseBufferSize = 1024
 
