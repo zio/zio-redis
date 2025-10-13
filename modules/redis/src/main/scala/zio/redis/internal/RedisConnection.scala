@@ -53,7 +53,7 @@ private[redis] final class RedisConnection(
         } yield chunk
 
       receive.mapError {
-        case _: EOFException => None
+        case e: EOFException => Some(new IOException(e))
         case e: IOException  => Some(e)
       }
     }

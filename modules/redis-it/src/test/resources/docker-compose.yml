@@ -2,55 +2,45 @@ version: "3.3"
 
 services:
   single-node0:
-    image: bitnami/redis:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
+    image: redis:7.2
 
   single-node1:
-    image: bitnami/redis:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
+    image: redis:7.2
 
   cluster-node0:
-    image: bitnami/redis-cluster:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
-      - 'REDIS_NODES=cluster-node0 cluster-node1 cluster-node2 cluster-node3 cluster-node4 cluster-node5'
+    image: redis:7.2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
 
   cluster-node1:
-    image: bitnami/redis-cluster:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
-      - 'REDIS_NODES=cluster-node0 cluster-node1 cluster-node2 cluster-node3 cluster-node4 cluster-node5'
+    image: redis:7.2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
 
   cluster-node2:
-    image: bitnami/redis-cluster:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
-      - 'REDIS_NODES=cluster-node0 cluster-node1 cluster-node2 cluster-node3 cluster-node4 cluster-node5'
+    image: redis:7.2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
 
   cluster-node3:
-    image: bitnami/redis-cluster:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
-      - 'REDIS_NODES=cluster-node0 cluster-node1 cluster-node2 cluster-node3 cluster-node4 cluster-node5'
+    image: redis:7.2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
 
   cluster-node4:
-    image: bitnami/redis-cluster:7.2
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
-      - 'REDIS_NODES=cluster-node0 cluster-node1 cluster-node2 cluster-node3 cluster-node4 cluster-node5'
+    image: redis:7.2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
 
   cluster-node5:
-    image: bitnami/redis-cluster:7.2
+    image: redis:7.2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
+
+  cluster-creator:
+    image: redis:7.2
     depends_on:
       - cluster-node0
       - cluster-node1
       - cluster-node2
       - cluster-node3
       - cluster-node4
-    environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
-      - 'REDIS_CLUSTER_REPLICAS=1'
-      - 'REDIS_NODES=cluster-node0 cluster-node1 cluster-node2 cluster-node3 cluster-node4 cluster-node5'
-      - 'REDIS_CLUSTER_CREATOR=yes'
+      - cluster-node5
+    command: >
+      sh -c "sleep 5 && redis-cli -h cluster-node5 -p 6379 --cluster create
+      cluster-node0:6379 cluster-node1:6379 cluster-node2:6379 cluster-node3:6379 cluster-node4:6379 cluster-node5:6379
+      --cluster-replicas 0 --cluster-yes"

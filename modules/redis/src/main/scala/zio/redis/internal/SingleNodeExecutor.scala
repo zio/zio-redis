@@ -28,7 +28,7 @@ private[redis] final class SingleNodeExecutor private (
 ) extends SingleNodeRunner
     with RedisExecutor {
 
-  // TODO NodeExecutor doesn't throw connection errors, timeout errors, it is hanging forever
+  // NodeExecutor should stop hanging forever, but onError should reopen a new connection
   def execute(command: RespCommand): UIO[IO[RedisError, RespValue]] =
     Promise
       .make[RedisError, RespValue]
