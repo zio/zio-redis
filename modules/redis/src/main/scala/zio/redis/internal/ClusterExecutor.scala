@@ -151,9 +151,10 @@ private[redis] object ClusterExecutor {
     for {
       closableScope <- Scope.make
       cfg            = RedisConfig(address.host, address.port, address.sni, address.ssl, requestQueueSize)
-      connection    <- closableScope.extend[Any](RedisConnection.create(cfg))
       executor      <-
-        closableScope.extend[Any](SingleNodeExecutor.create(connection).provideSome[Scope](ZLayer.succeed(cfg)))
+        closableScope.extend[Any](
+          SingleNodeExecutor.create.provideSome[Scope](ZLayer.succeed(cfg), RedisConnection.layer)
+        )
       layerScope    <- ZIO.scope
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
