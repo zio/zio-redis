@@ -14,7 +14,7 @@ inThisBuild(
     startYear          := Some(2021),
     scala212           := "2.12.20",
     scala213           := "2.13.16",
-    scala3             := "3.3.6",
+    scala3             := "3.3.7",
     zioVersion         := Versions.Zio,
     crossScalaVersions := List(scala212.value, scala213.value, scala3.value),
     scalaVersion       := scala213.value
