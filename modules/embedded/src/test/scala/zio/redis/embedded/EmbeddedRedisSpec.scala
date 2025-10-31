@@ -32,7 +32,7 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
     implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
   }
 
-  def spec = suite("EmbeddedRedis should")(
+  def spec: Spec[Any,Throwable] = suite("EmbeddedRedis should")(
     test("set and get values") {
       for {
         redis <- ZIO.service[Redis]

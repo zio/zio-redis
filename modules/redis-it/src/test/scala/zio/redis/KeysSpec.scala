@@ -552,5 +552,5 @@ trait KeysSpec extends IntegrationSpec {
 }
 
 object KeysSpec {
-  final val MigrateTimeout = 5.seconds
+  final val MigrateTimeout: Duration = 5.seconds
 }
