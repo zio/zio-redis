@@ -1,12 +1,14 @@
 package zio.redis
 
+import com.dimafeng.testcontainers.DockerComposeContainer
+import org.testcontainers.DockerClientFactory
 import zio._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 
 trait ConnectionSpec extends IntegrationSpec {
-  def connectionSuite: Spec[Redis, RedisError] =
+  def connectionSuite: Spec[DockerComposeContainer & Redis, RedisError] =
     suite("connection")(
       suite("authenticating")(
         test("auth with 'default' username") {
@@ -41,6 +43,16 @@ trait ConnectionSpec extends IntegrationSpec {
             pong <- ZIO.serviceWithZIO[Redis](_.ping(Some("toto")))
           } yield assertTrue(pong == "toto")
         }
-      )
+      ),
+      suite("reconnect") {
+        test("restart redis") {
+          for {
+            docker     <- ZIO.service[DockerComposeContainer]
+            containerId = docker.getContainerByServiceName(IntegrationSpec.SingleNode0).get.getContainerId()
+            _           = DockerClientFactory.instance().client().restartContainerCmd(containerId).exec()
+            pong       <- ZIO.serviceWithZIO[Redis](_.ping())
+          } yield assertTrue(pong == "PONG")
+        }
+      } @@ clusterExecutorUnsupported
     ) @@ sequential
 }
