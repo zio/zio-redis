@@ -62,14 +62,14 @@ trait HashSpec extends IntegrationSpec {
           } yield assert(deleted)(equalTo(2L))
         }
       ),
-      suite("hmSet and hmGet")(
+      suite("hSet and hmGet")(
         test("set followed by get") {
           for {
             redis  <- ZIO.service[Redis]
             hash   <- uuid
             field  <- uuid
             value  <- uuid
-            _      <- redis.hmSet(hash, field -> value)
+            _      <- redis.hSet(hash, field -> value)
             result <- redis.hmGet(hash, field).returning[String]
           } yield assert(result)(hasSameElements(Chunk(Some(value))))
         },
@@ -80,7 +80,7 @@ trait HashSpec extends IntegrationSpec {
             field1  <- uuid
             field2  <- uuid
             value   <- uuid
-            _       <- redis.hmSet(hash, field1 -> value, field2 -> value)
+            _       <- redis.hSet(hash, field1 -> value, field2 -> value)
             result1 <- redis.hmGet(hash, field1).returning[String]
             result2 <- redis.hmGet(hash, field2).returning[String]
           } yield assert(result1)(hasSameElements(Chunk(Some(value)))) &&
@@ -94,7 +94,7 @@ trait HashSpec extends IntegrationSpec {
             field2 <- uuid
             value1 <- uuid
             value2 <- uuid
-            _      <- redis.hmSet(hash, field1 -> value1, field2 -> value2)
+            _      <- redis.hSet(hash, field1 -> value1, field2 -> value2)
             result <- redis.hmGet(hash, field1, field2).returning[String]
           } yield assert(result)(hasSameElements(Chunk(Some(value1), Some(value2))))
         },
@@ -104,7 +104,7 @@ trait HashSpec extends IntegrationSpec {
             hash    <- uuid
             field   <- uuid
             value   <- uuid
-            _       <- redis.hmSet(hash, field -> value)
+            _       <- redis.hSet(hash, field -> value)
             deleted <- redis.hDel(hash, field)
             result  <- redis.hmGet(hash, field).returning[String]
           } yield assert(deleted)(equalTo(1L)) && assert(result)(hasSameElements(Chunk(None)))
@@ -117,7 +117,7 @@ trait HashSpec extends IntegrationSpec {
             field2  <- uuid
             field3  <- uuid
             value   <- uuid
-            _       <- redis.hmSet(hash, field1 -> value, field2 -> value, field3 -> value)
+            _       <- redis.hSet(hash, field1 -> value, field2 -> value, field3 -> value)
             deleted <- redis.hDel(hash, field1, field3)
             result  <- redis.hmGet(hash, field1, field2, field3).returning[String]
           } yield assert(deleted)(equalTo(2L)) &&
