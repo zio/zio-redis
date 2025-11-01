@@ -961,48 +961,6 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
     )
 
   /**
-   * Return a range of members in a sorted set, by lexicographical range.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param lexRange
-   *   LexRange that must be satisfied
-   * @param limit
-   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
-   *   all elements from the offset
-   * @return
-   *   Chunk of elements in the specified score range.
-   */
-  @deprecated("Use the new version of zRange", "1.1.2")
-  final def zRangeByLex[K: Schema](
-    key: K,
-    lexRange: SortedSetRange.LexRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk, G] =
-    zRange(key, lexRange, limit = limit)
-
-  /**
-   * Return a range of members in a sorted set, by score.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param scoreRange
-   *   ScoreRange that must be satisfied
-   * @param limit
-   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
-   *   all elements from the offset
-   * @return
-   *   Chunk of elements in the specified score range.
-   */
-  @deprecated("Use the new version of zRange", "1.1.2")
-  final def zRangeByScore[K: Schema](
-    key: K,
-    scoreRange: SortedSetRange.ScoreRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk, G] =
-    zRange(key, scoreRange, limit = limit)
-
-  /**
    * Return a range of members in a sorted set, by score.
    *
    * @param key
@@ -1142,27 +1100,6 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
    * @param range
    *   Range that must be satisfied
    * @return
-   *   Chunk of elements in the specified range.
-   */
-  @deprecated("Use the new version of zRange with rev = true", "1.1.2")
-  final def zRevRange[K: Schema](key: K, range: Range): ResultBuilder1[Chunk, G] =
-    zRange(
-      key,
-      SortedSetRange.Range(
-        RangeMinimum(range.start.toLong),
-        if (range.isInclusive) RangeMaximum.Inclusive(range.end.toLong) else RangeMaximum.Exclusive(range.end.toLong)
-      ),
-      rev = true
-    )
-
-  /**
-   * Return a range of members in a sorted set, by index, with scores ordered from high to low.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param range
-   *   Range that must be satisfied
-   * @return
    *   Chunk of elements with their scores in the specified range.
    */
   @deprecated("Use the new version of zRangeWithScores with rev = true", "1.1.2")
@@ -1175,48 +1112,6 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
       ),
       rev = true
     )
-
-  /**
-   * Return a range of members in a sorted set, by lexicographical range, ordered from higher to lower strings.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param lexRange
-   *   LexRange that must be satisfied
-   * @param limit
-   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
-   *   all elements from the offset
-   * @return
-   *   Chunk of elements in the specified score range.
-   */
-  @deprecated("Use the new version of zRange with rev = true", "1.1.2")
-  final def zRevRangeByLex[K: Schema](
-    key: K,
-    lexRange: SortedSetRange.LexRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk, G] =
-    zRange(key, lexRange, rev = true, limit = limit)
-
-  /**
-   * Return a range of members in a sorted set, by score, with scores ordered from high to low.
-   *
-   * @param key
-   *   Key of a sorted set
-   * @param scoreRange
-   *   ScoreRange that must be satisfied
-   * @param limit
-   *   The optional LIMIT argument can be used to only get a range of the matching elements. A negative count returns
-   *   all elements from the offset
-   * @return
-   *   Chunk of elements in the specified range.
-   */
-  @deprecated("Use the new version of zRange with rev = true", "1.1.2")
-  final def zRevRangeByScore[K: Schema](
-    key: K,
-    scoreRange: SortedSetRange.ScoreRange,
-    limit: Option[Limit] = None
-  ): ResultBuilder1[Chunk, G] =
-    zRange(key, scoreRange, rev = true, limit = limit)
 
   /**
    * Return a range of members in a sorted set, by score, with scores ordered from high to low.
