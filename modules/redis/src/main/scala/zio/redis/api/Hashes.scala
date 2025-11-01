@@ -243,32 +243,6 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
     }
 
   /**
-   * Sets the specified `field -> value` pairs in the hash stored at `key`. Deprecated: As per Redis 4.0.0, HMSET is
-   * considered deprecated. Please use `hSet` instead.
-   *
-   * @param key
-   *   of the hash whose value should be set
-   * @param pair
-   *   mapping of a field to value
-   * @param pairs
-   *   additional pairs
-   * @return
-   *   unit if fields are successfully set.
-   */
-  final def hmSet[K: Schema, F: Schema, V: Schema](
-    key: K,
-    pair: (F, V),
-    pairs: (F, V)*
-  ): G[Unit] = {
-    val command = RedisCommand(
-      HmSet,
-      Tuple2(ArbitraryKeyInput[K](), NonEmptyList(Tuple2(ArbitraryValueInput[F](), ArbitraryValueInput[V]()))),
-      UnitOutput
-    )
-    command.run((key, (pair, pairs.toList)))
-  }
-
-  /**
    * Iterates `fields` of Hash types and their associated values using a cursor-based iterator
    *
    * @param key
@@ -392,7 +366,6 @@ private[redis] object Hashes {
   final val HLen         = "HLEN"
   final val HmGet        = "HMGET"
   final val HRandField   = "HRANDFIELD"
-  final val HmSet        = "HMSET"
   final val HScan        = "HSCAN"
   final val HSet         = "HSET"
   final val HSetNx       = "HSETNX"
