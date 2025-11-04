@@ -124,37 +124,6 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
     }
 
   /**
-   * Pops an element from the list stored at source, pushes it to the list stored at destination; or block until one is
-   * available. This is the blocking variant of [[zio.redis.api.Lists#rPopLPush]].
-   *
-   * @param source
-   *   the key identifier of the source list
-   * @param destination
-   *   the key identifier of the target list
-   * @param timeout
-   *   the maximum time to wait for an element to be available. A timeout of zero can be used to block indefinitely
-   * @return
-   *   the element being popped from source and pushed to destination. If timeout is reached, an empty reply is
-   *   returned.
-   */
-  final def brPopLPush[S: Schema, D: Schema](
-    source: S,
-    destination: D,
-    timeout: Duration
-  ): ResultBuilder1[Option, G] =
-    new ResultBuilder1[Option, G] {
-      def returning[V: Schema]: G[Option[V]] = {
-        val command = RedisCommand(
-          BrPopLPush,
-          Tuple3(ArbitraryValueInput[S](), ArbitraryValueInput[D](), DurationSecondsInput),
-          OptionalOutput(ArbitraryOutput[V]())
-        )
-
-        command.run((source, destination, timeout))
-      }
-    }
-
-  /**
    * Returns the element at index in the list stored at key.
    *
    * @param key
@@ -464,28 +433,6 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
     }
 
   /**
-   * Atomically removes the last element in the list stored at source, prepends it to the list stored at destination and
-   * returns it. If source and destination are the same, the operation is equivalent to removing the last element from
-   * the list and pushing it as first element of the same list, so it can be considered as a list rotation command.
-   *
-   * @param source
-   *   the key identifier of the source list
-   * @param destination
-   *   the key identifier of the destination list
-   * @return
-   *   the element being popped and pushed. If source does not exist, empty is returned and no operation is performed.
-   */
-  final def rPopLPush[S: Schema, D: Schema](source: S, destination: D): ResultBuilder1[Option, G] =
-    new ResultBuilder1[Option, G] {
-      def returning[V: Schema]: G[Option[V]] =
-        RedisCommand(
-          RPopLPush,
-          Tuple2(ArbitraryValueInput[S](), ArbitraryValueInput[D]()),
-          OptionalOutput(ArbitraryOutput[V]())
-        ).run((source, destination))
-    }
-
-  /**
    * Appends one or more elements to the list stored at key. If key does not exist, it is created as empty list before
    * performing the push operation.
    *
@@ -525,24 +472,22 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
 }
 
 private[redis] object Lists {
-  final val BlMove     = "BLMOVE"
-  final val BlPop      = "BLPOP"
-  final val BrPop      = "BRPOP"
-  final val BrPopLPush = "BRPOPLPUSH"
-  final val LIndex     = "LINDEX"
-  final val LInsert    = "LINSERT"
-  final val LLen       = "LLEN"
-  final val LMove      = "LMOVE"
-  final val LPop       = "LPOP"
-  final val LPos       = "LPOS"
-  final val LPush      = "LPUSH"
-  final val LPushX     = "LPUSHX"
-  final val LRange     = "LRANGE"
-  final val LRem       = "LREM"
-  final val LSet       = "LSET"
-  final val LTrim      = "LTRIM"
-  final val RPop       = "RPOP"
-  final val RPopLPush  = "RPOPLPUSH"
-  final val RPush      = "RPUSH"
-  final val RPushX     = "RPUSHX"
+  final val BlMove  = "BLMOVE"
+  final val BlPop   = "BLPOP"
+  final val BrPop   = "BRPOP"
+  final val LIndex  = "LINDEX"
+  final val LInsert = "LINSERT"
+  final val LLen    = "LLEN"
+  final val LMove   = "LMOVE"
+  final val LPop    = "LPOP"
+  final val LPos    = "LPOS"
+  final val LPush   = "LPUSH"
+  final val LPushX  = "LPUSHX"
+  final val LRange  = "LRANGE"
+  final val LRem    = "LREM"
+  final val LSet    = "LSET"
+  final val LTrim   = "LTRIM"
+  final val RPop    = "RPOP"
+  final val RPush   = "RPUSH"
+  final val RPushX  = "RPUSHX"
 }
