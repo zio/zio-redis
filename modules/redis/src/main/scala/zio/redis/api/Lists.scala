@@ -124,37 +124,6 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
     }
 
   /**
-   * Pops an element from the list stored at source, pushes it to the list stored at destination; or block until one is
-   * available. This is the blocking variant of [[zio.redis.api.Lists#rPopLPush]].
-   *
-   * @param source
-   *   the key identifier of the source list
-   * @param destination
-   *   the key identifier of the target list
-   * @param timeout
-   *   the maximum time to wait for an element to be available. A timeout of zero can be used to block indefinitely
-   * @return
-   *   the element being popped from source and pushed to destination. If timeout is reached, an empty reply is
-   *   returned.
-   */
-  final def brPopLPush[S: Schema, D: Schema](
-    source: S,
-    destination: D,
-    timeout: Duration
-  ): ResultBuilder1[Option, G] =
-    new ResultBuilder1[Option, G] {
-      def returning[V: Schema]: G[Option[V]] = {
-        val command = RedisCommand(
-          BrPopLPush,
-          Tuple3(ArbitraryValueInput[S](), ArbitraryValueInput[D](), DurationSecondsInput),
-          OptionalOutput(ArbitraryOutput[V]())
-        )
-
-        command.run((source, destination, timeout))
-      }
-    }
-
-  /**
    * Returns the element at index in the list stored at key.
    *
    * @param key
@@ -506,7 +475,6 @@ private[redis] object Lists {
   final val BlMove     = "BLMOVE"
   final val BlPop      = "BLPOP"
   final val BrPop      = "BRPOP"
-  final val BrPopLPush = "BRPOPLPUSH"
   final val LIndex     = "LINDEX"
   final val LInsert    = "LINSERT"
   final val LLen       = "LLEN"
