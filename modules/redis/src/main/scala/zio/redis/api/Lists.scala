@@ -464,28 +464,6 @@ trait Lists[G[+_]] extends RedisEnvironment[G] {
     }
 
   /**
-   * Atomically removes the last element in the list stored at source, prepends it to the list stored at destination and
-   * returns it. If source and destination are the same, the operation is equivalent to removing the last element from
-   * the list and pushing it as first element of the same list, so it can be considered as a list rotation command.
-   *
-   * @param source
-   *   the key identifier of the source list
-   * @param destination
-   *   the key identifier of the destination list
-   * @return
-   *   the element being popped and pushed. If source does not exist, empty is returned and no operation is performed.
-   */
-  final def rPopLPush[S: Schema, D: Schema](source: S, destination: D): ResultBuilder1[Option, G] =
-    new ResultBuilder1[Option, G] {
-      def returning[V: Schema]: G[Option[V]] =
-        RedisCommand(
-          RPopLPush,
-          Tuple2(ArbitraryValueInput[S](), ArbitraryValueInput[D]()),
-          OptionalOutput(ArbitraryOutput[V]())
-        ).run((source, destination))
-    }
-
-  /**
    * Appends one or more elements to the list stored at key. If key does not exist, it is created as empty list before
    * performing the push operation.
    *
@@ -542,7 +520,6 @@ private[redis] object Lists {
   final val LSet       = "LSET"
   final val LTrim      = "LTRIM"
   final val RPop       = "RPOP"
-  final val RPopLPush  = "RPOPLPUSH"
   final val RPush      = "RPUSH"
   final val RPushX     = "RPUSHX"
 }
