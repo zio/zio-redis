@@ -1002,6 +1002,30 @@ object InputSpec extends BaseSpec {
           )
         }
       ),
+      suite("Tuple8")(
+        test("valid value") {
+          for {
+            result <-
+              ZIO.attempt(
+                Tuple8(StringInput, LongInput, StringInput, LongInput, StringInput, LongInput, StringInput, LongInput)
+                  .encode(("one", 2, "three", 4, "five", 6, "seven", 8))
+              )
+          } yield assert(result)(
+            equalTo(
+              RespCommand(
+                Value("one"),
+                Value("2"),
+                Value("three"),
+                Value("4"),
+                Value("five"),
+                Value("6"),
+                Value("seven"),
+                Value("8")
+              )
+            )
+          )
+        }
+      ),
       suite("Tuple9")(
         test("valid value") {
           for {

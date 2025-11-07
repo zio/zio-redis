@@ -607,6 +607,21 @@ object Input {
         _6.encode(data._6) ++ _7.encode(data._7)
   }
 
+  final case class Tuple8[-A, -B, -C, -D, -E, -F, -G, -H](
+    _1: Input[A],
+    _2: Input[B],
+    _3: Input[C],
+    _4: Input[D],
+    _5: Input[E],
+    _6: Input[F],
+    _7: Input[G],
+    _8: Input[H]
+  ) extends Input[(A, B, C, D, E, F, G, H)] {
+    def encode(data: (A, B, C, D, E, F, G, H)): RespCommand =
+      _1.encode(data._1) ++ _2.encode(data._2) ++ _3.encode(data._3) ++ _4.encode(data._4) ++ _5.encode(data._5) ++
+        _6.encode(data._6) ++ _7.encode(data._7) ++ _8.encode(data._8)
+  }
+
   final case class Tuple9[-A, -B, -C, -D, -E, -F, -G, -H, -I](
     _1: Input[A],
     _2: Input[B],
