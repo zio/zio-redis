@@ -75,6 +75,11 @@ object Input {
       RespCommand(RespCommandArgument.Value(data))
   }
 
+  final case class FromMemberInput[A: BinaryCodec]() extends Input[A] {
+    def encode(data: A): RespCommand =
+      RespCommand(RespCommandArgument.Literal("FROMMEMBER"), RespCommandArgument.Value(data))
+  }
+
   case object AuthInput extends Input[Auth] {
     def encode(data: Auth): RespCommand =
       data.username match {
@@ -172,6 +177,11 @@ object Input {
   case object DoubleInput extends Input[Double] {
     def encode(data: Double): RespCommand =
       RespCommand(RespCommandArgument.Value(data.toString))
+  }
+
+  case object ByRadiusInput extends Input[Double] {
+    def encode(data: Double): RespCommand =
+      RespCommand(RespCommandArgument.Literal("BYRADIUS"), RespCommandArgument.Value(data.toString))
   }
 
   case object DurationMillisecondsInput extends Input[Duration] {
