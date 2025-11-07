@@ -2,7 +2,7 @@ package zio.redis
 
 import zio._
 import zio.redis.Input._
-import zio.redis.internal.RespCommand
+import zio.redis.internal.{RespCommand, RespCommandArgument}
 import zio.redis.internal.RespCommandArgument._
 import zio.test.Assertion._
 import zio.test._
@@ -321,6 +321,23 @@ object InputSpec extends BaseSpec {
           for {
             result <- ZIO.attempt(DoubleInput.encode(0d))
           } yield assert(result)(equalTo(RespCommand(Value("0.0"))))
+        }
+      ),
+      suite("ByRadius")(
+        test("positive value") {
+          for {
+            result <- ZIO.attempt(ByRadiusInput.encode(4.2d))
+          } yield assert(result)(equalTo(RespCommand(RespCommandArgument.Literal("BYRADIUS"), Value("4.2"))))
+        },
+        test("negative value") {
+          for {
+            result <- ZIO.attempt(ByRadiusInput.encode(-4.2d))
+          } yield assert(result)(equalTo(RespCommand(RespCommandArgument.Literal("BYRADIUS"), Value("-4.2"))))
+        },
+        test("zero value") {
+          for {
+            result <- ZIO.attempt(ByRadiusInput.encode(0d))
+          } yield assert(result)(equalTo(RespCommand(RespCommandArgument.Literal("BYRADIUS"), Value("0.0"))))
         }
       ),
       suite("DurationMilliseconds")(
