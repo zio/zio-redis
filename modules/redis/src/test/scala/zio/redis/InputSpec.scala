@@ -774,16 +774,28 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("STOREDIST"), Value(""))))
         }
       ),
-      suite("Store")(
+      suite("Legacy Store")(
         test("with non-empty string") {
           for {
-            result <- ZIO.attempt(StoreInput.encode(Store("key")))
+            result <- ZIO.attempt(LegacyStoreInput.encode(Store("key")))
           } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Value("key"))))
         },
         test("with empty string") {
           for {
-            result <- ZIO.attempt(StoreInput.encode(Store("")))
+            result <- ZIO.attempt(LegacyStoreInput.encode(Store("")))
           } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Value(""))))
+        }
+      ),
+      suite("Store")(
+        test("with non-empty string") {
+          for {
+            result <- ZIO.attempt(StoreInput.encode(Store("key")))
+          } yield assert(result)(equalTo(RespCommand(Value("key"))))
+        },
+        test("with empty string") {
+          for {
+            result <- ZIO.attempt(StoreInput.encode(Store("")))
+          } yield assert(result)(equalTo(RespCommand(Value(""))))
         }
       ),
       suite("ScoreRange")(

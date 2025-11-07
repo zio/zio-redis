@@ -243,7 +243,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
         OptionalInput(WithHashInput),
         OptionalInput(CountInput),
         OptionalInput(OrderInput),
-        OptionalInput(StoreInput),
+        OptionalInput(LegacyStoreInput),
         OptionalInput(StoreDistInput)
       ),
       LongOutput
@@ -344,18 +344,18 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
     val command = RedisCommand(
       GeoSearchStore,
       Tuple7(
+        OptionalInput(StoreInput),
         ArbitraryKeyInput[K](),
         FromMemberInput[M](),
         Tuple2(ByRadiusInput, RadiusUnitInput),
         OptionalInput(CountInput),
         OptionalInput(OrderInput),
-        OptionalInput(StoreInput),
         OptionalInput(StoreDistInput)
       ),
       LongOutput
     )
     command.run(
-      (key, member, (radius, radiusUnit), count, order, store.store, store.storeDist)
+      (store.store, key, member, (radius, radiusUnit), count, order, store.storeDist)
     )
   }
 }

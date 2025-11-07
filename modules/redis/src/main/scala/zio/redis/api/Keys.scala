@@ -518,7 +518,7 @@ trait Keys[G[+_]] extends RedisEnvironment[G] {
         OptionalInput(NonEmptyList(GetInput)),
         OrderInput,
         OptionalInput(AlphaInput),
-        StoreInput
+        LegacyStoreInput
       ),
       LongOutput
     )

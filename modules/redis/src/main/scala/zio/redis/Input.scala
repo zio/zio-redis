@@ -458,9 +458,14 @@ object Input {
       RespCommand(RespCommandArgument.Literal("STOREDIST"), RespCommandArgument.Value(data.key))
   }
 
-  case object StoreInput extends Input[Store] {
+  case object LegacyStoreInput extends Input[Store] {
     def encode(data: Store): RespCommand =
       RespCommand(RespCommandArgument.Literal("STORE"), RespCommandArgument.Value(data.key))
+  }
+
+  case object StoreInput extends Input[Store] {
+    def encode(data: Store): RespCommand =
+      RespCommand(RespCommandArgument.Value(data.key))
   }
 
   case object MaxLenApproxInput extends Input[CappedStreamType.MaxLenApprox] {
