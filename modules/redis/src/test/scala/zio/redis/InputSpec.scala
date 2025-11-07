@@ -2,8 +2,8 @@ package zio.redis
 
 import zio._
 import zio.redis.Input._
-import zio.redis.internal.{RespCommand, RespCommandArgument}
 import zio.redis.internal.RespCommandArgument._
+import zio.redis.internal.{RespCommand, RespCommandArgument}
 import zio.test.Assertion._
 import zio.test._
 
