@@ -290,12 +290,11 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
     order: Option[Order] = None
   ): G[Chunk[GeoView]] = {
     val command = RedisCommand(
-      GeoRadiusByMember,
-      Tuple9(
+      GeoSearch,
+      Tuple8(
         ArbitraryKeyInput[K](),
-        ArbitraryValueInput[M](),
-        DoubleInput,
-        RadiusUnitInput,
+        FromMemberInput[M](),
+        Tuple2(ByRadiusInput, RadiusUnitInput),
         OptionalInput(WithCoordInput),
         OptionalInput(WithDistInput),
         OptionalInput(WithHashInput),
@@ -304,7 +303,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       GeoRadiusOutput
     )
-    command.run((key, member, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+    command.run((key, member, (radius, radiusUnit), withCoord, withDist, withHash, count, order))
   }
 
   /**
@@ -346,7 +345,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       GeoSearchStore,
       Tuple7(
         ArbitraryKeyInput[K](),
-        FromMemberInput[M](), // new
+        FromMemberInput[M](),
         Tuple2(ByRadiusInput, RadiusUnitInput),
         OptionalInput(CountInput),
         OptionalInput(OrderInput),
@@ -362,11 +361,11 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
 }
 
 private[redis] object Geo {
-  final val GeoAdd            = "GEOADD"
-  final val GeoDist           = "GEODIST"
-  final val GeoHash           = "GEOHASH"
-  final val GeoPos            = "GEOPOS"
-  final val GeoRadius         = "GEORADIUS"
-  final val GeoRadiusByMember = "GEORADIUSBYMEMBER"
-  final val GeoSearchStore    = "GEOSEARCHSTORE"
+  final val GeoAdd         = "GEOADD"
+  final val GeoDist        = "GEODIST"
+  final val GeoHash        = "GEOHASH"
+  final val GeoPos         = "GEOPOS"
+  final val GeoRadius      = "GEORADIUS"
+  final val GeoSearchStore = "GEOSEARCHSTORE"
+  final val GeoSearch      = "GEOSEARCH"
 }
