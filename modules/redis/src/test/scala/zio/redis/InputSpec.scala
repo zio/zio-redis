@@ -601,6 +601,23 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("0.0"))))
         }
       ),
+      suite("FromLonLat")(
+        test("positive longitude and latitude") {
+          for {
+            result <- ZIO.attempt(FromLonLatInput.encode(LongLat(4.2d, 5.2d)))
+          } yield assert(result)(equalTo(RespCommand( RespCommandArgument.Literal("FROMLONLAT"), Value("4.2"), Value("5.2"))))
+        },
+        test("negative longitude and latitude") {
+          for {
+            result <- ZIO.attempt(FromLonLatInput.encode(LongLat(-4.2d, -5.2d)))
+          } yield assert(result)(equalTo(RespCommand( RespCommandArgument.Literal("FROMLONLAT"), Value("-4.2"), Value("-5.2"))))
+        },
+        test("zero longitude and latitude") {
+          for {
+            result <- ZIO.attempt(FromLonLatInput.encode(LongLat(0d, 0d)))
+          } yield assert(result)(equalTo(RespCommand( RespCommandArgument.Literal("FROMLONLAT"), Value("0.0"), Value("0.0"))))
+        }
+      ),
       suite("MemberScore")(
         test("with positive score and empty member") {
           for {

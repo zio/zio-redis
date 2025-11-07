@@ -171,12 +171,11 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
     order: Option[Order] = None
   ): G[Chunk[GeoView]] = {
     val command = RedisCommand(
-      GeoRadius,
-      Tuple9(
+      GeoSearch,
+      Tuple8(
         ArbitraryKeyInput[K](),
-        LongLatInput,
-        DoubleInput,
-        RadiusUnitInput,
+        FromLonLatInput,
+        Tuple2(ByRadiusInput, RadiusUnitInput),
         OptionalInput(WithCoordInput),
         OptionalInput(WithDistInput),
         OptionalInput(WithHashInput),
@@ -185,7 +184,7 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
       ),
       GeoRadiusOutput
     )
-    command.run((key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order))
+    command.run((key, center, (radius, radiusUnit), withCoord, withDist, withHash, count, order))
   }
 
   /**
@@ -204,12 +203,6 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
    * sorted set where the results and/or distances should be stored
    * @param radiusUnit
    * Unit of distance ("m", "km", "ft", "mi")
-   * @param withCoord
-   * flag to include the position of each member in the result
-   * @param withDist
-   * flag to include the distance of each member from the center in the result
-   * @param withHash
-   * flag to include raw geohash sorted set score of each member in the result
    * @param count
    * limit the results to the first N matching items
    * @param order
@@ -225,31 +218,24 @@ trait Geo[G[+_]] extends RedisEnvironment[G] {
     radius: Double,
     radiusUnit: RadiusUnit,
     store: StoreOptions,
-    withCoord: Option[WithCoord] = None,
-    withDist: Option[WithDist] = None,
-    withHash: Option[WithHash] = None,
     count: Option[Count] = None,
     order: Option[Order] = None
   ): G[Long] = {
     val command = RedisCommand(
-      GeoRadius,
-      Tuple11(
+      GeoSearchStore,
+      Tuple7(
+        OptionalInput(StoreInput),
         ArbitraryKeyInput[K](),
-        LongLatInput,
-        DoubleInput,
-        RadiusUnitInput,
-        OptionalInput(WithCoordInput),
-        OptionalInput(WithDistInput),
-        OptionalInput(WithHashInput),
+        FromLonLatInput,
+        Tuple2(ByRadiusInput, RadiusUnitInput),
         OptionalInput(CountInput),
         OptionalInput(OrderInput),
-        OptionalInput(LegacyStoreInput),
         OptionalInput(StoreDistInput)
       ),
       LongOutput
     )
     command.run(
-      (key, center, radius, radiusUnit, withCoord, withDist, withHash, count, order, store.store, store.storeDist)
+      (store.store, key, center, (radius, radiusUnit), count, order, store.storeDist)
     )
   }
 
@@ -365,7 +351,6 @@ private[redis] object Geo {
   final val GeoDist        = "GEODIST"
   final val GeoHash        = "GEOHASH"
   final val GeoPos         = "GEOPOS"
-  final val GeoRadius      = "GEORADIUS"
   final val GeoSearchStore = "GEOSEARCHSTORE"
   final val GeoSearch      = "GEOSEARCH"
 }

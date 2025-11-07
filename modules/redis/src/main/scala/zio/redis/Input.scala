@@ -361,6 +361,15 @@ object Input {
       )
   }
 
+  case object FromLonLatInput extends Input[LongLat] {
+    def encode(data: LongLat): RespCommand =
+      RespCommand(
+        RespCommandArgument.Literal("FROMLONLAT"),
+        RespCommandArgument.Value(data.longitude.toString),
+        RespCommandArgument.Value(data.latitude.toString)
+      )
+  }
+
   final case class MemberScoreInput[M: BinaryCodec]() extends Input[MemberScore[M]] {
     def encode(data: MemberScore[M]): RespCommand = {
       val score = data.score match {
