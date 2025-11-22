@@ -2,8 +2,8 @@ package zio.redis
 
 import zio._
 import zio.redis.Input._
-import zio.redis.internal.RespCommand
 import zio.redis.internal.RespCommandArgument._
+import zio.redis.internal.{RespCommand, RespCommandArgument}
 import zio.test.Assertion._
 import zio.test._
 
@@ -323,6 +323,23 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Value("0.0"))))
         }
       ),
+      suite("ByRadius")(
+        test("positive value") {
+          for {
+            result <- ZIO.attempt(ByRadiusInput.encode(4.2d))
+          } yield assert(result)(equalTo(RespCommand(RespCommandArgument.Literal("BYRADIUS"), Value("4.2"))))
+        },
+        test("negative value") {
+          for {
+            result <- ZIO.attempt(ByRadiusInput.encode(-4.2d))
+          } yield assert(result)(equalTo(RespCommand(RespCommandArgument.Literal("BYRADIUS"), Value("-4.2"))))
+        },
+        test("zero value") {
+          for {
+            result <- ZIO.attempt(ByRadiusInput.encode(0d))
+          } yield assert(result)(equalTo(RespCommand(RespCommandArgument.Literal("BYRADIUS"), Value("0.0"))))
+        }
+      ),
       suite("DurationMilliseconds")(
         test("1 second") {
           for {
@@ -584,6 +601,29 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Value("0.0"), Value("0.0"))))
         }
       ),
+      suite("FromLonLat")(
+        test("positive longitude and latitude") {
+          for {
+            result <- ZIO.attempt(FromLonLatInput.encode(LongLat(4.2d, 5.2d)))
+          } yield assert(result)(
+            equalTo(RespCommand(RespCommandArgument.Literal("FROMLONLAT"), Value("4.2"), Value("5.2")))
+          )
+        },
+        test("negative longitude and latitude") {
+          for {
+            result <- ZIO.attempt(FromLonLatInput.encode(LongLat(-4.2d, -5.2d)))
+          } yield assert(result)(
+            equalTo(RespCommand(RespCommandArgument.Literal("FROMLONLAT"), Value("-4.2"), Value("-5.2")))
+          )
+        },
+        test("zero longitude and latitude") {
+          for {
+            result <- ZIO.attempt(FromLonLatInput.encode(LongLat(0d, 0d)))
+          } yield assert(result)(
+            equalTo(RespCommand(RespCommandArgument.Literal("FROMLONLAT"), Value("0.0"), Value("0.0")))
+          )
+        }
+      ),
       suite("MemberScore")(
         test("with positive score and empty member") {
           for {
@@ -757,16 +797,28 @@ object InputSpec extends BaseSpec {
           } yield assert(result)(equalTo(RespCommand(Literal("STOREDIST"), Value(""))))
         }
       ),
-      suite("Store")(
+      suite("Legacy Store")(
         test("with non-empty string") {
           for {
-            result <- ZIO.attempt(StoreInput.encode(Store("key")))
+            result <- ZIO.attempt(LegacyStoreInput.encode(Store("key")))
           } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Value("key"))))
         },
         test("with empty string") {
           for {
-            result <- ZIO.attempt(StoreInput.encode(Store("")))
+            result <- ZIO.attempt(LegacyStoreInput.encode(Store("")))
           } yield assert(result)(equalTo(RespCommand(Literal("STORE"), Value(""))))
+        }
+      ),
+      suite("Store")(
+        test("with non-empty string") {
+          for {
+            result <- ZIO.attempt(StoreInput.encode(Store("key")))
+          } yield assert(result)(equalTo(RespCommand(Value("key"))))
+        },
+        test("with empty string") {
+          for {
+            result <- ZIO.attempt(StoreInput.encode(Store("")))
+          } yield assert(result)(equalTo(RespCommand(Value(""))))
         }
       ),
       suite("ScoreRange")(
@@ -980,6 +1032,30 @@ object InputSpec extends BaseSpec {
                 Value("five"),
                 Value("6"),
                 Value("seven")
+              )
+            )
+          )
+        }
+      ),
+      suite("Tuple8")(
+        test("valid value") {
+          for {
+            result <-
+              ZIO.attempt(
+                Tuple8(StringInput, LongInput, StringInput, LongInput, StringInput, LongInput, StringInput, LongInput)
+                  .encode(("one", 2, "three", 4, "five", 6, "seven", 8))
+              )
+          } yield assert(result)(
+            equalTo(
+              RespCommand(
+                Value("one"),
+                Value("2"),
+                Value("three"),
+                Value("4"),
+                Value("five"),
+                Value("6"),
+                Value("seven"),
+                Value("8")
               )
             )
           )
