@@ -12,7 +12,7 @@ inThisBuild(
       Developer("mijicd", "Dejan Mijic", "dmijic@acm.org", url("https://github.com/mijicd"))
     ),
     startYear          := Some(2021),
-    scala212           := "2.12.20",
+    scala212           := "2.12.21",
     scala213           := "2.13.18",
     scala3             := "3.3.7",
     zioVersion         := Versions.Zio,
