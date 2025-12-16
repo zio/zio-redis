@@ -29,6 +29,16 @@ object RedisUri {
     RedisUri(host, port, ssl = false, sni = None)
   }
 
+  def apply(hostAndPort: String, ssl: Boolean): RedisUri = {
+    val splitting = hostAndPort.split(':')
+    val host      = splitting(0)
+    val port      = splitting(1).toInt
+    RedisUri(host, port, ssl = ssl, sni = None)
+  }
+
   def apply(host: String, port: Int): RedisUri =
     RedisUri(host, port, ssl = false, sni = None)
+
+  def apply(host: String, port: Int, ssl: Boolean): RedisUri =
+    RedisUri(host, port, ssl = ssl, sni = None)
 }
