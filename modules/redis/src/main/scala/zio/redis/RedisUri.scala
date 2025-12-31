@@ -32,7 +32,7 @@ object RedisUri {
     val splitting = hostAndPort.split(':')
     val host      = splitting(0)
     val port      = splitting(1).toInt
-    RedisUri(host, port, ssl = false, sni = None, verifyCertificate = true)
+    RedisUri(host, port, ssl = false, sni = None)
   }
 
   def apply(hostAndPort: String, ssl: Boolean): RedisUri = {
