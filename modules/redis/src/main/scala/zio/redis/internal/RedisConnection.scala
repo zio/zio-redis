@@ -26,8 +26,9 @@ import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
 import java.nio.channels._
+import java.security.cert.X509Certificate
 import java.util.Arrays
-import javax.net.ssl.{SNIHostName, SSLContext}
+import javax.net.ssl.{SNIHostName, SSLContext, TrustManager, X509TrustManager}
 
 private[redis] trait RedisConnection {
   def read: Stream[IOException, Byte]
@@ -53,7 +54,7 @@ private[redis] object RedisConnection {
       channelRef  <-
         ScopedRef
           .fromAcquire(
-            connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl)
+            connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl, config.verifyCertificate)
               .mapError(RedisError.IOError(_))
           )
       _           <- logScopeFinalizer("Redis connection is closed")
@@ -83,7 +84,9 @@ private[redis] object RedisConnection {
 
       def reconnect: IO[IOException, Unit] =
         channelRef
-          .set(connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl))
+          .set(
+            connect(new InetSocketAddress(config.host, config.port), config.sni, config.ssl, config.verifyCertificate)
+          )
           .provideLayer(ZLayer.succeed(scope))
 
       def write(chunk: Chunk[Byte]): IO[IOException, Option[Unit]] =
@@ -108,9 +111,10 @@ private[redis] object RedisConnection {
   def connect(
     address: => SocketAddress,
     sni: Option[String],
-    ssl: Boolean
+    ssl: Boolean,
+    verifyCertificate: Boolean = true
   ): ZIO[Scope, IOException, AsynchronousByteChannel] =
-    if (ssl) openTlsChannel(address, sni) else openChannel(address)
+    if (ssl) openTlsChannel(address, sni, verifyCertificate) else openChannel(address)
 
   private final val ResponseBufferSize = 1024
 
@@ -147,11 +151,12 @@ private[redis] object RedisConnection {
 
   private def openTlsChannel(
     address: SocketAddress,
-    sni: Option[String]
+    sni: Option[String],
+    verifyCertificate: Boolean
   ): ZIO[Scope, IOException, AsynchronousTlsChannel] =
     ZIO.fromAutoCloseable {
       for {
-        channel <- createAsynchronousTlsChannel(address, sni)
+        channel <- createAsynchronousTlsChannel(address, sni, verifyCertificate)
         _       <- closeWith[Integer](channel)(channel.read(ByteBuffer.allocate(0), null, _))
         _       <- ZIO.logInfo(s"Connected to the redis server with address $address.")
       } yield channel
@@ -159,13 +164,24 @@ private[redis] object RedisConnection {
 
   private def createAsynchronousTlsChannel(
     address: SocketAddress,
-    sni: Option[String]
+    sni: Option[String],
+    verifyCertificate: Boolean
   ): Task[AsynchronousTlsChannel] =
     ZIO.attempt {
-      val sslContext        = SSLContext.getDefault()
+      val sslContext        =
+        if (verifyCertificate) {
+          SSLContext.getDefault()
+        } else {
+          val ctx = SSLContext.getInstance("TLS")
+          ctx.init(null, Array[TrustManager](TrustAllCertificates), null)
+          ctx
+        }
       val sslEngine         = sslContext.createSSLEngine()
       val params            = sslEngine.getSSLParameters
       sni.foreach(sni => params.setServerNames(Arrays.asList(new SNIHostName(sni))))
+      if (verifyCertificate) {
+        params.setEndpointIdentificationAlgorithm("HTTPS")
+      }
       sslEngine.setUseClientMode(true)
       sslEngine.setSSLParameters(params)
       val selector          = Selector.open()
@@ -181,4 +197,10 @@ private[redis] object RedisConnection {
       val channelGroup      = new AsynchronousTlsChannelGroup()
       new AsynchronousTlsChannel(channelGroup, tlsChannel, rawChannel)
     }
+
+  private object TrustAllCertificates extends X509TrustManager {
+    override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+    override def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+    override def getAcceptedIssuers: Array[X509Certificate]                                = Array.empty
+  }
 }

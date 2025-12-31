@@ -150,7 +150,8 @@ private[redis] object ClusterExecutor {
   private def connectToNode(address: RedisUri, requestQueueSize: Int) =
     for {
       closableScope <- Scope.make
-      cfg            = RedisConfig(address.host, address.port, address.sni, address.ssl, requestQueueSize)
+      cfg            =
+        RedisConfig(address.host, address.port, address.sni, address.ssl, address.verifyCertificate, requestQueueSize)
       executor      <-
         closableScope.extend[Any](
           SingleNodeExecutor.create.provideSome[Scope](ZLayer.succeed(cfg), RedisConnection.layer)
@@ -162,7 +163,8 @@ private[redis] object ClusterExecutor {
   private def redis(address: RedisUri) =
     for {
       closableScope <- Scope.make
-      configLayer    = ZLayer.succeed(RedisConfig(address.host, address.port, address.sni, address.ssl))
+      configLayer    =
+        ZLayer.succeed(RedisConfig(address.host, address.port, address.sni, address.ssl, address.verifyCertificate))
       supplierLayer  = ZLayer.succeed(CodecSupplier.utf8)
       redisLayer     = ZLayer.make[Redis](configLayer, supplierLayer, Redis.singleNode)
       layer         <- closableScope.extend[Any](redisLayer.memoize)
