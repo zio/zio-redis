@@ -53,7 +53,7 @@ object RedisUri {
     RedisUri(host, port, ssl = false, sni = None, verifyCertificate = true)
 
   def apply(host: String, port: Int, ssl: Boolean): RedisUri =
-    RedisUri(host, port, ssl = ssl, sni = None, verifyCertificate = true)
+    RedisUri(host, port, ssl = ssl, sni = None)
 
   def apply(host: String, port: Int, ssl: Boolean, verifyCertificate: Boolean): RedisUri =
     RedisUri(host, port, ssl = ssl, sni = None, verifyCertificate = verifyCertificate)
