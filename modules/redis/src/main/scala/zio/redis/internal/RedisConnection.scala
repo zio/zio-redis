@@ -26,9 +26,9 @@ import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
 import java.nio.ByteBuffer
 import java.nio.channels._
+import java.security.cert.X509Certificate
 import java.util.Arrays
 import javax.net.ssl.{SNIHostName, SSLContext, TrustManager, X509TrustManager}
-import java.security.cert.X509Certificate
 
 private[redis] trait RedisConnection {
   def read: Stream[IOException, Byte]
