@@ -23,6 +23,7 @@ final case class RedisConfig(
   port: Int,
   sni: Option[String] = None,
   ssl: Boolean = false,
+  verifyCertificate: Boolean = true,
   requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize
 )
 
