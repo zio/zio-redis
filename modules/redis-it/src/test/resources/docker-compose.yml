@@ -7,6 +7,10 @@ services:
   single-node1:
     image: redis:7.2
 
+  single-node2:
+    image: redis:7.2
+    command: redis-server --requirepass asdf
+
   cluster-node0:
     image: redis:7.2
     command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --protected-mode no --bind 0.0.0.0
