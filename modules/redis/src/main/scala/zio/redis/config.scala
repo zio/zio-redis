@@ -23,18 +23,23 @@ final case class RedisConfig(
   port: Int,
   sni: Option[String] = None,
   ssl: Boolean = false,
-  requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize
+  verifyCertificate: Boolean = true,
+  requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize,
+  auth: Option[RedisConfig.Auth] = None
 )
 
 object RedisConfig {
   lazy val Local: RedisConfig      = RedisConfig("localhost", 6379)
   val DefaultRequestQueueSize: Int = 16
+
+  final case class Auth(password: String, username: Option[String] = None)
 }
 
 final case class RedisClusterConfig(
   addresses: Chunk[RedisUri],
   retry: RetryClusterConfig = RetryClusterConfig.Default,
-  requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize
+  requestQueueSize: Int = RedisConfig.DefaultRequestQueueSize,
+  auth: Option[RedisConfig.Auth] = None
 )
 
 final case class RetryClusterConfig(base: Duration, factor: Double, maxRecurs: Int)

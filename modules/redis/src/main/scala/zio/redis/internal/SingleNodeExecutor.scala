@@ -17,10 +17,13 @@
 package zio.redis.internal
 
 import zio._
+import zio.redis.Input.AuthInput
+import zio.redis.Output.UnitOutput
 import zio.redis.internal.SingleNodeExecutor._
 import zio.redis.{RedisConfig, RedisError}
 
 private[redis] final class SingleNodeExecutor private (
+  config: RedisConfig,
   connection: RedisConnection,
   requests: Queue[Request],
   responses: Queue[Promise[RedisError, RespValue]],
@@ -34,9 +37,14 @@ private[redis] final class SingleNodeExecutor private (
       .make[RedisError, RespValue]
       .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)).as(promise.await))
 
+  val auth: ZIO[Any, Nothing, Unit] = ZIO.foreachDiscard(config.auth) { auth =>
+    val cmd = RedisCommand("AUTH", AuthInput, UnitOutput).resp(zio.redis.Auth(auth.username, auth.password))
+    execute(cmd).unit
+  }
+
   def onError(e: RedisError): UIO[Unit] =
     responses.takeAll.flatMap(ZIO.foreachDiscard(_)(_.fail(e))) *>
-      connection.reconnect.catchAll { e =>
+      connection.reconnect.zipRight(auth).catchAll { e =>
         ZIO.logError(s"Unable to reconnect to redis server: ${e}")
       }
 
@@ -75,13 +83,15 @@ private[redis] object SingleNodeExecutor {
 
   def create: URIO[Scope & RedisConfig & RedisConnection, SingleNodeExecutor] =
     for {
-      requestQueueSize <- ZIO.serviceWith[RedisConfig](_.requestQueueSize)
-      connection       <- ZIO.service[RedisConnection]
-      requests         <- Queue.bounded[Request](requestQueueSize)
-      responses        <- Queue.unbounded[Promise[RedisError, RespValue]]
-      executor          = new SingleNodeExecutor(connection, requests, responses, requestQueueSize)
-      _                <- executor.run.forkScoped
-      _                <- logScopeFinalizer(s"$executor Node Executor is closed")
+      config          <- ZIO.service[RedisConfig]
+      requestQueueSize = config.requestQueueSize
+      connection      <- ZIO.service[RedisConnection]
+      requests        <- Queue.bounded[Request](requestQueueSize)
+      responses       <- Queue.unbounded[Promise[RedisError, RespValue]]
+      executor         = new SingleNodeExecutor(config, connection, requests, responses, requestQueueSize)
+      _               <- executor.run.forkScoped
+      _               <- executor.auth
+      _               <- logScopeFinalizer(s"$executor Node Executor is closed")
     } yield executor
 
   private final case class Request(command: Chunk[RespValue.BulkString], promise: Promise[RedisError, RespValue])

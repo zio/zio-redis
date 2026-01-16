@@ -38,12 +38,15 @@ trait IntegrationSpec extends ZIOSpecDefault {
   final def service(name: String, waitMessage: String): ExposedService =
     ExposedService(name, 6379, Wait.forLogMessage(waitMessage, 1))
 
-  final def singleNodeConfig(host: String): URLayer[DockerComposeContainer, RedisConfig] =
+  final def singleNodeConfig(
+    host: String,
+    password: Option[String] = None
+  ): URLayer[DockerComposeContainer, RedisConfig] =
     ZLayer {
       for {
         docker      <- ZIO.service[DockerComposeContainer]
         hostAndPort <- docker.getHostAndPort(host)(6379)
-      } yield RedisConfig(hostAndPort._1, hostAndPort._2)
+      } yield RedisConfig(hostAndPort._1, hostAndPort._2, auth = password.map(RedisConfig.Auth(_)))
     }
 
   /* TODO
@@ -73,4 +76,5 @@ object IntegrationSpec {
   final val MasterNode                 = "cluster-node5"
   final val SingleNode0                = "single-node0"
   final val SingleNode1                = "single-node1"
+  final val SingleNode2                = "single-node2"
 }

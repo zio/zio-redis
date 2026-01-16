@@ -26,6 +26,7 @@ object ApiSpec
         compose(
           service(IntegrationSpec.SingleNode0, ".*Ready to accept connections.*"),
           service(IntegrationSpec.SingleNode1, ".*Ready to accept connections.*"),
+          service(IntegrationSpec.SingleNode2, ".*Ready to accept connections.*"),
           service(IntegrationSpec.MasterNode, ".*Cluster state changed: ok.*")
         )
       ) @@ sequential @@ withLiveEnvironment

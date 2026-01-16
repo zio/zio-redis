@@ -90,6 +90,7 @@ private[redis] object RespValue {
   final case class Error(value: String) extends RespValue {
     def asRedisError: RedisError =
       if (value.startsWith("ERR")) RedisError.ProtocolError(value.drop(3).trim)
+      else if (value.startsWith("NOAUTH")) RedisError.ProtocolError(value.drop(6).trim)
       else if (value.startsWith("WRONGTYPE")) RedisError.WrongType(value.drop(9).trim)
       else if (value.startsWith("BUSYGROUP")) RedisError.BusyGroup(value.drop(9).trim)
       else if (value.startsWith("NOGROUP")) RedisError.NoGroup(value.drop(7).trim)

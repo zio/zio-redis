@@ -74,7 +74,7 @@ private[redis] final class ClusterExecutor private (
       val executorOpt       = cc.executors.get(address).map(es => (es.executor, cc))
       val enrichedClusterIO =
         scope
-          .extend[Any](connectToNode(address, requestQueueSize))
+          .extend[Any](connectToNode(address, requestQueueSize, config.auth))
           .map(es => (es.executor, cc.addExecutor(address, es)))
       ZIO.fromOption(executorOpt).catchAll(_ => enrichedClusterIO)
     }
@@ -83,7 +83,7 @@ private[redis] final class ClusterExecutor private (
     clusterConnection.updateZIO { connection =>
       val addresses = connection.partitions.flatMap(_.addresses)
       for {
-        cluster <- scope.extend[Any](initConnectToCluster(addresses, config.requestQueueSize))
+        cluster <- scope.extend[Any](initConnectToCluster(addresses, config.requestQueueSize, config.auth))
         _       <- ZIO.foreachParDiscard(connection.executors) { case (_, es) => es.scope.close(Exit.unit) }
       } yield cluster
     }
@@ -115,7 +115,7 @@ private[redis] object ClusterExecutor {
     scope: Scope.Closeable
   ): ZIO[Scope, RedisError, ClusterExecutor] =
     for {
-      connection <- initConnectToCluster(config.addresses, config.requestQueueSize)
+      connection <- initConnectToCluster(config.addresses, config.requestQueueSize, config.auth)
       ref        <- Ref.Synchronized.make(connection)
       executor    = new ClusterExecutor(ref, config, scope)
       _          <- logScopeFinalizer("Cluster executor is closed")
@@ -123,34 +123,46 @@ private[redis] object ClusterExecutor {
 
   private def initConnectToCluster(
     addresses: Chunk[RedisUri],
-    requestQueueSize: Int
+    requestQueueSize: Int,
+    auth: Option[RedisConfig.Auth]
   ): ZIO[Scope, RedisError, ClusterConnection] =
     ZIO
       .collectFirst(addresses) { address =>
-        connectToCluster(address, requestQueueSize).foldZIO(
+        connectToCluster(address, requestQueueSize, auth).foldZIO(
           error => ZIO.logError(s"The connection to cluster failed. Cause: $error").as(None),
           cc => ZIO.logInfo("The connection to cluster has been established").as(Some(cc))
         )
       }
       .flatMap(cc => ZIO.getOrFailWith(CusterConnectionError)(cc))
 
-  private def connectToCluster(address: RedisUri, requestQueueSize: Int) =
+  private def connectToCluster(address: RedisUri, requestQueueSize: Int, auth: Option[RedisConfig.Auth]) =
     for {
-      temporaryRedis    <- redis(address)
+      temporaryRedis    <- redis(address, auth)
       (trLayer, trScope) = temporaryRedis
       partitions        <- ZIO.serviceWithZIO[Redis](_.slots).provideLayer(trLayer)
       _                 <- ZIO.logTrace(s"Cluster configs:\n${partitions.mkString("\n")}")
       uniqueAddresses    = partitions.map(_.master.address).distinct
       uriExecScope      <-
-        ZIO.foreachPar(uniqueAddresses)(address => connectToNode(address, requestQueueSize).map(es => address -> es))
+        ZIO.foreachPar(uniqueAddresses)(address =>
+          connectToNode(address, requestQueueSize, auth).map(es => address -> es)
+        )
       slots              = slotAddress(partitions)
       _                 <- trScope.close(Exit.unit)
     } yield ClusterConnection(partitions, uriExecScope.toMap, slots)
 
-  private def connectToNode(address: RedisUri, requestQueueSize: Int) =
+  private def connectToNode(address: RedisUri, requestQueueSize: Int, auth: Option[RedisConfig.Auth]) =
     for {
       closableScope <- Scope.make
-      cfg            = RedisConfig(address.host, address.port, address.sni, address.ssl, requestQueueSize)
+      cfg            =
+        RedisConfig(
+          address.host,
+          address.port,
+          address.sni,
+          address.ssl,
+          address.verifyCertificate,
+          requestQueueSize,
+          auth
+        )
       executor      <-
         closableScope.extend[Any](
           SingleNodeExecutor.create.provideSome[Scope](ZLayer.succeed(cfg), RedisConnection.layer)
@@ -159,10 +171,13 @@ private[redis] object ClusterExecutor {
       _             <- layerScope.addFinalizerExit(closableScope.close(_))
     } yield ExecutorScope(executor, closableScope)
 
-  private def redis(address: RedisUri) =
+  private def redis(address: RedisUri, auth: Option[RedisConfig.Auth]) =
     for {
       closableScope <- Scope.make
-      configLayer    = ZLayer.succeed(RedisConfig(address.host, address.port, address.sni, address.ssl))
+      configLayer    =
+        ZLayer.succeed(
+          RedisConfig(address.host, address.port, address.sni, address.ssl, address.verifyCertificate, auth = auth)
+        )
       supplierLayer  = ZLayer.succeed(CodecSupplier.utf8)
       redisLayer     = ZLayer.make[Redis](configLayer, supplierLayer, Redis.singleNode)
       layer         <- closableScope.extend[Any](redisLayer.memoize)

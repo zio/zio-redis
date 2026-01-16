@@ -16,7 +16,13 @@
 
 package zio.redis
 
-final case class RedisUri(host: String, port: Int, ssl: Boolean, sni: Option[String]) {
+final case class RedisUri(
+  host: String,
+  port: Int,
+  ssl: Boolean,
+  sni: Option[String],
+  verifyCertificate: Boolean = true
+) {
   override def toString: String =
     if (ssl) s"rediss://$host:$port" else s"redis://$host:$port"
 }
@@ -36,9 +42,19 @@ object RedisUri {
     RedisUri(host, port, ssl = ssl, sni = None)
   }
 
+  def apply(hostAndPort: String, ssl: Boolean, verifyCertificate: Boolean): RedisUri = {
+    val splitting = hostAndPort.split(':')
+    val host      = splitting(0)
+    val port      = splitting(1).toInt
+    RedisUri(host, port, ssl = ssl, sni = None, verifyCertificate = verifyCertificate)
+  }
+
   def apply(host: String, port: Int): RedisUri =
     RedisUri(host, port, ssl = false, sni = None)
 
   def apply(host: String, port: Int, ssl: Boolean): RedisUri =
     RedisUri(host, port, ssl = ssl, sni = None)
+
+  def apply(host: String, port: Int, ssl: Boolean, verifyCertificate: Boolean): RedisUri =
+    RedisUri(host, port, ssl = ssl, sni = None, verifyCertificate = verifyCertificate)
 }
