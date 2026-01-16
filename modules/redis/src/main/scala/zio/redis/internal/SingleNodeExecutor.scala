@@ -37,7 +37,7 @@ private[redis] final class SingleNodeExecutor private (
       .make[RedisError, RespValue]
       .flatMap(promise => requests.offer(Request(command.args.map(_.value), promise)).as(promise.await))
 
-  val auth: ZIO[Any, Nothing, Unit] = ZIO.foreachDiscard(config.auth) { auth =>
+  val auth = ZIO.foreachDiscard(config.auth) { auth =>
     val cmd = RedisCommand("AUTH", AuthInput, UnitOutput).resp(zio.redis.Auth(auth.username, auth.password))
     execute(cmd).unit
   }
