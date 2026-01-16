@@ -17,8 +17,7 @@
 package zio.redis.internal
 
 import zio.redis.RedisError
-import zio.redis.internal.SingleNodeRunner.True
-import zio.{IO, Schedule, ZIO}
+import zio.{IO, Schedule, ZIO, durationInt}
 
 private[redis] trait SingleNodeRunner {
   def send: IO[RedisError.IOError, Unit]
@@ -35,7 +34,7 @@ private[redis] trait SingleNodeRunner {
     ZIO.logTrace(s"$this sender and reader has been started") *>
       (send.either.repeat(Schedule.forever) race receive
         .tapError(e => ZIO.logWarning(s"Reconnecting due to error: $e") *> onError(e))
-        .retryWhile(True))
+        .retry(Schedule.exponential(10.millis)))
         .tapError(e => ZIO.logError(s"Executor exiting: $e"))
 }
 
