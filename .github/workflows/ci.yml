@@ -27,7 +27,7 @@ jobs:
           java-version: 17
           check-latest: true
       - uses: sbt/setup-sbt@v1
-      - uses: coursier/cache-action@v7
+      - uses: coursier/cache-action@v8
       - name: Lint code
         run: sbt lint
 
@@ -42,7 +42,7 @@ jobs:
           java-version: 11
           check-latest: true
       - uses: sbt/setup-sbt@v1
-      - uses: coursier/cache-action@v7
+      - uses: coursier/cache-action@v8
       - name: Check that building packages works
         run: sbt +publishLocal
       - name: Check website build process
@@ -64,7 +64,7 @@ jobs:
           java-version: ${{ matrix.java }}
           check-latest: true
       - uses: sbt/setup-sbt@v1
-      - uses: coursier/cache-action@v7
+      - uses: coursier/cache-action@v8
       - run: sbt '++ ${{ matrix.scala }} test'
 
   update-readme:
@@ -82,7 +82,7 @@ jobs:
           java-version: 17
           check-latest: true
       - uses: sbt/setup-sbt@v1
-      - uses: coursier/cache-action@v7
+      - uses: coursier/cache-action@v8
       - name: Generate Readme
         run: sbt docs/generateReadme
       - name: Commit Changes
@@ -147,7 +147,7 @@ jobs:
           java-version: 11
           check-latest: true
       - uses: sbt/setup-sbt@v1
-      - uses: coursier/cache-action@v7
+      - uses: coursier/cache-action@v8
       - run: sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
@@ -170,7 +170,7 @@ jobs:
           java-version: 11
           check-latest: true
       - uses: sbt/setup-sbt@v1
-      - uses: coursier/cache-action@v7
+      - uses: coursier/cache-action@v8
       - uses: actions/setup-node@v6
         with:
           node-version: 22.x
