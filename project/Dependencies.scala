@@ -12,7 +12,7 @@ object Dependencies {
     val TlsChannel        = "0.10.1"
     val ZioConfig         = "4.0.6"
     val ZioJson           = "0.7.45"
-    val ZioSchema         = "1.8.1"
+    val ZioSchema         = "1.8.2"
     val ZioTestContainers = "0.6.0"
   }
 
