@@ -8,11 +8,11 @@ object Dependencies {
     val EmbeddedRedis     = "0.6"
     val Redis4Cats        = "2.0.3"
     val Slf4jSimple       = "2.0.17"
-    val Sttp              = "3.11.0"
+    val Sttp              = "4.0.19"
     val TlsChannel        = "0.10.1"
     val ZioConfig         = "4.0.6"
-    val ZioJson           = "0.7.45"
-    val ZioSchema         = "1.8.1"
+    val ZioJson           = "0.9.0"
+    val ZioSchema         = "1.8.2"
     val ZioTestContainers = "0.8.0"
   }
 
@@ -32,8 +32,8 @@ object Dependencies {
 
   lazy val Example =
     List(
-      "com.softwaremill.sttp.client3" %% "zio"                 % Versions.Sttp,
-      "com.softwaremill.sttp.client3" %% "zio-json"            % Versions.Sttp,
+      "com.softwaremill.sttp.client4" %% "zio"                 % Versions.Sttp,
+      "com.softwaremill.sttp.client4" %% "zio-json"            % Versions.Sttp,
       "dev.zio"                       %% "zio-config-magnolia" % Versions.ZioConfig,
       "dev.zio"                       %% "zio-config-typesafe" % Versions.ZioConfig,
       "dev.zio"                       %% "zio-schema-protobuf" % Versions.ZioSchema,
