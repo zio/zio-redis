@@ -17,7 +17,8 @@ inThisBuild(
     scala3             := "3.3.7",
     zioVersion         := Versions.Zio,
     crossScalaVersions := List(scala212.value, scala213.value, scala3.value),
-    scalaVersion       := scala213.value
+    scalaVersion       := scala213.value,
+    libraryDependencySchemes ++= Seq("dev.zio" %% "zio-json" % VersionScheme.Always)
   )
 )
 

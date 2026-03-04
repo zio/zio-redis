@@ -17,7 +17,7 @@
 package zio.redis.example
 
 import com.typesafe.config.ConfigFactory
-import sttp.client3.httpclient.zio.HttpClientZioBackend
+import sttp.client4.httpclient.zio.HttpClientZioBackend
 import zio._
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.http.Server

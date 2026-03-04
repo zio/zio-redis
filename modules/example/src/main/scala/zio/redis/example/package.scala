@@ -16,7 +16,8 @@
 
 package zio.redis
 
-import sttp.client3.SttpBackend
+import sttp.capabilities.zio.ZioStreams
+import sttp.client4.WebSocketStreamBackend
 import zio.Task
 
 package object example {
@@ -24,5 +25,5 @@ package object example {
   type Login         = Login.Type
   type Owner         = Owner.Type
   type Name          = Name.Type
-  type Sttp          = SttpBackend[Task, Any]
+  type Sttp          = WebSocketStreamBackend[Task, ZioStreams]
 }
