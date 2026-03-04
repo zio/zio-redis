@@ -16,8 +16,8 @@
 
 package zio.redis.example
 
-import sttp.client3.ziojson.asJson
-import sttp.client3.{UriContext, basicRequest}
+import sttp.client4.ziojson.asJson
+import sttp.client4.{UriContext, basicRequest}
 import sttp.model.Uri
 import zio._
 import zio.json._
@@ -54,7 +54,7 @@ object ContributorsCache {
     private def retrieve(repository: Repository): IO[ApiError, Contributors] =
       for {
         req          <- ZIO.succeed(basicRequest.get(urlOf(repository)).response(asJson[Chunk[Contributor]]))
-        res          <- sttp.send(req).orElseFail(GithubUnreachable)
+        res          <- req.send(sttp).orElseFail(GithubUnreachable)
         contributors <- res.body.fold(_ => ZIO.fail(UnknownProject(urlOf(repository).toString)), ZIO.succeed(_))
         _            <- cache(repository, contributors)
       } yield Contributors(contributors)
