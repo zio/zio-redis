@@ -9,7 +9,7 @@ object Dependencies {
     val Redis4Cats        = "2.0.3"
     val Slf4jSimple       = "2.0.17"
     val Sttp              = "4.0.20"
-    val TlsChannel        = "0.10.1"
+    val TlsChannel        = "1.0.0"
     val ZioConfig         = "4.0.7"
     val ZioJson           = "0.9.0"
     val ZioSchema         = "1.8.3"
