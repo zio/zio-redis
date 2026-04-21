@@ -27,16 +27,17 @@ private[redis] trait SubscriptionExecutor {
 
 private[redis] object SubscriptionExecutor {
   lazy val layer: ZLayer[RedisConfig, RedisError.IOError, SubscriptionExecutor] =
-    RedisConnection.layer.fresh >>> pubSublayer
+    (RedisConnection.layer.fresh ++ ZLayer.service[RedisConfig]) >>> pubSublayer
 
   lazy val local: Layer[RedisError.IOError, SubscriptionExecutor] =
     RedisConnection.local.fresh >>> pubSublayer
 
-  private lazy val pubSublayer: ZLayer[RedisConnection, RedisError.IOError, SubscriptionExecutor] =
+  private lazy val pubSublayer: ZLayer[RedisConnection with RedisConfig, RedisError.IOError, SubscriptionExecutor] =
     ZLayer.scoped {
       for {
         conn   <- ZIO.service[RedisConnection]
-        pubSub <- SingleNodeSubscriptionExecutor.create(conn)
+        config <- ZIO.service[RedisConfig]
+        pubSub <- SingleNodeSubscriptionExecutor.create(conn, config)
       } yield pubSub
     }
 }
