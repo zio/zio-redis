@@ -203,11 +203,11 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
    * the `run` fiber starts, so that no other effect is reading from or writing to the
    * connection concurrently.
    */
-  val auth: UIO[Unit] = 
+  val auth: UIO[Unit] =
     ZIO.foreachDiscard(config.auth) { creds =>
       val cmd   = RedisCommand("AUTH", AuthInput, UnitOutput).resp(zio.redis.Auth(creds.username, creds.password))
       val bytes = RespValue.Array(cmd.args.map(_.value)).asBytes
-      
+
       val effect =
         for {
           _        <- connection.write(bytes).mapError(RedisError.IOError.apply)
@@ -224,7 +224,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
                           ZIO.fail(RedisError.ProtocolError(s"Unexpected response to AUTH: $other"))
                       }
         } yield ()
-      
+
       effect.catchAll(e => ZIO.logError(s"Failed to authenticate subscription connection: $e"))
     }
 }
