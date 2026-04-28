@@ -52,8 +52,8 @@ trait ConnectionSpec extends IntegrationSpec {
           ZLayer.succeed(ProtobufCodecSupplier)
         ),
         test("subscription automatic auth") {
-          val channel = "auth-test-channel-" + java.util.UUID.randomUUID().toString
           for {
+            channel      <- Random.nextUUID.map(uuid => "auth-test-channel-$uuid")
             redis        <- ZIO.service[Redis]
             subscription <- ZIO.service[RedisSubscription]
             subscribed   <- Promise.make[RedisError, Unit]
