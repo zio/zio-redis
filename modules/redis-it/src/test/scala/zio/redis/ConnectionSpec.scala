@@ -53,7 +53,7 @@ trait ConnectionSpec extends IntegrationSpec {
         ),
         test("subscription automatic auth") {
           for {
-            channel      <- Random.nextUUID.map(uuid => "auth-test-channel-$uuid")
+            channel      <- Random.nextUUID.map(uuid => s"auth-test-channel-$uuid")
             redis        <- ZIO.service[Redis]
             subscription <- ZIO.service[RedisSubscription]
             subscribed   <- Promise.make[RedisError, Unit]
