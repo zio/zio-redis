@@ -206,7 +206,7 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
   val auth = ZIO.foreachDiscard(config.auth) { creds =>
     val cmd                          = RedisCommand("AUTH", AuthInput, UnitOutput).resp(zio.redis.Auth(creds.username, creds.password))
     val bytes                        = RespValue.Array(cmd.args.map(_.value)).asBytes
-    val effect: IO[RedisError, Unit] =
+    val effect =
       for {
         _        <- connection.write(bytes).mapError(RedisError.IOError.apply)
         response <- connection.read
