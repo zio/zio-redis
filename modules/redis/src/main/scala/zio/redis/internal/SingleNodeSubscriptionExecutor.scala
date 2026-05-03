@@ -18,16 +18,17 @@ package zio.redis.internal
 
 import zio._
 import zio.concurrent.ConcurrentMap
-import zio.redis.Input.{CommandNameInput, StringInput}
-import zio.redis.Output.PushMessageOutput
+import zio.redis.Input.{AuthInput, CommandNameInput, StringInput}
+import zio.redis.Output.{PushMessageOutput, UnitOutput}
 import zio.redis.api.Subscription
 import zio.redis.internal.PubSub.{PushMessage, SubscriptionKey}
 import zio.redis.internal.SingleNodeRunner.True
 import zio.redis.internal.SingleNodeSubscriptionExecutor.Request
-import zio.redis.{Input, RedisError}
+import zio.redis.{Input, RedisConfig, RedisError}
 import zio.stream._
 
 private[redis] final class SingleNodeSubscriptionExecutor private (
+  config: RedisConfig,
   subscriptionMap: ConcurrentMap[SubscriptionKey, Hub[Take[RedisError, PushMessage]]],
   requests: Queue[Request],
   subsResponses: Queue[Promise[RedisError, PushMessage]],
@@ -195,6 +196,37 @@ private[redis] final class SingleNodeSubscriptionExecutor private (
                                .retryWhile(True)
     } yield ()
   }
+
+  /**
+   * Authenticates the subscription connection synchronously by writing an `AUTH`
+   * command and awaiting the reply on the same connection. It must be invoked before
+   * the `run` fiber starts, so that no other effect is reading from or writing to the
+   * connection concurrently.
+   */
+  val auth: UIO[Unit] =
+    ZIO.foreachDiscard(config.auth) { creds =>
+      val cmd   = RedisCommand("AUTH", AuthInput, UnitOutput).resp(zio.redis.Auth(creds.username, creds.password))
+      val bytes = RespValue.Array(cmd.args.map(_.value)).asBytes
+
+      val effect =
+        for {
+          _        <- connection.write(bytes).mapError(RedisError.IOError.apply)
+          response <- connection.read
+                        .mapError(RedisError.IOError.apply)
+                        .via(RespValue.Decoder)
+                        .collectSome
+                        .runHead
+                        .someOrFail(RedisError.ProtocolError("No response to AUTH"))
+          _        <- response match {
+                        case _: RespValue.SimpleString => ZIO.unit
+                        case err: RespValue.Error      => ZIO.fail(err.asRedisError)
+                        case other                     =>
+                          ZIO.fail(RedisError.ProtocolError(s"Unexpected response to AUTH: $other"))
+                      }
+        } yield ()
+
+      effect.catchAll(e => ZIO.logError(s"Failed to authenticate subscription connection: $e"))
+    }
 }
 
 private[redis] object SingleNodeSubscriptionExecutor {
@@ -209,12 +241,13 @@ private[redis] object SingleNodeSubscriptionExecutor {
         extends Request
   }
 
-  def create(conn: RedisConnection): URIO[Scope, SubscriptionExecutor] =
+  def create(conn: RedisConnection, config: RedisConfig): URIO[Scope, SubscriptionExecutor] =
     for {
       reqQueue <- Queue.bounded[Request](RequestQueueSize)
       resQueue <- Queue.unbounded[Promise[RedisError, PushMessage]]
       subsRef  <- ConcurrentMap.empty[SubscriptionKey, Hub[Take[RedisError, PushMessage]]]
-      pubSub    = new SingleNodeSubscriptionExecutor(subsRef, reqQueue, resQueue, conn)
+      pubSub    = new SingleNodeSubscriptionExecutor(config, subsRef, reqQueue, resQueue, conn)
+      _        <- pubSub.auth
       _        <- pubSub.run.forkScoped
       _        <- logScopeFinalizer(s"$pubSub Subscription Node is closed")
     } yield pubSub
