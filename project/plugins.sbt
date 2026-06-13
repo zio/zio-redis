@@ -3,7 +3,7 @@ val ZioSbtVersion = "0.5.3"
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings"  % "3.0.2")
 addSbtPlugin("dev.zio"                           % "zio-sbt-website"   % ZioSbtVersion)
 addSbtPlugin("dev.zio"                           % "zio-sbt-ecosystem" % ZioSbtVersion)
-addSbtPlugin("ch.epfl.scala"                     % "sbt-scalafix"      % "0.14.6")
+addSbtPlugin("ch.epfl.scala"                     % "sbt-scalafix"      % "0.14.7")
 addSbtPlugin("com.github.sbt"                    % "sbt-ci-release"    % "1.11.2")
 addSbtPlugin("com.typesafe"                      % "sbt-mima-plugin"   % "1.1.5")
 addSbtPlugin("org.scalameta"                     % "sbt-scalafmt"      % "2.6.1")
