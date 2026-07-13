@@ -1127,23 +1127,24 @@ object OutputSpec extends BaseSpec {
               )
             )
 
-          val expected = Chunk(
-            Cluster.Partition(
-              Cluster.SlotRange(0L, 5460L),
-              Cluster.Node("node1", RedisUri("127.0.0.1", 6379)),
-              slaves = Chunk.empty
-            ),
-            Cluster.Partition(
-              Cluster.SlotRange(5461L, 10922L),
-              Cluster.Node("node2", RedisUri("127.0.0.2", 6379)),
-              slaves = Chunk.empty
-            ),
-            Cluster.Partition(
-              Cluster.SlotRange(10923L, 16383L),
-              Cluster.Node("node3", RedisUri("127.0.0.3", 6379)),
-              slaves = Chunk.empty
+          val expected =
+            Chunk(
+              Cluster.Partition(
+                Cluster.SlotRange(0L, 5460L),
+                Cluster.Node("node1", RedisUri("127.0.0.1", 6379)),
+                slaves = Chunk.empty
+              ),
+              Cluster.Partition(
+                Cluster.SlotRange(5461L, 10922L),
+                Cluster.Node("node2", RedisUri("127.0.0.2", 6379)),
+                slaves = Chunk.empty
+              ),
+              Cluster.Partition(
+                Cluster.SlotRange(10923L, 16383L),
+                Cluster.Node("node3", RedisUri("127.0.0.3", 6379)),
+                slaves = Chunk.empty
+              )
             )
-          )
 
           assertZIO(ZIO.attempt(ChunkOutput(ClusterPartitionOutput).unsafeDecode(response)))(hasSameElements(expected))
         },
