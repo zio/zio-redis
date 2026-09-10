@@ -73,14 +73,17 @@ trait ScriptingSpec extends IntegrationSpec {
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(error)))))
         },
         test("throw an error if couldn't decode resp value") {
-          val customError                      = "custom error"
-          implicit val decoder: Output[String] = errorOutput(customError)
+          val customError                                 = "custom error"
+          // Shadows the imported ScriptingSpec.simpleStringOutput so it is not an
+          // eligible implicit here: Scala 3.9 no longer accepts passing the Output
+          // positionally to `returning`.
+          implicit val simpleStringOutput: Output[String] = errorOutput(customError)
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
             arg   <- uuid
             lua    = ""
-            res   <- redis.eval(lua, Chunk(key), Chunk(arg)).returning[String](decoder).either
+            res   <- redis.eval(lua, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         test("throw custom error from script") {
@@ -132,15 +135,18 @@ trait ScriptingSpec extends IntegrationSpec {
           } yield assertTrue(res == expected)
         },
         test("throw an error if couldn't decode resp value") {
-          val customError                      = "custom error"
-          implicit val decoder: Output[String] = errorOutput(customError)
+          val customError                                 = "custom error"
+          // Shadows the imported ScriptingSpec.simpleStringOutput so it is not an
+          // eligible implicit here: Scala 3.9 no longer accepts passing the Output
+          // positionally to `returning`.
+          implicit val simpleStringOutput: Output[String] = errorOutput(customError)
           for {
             redis <- ZIO.service[Redis]
             key   <- uuid
             arg   <- uuid
             lua    = ""
             sha   <- redis.scriptLoad(lua)
-            res   <- redis.evalSha(sha, Chunk(key), Chunk(arg)).returning[String](decoder).either
+            res   <- redis.evalSha(sha, Chunk(key), Chunk(arg)).returning[String].either
           } yield assert(res)(isLeft(isSubtype[ProtocolError](hasField("message", _.message, equalTo(customError)))))
         },
         test("throw custom error from script") {
