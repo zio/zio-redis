@@ -1,5 +1,7 @@
 import Dependencies.Versions
 
+import zio.sbt.githubactions.{Condition, Step}
+
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 enablePlugins(ZioSbtEcosystemPlugin)
@@ -18,7 +20,35 @@ inThisBuild(
     zioVersion         := Versions.Zio,
     crossScalaVersions := List(scala212.value, scala213.value, scala3.value),
     scalaVersion       := scala213.value,
-    libraryDependencySchemes ++= Seq("dev.zio" %% "zio-json" % VersionScheme.Always)
+    libraryDependencySchemes ++= Seq("dev.zio" %% "zio-json" % VersionScheme.Always),
+
+    // zio-sbt-ci: generates .github/workflows/{ci,auto-approve,auto-merge}.yml via
+    // `sbt ciGenerateGithubWorkflow`; `ciCheckGithubWorkflow` (run as part of `sbt lint`) fails
+    // the build if the committed files have drifted from what these settings produce.
+    ciEnabledBranches := Seq("main"),
+    // The handwritten workflow ran this on every push to main, not just on release - keep that.
+    ciUpdateReadmeCondition := Some(Condition.Expression("github.event_name == 'push'")),
+    // Matches the handwritten workflow's env block; the default omits SBT_OPTS and the heap sizing.
+    ciWorkflowEnv := {
+      val opts = "-XX:+PrintCommandLineFlags -Xms6G -Xmx6G"
+      Map("JDK_JAVA_OPTIONS" -> opts, "SBT_OPTS" -> opts)
+    },
+    // The generated release-docs job otherwise has no way to know `npm publish` needs
+    // NODE_AUTH_TOKEN in its environment to authenticate against the npm registry. Its steps are
+    // nested inside a single StepSequence, so the fix-up has to recurse rather than map the job's
+    // top-level steps directly.
+    ciPostReleaseJobs := {
+      def addNpmToken(step: Step): Step = step match {
+        case s: Step.SingleStep if s.name == "Publish Docs to NPM Registry" =>
+          s.copy(env = s.env + ("NODE_AUTH_TOKEN" -> "${{ secrets.NPM_TOKEN }}"))
+        case s: Step.StepSequence => Step.StepSequence(s.steps.map(addNpmToken))
+        case other => other
+      }
+
+      ciPostReleaseJobs.value.map { job =>
+        if (job.id != "release-docs") job else job.copy(steps = job.steps.map(addNpmToken))
+      }
+    }
   )
 )
 
