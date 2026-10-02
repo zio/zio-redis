@@ -1,4 +1,4 @@
-val ZioSbtVersion = "0.8.3"
+val ZioSbtVersion = "0.8.5"
 
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings"  % "3.1.0")
 addSbtPlugin("dev.zio"                           % "zio-sbt-website"   % ZioSbtVersion)
