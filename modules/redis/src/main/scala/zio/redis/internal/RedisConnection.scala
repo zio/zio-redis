@@ -23,7 +23,7 @@ import zio.redis._
 import zio.stream.{Stream, ZStream}
 
 import java.io.{EOFException, IOException}
-import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions}
+import java.net.{InetSocketAddress, SocketAddress, StandardSocketOptions, UnknownHostException}
 import java.nio.ByteBuffer
 import java.nio.channels._
 import java.security.cert.X509Certificate
@@ -114,7 +114,15 @@ private[redis] object RedisConnection {
     ssl: Boolean,
     verifyCertificate: Boolean = true
   ): ZIO[Scope, IOException, AsynchronousByteChannel] =
-    if (ssl) openTlsChannel(address, sni, verifyCertificate) else openChannel(address)
+    address match {
+      // Connecting to an unresolved address throws UnresolvedAddressException, which is not an IOException. We fail
+      // with an IOException instead, so that a host name that does not resolve for a moment is retried like any
+      // other connection error.
+      case unresolved: InetSocketAddress if unresolved.isUnresolved =>
+        ZIO.fail(new UnknownHostException(unresolved.getHostString))
+      case resolved                                                 =>
+        if (ssl) openTlsChannel(resolved, sni, verifyCertificate) else openChannel(resolved)
+    }
 
   private final val ResponseBufferSize = 1024
 
