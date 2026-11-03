@@ -15,7 +15,7 @@ inThisBuild(
     ),
     startYear          := Some(2021),
     scala212           := "2.12.21",
-    scala213           := "2.13.18",
+    scala213           := "3.10.0",
     scala3             := "3.9.0",
     zioVersion         := Versions.Zio,
     crossScalaVersions := List(scala212.value, scala213.value, scala3.value),
@@ -25,11 +25,11 @@ inThisBuild(
     // zio-sbt-ci: generates .github/workflows/{ci,auto-approve,auto-merge}.yml via
     // `sbt ciGenerateGithubWorkflow`; `ciCheckGithubWorkflow` (run as part of `sbt lint`) fails
     // the build if the committed files have drifted from what these settings produce.
-    ciEnabledBranches := Seq("main"),
+    ciEnabledBranches       := Seq("main"),
     // The handwritten workflow ran this on every push to main, not just on release - keep that.
     ciUpdateReadmeCondition := Some(Condition.Expression("github.event_name == 'push'")),
     // Matches the handwritten workflow's env block; the default omits SBT_OPTS and the heap sizing.
-    ciWorkflowEnv := {
+    ciWorkflowEnv           := {
       val opts = "-XX:+PrintCommandLineFlags -Xms6G -Xmx6G"
       Map("JDK_JAVA_OPTIONS" -> opts, "SBT_OPTS" -> opts)
     },
@@ -37,12 +37,12 @@ inThisBuild(
     // NODE_AUTH_TOKEN in its environment to authenticate against the npm registry. Its steps are
     // nested inside a single StepSequence, so the fix-up has to recurse rather than map the job's
     // top-level steps directly.
-    ciPostReleaseJobs := {
+    ciPostReleaseJobs       := {
       def addNpmToken(step: Step): Step = step match {
         case s: Step.SingleStep if s.name == "Publish Docs to NPM Registry" =>
           s.copy(env = s.env + ("NODE_AUTH_TOKEN" -> "${{ secrets.NPM_TOKEN }}"))
-        case s: Step.StepSequence => Step.StepSequence(s.steps.map(addNpmToken))
-        case other => other
+        case s: Step.StepSequence                                           => Step.StepSequence(s.steps.map(addNpmToken))
+        case other                                                          => other
       }
 
       ciPostReleaseJobs.value.map { job =>
@@ -109,7 +109,9 @@ lazy val docs = project
 lazy val embedded =
   project
     .in(file("modules/embedded"))
-    .settings(stdSettings(name = Some("zio-redis-embedded"), packageName = Some("zio.redis.embedded"), javaPlatform = "17"))
+    .settings(
+      stdSettings(name = Some("zio-redis-embedded"), packageName = Some("zio.redis.embedded"), javaPlatform = "17")
+    )
     .settings(enableZIO())
     .settings(libraryDependencies ++= Dependencies.Embedded)
     .dependsOn(client)
