@@ -25,11 +25,11 @@ inThisBuild(
     // zio-sbt-ci: generates .github/workflows/{ci,auto-approve,auto-merge}.yml via
     // `sbt ciGenerateGithubWorkflow`; `ciCheckGithubWorkflow` (run as part of `sbt lint`) fails
     // the build if the committed files have drifted from what these settings produce.
-    ciEnabledBranches := Seq("main"),
+    ciEnabledBranches       := Seq("main"),
     // The handwritten workflow ran this on every push to main, not just on release - keep that.
     ciUpdateReadmeCondition := Some(Condition.Expression("github.event_name == 'push'")),
     // Matches the handwritten workflow's env block; the default omits SBT_OPTS and the heap sizing.
-    ciWorkflowEnv := {
+    ciWorkflowEnv           := {
       val opts = "-XX:+PrintCommandLineFlags -Xms6G -Xmx6G"
       Map("JDK_JAVA_OPTIONS" -> opts, "SBT_OPTS" -> opts)
     }
