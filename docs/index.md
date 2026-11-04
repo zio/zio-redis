@@ -20,95 +20,37 @@ To use ZIO Redis, add the following line to your `build.sbt`:
 libraryDependencies += "dev.zio" %% "zio-redis" % "@VERSION@"
 ```
 
-## Example
+## Features
 
-To execute our ZIO Redis effect, we should provide the `RedisExecutor` layer to that effect. To create this layer we
-should also provide the following layers:
+- **Type-safe commands.** Results are decoded to any type with a ZIO Schema `Schema`; see [Codecs](./codecs.md).
+- **All major command groups.** Strings, keys, hashes, lists, sets, sorted sets, streams, geo, HyperLogLog and scripting; see the command reference pages.
+- **Pub/Sub.** Subscriptions are exposed as ZIO streams; see [Pub/Sub](./pub-sub.md).
+- **Pipelining.** `AsyncRedis` sends commands without waiting for replies; see [AsyncRedis](./async-redis.md).
+- **Cluster support.** `Redis.cluster` follows slot redirections; see [Cluster](./cluster.md).
+- **Embedded server for tests.** See [Testing](./testing.md).
 
-- **RedisConfig** — Using default one, will connect to the `localhost:6379` Redis instance.
-- **BinaryCodec** — In this example, we are going to use the built-in `ProtobufCodec` codec from zio-schema project.
+## Quick Example
 
-To run this example we should put following dependencies in our `build.sbt` file:
-
-```scala
-libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis" % "@VERSION@",
-  "dev.zio" %% "zio-schema-protobuf" % "1.6.1"
-)
-```
+To run an effect that uses Redis, provide the `Redis` layer. It needs a `CodecSupplier` and, for a local server, nothing else. See [Getting Started](./getting-started.md) for the details:
 
 ```scala mdoc:compile-only
 import zio._
 import zio.redis._
-import zio.schema._
-import zio.schema.codec._
 
-object ZIORedisExample extends ZIOAppDefault {
-  
-  object ProtobufCodecSupplier extends CodecSupplier {
-    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
-  }
-  
-  val myApp: ZIO[Redis, RedisError, Unit] = 
+object QuickExample extends ZIOAppDefault {
+  val myApp: ZIO[Redis, RedisError, Unit] =
     for {
       redis <- ZIO.service[Redis]
-      _     <- redis.set("myKey", 8L, Some(1.minutes))
+      _     <- redis.set("myKey", 8L, Some(1.minute))
       v     <- redis.get("myKey").returning[Long]
-      _     <- Console.printLine(s"Value of myKey: $v").orDie
+      _     <- ZIO.debug(s"Value of myKey: $v")
       _     <- redis.hSet("myHash", ("k1", 6), ("k2", 2))
       _     <- redis.rPush("myList", 1, 2, 3, 4)
       _     <- redis.sAdd("mySet", "a", "b", "a", "c")
     } yield ()
 
-  override def run = 
-    myApp.provide(Redis.local, ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier))
-}
-```
-
-## Testing
-
-To test you can use the embedded redis instance by adding to your build:
-
-```scala
-libraryDependencies := "dev.zio" %% "zio-redis-embedded" % "@VERSION@"
-```
-
-Then you can supply `EmbeddedRedis.layer.orDie` as your `RedisConfig` and you're good to go!
-
-```scala mdoc:compile-only
-import zio._
-import zio.redis._
-import zio.redis.embedded.EmbeddedRedis
-import zio.schema.{DeriveSchema, Schema}
-import zio.schema.codec.{BinaryCodec, ProtobufCodec}
-import zio.test._
-import zio.test.Assertion._
-import java.util.UUID
-
-object EmbeddedRedisSpec extends ZIOSpecDefault {
-  object ProtobufCodecSupplier extends CodecSupplier {
-    def get[A: Schema]: BinaryCodec[A] = ProtobufCodec.protobufCodec
-  }
-  
-  final case class Item private (id: UUID, name: String, quantity: Int)
-  object Item {
-    implicit val itemSchema: Schema[Item] = DeriveSchema.gen[Item]
-  }
-  
-  def spec = suite("EmbeddedRedis should")(
-    test("set and get values") {
-      for {
-        redis <- ZIO.service[Redis]
-        item   = Item(UUID.randomUUID, "foo", 2)
-        _     <- redis.set(s"item.${item.id.toString}", item)
-        found <- redis.get(s"item.${item.id.toString}").returning[Item]
-      } yield assert(found)(isSome(equalTo(item)))
-    }
-  ).provideShared(
-    EmbeddedRedis.layer,
-    ZLayer.succeed[CodecSupplier](ProtobufCodecSupplier),
-    Redis.singleNode
-  ) @@ TestAspect.silentLogging
+  def run =
+    myApp.provide(Redis.local, ZLayer.succeed[CodecSupplier](CodecSupplier.utf8))
 }
 ```
 
