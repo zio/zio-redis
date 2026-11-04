@@ -63,15 +63,18 @@ Sidebar: Overview, Getting Started, Configuration, Codecs, Error Handling, Async
 (Strings, Keys, Hashes, Lists, Sets, Sorted Sets, Geo, HyperLogLog, Streams, Scripting, Connection), Pub/Sub,
 Cluster, Testing, then category "Guides" (tutorial, two how-tos).
 
-## 5. PR split (7 PRs, ~600-1000 lines each)
+## 5. PR split (approved by Milad: ONE PR)
 
-1. Foundation: pages 1-6, sidebar skeleton, delete `website/docs/`.
-2. Strings + Keys.
-3. Hashes + Lists + Sets.
-4. Sorted Sets + Geo + HyperLogLog.
-5. Streams + Scripting + Connection.
-6. Pub/Sub + Cluster + Testing.
-7. Tutorial + two how-tos, remove this plan file.
+All pages above go into a single PR on branch `redis-docs`, committed page by page. `website/docs/` is deleted in it.
+The plan file is removed before the PR is opened. Examples are `mdoc:compile-only`.
+
+## 5b. Publishing note and open questions
+
+- zio.dev is stuck at 1.1.10: npm `@zio.dev/zio-redis` latest is 1.1.10 and the "Release Docs" job failed on the v1.3.0
+  and v1.2.1 releases. New docs reach zio.dev only after: merge, a release whose Release Docs job succeeds, then a bump of
+  `@zio.dev/zio-redis` in zio/zio `website/package.json`. PR #1329 may have fixed the npm step; untested.
+- Open question for Milad: investigate the Release Docs failure (`gh run view <id> -R zio/zio-redis --log-failed`)
+  as a separate task? Not part of this PR.
 
 ## 6. Method
 
