@@ -295,7 +295,26 @@ trait HashSpec extends IntegrationSpec {
             scan            <- redis.hScan(hash, 0L, pattern, count).returning[String, String]
             (next, elements) = scan
           } yield assert(next)(isGreaterThanEqualTo(0L)) && assert(elements)(isNonEmpty)
-        })
+        }),
+        test("hScan single entry returns cursor 0") {
+          for {
+            redis           <- ZIO.service[Redis]
+            hash            <- uuid
+            field           <- uuid
+            value           <- uuid
+            _               <- redis.hSet(hash, field -> value)
+            scan            <- redis.hScan(hash, 0L).returning[String, String]
+            (next, elements) = scan
+          } yield assert(next)(isZero) && assert(elements)(equalTo(Chunk(field -> value)))
+        },
+        test("hScan empty hash") {
+          for {
+            redis           <- ZIO.service[Redis]
+            hash            <- uuid
+            scan            <- redis.hScan(hash, 0L).returning[String, String]
+            (next, elements) = scan
+          } yield assert(next)(isZero) && assert(elements)(isEmpty)
+        }
       ),
       suite("hRandField")(
         test("randomly select one field") {

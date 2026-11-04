@@ -267,7 +267,10 @@ trait Hashes[G[+_]] extends RedisEnvironment[G] {
         val command = RedisCommand(
           HScan,
           Tuple4(ArbitraryKeyInput[K](), LongInput, OptionalInput(PatternInput), OptionalInput(CountInput)),
-          Tuple2Output(ArbitraryOutput[Long](), ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]()))
+          Tuple2Output(
+            MultiStringOutput.map(_.toLong),
+            ChunkTuple2Output(ArbitraryOutput[F](), ArbitraryOutput[V]())
+          )
         )
         command.run((key, cursor, pattern.map(Pattern(_)), count))
       }
