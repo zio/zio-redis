@@ -136,7 +136,22 @@ def storeNearby(redis: Redis): IO[RedisError, Long] =
   )
 ```
 
-The `StoreDistances` and `StoreBoth` variants also exist, but they add a `STOREDIST` argument that carries a key. Redis defines `STOREDIST` as a flag without an argument, so prefer `StoreResults` unless you have verified the other forms against your server.
+The `StoreDistances` variant stores the distances in a second key with `STOREDIST`, and `StoreBoth` stores the members and the distances in two keys. To store both, pass a `Store` and a `StoreDist`:
+
+```scala mdoc:compile-only
+import zio._
+import zio.redis._
+
+def storeNearbyWithDistances(redis: Redis): IO[RedisError, Long] =
+  redis.geoRadiusStore(
+    "cities",
+    LongLat(15.0, 37.0),
+    200.0,
+    RadiusUnit.Kilometers,
+    StoreBoth(Store("cities:nearby"), StoreDist("cities:distances")),
+    count = Some(Count(10))
+  )
+```
 
 ## Next Steps
 
