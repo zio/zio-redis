@@ -613,7 +613,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zLexCount[K: Schema](key: K, lexRange: SortedSetRange.LexRange): G[Long] = {
     val command = RedisCommand(
       ZLexCount,
-      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
+      Tuple3(ArbitraryKeyInput[K](), StringInput, StringInput),
       LongOutput
     )
     command.run((key, lexRange.min.asString, lexRange.max.asString))
@@ -798,10 +798,10 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ZRange,
             Tuple6(
               ArbitraryKeyInput[K](),
-              ArbitraryValueInput[String](),
-              ArbitraryValueInput[String](),
-              OptionalInput(ArbitraryValueInput[String]()),
-              OptionalInput(ArbitraryValueInput[String]()),
+              StringInput,
+              StringInput,
+              OptionalInput(StringInput),
+              OptionalInput(StringInput),
               OptionalInput(LimitInput)
             ),
             ChunkOutput(ArbitraryOutput[M]())
@@ -855,10 +855,10 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
             ZRange,
             Tuple7(
               ArbitraryKeyInput[K](),
-              ArbitraryValueInput[String](),
-              ArbitraryValueInput[String](),
-              OptionalInput(ArbitraryValueInput[String]()),
-              OptionalInput(ArbitraryValueInput[String]()),
+              StringInput,
+              StringInput,
+              OptionalInput(StringInput),
+              OptionalInput(StringInput),
               OptionalInput(LimitInput),
               WithScoresInput
             ),
@@ -917,10 +917,10 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
         Tuple7(
           ArbitraryKeyInput[K](),
           ArbitraryKeyInput[K](),
-          ArbitraryValueInput[String](),
-          ArbitraryValueInput[String](),
-          OptionalInput(ArbitraryValueInput[String]()),
-          OptionalInput(ArbitraryValueInput[String]()),
+          StringInput,
+          StringInput,
+          OptionalInput(StringInput),
+          OptionalInput(StringInput),
           OptionalInput(LimitInput)
         ),
         LongOutput
@@ -1052,7 +1052,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zRemRangeByLex[K: Schema](key: K, lexRange: SortedSetRange.LexRange): G[Long] = {
     val command = RedisCommand(
       ZRemRangeByLex,
-      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
+      Tuple3(ArbitraryKeyInput[K](), StringInput, StringInput),
       LongOutput
     )
     command.run((key, lexRange.min.asString, lexRange.max.asString))
@@ -1086,7 +1086,7 @@ trait SortedSets[G[+_]] extends RedisEnvironment[G] {
   final def zRemRangeByScore[K: Schema](key: K, scoreRange: SortedSetRange.ScoreRange): G[Long] = {
     val command = RedisCommand(
       ZRemRangeByScore,
-      Tuple3(ArbitraryKeyInput[K](), ArbitraryValueInput[String](), ArbitraryValueInput[String]()),
+      Tuple3(ArbitraryKeyInput[K](), StringInput, StringInput),
       LongOutput
     )
     command.run((key, scoreRange.min.asString, scoreRange.max.asString))

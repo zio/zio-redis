@@ -453,19 +453,19 @@ object InputSpec extends BaseSpec {
       suite("RangeMinimum")(
         test("valid value") {
           for {
-            result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMinimum(10L).asString))
+            result <- ZIO.attempt(StringInput.encode(RangeMinimum(10L).asString))
           } yield assert(result)(equalTo(RespCommand(Value("10"))))
         }
       ),
       suite("RangeMaximum")(
         test("inclusive value") {
           for {
-            result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMaximum.Inclusive(10L).asString))
+            result <- ZIO.attempt(StringInput.encode(RangeMaximum.Inclusive(10L).asString))
           } yield assert(result)(equalTo(RespCommand(Value("10"))))
         },
         test("exclusive value") {
           for {
-            result <- ZIO.attempt(ArbitraryValueInput[String]().encode(RangeMaximum.Exclusive(10L).asString))
+            result <- ZIO.attempt(StringInput.encode(RangeMaximum.Exclusive(10L).asString))
           } yield assert(result)(equalTo(RespCommand(Value("9"))))
         }
       ),
@@ -473,7 +473,7 @@ object InputSpec extends BaseSpec {
         test("with unbound min and unbound max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.UnboundedNegative.asString, LexMaximum.UnboundedPositive.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-"), Value("+"))))
@@ -481,7 +481,7 @@ object InputSpec extends BaseSpec {
         test("with open min and unbound max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.Open("a").asString, LexMaximum.UnboundedPositive.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(a"), Value("+"))))
@@ -489,7 +489,7 @@ object InputSpec extends BaseSpec {
         test("with closed min and unbound max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.Closed("a").asString, LexMaximum.UnboundedPositive.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("[a"), Value("+"))))
@@ -497,7 +497,7 @@ object InputSpec extends BaseSpec {
         test("with unbound min and open max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.UnboundedNegative.asString, LexMaximum.Open("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-"), Value("(z"))))
@@ -505,7 +505,7 @@ object InputSpec extends BaseSpec {
         test("with open min and open max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.Open("a").asString, LexMaximum.Open("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(a"), Value("(z"))))
@@ -513,7 +513,7 @@ object InputSpec extends BaseSpec {
         test("with closed min and open max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.Closed("a").asString, LexMaximum.Open("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("[a"), Value("(z"))))
@@ -521,7 +521,7 @@ object InputSpec extends BaseSpec {
         test("with unbound min and closed max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.UnboundedNegative.asString, LexMaximum.Closed("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-"), Value("[z"))))
@@ -529,7 +529,7 @@ object InputSpec extends BaseSpec {
         test("with open min and closed max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.Open("a").asString, LexMaximum.Closed("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(a"), Value("[z"))))
@@ -537,7 +537,7 @@ object InputSpec extends BaseSpec {
         test("with closed min and closed max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((LexMinimum.Closed("a").asString, LexMaximum.Closed("z").asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("[a"), Value("[z"))))
@@ -825,7 +825,7 @@ object InputSpec extends BaseSpec {
         test("with infinite min and infinite max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Infinity.asString, ScoreMaximum.Infinity.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-inf"), Value("+inf"))))
@@ -833,7 +833,7 @@ object InputSpec extends BaseSpec {
         test("with open min and infinite max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Open(4.2d).asString, ScoreMaximum.Infinity.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(4.2"), Value("+inf"))))
@@ -841,7 +841,7 @@ object InputSpec extends BaseSpec {
         test("with closed min and infinite max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Closed(4.2d).asString, ScoreMaximum.Infinity.asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("+inf"))))
@@ -849,7 +849,7 @@ object InputSpec extends BaseSpec {
         test("with infinite min and open max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Infinity.asString, ScoreMaximum.Open(5.2d).asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-inf"), Value("(5.2"))))
@@ -857,7 +857,7 @@ object InputSpec extends BaseSpec {
         test("with open min and open max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Open(4.2d).asString, ScoreMaximum.Open(5.2d).asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(4.2"), Value("(5.2"))))
@@ -865,7 +865,7 @@ object InputSpec extends BaseSpec {
         test("with closed min and open max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Closed(4.2d).asString, ScoreMaximum.Open(5.2d).asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("(5.2"))))
@@ -873,7 +873,7 @@ object InputSpec extends BaseSpec {
         test("with infinite min and closed max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Infinity.asString, ScoreMaximum.Closed(5.2d).asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("-inf"), Value("5.2"))))
@@ -881,7 +881,7 @@ object InputSpec extends BaseSpec {
         test("with open min and closed max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Open(4.2d).asString, ScoreMaximum.Closed(5.2d).asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("(4.2"), Value("5.2"))))
@@ -889,7 +889,7 @@ object InputSpec extends BaseSpec {
         test("with closed min and closed max") {
           for {
             result <- ZIO.attempt(
-                        Tuple2(ArbitraryValueInput[String](), ArbitraryValueInput[String]())
+                        Tuple2(StringInput, StringInput)
                           .encode((ScoreMinimum.Closed(4.2d).asString, ScoreMaximum.Closed(5.2d).asString))
                       )
           } yield assert(result)(equalTo(RespCommand(Value("4.2"), Value("5.2"))))
