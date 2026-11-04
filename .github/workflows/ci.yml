@@ -246,8 +246,6 @@ jobs:
         registry-url: https://registry.npmjs.org
     - name: Publish Docs to NPM Registry
       run: sbt --no-colors docs/publishToNpm
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   notify-docs-release:
     name: Notify Docs Release
     runs-on: ubuntu-latest
