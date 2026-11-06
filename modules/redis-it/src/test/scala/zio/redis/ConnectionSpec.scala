@@ -119,9 +119,9 @@ trait ConnectionSpec extends IntegrationSpec {
         test("restart password protected redis") {
           for {
             docker     <- ZIO.service[DockerComposeContainer]
-            containerId = docker.getContainerByServiceName(IntegrationSpec.SingleNode1).get.getContainerId()
+            containerId = docker.getContainerByServiceName(IntegrationSpec.SingleNode2).get.getContainerId()
             _           = DockerClientFactory.instance().client().restartContainerCmd(containerId).exec()
-            pong       <- ZIO.serviceWithZIO[Redis](_.ping())
+            pong       <- pingUntilRecovered
           } yield assertTrue(pong == "PONG")
         }.provideSome[DockerComposeContainer](
           Redis.singleNode,
