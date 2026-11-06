@@ -9,6 +9,12 @@ import zio.test.TestAspect._
 import zio.test._
 
 trait ConnectionSpec extends IntegrationSpec {
+
+  // After a container restart, the connection is re-established asynchronously, so a ping
+  // sent right away can fail. Retry for up to ~10 seconds (50 attempts, 200 ms apart).
+  private def pingUntilRecovered: ZIO[Redis, RedisError, String] =
+    ZIO.serviceWithZIO[Redis](_.ping()).retry(Schedule.spaced(200.millis) && Schedule.recurs(50))
+
   def connectionSuite: Spec[DockerComposeContainer & Redis, RedisError] =
     suite("connection")(
       suite("authenticating")(
@@ -107,7 +113,7 @@ trait ConnectionSpec extends IntegrationSpec {
             docker     <- ZIO.service[DockerComposeContainer]
             containerId = docker.getContainerByServiceName(IntegrationSpec.SingleNode0).get.getContainerId()
             _           = DockerClientFactory.instance().client().restartContainerCmd(containerId).exec()
-            pong       <- ZIO.serviceWithZIO[Redis](_.ping())
+            pong       <- pingUntilRecovered
           } yield assertTrue(pong == "PONG")
         },
         test("restart password protected redis") {
