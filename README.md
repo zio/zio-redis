@@ -17,7 +17,7 @@ instances.
 To use ZIO Redis, add the following line to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-redis" % "1.3.0"
+libraryDependencies += "dev.zio" %% "zio-redis" % "1.3.1"
 ```
 
 ## Features
