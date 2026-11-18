@@ -42,19 +42,6 @@ def addToBoth(redis: Redis): IO[RedisError, Long] =
   } yield union
 ```
 
-## Authenticate
+## Next Steps
 
-To use credentials on every node, set `auth` on the config. For TLS, build the nodes with `RedisUri("host:port", ssl = true)`:
-
-```scala mdoc:compile-only
-import zio._
-import zio.redis._
-
-val config: RedisClusterConfig =
-  RedisClusterConfig(
-    addresses = Chunk(RedisUri("redis-1.example.com:6380", ssl = true)),
-    auth = Some(RedisConfig.Auth("secret"))
-  )
-```
-
-See [Cluster](../concepts/cluster.md) for redirections, retry settings and limitations.
+For authentication, TLS nodes, retry settings and limitations, see [Cluster](../concepts/cluster.md).

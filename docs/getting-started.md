@@ -7,7 +7,7 @@ ZIO Redis exposes every Redis command as a method on the `Redis` service. This p
 
 ## Installation
 
-Add `zio-redis` to your build as shown in [Installation](./index.md#installation). Examples that store case classes also use the Protobuf codec from ZIO Schema:
+`zio-redis` is added to your build as shown in [Installation](./index.md#installation). Examples that store case classes also use the Protobuf codec from ZIO Schema:
 
 ```scala
 libraryDependencies ++= Seq(
@@ -20,10 +20,10 @@ libraryDependencies ++= Seq(
 
 The library defines two service types, both built from the same layers:
 
-| Type         | Command return type              | Use it to                           |
-| ------------ | -------------------------------- | ----------------------------------- |
-| `Redis`      | `IO[RedisError, A]`              | Run commands one after another      |
-| `AsyncRedis` | `UIO[IO[RedisError, A]]`         | Send commands without waiting       |
+| Type         | Command return type      | Use it to                      |
+| ------------ | ------------------------ | ------------------------------ |
+| `Redis`      | `IO[RedisError, A]`      | Run commands one after another |
+| `AsyncRedis` | `UIO[IO[RedisError, A]]` | Send commands without waiting  |
 
 Most programs only need `Redis`. See [AsyncRedis](./concepts/async-redis.md) for the second one.
 
@@ -31,11 +31,11 @@ Most programs only need `Redis`. See [AsyncRedis](./concepts/async-redis.md) for
 
 A `Redis` layer needs a [`CodecSupplier`](./concepts/codecs.md) and a connection. The following layers create it:
 
-| Layer                | Requires                              | Connects to                                |
-| -------------------- | ------------------------------------- | ------------------------------------------ |
-| `Redis.local`        | `CodecSupplier`                       | `localhost:6379`                           |
-| `Redis.singleNode`   | `CodecSupplier` and `RedisConfig`     | The single server described by the config  |
-| `Redis.cluster`      | `CodecSupplier` and `RedisClusterConfig` | A Redis Cluster (see [Cluster](./concepts/cluster.md)) |
+| Layer              | Requires                                 | Connects to                                            |
+| ------------------ | ---------------------------------------- | ------------------------------------------------------ |
+| `Redis.local`      | `CodecSupplier`                          | `localhost:6379`                                       |
+| `Redis.singleNode` | `CodecSupplier` and `RedisConfig`        | The single server described by the config              |
+| `Redis.cluster`    | `CodecSupplier` and `RedisClusterConfig` | A Redis Cluster (see [Cluster](./concepts/cluster.md)) |
 
 To use the built-in UTF-8 codec supplier against a local server:
 

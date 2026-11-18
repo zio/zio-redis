@@ -8,18 +8,7 @@ This guide shows how to send many commands without waiting for each reply, which
 
 ## Get the Async Service
 
-`Redis.local` and `Redis.singleNode` provide `AsyncRedis` next to `Redis`. `Redis.cluster` does not, so pipelining is available on single nodes only:
-
-```scala mdoc:compile-only
-import zio._
-import zio.redis._
-
-val layer: ZLayer[Any, RedisError.IOError, Redis & AsyncRedis] =
-  ZLayer.make[Redis & AsyncRedis](
-    ZLayer.succeed[CodecSupplier](CodecSupplier.utf8),
-    Redis.local
-  )
-```
+`Redis.local` and `Redis.singleNode` provide `AsyncRedis` next to `Redis`; `Redis.cluster` does not, so pipelining is available on single nodes only. Build the layers as described in [Redis](../reference/redis.md#layers).
 
 ## Queue a Batch and Await the Replies
 

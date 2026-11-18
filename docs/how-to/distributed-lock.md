@@ -51,7 +51,7 @@ See [Scripting](../reference/commands/scripting.md) for the full set of script c
 
 ## Run an Effect Under the Lock
 
-To make sure the lock is always released, wrap the protected effect in `ZIO.acquireReleaseWith`. This version fails with `None` when the lock is already held:
+To make sure the lock is always released, wrap the protected effect in `ZIO.acquireReleaseWith`. This version returns `None` when the lock is already held:
 
 ```scala mdoc:compile-only
 import zio._

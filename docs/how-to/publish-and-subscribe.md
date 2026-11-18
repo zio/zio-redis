@@ -29,11 +29,11 @@ object ProtobufSupplier extends CodecSupplier {
 
 ## Provide Both Layers
 
-Publishing uses `Redis`; listening uses `RedisSubscription`, which owns its own connection:
+Publishing uses `Redis`; listening uses `RedisSubscription`, which owns its own connection. Both layers are described in [Pub/Sub](../concepts/pub-sub.md):
 
 ```scala mdoc:silent
-val layers: ZLayer[Any, RedisError.IOError, Redis with RedisSubscription] =
-  ZLayer.make[Redis with RedisSubscription](
+val layers: ZLayer[Any, RedisError.IOError, Redis & RedisSubscription] =
+  ZLayer.make[Redis & RedisSubscription](
     ZLayer.succeed(RedisConfig.Local),
     ZLayer.succeed[CodecSupplier](ProtobufSupplier),
     Redis.singleNode,

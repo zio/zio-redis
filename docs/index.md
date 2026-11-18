@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
 )
 ```
 
-Values are encoded and decoded by a `CodecSupplier`. The built-in `CodecSupplier.utf8` handles strings and numbers; to store case classes, add a ZIO Schema codec as described in [Getting Started](./getting-started.md#installation) and [Codecs](./concepts/codecs.md).
+Values are encoded and decoded by a `CodecSupplier`. The built-in `CodecSupplier.utf8` handles strings and numbers; to store case classes, add a ZIO Schema codec as described in [Codecs](./concepts/codecs.md).
 
 ## Modules
 

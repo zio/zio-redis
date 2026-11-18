@@ -6,13 +6,13 @@ sidebar_label: "Test With Embedded Redis"
 
 Tests that talk to Redis need a server. The `zio-redis-embedded` module starts a real Redis process for the duration of a test and shuts it down afterwards, so specs run without Docker or a pre-installed server.
 
-## Installation
+## Prerequisites
 
-Add `zio-redis-embedded` to your test dependencies, as shown in [Modules](../index.md#modules). The module wraps the `embedded-redis` library, which launches a Redis binary that it ships, so no separate Redis installation is needed. Use the same version as `zio-redis`.
+Add `zio-redis-embedded` to your test dependencies, as shown in [Modules](../index.md#modules).
 
 ## Starting the Embedded Server
 
-`EmbeddedRedis.layer` has the type `ZLayer[Any, Throwable, RedisConfig]`. When the layer is built it finds a free TCP port, starts a Redis server on it and returns a `RedisConfig` for `localhost` and that port. When the layer's scope closes, the server is stopped. Because it produces a `RedisConfig`, it plugs directly into `Redis.singleNode`, which is described in [Configuration](../reference/configuration.md).
+`EmbeddedRedis.layer` starts a Redis server on a free port and produces a `RedisConfig` for it. See [EmbeddedRedis](../reference/embedded-redis.md#layer) for the type and lifecycle.
 
 ## Writing a Spec
 
@@ -68,20 +68,19 @@ import zio.test._
 
 object CleanSpec extends ZIOSpecDefault {
   def spec: Spec[Any, Any] =
-    (suite("clean database")(
-      test("starts empty") {
+    suite("clean database")(
+      test("sees only its own key") {
         for {
           redis <- ZIO.service[Redis]
           _     <- redis.set("key", "value")
           keys  <- redis.keys("*").returning[String]
         } yield assertTrue(keys.size == 1)
       }
-    ) @@ TestAspect.before(ZIO.serviceWithZIO[Redis](_.flushall(sync = true))) @@ TestAspect.sequential
-  ).provideShared(
+    ).provideShared(
       EmbeddedRedis.layer,
       ZLayer.succeed[CodecSupplier](CodecSupplier.utf8),
       Redis.singleNode
-    )
+    ) @@ TestAspect.before(ZIO.serviceWithZIO[Redis](_.flushall(sync = true))) @@ TestAspect.sequential
 }
 ```
 

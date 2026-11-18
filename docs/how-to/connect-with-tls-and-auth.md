@@ -8,7 +8,7 @@ This guide shows how to connect to a managed Redis service that requires a passw
 
 ## Read the Settings From the Environment
 
-Build the `RedisConfig` with `ZLayer.fromZIO`, so a missing variable fails the layer instead of the whole program at start-up:
+Build the `RedisConfig` with `ZLayer.fromZIO`, so the settings are read when the layer is built. A missing host or port falls back to a default, and a missing password or user leaves `auth` unset:
 
 ```scala mdoc:compile-only
 import zio._

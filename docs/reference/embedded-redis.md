@@ -13,20 +13,7 @@ title: "EmbeddedRedis"
 lazy val layer: ZLayer[Any, Throwable, RedisConfig]
 ```
 
-Building the layer finds a free TCP port, starts a Redis server on it and produces `RedisConfig("localhost", port)`. Closing the layer's scope stops the server. Because the output is a `RedisConfig`, it feeds [`Redis.singleNode`](./redis.md#layers) and `RedisSubscription.singleNode` directly:
-
-```scala mdoc:compile-only
-import zio._
-import zio.redis._
-import zio.redis.embedded.EmbeddedRedis
-
-val testRedis: ZLayer[Any, Throwable, Redis] =
-  ZLayer.make[Redis](
-    EmbeddedRedis.layer,
-    ZLayer.succeed[CodecSupplier](CodecSupplier.utf8),
-    Redis.singleNode
-  )
-```
+Building the layer finds a free TCP port, starts a Redis server on it and produces `RedisConfig("localhost", port)`. Closing the layer's scope stops the server. Because the output is a `RedisConfig`, it feeds [`Redis.singleNode`](./redis.md#layers) and `RedisSubscription.singleNode` directly. For a worked wiring, see [How to Test With Embedded Redis](../how-to/test-with-embedded-redis.md).
 
 The layer fails with the `Throwable` raised when the server cannot be started, for example when the Redis binary cannot be launched.
 

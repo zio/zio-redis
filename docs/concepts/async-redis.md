@@ -18,19 +18,4 @@ type AsyncRedis = GenRedis[GenRedis.Async]
 
 ## Pipelining Commands
 
-To send several commands, then wait for all the replies, queue each one and await the inner effects together:
-
-```scala mdoc:compile-only
-import zio._
-import zio.redis._
-
-def writeAll(redis: AsyncRedis): IO[RedisError, Unit] =
-  for {
-    first  <- redis.set("a", 1L)
-    second <- redis.set("b", 2L)
-    third  <- redis.set("c", 3L)
-    _      <- first.zip(second).zip(third)
-  } yield ()
-```
-
-All three commands are on the wire before the first reply is awaited, which reduces round trips. Use `AsyncRedis` for bulk writes and `Redis` everywhere else.
+To send several commands and then wait for all the replies, see [How to Pipeline Commands](../how-to/pipeline-commands.md).
