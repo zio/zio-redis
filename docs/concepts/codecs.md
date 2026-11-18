@@ -31,7 +31,7 @@ val supplier: ULayer[CodecSupplier] =
 
 ## Protobuf and Other Codecs
 
-To store case classes, implement `CodecSupplier` with a ZIO Schema codec. This supplier uses Protobuf, from the `zio-schema-protobuf` dependency listed in [Getting Started](./getting-started.md):
+To store case classes, implement `CodecSupplier` with a ZIO Schema codec. This supplier uses Protobuf, from the `zio-schema-protobuf` dependency listed in [Getting Started](../getting-started.md):
 
 ```scala mdoc:silent
 import zio._

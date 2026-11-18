@@ -1,5 +1,5 @@
 ---
-id: how-to-distributed-lock
+id: distributed-lock
 title: "How to Build a Distributed Lock"
 sidebar_label: "Distributed Lock"
 ---
@@ -47,7 +47,7 @@ def release(redis: Redis, name: String, owner: String): IO[RedisError, Boolean] 
     .map(_ == 1L)
 ```
 
-See [Scripting](./commands/scripting.md) for the full set of script commands.
+See [Scripting](../reference/commands/scripting.md) for the full set of script commands.
 
 ## Run an Effect Under the Lock
 

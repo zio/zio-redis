@@ -1,23 +1,18 @@
 ---
-id: testing
-title: "Testing"
+id: test-with-embedded-redis
+title: "How to Test With Embedded Redis"
+sidebar_label: "Test With Embedded Redis"
 ---
 
 Tests that talk to Redis need a server. The `zio-redis-embedded` module starts a real Redis process for the duration of a test and shuts it down afterwards, so specs run without Docker or a pre-installed server.
 
 ## Installation
 
-The embedded server is a separate artifact. To use it in your tests, add the following to `build.sbt`:
+Add `zio-redis-embedded` to your test dependencies, as shown in [Modules](../index.md#modules). The module wraps the `embedded-redis` library, which launches a Redis binary that it ships, so no separate Redis installation is needed. Use the same version as `zio-redis`.
 
-```scala
-libraryDependencies += "dev.zio" %% "zio-redis-embedded" % "@VERSION@" % Test
-```
+## Starting the Embedded Server
 
-The module wraps the `embedded-redis` library, which launches a Redis binary that it ships, so no separate Redis installation is needed. Use the same version as `zio-redis`.
-
-## EmbeddedRedis
-
-`EmbeddedRedis.layer` has the type `ZLayer[Any, Throwable, RedisConfig]`. When the layer is built it finds a free TCP port, starts a Redis server on it and returns a `RedisConfig` for `localhost` and that port. When the layer's scope closes, the server is stopped. Because it produces a `RedisConfig`, it plugs directly into `Redis.singleNode`, which is described in [Configuration](./configuration.md).
+`EmbeddedRedis.layer` has the type `ZLayer[Any, Throwable, RedisConfig]`. When the layer is built it finds a free TCP port, starts a Redis server on it and returns a `RedisConfig` for `localhost` and that port. When the layer's scope closes, the server is stopped. Because it produces a `RedisConfig`, it plugs directly into `Redis.singleNode`, which is described in [Configuration](../concepts/configuration.md).
 
 ## Writing a Spec
 
@@ -54,7 +49,7 @@ object EmbeddedRedisSpec extends ZIOSpecDefault {
 }
 ```
 
-`CodecSupplier.utf8` is enough for primitive values. To store case classes, supply a structural codec instead, as shown in [Codecs](./codecs.md).
+`CodecSupplier.utf8` is enough for primitive values. To store case classes, supply a structural codec instead, as shown in [Codecs](../concepts/codecs.md).
 
 ## Keeping Tests Independent
 
@@ -92,8 +87,8 @@ object CleanSpec extends ZIOSpecDefault {
 
 ## Testing Pub/Sub
 
-`RedisSubscription.singleNode` accepts the same `RedisConfig`, so the embedded server also works for subscription tests. Provide both layers from one `EmbeddedRedis.layer`, which `provideShared` shares between them. See [Pub/Sub](./pub-sub.md) for the services.
+`RedisSubscription.singleNode` accepts the same `RedisConfig`, so the embedded server also works for subscription tests. Provide both layers from one `EmbeddedRedis.layer`, which `provideShared` shares between them. See [Pub/Sub](../concepts/pub-sub.md) for the services.
 
 ## Limitations
 
-The embedded server is a single node. Tests of [Cluster](./cluster.md) behavior need a real cluster, which the library's own integration tests start with Docker Compose. The Redis version is whatever the embedded library ships, so it can differ from your production version.
+The embedded server is a single node. Tests of [Cluster](../concepts/cluster.md) behavior need a real cluster, which the library's own integration tests start with Docker Compose. The Redis version is whatever the embedded library ships, so it can differ from your production version.

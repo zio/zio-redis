@@ -5,7 +5,7 @@ title: "Lists"
 
 A Redis list is an ordered sequence of values that supports fast pushes and pops at both ends. This page lists every list command on `Redis`, together with the option types `Side`, `Position`, `Rank` and `ListMaxLen`.
 
-Keys and elements are encoded with the configured [`CodecSupplier`](../codecs.md). Commands that return elements end with `returning[A]`, as described in [Getting Started](../getting-started.md).
+Keys and elements are encoded with the configured [`CodecSupplier`](../../concepts/codecs.md). Commands that return elements end with `returning[A]`, as described in [Getting Started](../../getting-started.md).
 
 ## Command Overview
 

@@ -7,12 +7,12 @@ ZIO Redis exposes every Redis command as a method on the `Redis` service. This p
 
 ## Installation
 
-To use ZIO Redis, add the following to `build.sbt`. The example also uses the Protobuf codec from ZIO Schema:
+Add `zio-redis` to your build as shown in [Installation](./index.md#installation). Examples that store case classes also use the Protobuf codec from ZIO Schema:
 
 ```scala
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-redis"           % "@VERSION@",
-  "dev.zio" %% "zio-schema-protobuf" % "1.9.0"
+  // Protobuf codec for ZIO Schema (JVM, Scala 2.12, 2.13, 3)
+  "dev.zio" %% "zio-schema-protobuf" % "1.9.1"
 )
 ```
 

@@ -123,4 +123,4 @@ def stopDebugging(redis: Redis): IO[RedisError, Unit] =
 ## Related Pages
 
 - [Keys](./keys.md) and [Strings](./strings.md) cover the commands a script usually calls.
-- [Error Handling](../error-handling.md) lists the errors raised by failing scripts.
+- [Error Handling](../../concepts/error-handling.md) lists the errors raised by failing scripts.

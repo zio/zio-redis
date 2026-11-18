@@ -1,12 +1,12 @@
 ---
-id: tutorial-rate-limiter
+id: rate-limiter
 title: "Tutorial: Build a Rate Limiter"
 sidebar_label: "Tutorial: Rate Limiter"
 ---
 
 Welcome! In this tutorial we build a small rate limiter with ZIO Redis. By the end, you will have a service that allows at most a fixed number of requests per client in each time window, backed by a Redis counter that expires on its own.
 
-We assume a Redis server on `localhost:6379` and the dependency from [Getting Started](./getting-started.md).
+We assume a Redis server on `localhost:6379` and the dependency from [Getting Started](../getting-started.md).
 
 ## How It Works
 
@@ -61,7 +61,7 @@ object RateLimiter {
 
 ## Step 4: Use It
 
-To run the limiter, we provide the `Redis` layer from [Getting Started](./getting-started.md) and call `RateLimiter#allow` repeatedly. With a limit of 3 per 10 seconds, the fourth call is rejected:
+To run the limiter, we provide the `Redis` layer from [Getting Started](../getting-started.md) and call `RateLimiter#allow` repeatedly. With a limit of 3 per 10 seconds, the fourth call is rejected:
 
 ```scala mdoc:compile-only
 import zio._
@@ -86,9 +86,9 @@ object RateLimiterApp extends ZIOAppDefault {
 
 ## A Known Weakness
 
-If the process fails between `Redis#incr` and `Redis#expire` on the first request, the counter never expires and the client stays blocked. To close that gap, move both steps into one Lua script; see [Scripting](./commands/scripting.md).
+If the process fails between `Redis#incr` and `Redis#expire` on the first request, the counter never expires and the client stays blocked. To close that gap, move both steps into one Lua script; see [Scripting](../reference/commands/scripting.md).
 
 ## Next Steps
 
-- [How to Cache Values With a Time to Live](./how-to-cache-with-ttl.md)
-- [How to Build a Distributed Lock](./how-to-distributed-lock.md)
+- [How to Cache Values With a Time to Live](../how-to/cache-with-ttl.md)
+- [How to Build a Distributed Lock](../how-to/distributed-lock.md)

@@ -5,7 +5,7 @@ title: "Geo"
 
 The geo commands store longitude and latitude pairs in a sorted set and answer distance and radius queries over them. This page documents the eight geo commands and the option types they accept.
 
-All commands are methods on the `Redis` service. Keys and members are encoded with the configured [`CodecSupplier`](../codecs.md). See [Getting Started](../getting-started.md) for how to build the layer.
+All commands are methods on the `Redis` service. Keys and members are encoded with the configured [`CodecSupplier`](../../concepts/codecs.md). See [Getting Started](../../getting-started.md) for how to build the layer.
 
 ## Commands
 

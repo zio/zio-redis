@@ -17,7 +17,7 @@ def login(redis: Redis): IO[RedisError, Unit] =
   redis.auth("app-user", "secret")
 ```
 
-Most programs do not call `Redis#auth` themselves. When a `RedisConfig` has credentials, the library authenticates every connection it opens, including after a reconnect. See [Configuration](../configuration.md) for how to set them.
+Most programs do not call `Redis#auth` themselves. When a `RedisConfig` has credentials, the library authenticates every connection it opens, including after a reconnect. See [Configuration](../../concepts/configuration.md) for how to set them.
 
 ## Choosing a Database
 
@@ -76,6 +76,6 @@ The only type in `options/Connection.scala` is `Address`, a case class with an `
 
 ## Related Pages
 
-- [Configuration](../configuration.md) explains credentials, TLS and the connection settings.
-- [Error Handling](../error-handling.md) lists the errors raised, such as authentication failures.
+- [Configuration](../../concepts/configuration.md) explains credentials, TLS and the connection settings.
+- [Error Handling](../../concepts/error-handling.md) lists the errors raised, such as authentication failures.
 - [Keys](./keys.md) covers commands that act on data in the selected database.

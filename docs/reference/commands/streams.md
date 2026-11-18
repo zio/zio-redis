@@ -7,7 +7,7 @@ A Redis stream is an append-only log of entries, each made of an ID and a set of
 
 Stream IDs have the form `<milliseconds>-<sequence>`. Pass `"*"` to `Redis#xAdd` to let the server generate the ID, and use `"-"` and `"+"` as the smallest and largest possible IDs in range queries.
 
-Every command here takes the key, group, consumer and ID as values with a ZIO Schema `Schema`, which are encoded by the [`CodecSupplier`](../codecs.md). In the examples they are plain `String`s.
+Every command here takes the key, group, consumer and ID as values with a ZIO Schema `Schema`, which are encoded by the [`CodecSupplier`](../../concepts/codecs.md). In the examples they are plain `String`s.
 
 ## Appending Entries
 
@@ -219,5 +219,5 @@ The following table summarizes the types from `options/Streams.scala` that appea
 ## Related Pages
 
 - [Lists](./lists.md) offer a simpler queue when consumer groups are not needed.
-- [Codecs](../codecs.md) explains how keys, fields and values are encoded.
-- [Error Handling](../error-handling.md) lists the errors raised, such as `NOGROUP` when a group does not exist.
+- [Codecs](../../concepts/codecs.md) explains how keys, fields and values are encoded.
+- [Error Handling](../../concepts/error-handling.md) lists the errors raised, such as `NOGROUP` when a group does not exist.

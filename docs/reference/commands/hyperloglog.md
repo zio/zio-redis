@@ -5,7 +5,7 @@ title: "HyperLogLog"
 
 A HyperLogLog is a probabilistic structure that estimates how many distinct elements it has seen, using a small and fixed amount of memory. This page documents the three commands that ZIO Redis exposes for it.
 
-All commands are methods on the `Redis` service. Keys and elements are encoded with the configured [`CodecSupplier`](../codecs.md), so any type with a ZIO Schema `Schema` can be used for both. See [Getting Started](../getting-started.md) for how to build the layer.
+All commands are methods on the `Redis` service. Keys and elements are encoded with the configured [`CodecSupplier`](../../concepts/codecs.md), so any type with a ZIO Schema `Schema` can be used for both. See [Getting Started](../../getting-started.md) for how to build the layer.
 
 ## Commands
 

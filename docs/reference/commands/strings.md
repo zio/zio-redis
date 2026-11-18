@@ -7,7 +7,7 @@ Strings are the simplest Redis value: a byte sequence that can hold text, a numb
 
 ## Reading and Writing Values
 
-The basic commands read and write one key at a time. Methods that return user data, such as `Redis#get`, finish with `returning[A]`, as explained in [Getting Started](../getting-started.md):
+The basic commands read and write one key at a time. Methods that return user data, such as `Redis#get`, finish with `returning[A]`, as explained in [Getting Started](../../getting-started.md):
 
 | Command           | Result                | Description                                                  |
 | ----------------- | --------------------- | ------------------------------------------------------------ |

@@ -5,7 +5,7 @@ title: "Sets"
 
 A Redis set is an unordered collection of unique members. This page lists every set command on `Redis`, grouped by what it does.
 
-Members and keys are encoded with the configured [`CodecSupplier`](../codecs.md). Commands that return members end with `returning[A]`, as described in [Getting Started](../getting-started.md).
+Members and keys are encoded with the configured [`CodecSupplier`](../../concepts/codecs.md). Commands that return members end with `returning[A]`, as described in [Getting Started](../../getting-started.md).
 
 ## Command Overview
 
