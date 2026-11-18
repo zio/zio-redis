@@ -42,7 +42,12 @@ const sidebars = {
         }
       ]
     },
-    "tutorials/rate-limiter",
+    {
+      type: "category",
+      label: "Tutorials",
+      collapsed: true,
+      items: ["tutorials/rate-limiter", "tutorials/session-store"]
+    },
     {
       type: "category",
       label: "How-to Guides",
@@ -50,7 +55,11 @@ const sidebars = {
       items: [
         "how-to/cache-with-ttl",
         "how-to/distributed-lock",
-        "how-to/test-with-embedded-redis"
+        "how-to/test-with-embedded-redis",
+        "how-to/connect-to-a-cluster",
+        "how-to/publish-and-subscribe",
+        "how-to/pipeline-commands",
+        "how-to/connect-with-tls-and-auth"
       ]
     },
     "resources"

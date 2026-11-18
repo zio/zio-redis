@@ -3,7 +3,7 @@ id: embedded-redis
 title: "EmbeddedRedis"
 ---
 
-`EmbeddedRedis` is the entry point of the `zio-redis-embedded` module. It starts a real Redis server inside the test JVM's process tree and exposes its address as a `RedisConfig`. Add the module as shown in [Modules](../index.md#modules). For a worked spec, see [How to Test With Embedded Redis](../how-to/test-with-embedded-redis.md).
+`EmbeddedRedis` is the entry point of the `zio-redis-embedded` module. It starts a real Redis server as a child process and exposes its address as a `RedisConfig`. Add the module as shown in [Modules](../index.md#modules). For a worked spec, see [How to Test With Embedded Redis](../how-to/test-with-embedded-redis.md).
 
 ## layer
 
