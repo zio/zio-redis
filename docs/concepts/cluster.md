@@ -61,7 +61,7 @@ val config: RedisClusterConfig =
 
 ## RedisUri
 
-`RedisUri` names a node by host and port, with optional `ssl`, `sni` and `verifyCertificate` settings. It is described in [Configuration](./configuration.md). A TLS node is written as follows:
+`RedisUri` names a node by host and port, with optional `ssl`, `sni` and `verifyCertificate` settings. It is described in [Configuration](../reference/configuration.md). A TLS node is written as follows:
 
 ```scala mdoc:compile-only
 import zio.redis._

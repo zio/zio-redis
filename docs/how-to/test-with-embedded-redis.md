@@ -12,7 +12,7 @@ Add `zio-redis-embedded` to your test dependencies, as shown in [Modules](../ind
 
 ## Starting the Embedded Server
 
-`EmbeddedRedis.layer` has the type `ZLayer[Any, Throwable, RedisConfig]`. When the layer is built it finds a free TCP port, starts a Redis server on it and returns a `RedisConfig` for `localhost` and that port. When the layer's scope closes, the server is stopped. Because it produces a `RedisConfig`, it plugs directly into `Redis.singleNode`, which is described in [Configuration](../concepts/configuration.md).
+`EmbeddedRedis.layer` has the type `ZLayer[Any, Throwable, RedisConfig]`. When the layer is built it finds a free TCP port, starts a Redis server on it and returns a `RedisConfig` for `localhost` and that port. When the layer's scope closes, the server is stopped. Because it produces a `RedisConfig`, it plugs directly into `Redis.singleNode`, which is described in [Configuration](../reference/configuration.md).
 
 ## Writing a Spec
 

@@ -7,7 +7,6 @@ const sidebars = {
       label: "Concepts",
       collapsed: false,
       items: [
-        "concepts/configuration",
         "concepts/codecs",
         "concepts/error-handling",
         "concepts/async-redis",
@@ -20,6 +19,9 @@ const sidebars = {
       label: "Reference",
       collapsed: false,
       items: [
+        "reference/redis",
+        "reference/configuration",
+        "reference/embedded-redis",
         {
           type: "category",
           label: "Commands",

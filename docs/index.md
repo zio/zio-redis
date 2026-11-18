@@ -40,11 +40,11 @@ libraryDependencies ++= Seq(
 
 ## Features
 
-- **Type-safe commands.** Results are decoded to any type with a ZIO Schema `Schema`; see [Codecs](./codecs.md).
+- **Type-safe commands.** Results are decoded to any type with a ZIO Schema `Schema`; see [Codecs](./concepts/codecs.md).
 - **All major command groups.** Strings, keys, hashes, lists, sets, sorted sets, streams, geo, HyperLogLog and scripting; see the [command reference](./reference/commands/strings.md) pages.
-- **Pub/Sub.** Subscriptions are exposed as ZIO streams; see [Pub/Sub](./pub-sub.md).
-- **Pipelining.** `AsyncRedis` sends commands without waiting for replies; see [AsyncRedis](./async-redis.md).
-- **Cluster support.** `Redis.cluster` follows slot redirections; see [Cluster](./cluster.md).
+- **Pub/Sub.** Subscriptions are exposed as ZIO streams; see [Pub/Sub](./concepts/pub-sub.md).
+- **Pipelining.** `AsyncRedis` sends commands without waiting for replies; see [AsyncRedis](./concepts/async-redis.md).
+- **Cluster support.** `Redis.cluster` follows slot redirections; see [Cluster](./concepts/cluster.md).
 - **Embedded server for tests.** See [How to Test With Embedded Redis](./how-to/test-with-embedded-redis.md).
 
 ## Quick Example
