@@ -68,7 +68,7 @@ import zio.test._
 
 object CleanSpec extends ZIOSpecDefault {
   def spec: Spec[Any, Any] =
-    suite("clean database")(
+    (suite("clean database")(
       test("sees only its own key") {
         for {
           redis <- ZIO.service[Redis]
@@ -76,11 +76,11 @@ object CleanSpec extends ZIOSpecDefault {
           keys  <- redis.keys("*").returning[String]
         } yield assertTrue(keys.size == 1)
       }
-    ).provideShared(
+    ) @@ TestAspect.before(ZIO.serviceWithZIO[Redis](_.flushall(sync = true))) @@ TestAspect.sequential).provideShared(
       EmbeddedRedis.layer,
       ZLayer.succeed[CodecSupplier](CodecSupplier.utf8),
       Redis.singleNode
-    ) @@ TestAspect.before(ZIO.serviceWithZIO[Redis](_.flushall(sync = true))) @@ TestAspect.sequential
+    )
 }
 ```
 
