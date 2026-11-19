@@ -5,7 +5,7 @@ title: "Sorted Sets"
 
 A sorted set stores unique members, each with a floating point score, and keeps them ordered by score. This page documents the sorted set commands of ZIO Redis and the option types they accept.
 
-All commands are methods on the `Redis` service. Keys and members are encoded with the configured [`CodecSupplier`](../codecs.md). Commands that return members need `returning[A]`, as explained in [Getting Started](../getting-started.md).
+All commands are methods on the `Redis` service. Keys and members are encoded with the configured [`CodecSupplier`](../../concepts/codecs.md). Commands that return members need `returning[A]`, as explained in [Getting Started](../../getting-started.md).
 
 ## Commands
 

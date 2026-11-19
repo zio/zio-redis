@@ -1,10 +1,10 @@
 ---
-id: how-to-cache-with-ttl
+id: cache-with-ttl
 title: "How to Cache Values With a Time to Live"
 sidebar_label: "Cache With TTL"
 ---
 
-This guide shows how to use Redis as a cache that expires entries automatically, and how to load a missing entry on demand. It assumes a `Redis` layer as described in [Getting Started](./getting-started.md).
+This guide shows how to use Redis as a cache that expires entries automatically, and how to load a missing entry on demand. It assumes a `Redis` layer as described in [Getting Started](../getting-started.md).
 
 ## Store a Value With an Expiry
 
@@ -53,7 +53,7 @@ def cached[E](redis: Redis, key: String, ttl: Duration)(
   }
 ```
 
-Two callers that miss at the same time both run `load`. To prevent that, guard the load with a lock as shown in [How to Build a Distributed Lock](./how-to-distributed-lock.md).
+Two callers that miss at the same time both run `load`. To prevent that, guard the load with a lock as shown in [How to Build a Distributed Lock](../how-to/distributed-lock.md).
 
 ## Invalidate an Entry
 

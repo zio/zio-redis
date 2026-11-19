@@ -77,5 +77,5 @@ The only type in `options/Connection.scala` is `Address`, a case class with an `
 ## Related Pages
 
 - [Configuration](../configuration.md) explains credentials, TLS and the connection settings.
-- [Error Handling](../error-handling.md) lists the errors raised, such as authentication failures.
+- [Error Handling](../../concepts/error-handling.md) lists the errors raised, such as authentication failures.
 - [Keys](./keys.md) covers commands that act on data in the selected database.

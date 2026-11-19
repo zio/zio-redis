@@ -5,7 +5,7 @@ title: "Hashes"
 
 A Redis hash maps field names to values under a single key, which makes it a good fit for objects and counters grouped by an owner. This page lists every hash command on `Redis` and shows how to call it.
 
-Keys, fields and values are encoded with the configured [`CodecSupplier`](../codecs.md). Commands that return user data end with `returning[A]`, as described in [Getting Started](../getting-started.md).
+Keys, fields and values are encoded with the configured [`CodecSupplier`](../../concepts/codecs.md). Commands that return user data end with `returning[A]`, as described in [Getting Started](../../getting-started.md).
 
 ## Command Overview
 

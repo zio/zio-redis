@@ -29,7 +29,7 @@ val layers: ZLayer[Any, RedisError.IOError, Redis with RedisSubscription] =
   )
 ```
 
-See [Configuration](./configuration.md) for `RedisConfig` and [Codecs](./codecs.md) for `CodecSupplier`.
+See [Configuration](../reference/configuration.md) for `RedisConfig` and [Codecs](./codecs.md) for `CodecSupplier`.
 
 ## Publishing
 

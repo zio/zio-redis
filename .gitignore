@@ -2,3 +2,11 @@
 /.bloop
 target/
 /.bsp
+website/node_modules
+website/build
+website/docs
+website/.docusaurus
+website/package-lock.json
+website/yarn.lock
+website/i18n
+website/static/api

@@ -1,47 +1,68 @@
 const sidebars = {
   sidebar: [
+    "index",
+    "getting-started",
     {
       type: "category",
-      label: "ZIO Redis",
+      label: "Concepts",
       collapsed: false,
-      link: { type: "doc", id: "index" },
       items: [
-        "getting-started",
-        "configuration",
-        "codecs",
-        "error-handling",
-        "async-redis",
+        "concepts/codecs",
+        "concepts/error-handling",
+        "concepts/async-redis",
+        "concepts/cluster",
+        "concepts/pub-sub"
+      ]
+    },
+    {
+      type: "category",
+      label: "Reference",
+      collapsed: false,
+      items: [
+        "reference/redis",
+        "reference/configuration",
+        "reference/embedded-redis",
         {
           type: "category",
           label: "Commands",
+          collapsed: false,
           items: [
-            "commands/strings",
-            "commands/keys",
-            "commands/hashes",
-            "commands/lists",
-            "commands/sets",
-            "commands/sorted-sets",
-            "commands/geo",
-            "commands/hyperloglog",
-            "commands/streams",
-            "commands/scripting",
-            "commands/connection"
-          ]
-        },
-        "pub-sub",
-        "cluster",
-        "testing",
-        {
-          type: "category",
-          label: "Guides",
-          items: [
-            "tutorial-rate-limiter",
-            "how-to-cache-with-ttl",
-            "how-to-distributed-lock"
+            "reference/commands/strings",
+            "reference/commands/keys",
+            "reference/commands/hashes",
+            "reference/commands/lists",
+            "reference/commands/sets",
+            "reference/commands/sorted-sets",
+            "reference/commands/geo",
+            "reference/commands/hyperloglog",
+            "reference/commands/streams",
+            "reference/commands/scripting",
+            "reference/commands/connection"
           ]
         }
       ]
-    }
+    },
+    {
+      type: "category",
+      label: "Tutorials",
+      collapsed: true,
+      items: ["tutorials/rate-limiter", "tutorials/session-store"]
+    },
+    {
+      type: "category",
+      label: "How-to Guides",
+      collapsed: true,
+      items: [
+        "how-to/cache-with-ttl",
+        "how-to/distributed-lock",
+        "how-to/test-with-embedded-redis",
+        "how-to/connect-to-a-cluster",
+        "how-to/publish-and-subscribe",
+        "how-to/pipeline-commands",
+        "how-to/connect-with-tls-and-auth"
+      ]
+    },
+    "resources"
   ]
 };
 
