@@ -10,10 +10,8 @@ ZIO Redis exposes every Redis command as a method on the `Redis` service. This p
 `zio-redis` is added to your build as shown in [Installation](./index.md#installation). Examples that store case classes also use the Protobuf codec from ZIO Schema:
 
 ```scala
-libraryDependencies ++= Seq(
-  // Protobuf codec for ZIO Schema (JVM, Scala 2.12, 2.13, 3)
-  "dev.zio" %% "zio-schema-protobuf" % "1.9.1"
-)
+// Protobuf codec for ZIO Schema (JVM, Scala 2.12, 2.13, 3)
+libraryDependencies += "dev.zio" %% "zio-schema-protobuf" % "1.9.1"
 ```
 
 ## The Redis Service
