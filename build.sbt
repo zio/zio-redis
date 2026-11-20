@@ -93,7 +93,9 @@ lazy val docs = project
 lazy val embedded =
   project
     .in(file("modules/embedded"))
-    .settings(stdSettings(name = Some("zio-redis-embedded"), packageName = Some("zio.redis.embedded"), javaPlatform = "17"))
+    .settings(
+      stdSettings(name = Some("zio-redis-embedded"), packageName = Some("zio.redis.embedded"), javaPlatform = "17")
+    )
     .settings(enableZIO())
     .settings(libraryDependencies ++= Dependencies.Embedded)
     .dependsOn(client)

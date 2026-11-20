@@ -17,10 +17,8 @@ instances.
 ZIO Redis is published for Scala 2.12, 2.13 and 3 on the JVM (Java 17 or later). Add it to your `build.sbt`:
 
 ```scala
-libraryDependencies ++= Seq(
-  // ZIO Redis client (JVM)
-  "dev.zio" %% "zio-redis" % "@VERSION@"
-)
+// ZIO Redis client (JVM)
+libraryDependencies += "dev.zio" %% "zio-redis" % "@VERSION@"
 ```
 
 Values are encoded and decoded by a `CodecSupplier`. The built-in `CodecSupplier.utf8` handles strings and numbers; to store case classes, add a ZIO Schema codec as described in [Codecs](./concepts/codecs.md).
@@ -32,10 +30,8 @@ Values are encoded and decoded by a `CodecSupplier`. The built-in `CodecSupplier
 `zio-redis-embedded` starts a real Redis process for the duration of a test, so specs run without Docker or a pre-installed server. Use the same version as `zio-redis`. See [How to Test With Embedded Redis](./how-to/test-with-embedded-redis.md).
 
 ```scala
-libraryDependencies ++= Seq(
-  // Embedded Redis server for tests (JVM)
-  "dev.zio" %% "zio-redis-embedded" % "@VERSION@" % Test
-)
+// Embedded Redis server for tests (JVM)
+libraryDependencies += "dev.zio" %% "zio-redis-embedded" % "@VERSION@" % Test
 ```
 
 ## Features
