@@ -16,6 +16,14 @@
 
 package zio.redis
 
+/**
+ * The address of one Redis server. `host` and `port` locate it. With `ssl` set to true, the connection uses TLS, and
+ * `sni` is the server name sent in the TLS handshake. With `verifyCertificate` set to true, the certificate is checked
+ * against the default trust store and the host name. With it set to false, any certificate is accepted.
+ *
+ * `toString` gives `redis://host:port`, or `rediss://host:port` when `ssl` is set. It leaves out `sni` and
+ * `verifyCertificate`.
+ */
 final case class RedisUri(
   host: String,
   port: Int,
@@ -27,7 +35,15 @@ final case class RedisUri(
     if (ssl) s"rediss://$host:$port" else s"redis://$host:$port"
 }
 
+/**
+ * Creates `RedisUri` values from a `host:port` string, or from a host and a port.
+ */
 object RedisUri {
+  /**
+   * Parses a `host:port` string such as `localhost:6379`, with TLS off. The string is split at each colon, and only the
+   * first two parts are used. A string without a colon fails with `ArrayIndexOutOfBoundsException`. A port that is not
+   * a number fails with `NumberFormatException`, and so does an IPv6 address in brackets.
+   */
   def apply(hostAndPort: String): RedisUri = {
     val splitting = hostAndPort.split(':')
     val host      = splitting(0)
@@ -35,6 +51,9 @@ object RedisUri {
     RedisUri(host, port, ssl = false, sni = None)
   }
 
+  /**
+   * Parses a `host:port` string, as the one-argument form does, with TLS set by `ssl`.
+   */
   def apply(hostAndPort: String, ssl: Boolean): RedisUri = {
     val splitting = hostAndPort.split(':')
     val host      = splitting(0)
@@ -42,6 +61,10 @@ object RedisUri {
     RedisUri(host, port, ssl = ssl, sni = None)
   }
 
+  /**
+   * Parses a `host:port` string with TLS set by `ssl` and certificate checking set by `verifyCertificate`. The failures
+   * are the same as for the one-argument form.
+   */
   def apply(hostAndPort: String, ssl: Boolean, verifyCertificate: Boolean): RedisUri = {
     val splitting = hostAndPort.split(':')
     val host      = splitting(0)
@@ -49,12 +72,22 @@ object RedisUri {
     RedisUri(host, port, ssl = ssl, sni = None, verifyCertificate = verifyCertificate)
   }
 
+  /**
+   * Creates a `RedisUri` for `host` and `port`, with TLS off.
+   */
   def apply(host: String, port: Int): RedisUri =
     RedisUri(host, port, ssl = false, sni = None)
 
+  /**
+   * Creates a `RedisUri` for `host` and `port`, with TLS set by `ssl`.
+   */
   def apply(host: String, port: Int, ssl: Boolean): RedisUri =
     RedisUri(host, port, ssl = ssl, sni = None)
 
+  /**
+   * Creates a `RedisUri` for `host` and `port`, with TLS set by `ssl` and certificate checking set by
+   * `verifyCertificate`.
+   */
   def apply(host: String, port: Int, ssl: Boolean, verifyCertificate: Boolean): RedisUri =
     RedisUri(host, port, ssl = ssl, sni = None, verifyCertificate = verifyCertificate)
 }
