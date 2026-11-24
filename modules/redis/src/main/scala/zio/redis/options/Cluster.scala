@@ -19,26 +19,61 @@ package zio.redis.options
 import zio.Chunk
 import zio.redis.RedisUri
 
+/**
+ * Types for Redis Cluster: hash slots, nodes and slot partitions.
+ */
 object Cluster {
   private[redis] final val SlotsAmount = 16384
 
+  /**
+   * A hash slot number. Redis Cluster maps every key to one of its hash slots. The constructor does not
+   * check the range.
+   */
   final case class Slot(number: Long) extends AnyVal
 
+  /**
+   * Companion object of `Slot`.
+   */
   object Slot {
+    /**
+     * The slot with number 1.
+     */
     final val Default: Slot = Slot(1)
   }
 
+  /**
+   * A cluster node: its node ID and the `RedisUri` that clients connect to.
+   */
   final case class Node(id: String, address: RedisUri)
 
+  /**
+   * An inclusive range of hash slots, from `start` to `end`.
+   */
   final case class SlotRange(start: Long, end: Long) {
+    /**
+     * Returns `true` when `slot.number` lies between `start` and `end`, both included. A range whose `start` is
+     * greater than `end` contains no slot.
+     */
     def contains(slot: Slot): Boolean = start <= slot.number && slot.number <= end
   }
 
+  /**
+   * The slots served by one master node and its replicas, as returned by `CLUSTER SLOTS`.
+   */
   final case class Partition(slotRange: SlotRange, master: Node, slaves: Chunk[Node]) {
+    /**
+     * The master, followed by the replicas in the order of `slaves`.
+     */
     lazy val nodes: Chunk[Node]         = master +: slaves
+    /**
+     * The `RedisUri` of each node in `nodes`, in the same order.
+     */
     lazy val addresses: Chunk[RedisUri] = nodes.map(_.address)
   }
 
+  /**
+   * The sub-command of `CLUSTER SETSLOT`, which changes the state of one hash slot.
+   */
   sealed trait SetSlotSubCommand extends Product { self =>
     private[redis] final def asString: String =
       self match {
@@ -49,10 +84,25 @@ object Cluster {
       }
   }
 
+  /**
+   * The sub-commands of `CLUSTER SETSLOT`.
+   */
   object SetSlotSubCommand {
+    /**
+     * Marks a slot as migrating away from this node. Sent as `MIGRATING`.
+     */
     case object Migrating extends SetSlotSubCommand
+    /**
+     * Marks a slot as being imported into this node. Sent as `IMPORTING`.
+     */
     case object Importing extends SetSlotSubCommand
+    /**
+     * Clears the migrating and importing state of a slot. Sent as `STABLE`.
+     */
     case object Stable    extends SetSlotSubCommand
+    /**
+     * Assigns a slot to the node with the given ID. Sent as `NODE`.
+     */
     case object Node      extends SetSlotSubCommand
   }
 }
