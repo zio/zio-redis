@@ -19,7 +19,7 @@ package zio.redis
 /**
  * The address of one Redis server. `host` and `port` locate it. With `ssl` set to true, the connection uses TLS, and
  * `sni` is the server name sent in the TLS handshake. With `verifyCertificate` set to true, the certificate is checked
- * against the default trust store and the host name. With it set to false, any certificate is accepted.
+ * against the default trust store, and its name against `sni`. With it set to false, any certificate is accepted.
  *
  * `toString` gives `redis://host:port`, or `rediss://host:port` when `ssl` is set. It leaves out `sni` and
  * `verifyCertificate`.

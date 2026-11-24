@@ -20,7 +20,8 @@ import zio._
 import zio.redis.internal._
 
 /**
- * Builds the Redis clients. Each layer needs a `CodecSupplier`, and also a `RedisConfig` or a `RedisClusterConfig`.
+ * Builds the Redis clients. Each layer needs a `CodecSupplier`. `singleNode` also needs a `RedisConfig`, and `cluster`
+ * a `RedisClusterConfig`.
  * `local` and `singleNode` provide `Redis` and `AsyncRedis`; `cluster` provides `Redis` only.
  *
  * {{{

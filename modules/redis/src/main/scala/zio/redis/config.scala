@@ -57,7 +57,8 @@ object RedisConfig {
 
   /**
    * Credentials for `AUTH`. With no `username`, the client sends only the password. A wrong password does not make the
-   * layer fail: the next command fails with `ProtocolError`, with the message `Authentication required.`
+   * layer fail. On a server that requires a password, the next command fails with `ProtocolError`, with the message
+   * `Authentication required.`
    */
   final case class Auth(password: String, username: Option[String] = None)
 }
@@ -75,7 +76,8 @@ final case class RedisClusterConfig(
 )
 
 /**
- * How the cluster client retries a command that fails with an `IOError`, `Ask`, `Moved` or `CrossSlot`. The first retry
+ * How the cluster client retries a command that fails with an `IOError` or `CrossSlot`, or whose `ASK` or `MOVED`
+ * redirect fails with an `IOError`. The first retry
  * waits `base`, and each later wait is `factor` times the one before. The client makes at most `maxRecurs` retries.
  */
 final case class RetryClusterConfig(base: Duration, factor: Double, maxRecurs: Int)

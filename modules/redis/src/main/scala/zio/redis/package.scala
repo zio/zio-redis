@@ -33,8 +33,9 @@ package object redis
   type Id[+A] = A
 
   /**
-   * The asynchronous client. A command returns `UIO[IO[RedisError, A]]`. Running the outer effect sends the command,
-   * and the inner effect waits for its reply, so several commands can be sent before their replies are read.
+   * The asynchronous client. A command returns `UIO[IO[RedisError, A]]`. Running the outer effect queues the command
+   * for sending, and the inner effect waits for its reply, so several commands can be sent before their replies are
+   * read.
    *
    * {{{
    * import zio._

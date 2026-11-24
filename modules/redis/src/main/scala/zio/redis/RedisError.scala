@@ -46,14 +46,15 @@ object RedisError {
 
   /**
    * Errors that a Redis cluster returns for a command. The cluster client handles each one by redirecting the command
-   * (`Ask` and `Moved`) or by retrying it (`CrossSlot`, and the redirects that fail again).
+   * (`Ask` and `Moved`) or by retrying it (`CrossSlot`, and a redirect that fails with an `IOError`).
    */
   sealed trait ClusterRedisError extends RedisError
 
   /**
    * The server replied with an error that has no more specific case, or a reply could not be decoded. For an error
    * reply that starts with `ERR` or `NOAUTH`, the message is the text after that word, trimmed. Other error replies
-   * keep their whole text. A reply that the decoder rejects has the message `Invalid data received.`
+   * keep their whole text. Bytes that are not valid RESP give the message `Invalid data received.`; a reply of the
+   * wrong shape for the command gives a message such as `... isn't a bulk string`.
    */
   final case class ProtocolError(message: String) extends RedisError {
     override def toString: String = s"ProtocolError: $message"

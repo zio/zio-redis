@@ -29,7 +29,7 @@ sealed trait ResultBuilder {
 
   /**
    * Does not compile without `returning`. The compiler reports the message of the `implicitNotFound` annotation, which
-   * starts with Use returning[A] to specify method's return type. The library provides no `NeedsReturnType` instance,
+   * is ``Use `returning[A]` to specify method's return type``. The library provides no `NeedsReturnType` instance,
    * so the body `???` is never reached.
    */
   final def map(f: Nothing => Any)(implicit nrt: NeedsReturnType): IO[Nothing, Nothing] = ???
