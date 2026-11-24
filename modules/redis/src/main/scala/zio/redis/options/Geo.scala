@@ -23,8 +23,8 @@ trait Geo { this: Shared =>
 
   /**
    * A position given as longitude and latitude in degrees. The class does not check the range. Redis rejects
-   * a pair outside longitude -180 to 180 or latitude -85.05112878 to 85.05112878 with the error
-   * `ERR invalid longitude,latitude pair`.
+   * a pair outside longitude -180 to 180 or latitude -85.05112878 to 85.05112878 with an error that starts
+   * with `ERR invalid longitude,latitude pair`.
    */
   sealed case class LongLat(longitude: Double, latitude: Double)
 
@@ -35,7 +35,7 @@ trait Geo { this: Shared =>
   sealed case class GeoView(member: String, dist: Option[Double], hash: Option[Long], longLat: Option[LongLat])
 
   /**
-   * The unit of a search radius, as used by `GEOSEARCH` and `GEOSEARCHSTORE`.
+   * The unit of a distance or a search radius, as used by `GEODIST`, `GEOSEARCH` and `GEOSEARCHSTORE`.
    */
   sealed trait RadiusUnit { self =>
     private[redis] final def asString: String =

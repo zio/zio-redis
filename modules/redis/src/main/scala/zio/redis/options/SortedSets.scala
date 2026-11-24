@@ -82,7 +82,8 @@ trait SortedSets {
   type Min = Min.type
 
   /**
-   * The `CH` flag for `ZADD`. The reply counts the members that changed as well as the members that were added.
+   * The `CH` flag for `ZADD`. The reply of `zAdd` counts the members that changed as well as the members
+   * that were added.
    */
   case object Changed {
     private[redis] def asString: String = "CH"
@@ -301,7 +302,7 @@ trait SortedSets {
 
     /**
      * The end index is excluded. The range stops at `value - 1`, which is the number that is sent. For `value`
-     * 0 that number is `-1`, which Redis reads as the last element. `zRange` with `Exclusive(0)` therefore
+     * 0 that number is `-1`, which Redis reads as the last element. `zRange` with `RangeMinimum(0)` and `Exclusive(0)` therefore
      * returns the whole sorted set, and `zRange` with `0 until 0` does the same.
      */
     sealed case class Exclusive(value: Long) extends RangeMaximum

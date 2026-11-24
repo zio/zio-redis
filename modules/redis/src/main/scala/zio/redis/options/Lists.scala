@@ -85,7 +85,7 @@ trait Lists {
   /**
    * The `RANK` option for `LPOS`: which match to return. 1 is the first match, 2 the second, and a negative
    * number counts from the end of the list. Redis rejects 0 with the error
-   * `RANK can't be zero: use 1 to start from the first match, 2 from the second ... or use negative to start
+   * `ERR RANK can't be zero: use 1 to start from the first match, 2 from the second ... or use negative to start
    * from the end of the list`.
    */
   sealed case class Rank(rank: Long)

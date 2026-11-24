@@ -37,7 +37,7 @@ trait Streams {
   type WithForce = WithForce.type
 
   /**
-   * The `JUSTID` flag for `XCLAIM`. It returns only the IDs of the claimed entries, without their fields.
+   * The `JUSTID` flag for `XCLAIM` and `XAUTOCLAIM`. It returns only the IDs of the claimed entries, without their fields.
    */
   case object WithJustId {
     private[redis] def asString = "JUSTID"
