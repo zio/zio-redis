@@ -302,7 +302,8 @@ trait SortedSets {
 
     /**
      * The end index is excluded. The range stops at `value - 1`, which is the number that is sent. For `value`
-     * 0 that number is `-1`, which Redis reads as the last element. `zRange` with `RangeMinimum(0)` and `Exclusive(0)` therefore
+     * 0 that number is `-1`, which Redis reads as the last element. `zRange` with `RangeMinimum(0)` and
+     * `Exclusive(0)` therefore
      * returns the whole sorted set, and `zRange` with `0 until 0` does the same.
      */
     sealed case class Exclusive(value: Long) extends RangeMaximum
