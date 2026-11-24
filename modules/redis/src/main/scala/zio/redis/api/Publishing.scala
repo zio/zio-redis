@@ -22,6 +22,10 @@ import zio.redis.Output._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
+/**
+ * The `PUBLISH` command and the `PUBSUB` commands. The type `G` is the effect type of the client: `Redis` or
+ * `AsyncRedis`.
+ */
 trait Publishing[G[+_]] extends RedisEnvironment[G] {
   import Publishing._
 
