@@ -20,11 +20,37 @@ import zio.redis.internal.Utf8Codec
 import zio.schema.Schema
 import zio.schema.codec.BinaryCodec
 
+/**
+ * Chooses the codec that converts values to bytes and back. Commands use the codec that `get` returns for the type of
+ * each key, value and reply they read or write.
+ *
+ * {{{
+ * import zio.schema.codec.BinaryCodec
+ *
+ * val codec: BinaryCodec[Int] = CodecSupplier.utf8.get[Int]
+ * }}}
+ *
+ * @see [[https://zio.dev/zio-redis/codecs/ Codecs]]
+ */
 trait CodecSupplier {
+  /**
+   * Returns the codec for values of type `A`. The `Schema` of `A` decides how a value is converted.
+   */
   def get[A: Schema]: BinaryCodec[A]
 }
 
+/**
+ * Supplies the built-in codec suppliers.
+ */
 object CodecSupplier {
+  /**
+   * A supplier of the UTF-8 codec for primitive values. A value is written with its `toString`. `Int`, `Long` and
+   * `Double` are read with `toInt`, `toLong` and `toDouble`, so a text that is not a number of that type fails the read
+   * with `NumberFormatException`. That exception is thrown, not returned as a `CodecError`. Other primitive types, for
+   * example `Boolean`, `Short` and `Float`, are read as a `String`, so using the value as its own type fails with
+   * `ClassCastException`. A value of any other type, such as a list, fails with `CodecError` and the message `the codec
+   * support only primitives`.
+   */
   def utf8: CodecSupplier = new CodecSupplier {
     def get[A: Schema]: BinaryCodec[A] = Utf8Codec.codec
   }
