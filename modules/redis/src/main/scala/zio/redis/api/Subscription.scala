@@ -193,6 +193,7 @@ trait Subscription extends SubscribeEnvironment {
  * The command names that the subscription methods send, and the callback type that they accept.
  */
 object Subscription {
+
   /**
    * A callback for a subscribe or unsubscribe confirmation. It receives the channel or pattern name and the number of
    * channels and patterns that the connection is subscribed to after the change, and returns `UIO[Unit]`.
@@ -202,15 +203,18 @@ object Subscription {
   /**
    * The `SUBSCRIBE` command name.
    */
-  final val Subscribe    = "SUBSCRIBE"
+  final val Subscribe = "SUBSCRIBE"
+
   /**
    * The `UNSUBSCRIBE` command name.
    */
-  final val Unsubscribe  = "UNSUBSCRIBE"
+  final val Unsubscribe = "UNSUBSCRIBE"
+
   /**
    * The `PSUBSCRIBE` command name.
    */
-  final val PSubscribe   = "PSUBSCRIBE"
+  final val PSubscribe = "PSUBSCRIBE"
+
   /**
    * The `PUNSUBSCRIBE` command name.
    */

@@ -43,11 +43,13 @@ final case class RedisConfig(
  * Default settings and the credentials type of `RedisConfig`.
  */
 object RedisConfig {
+
   /**
    * The settings for `localhost` on port 6379, the default port of Redis. `Redis.local` and `RedisSubscription.local`
    * connect with them.
    */
-  lazy val Local: RedisConfig      = RedisConfig("localhost", 6379)
+  lazy val Local: RedisConfig = RedisConfig("localhost", 6379)
+
   /**
    * The default `requestQueueSize`, which is 16.
    */
@@ -82,6 +84,7 @@ final case class RetryClusterConfig(base: Duration, factor: Double, maxRecurs: I
  * Default retry settings for a cluster client.
  */
 object RetryClusterConfig {
+
   /**
    * The default retry settings: a base of 100 milliseconds, a factor of 1.5 and 5 retries.
    */

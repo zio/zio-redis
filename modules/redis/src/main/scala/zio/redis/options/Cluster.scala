@@ -35,6 +35,7 @@ object Cluster {
    * Companion object of `Slot`.
    */
   object Slot {
+
     /**
      * The slot with number 1.
      */
@@ -50,6 +51,7 @@ object Cluster {
    * An inclusive range of hash slots, from `start` to `end`.
    */
   final case class SlotRange(start: Long, end: Long) {
+
     /**
      * Returns `true` when `slot.number` lies between `start` and `end`, both included. A range whose `start` is
      * greater than `end` contains no slot.
@@ -61,10 +63,12 @@ object Cluster {
    * The slots served by one master node and its replicas, as returned by `CLUSTER SLOTS`.
    */
   final case class Partition(slotRange: SlotRange, master: Node, slaves: Chunk[Node]) {
+
     /**
      * The master, followed by the replicas in the order of `slaves`.
      */
-    lazy val nodes: Chunk[Node]         = master +: slaves
+    lazy val nodes: Chunk[Node] = master +: slaves
+
     /**
      * The `RedisUri` of each node in `nodes`, in the same order.
      */
@@ -88,21 +92,25 @@ object Cluster {
    * The sub-commands of `CLUSTER SETSLOT`.
    */
   object SetSlotSubCommand {
+
     /**
      * Marks a slot as migrating away from this node. Sent as `MIGRATING`.
      */
     case object Migrating extends SetSlotSubCommand
+
     /**
      * Marks a slot as being imported into this node. Sent as `IMPORTING`.
      */
     case object Importing extends SetSlotSubCommand
+
     /**
      * Clears the migrating and importing state of a slot. Sent as `STABLE`.
      */
-    case object Stable    extends SetSlotSubCommand
+    case object Stable extends SetSlotSubCommand
+
     /**
      * Assigns a slot to the node with the given ID. Sent as `NODE`.
      */
-    case object Node      extends SetSlotSubCommand
+    case object Node extends SetSlotSubCommand
   }
 }

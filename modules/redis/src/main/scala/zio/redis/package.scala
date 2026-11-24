@@ -45,6 +45,7 @@ package object redis
    * }}}
    */
   type AsyncRedis = GenRedis[GenRedis.Async]
+
   /**
    * The synchronous client. A command returns `IO[RedisError, A]`, which sends the command and waits for its reply.
    *
@@ -56,5 +57,5 @@ package object redis
    *   redis.get("key").returning[String]
    * }}}
    */
-  type Redis      = GenRedis[GenRedis.Sync]
+  type Redis = GenRedis[GenRedis.Sync]
 }

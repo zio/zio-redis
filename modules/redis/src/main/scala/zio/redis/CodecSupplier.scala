@@ -33,6 +33,7 @@ import zio.schema.codec.BinaryCodec
  * @see [[https://zio.dev/zio-redis/codecs/ Codecs]]
  */
 trait CodecSupplier {
+
   /**
    * Returns the codec for values of type `A`. The `Schema` of `A` decides how a value is converted.
    */
@@ -43,6 +44,7 @@ trait CodecSupplier {
  * Supplies the built-in codec suppliers.
  */
 object CodecSupplier {
+
   /**
    * A supplier of the UTF-8 codec for primitive values. A value is written with its `toString`. `Int`, `Long` and
    * `Double` are read with `toInt`, `toLong` and `toDouble`, so a text that is not a number of that type fails the read

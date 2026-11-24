@@ -22,6 +22,7 @@ import zio.Chunk
  * Types and flags for the sorted set commands, the `Z` commands.
  */
 trait SortedSets {
+
   /**
    * How `ZUNIONSTORE`, `ZINTERSTORE` and the related commands combine the scores of a member that appears in
    * more than one input set.
@@ -39,14 +40,17 @@ trait SortedSets {
    * The aggregation functions for the `AGGREGATE` option.
    */
   object Aggregate {
+
     /**
      * Adds the scores of the member. Sent as `SUM`.
      */
     case object Sum extends Aggregate
+
     /**
      * Keeps the smallest score of the member. Sent as `MIN`.
      */
     case object Min extends Aggregate
+
     /**
      * Keeps the largest score of the member. Sent as `MAX`.
      */
@@ -140,18 +144,22 @@ trait SortedSets {
    * The upper bounds of a lexicographic range.
    */
   object LexMaximum {
+
     /**
      * No upper bound. Sent as `+`.
      */
-    case object UnboundedPositive           extends LexMaximum
+    case object UnboundedPositive extends LexMaximum
+
     /**
      * Sent as `-`. As an upper bound it selects no member: `ZLEXCOUNT` with `[a` and `-` returned 0 on Redis 7.2.
      */
-    case object UnboundedNegative           extends LexMaximum
+    case object UnboundedNegative extends LexMaximum
+
     /**
      * Excludes `value` from the range. Sent as `(` followed by the value.
      */
-    sealed case class Open(value: String)   extends LexMaximum
+    sealed case class Open(value: String) extends LexMaximum
+
     /**
      * Includes `value` in the range. Sent as `[` followed by the value.
      */
@@ -175,18 +183,22 @@ trait SortedSets {
    * The lower bounds of a lexicographic range.
    */
   object LexMinimum {
+
     /**
      * Sent as `+`. As a lower bound it selects no member: `ZLEXCOUNT` with `+` and `[z` returned 0 on Redis 7.2.
      */
-    case object UnboundedPositive           extends LexMinimum
+    case object UnboundedPositive extends LexMinimum
+
     /**
      * No lower bound. Sent as `-`.
      */
-    case object UnboundedNegative           extends LexMinimum
+    case object UnboundedNegative extends LexMinimum
+
     /**
      * Excludes `value` from the range. Sent as `(` followed by the value.
      */
-    sealed case class Open(value: String)   extends LexMinimum
+    sealed case class Open(value: String) extends LexMinimum
+
     /**
      * Includes `value` in the range. Sent as `[` followed by the value.
      */
@@ -209,14 +221,17 @@ trait SortedSets {
    * The upper bounds of a score range.
    */
   object ScoreMaximum {
+
     /**
      * No upper bound. Sent as `+inf`.
      */
-    case object Infinity                    extends ScoreMaximum
+    case object Infinity extends ScoreMaximum
+
     /**
      * Excludes scores equal to `value`. Sent as `(` followed by the value.
      */
-    sealed case class Open(value: Double)   extends ScoreMaximum
+    sealed case class Open(value: Double) extends ScoreMaximum
+
     /**
      * Includes scores equal to `value`. Sent as the number, so `1e20` is sent as `1.0E20`, which Redis accepts.
      */
@@ -239,14 +254,17 @@ trait SortedSets {
    * The lower bounds of a score range.
    */
   object ScoreMinimum {
+
     /**
      * No lower bound. Sent as `-inf`.
      */
-    case object Infinity                    extends ScoreMinimum
+    case object Infinity extends ScoreMinimum
+
     /**
      * Excludes scores equal to `value`. Sent as `(` followed by the value.
      */
-    sealed case class Open(value: Double)   extends ScoreMinimum
+    sealed case class Open(value: Double) extends ScoreMinimum
+
     /**
      * Includes scores equal to `value`. Sent as the number, so `1e-5` is sent as `1.0E-5`, which Redis accepts.
      */
@@ -275,10 +293,12 @@ trait SortedSets {
    * The end indexes of an index range.
    */
   object RangeMaximum {
+
     /**
      * The end index is included. Sent as `value`, and a negative value counts from the end of the set.
      */
     sealed case class Inclusive(value: Long) extends RangeMaximum
+
     /**
      * The end index is excluded. The range stops at `value - 1`, which is the number that is sent. For `value`
      * 0 that number is `-1`, which Redis reads as the last element. `zRange` with `Exclusive(0)` therefore
@@ -309,18 +329,21 @@ trait SortedSets {
    * The three kinds of range for `ZRANGE`.
    */
   object SortedSetRange {
+
     /**
      * A lexicographic range. `ZRANGE` sends it with `BYLEX`, and with `rev` it swaps the bounds.
      */
-    sealed case class LexRange(min: LexMinimum, max: LexMaximum)       extends SortedSetRange
+    sealed case class LexRange(min: LexMinimum, max: LexMaximum) extends SortedSetRange
+
     /**
      * A score range. `ZRANGE` sends it with `BYSCORE`, and with `rev` it swaps the bounds.
      */
     sealed case class ScoreRange(min: ScoreMinimum, max: ScoreMaximum) extends SortedSetRange
+
     /**
      * An index range from `min` to `max`, counted by position. `ZRANGE` sends no `BYSCORE` or `BYLEX` flag for it.
      */
-    sealed case class Range(min: RangeMinimum, max: RangeMaximum)      extends SortedSetRange
+    sealed case class Range(min: RangeMinimum, max: RangeMaximum) extends SortedSetRange
   }
 
   /**

@@ -20,6 +20,7 @@ package zio.redis.options
  * Types for the list commands.
  */
 trait Lists {
+
   /**
    * Where `LINSERT` puts the new element, relative to the pivot element.
    */
@@ -35,14 +36,16 @@ trait Lists {
    * The positions for `LINSERT`.
    */
   object Position {
+
     /**
      * Inserts the element before the pivot. Sent as `BEFORE`.
      */
     case object Before extends Position
+
     /**
      * Inserts the element after the pivot. Sent as `AFTER`.
      */
-    case object After  extends Position
+    case object After extends Position
   }
 
   /**
@@ -61,10 +64,12 @@ trait Lists {
    * The two ends of a list.
    */
   object Side {
+
     /**
      * The head of the list. Sent as `LEFT`.
      */
-    case object Left  extends Side
+    case object Left extends Side
+
     /**
      * The tail of the list. Sent as `RIGHT`.
      */

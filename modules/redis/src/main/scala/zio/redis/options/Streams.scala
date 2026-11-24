@@ -22,6 +22,7 @@ import zio._
  * Types and flags for the stream commands, the `X` commands.
  */
 trait Streams {
+
   /**
    * The `FORCE` flag for `XCLAIM`. Redis adds an entry that exists in the stream to the pending list of the
    * claiming consumer, even when no consumer had it pending.
@@ -67,26 +68,31 @@ trait Streams {
    * The subcommands of `XGROUP`.
    */
   object XGroupCommand {
+
     /**
      * `XGROUP CREATE`: creates a consumer group on the stream `key`. The group starts after the entry `id`.
      */
-    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I)                 extends XGroupCommand
+    sealed case class Create[SK, SG, I](key: SK, group: SG, id: I) extends XGroupCommand
+
     /**
      * `XGROUP SETID`: moves the last-delivered ID of the consumer group to `id`.
      */
-    sealed case class SetId[SK, SG, I](key: SK, group: SG, id: I)                  extends XGroupCommand
+    sealed case class SetId[SK, SG, I](key: SK, group: SG, id: I) extends XGroupCommand
+
     /**
      * `XGROUP DESTROY`: deletes the consumer group.
      */
-    sealed case class Destroy[SK, SG](key: SK, group: SG)                          extends XGroupCommand
+    sealed case class Destroy[SK, SG](key: SK, group: SG) extends XGroupCommand
+
     /**
      * `XGROUP CREATECONSUMER`: adds a consumer to the consumer group.
      */
     sealed case class CreateConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC) extends XGroupCommand
+
     /**
      * `XGROUP DELCONSUMER`: removes a consumer from the consumer group.
      */
-    sealed case class DelConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC)    extends XGroupCommand
+    sealed case class DelConsumer[SK, SG, SC](key: SK, group: SG, consumer: SC) extends XGroupCommand
   }
 
   /**
@@ -170,24 +176,28 @@ trait Streams {
    * The trimming strategies for `XADD` and `XTRIM`.
    */
   object CappedStreamType {
+
     /**
      * Trims to about `count` entries, sent as `MAXLEN ~ count`. A `limit` adds `LIMIT limit`, which is sent only
      * with this approximate form.
      */
     sealed case class MaxLenApprox(count: Long, limit: Option[Long]) extends CappedStreamType
+
     /**
      * Trims to exactly `count` entries, sent as `MAXLEN = count`.
      */
-    sealed case class MaxLenExact(count: Long)                       extends CappedStreamType
+    sealed case class MaxLenExact(count: Long) extends CappedStreamType
+
     /**
      * Removes entries with IDs lower than `id`, approximately, sent as `MINID ~ id`. A `limit` adds
      * `LIMIT limit`, which is sent only with this approximate form.
      */
-    sealed case class MinIdApprox[I](id: I, limit: Option[Long])     extends CappedStreamType
+    sealed case class MinIdApprox[I](id: I, limit: Option[Long]) extends CappedStreamType
+
     /**
      * Removes entries with IDs lower than `id`, sent as `MINID = id`.
      */
-    sealed case class MinIdExact[I](id: I)                           extends CappedStreamType
+    sealed case class MinIdExact[I](id: I) extends CappedStreamType
   }
 
   /**
@@ -238,6 +248,7 @@ trait Streams {
    * Companion object of `StreamInfo`.
    */
   object StreamInfo {
+
     /**
      * An empty `StreamInfo`: all counters are 0, all strings are empty, and both entries are `None`.
      */
@@ -261,6 +272,7 @@ trait Streams {
    * Companion object of `StreamGroupsInfo`.
    */
   object StreamGroupsInfo {
+
     /**
      * An empty `StreamGroupsInfo`: an empty name and last-delivered ID, and zero counts.
      */
@@ -282,6 +294,7 @@ trait Streams {
    * Companion object of `StreamConsumersInfo`.
    */
   object StreamConsumersInfo {
+
     /**
      * An empty `StreamConsumersInfo`: an empty name, a zero pending count, and zero durations.
      */
@@ -312,6 +325,7 @@ trait Streams {
      * Companion object of `FullStreamInfo`.
      */
     object FullStreamInfo {
+
       /**
        * An empty `FullStreamInfo`: zero counters, empty strings, and no entries or groups.
        */
@@ -335,6 +349,7 @@ trait Streams {
      * Companion object of `ConsumerGroups`.
      */
     object ConsumerGroups {
+
       /**
        * An empty `ConsumerGroups`: an empty name, zero counts, and no pending entries or consumers.
        */
@@ -364,6 +379,7 @@ trait Streams {
      * Companion object of `Consumers`.
      */
     object Consumers {
+
       /**
        * An empty `Consumers`: an empty name, zero durations and counts, and no pending entries.
        */

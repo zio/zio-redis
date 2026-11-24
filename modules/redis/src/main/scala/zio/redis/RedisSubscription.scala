@@ -40,6 +40,7 @@ trait RedisSubscription extends api.Subscription
  * `Redis` uses.
  */
 object RedisSubscription {
+
   /**
    * A subscription client for the Redis server at `localhost` on port 6379. The connection opens when the layer is
    * built.

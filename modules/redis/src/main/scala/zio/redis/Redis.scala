@@ -33,6 +33,7 @@ import zio.redis.internal._
  * @see [[https://zio.dev/zio-redis/ ZIO Redis]]
  */
 object Redis {
+
   /**
    * A client for a Redis cluster, built from a `RedisClusterConfig`. It provides only `Redis`. A command goes to the
    * node that serves the slot of its first key. `MOVED` and `ASK` replies are followed. A command whose keys are in

@@ -39,6 +39,7 @@ final case class RedisUri(
  * Creates `RedisUri` values from a `host:port` string, or from a host and a port.
  */
 object RedisUri {
+
   /**
    * Parses a `host:port` string such as `localhost:6379`, with TLS off. The string is split at each colon, and only the
    * first two parts are used. A string without a colon fails with `ArrayIndexOutOfBoundsException`. A port that is not

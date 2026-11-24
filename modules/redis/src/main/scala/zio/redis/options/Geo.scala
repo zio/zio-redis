@@ -20,6 +20,7 @@ package zio.redis.options
  * Types for the geospatial commands, such as `GEOADD` and `GEOSEARCH`.
  */
 trait Geo { this: Shared =>
+
   /**
    * A position given as longitude and latitude in degrees. The class does not check the range. Redis rejects
    * a pair outside longitude -180 to 180 or latitude -85.05112878 to 85.05112878 with the error
@@ -50,22 +51,26 @@ trait Geo { this: Shared =>
    * The units that a search radius can be given in.
    */
   object RadiusUnit {
+
     /**
      * Meters. Sent as `m`.
      */
-    case object Meters     extends RadiusUnit
+    case object Meters extends RadiusUnit
+
     /**
      * Kilometers. Sent as `km`.
      */
     case object Kilometers extends RadiusUnit
+
     /**
      * Feet. Sent as `ft`.
      */
-    case object Feet       extends RadiusUnit
+    case object Feet extends RadiusUnit
+
     /**
      * Miles. Sent as `mi`.
      */
-    case object Miles      extends RadiusUnit
+    case object Miles extends RadiusUnit
   }
 
   /**
@@ -73,10 +78,12 @@ trait Geo { this: Shared =>
    * subtypes describe which forms Redis 7.2 accepts.
    */
   sealed trait StoreOptions {
+
     /**
      * The destination key for the matched members, or `None` when no members are stored.
      */
     def store: Option[Store]
+
     /**
      * The destination key for the distances, or `None` when no distances are stored.
      */
@@ -101,10 +108,12 @@ trait Geo { this: Shared =>
    * @see [[https://zio.dev/zio-redis/ ZIO Redis]]
    */
   case class StoreResults(results: Store) extends StoreOptions {
+
     /**
      * The destination key for the matched members, `results`.
      */
-    def store: Option[Store]         = Some(results)
+    def store: Option[Store] = Some(results)
+
     /**
      * Always `None`: distances are not stored.
      */
@@ -116,10 +125,12 @@ trait Geo { this: Shared =>
    * `ERR syntax error`, because no destination key is sent for the members. See `StoreDist`.
    */
   case class StoreDistances(distances: StoreDist) extends StoreOptions {
+
     /**
      * Always `None`: no destination key is sent for the members.
      */
-    def store: Option[Store]         = None
+    def store: Option[Store] = None
+
     /**
      * The destination for the distances, `distances`.
      */
@@ -131,10 +142,12 @@ trait Geo { this: Shared =>
    * with `ERR syntax error`, because the distance key follows `STOREDIST`. See `StoreDist`.
    */
   case class StoreBoth(results: Store, distances: StoreDist) extends StoreOptions {
+
     /**
      * The destination key for the matched members, `results`.
      */
-    def store: Option[Store]         = Some(results)
+    def store: Option[Store] = Some(results)
+
     /**
      * The destination key for the distances, `distances`.
      */

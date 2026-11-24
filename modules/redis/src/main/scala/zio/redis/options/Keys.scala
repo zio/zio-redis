@@ -20,6 +20,7 @@ package zio.redis.options
  * Types for the key commands: `COPY`, `MIGRATE`, `RESTORE`, `SCAN`, `SORT` and `TYPE`.
  */
 trait Keys {
+
   /**
    * The `ABSTTL` flag for `RESTORE`. With it, the `ttl` argument is an absolute Unix time in milliseconds,
    * not a duration.
@@ -99,30 +100,36 @@ trait Keys {
    * The Redis data types. Each one sends the name that `TYPE` uses for it.
    */
   object RedisType {
+
     /**
      * A string value, reported as `string`.
      */
-    case object String    extends RedisType
+    case object String extends RedisType
+
     /**
      * A list value, reported as `list`.
      */
-    case object List      extends RedisType
+    case object List extends RedisType
+
     /**
      * A set value, reported as `set`.
      */
-    case object Set       extends RedisType
+    case object Set extends RedisType
+
     /**
      * A sorted set value, reported as `zset`.
      */
     case object SortedSet extends RedisType
+
     /**
      * A hash value, reported as `hash`.
      */
-    case object Hash      extends RedisType
+    case object Hash extends RedisType
+
     /**
      * A stream value, reported as `stream`.
      */
-    case object Stream    extends RedisType
+    case object Stream extends RedisType
   }
 
   /**

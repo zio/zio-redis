@@ -26,6 +26,7 @@ import zio.stream.Stream
  * result. `map` and `flatMap` do not compile before `returning` is called.
  */
 sealed trait ResultBuilder {
+
   /**
    * Does not compile without `returning`. The compiler reports the message of the `implicitNotFound` annotation, which
    * starts with Use returning[A] to specify method's return type. The library provides no `NeedsReturnType` instance,
@@ -44,6 +45,7 @@ sealed trait ResultBuilder {
  * method chooses it.
  */
 object ResultBuilder {
+
   /**
    * Evidence that a `ResultBuilder` method was used without `returning`. No instance is provided, so such a call does
    * not compile.
@@ -56,6 +58,7 @@ object ResultBuilder {
    * `Option[R]`.
    */
   trait ResultBuilder1[+F[_], G[+_]] extends ResultBuilder {
+
     /**
      * Chooses `R` as the reply type. The reply is decoded with the codec from the `CodecSupplier` for `R`.
      */
@@ -66,6 +69,7 @@ object ResultBuilder {
    * A result with two reply types, such as the result of `XREADGROUP`.
    */
   trait ResultBuilder2[+F[_, _], G[+_]] extends ResultBuilder {
+
     /**
      * Chooses `R1` and `R2` as the reply types. Each one is decoded with its own codec.
      */
@@ -76,6 +80,7 @@ object ResultBuilder {
    * A result with three reply types, such as the result of `XAUTOCLAIM`.
    */
   trait ResultBuilder3[+F[_, _, _], G[+_]] extends ResultBuilder {
+
     /**
      * Chooses the three reply types. Each one is decoded with its own codec.
      */
@@ -87,6 +92,7 @@ object ResultBuilder {
    * `EVALSHA` use it, because their replies can have any shape.
    */
   trait ResultOutputBuilder[G[+_]] extends ResultBuilder {
+
     /**
      * Chooses `R` as the reply type, decoded with the `Output` in scope.
      */
@@ -98,6 +104,7 @@ object ResultBuilder {
    * received message.
    */
   trait ResultStreamBuilder1[+F[_]] extends ResultBuilder {
+
     /**
      * Chooses `R` as the type of the values. The stream fails with a `RedisError`.
      */
