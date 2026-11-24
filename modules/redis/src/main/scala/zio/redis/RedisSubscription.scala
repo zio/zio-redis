@@ -19,12 +19,38 @@ package zio.redis
 import zio._
 import zio.redis.internal.SubscriptionExecutor
 
+/**
+ * A client for publish and subscribe. It has the methods of `Subscription`. Build one with `RedisSubscription.local` or
+ * `RedisSubscription.singleNode`.
+ *
+ * {{{
+ * import zio._
+ *
+ * val layer: ZLayer[Any, RedisError.IOError, RedisSubscription] =
+ *   ZLayer.succeed(CodecSupplier.utf8) ++
+ *   ZLayer.succeed(RedisConfig("localhost", 6379)) >>> RedisSubscription.singleNode
+ * }}}
+ *
+ * @see [[https://zio.dev/zio-redis/pub-sub/ Pub/sub]]
+ */
 trait RedisSubscription extends api.Subscription
 
+/**
+ * Layers that create a `RedisSubscription`. Each layer opens a connection of its own, separate from the one that
+ * `Redis` uses.
+ */
 object RedisSubscription {
+
+  /**
+   * A subscription client for the Redis server at `localhost` on port 6379. The connection opens when the layer is
+   * built.
+   */
   lazy val local: ZLayer[CodecSupplier, RedisError.IOError, RedisSubscription] =
     SubscriptionExecutor.local >>> makeLayer
 
+  /**
+   * A subscription client for the Redis server in the `RedisConfig`. The connection opens when the layer is built.
+   */
   lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, RedisSubscription] =
     SubscriptionExecutor.layer >>> makeLayer
 

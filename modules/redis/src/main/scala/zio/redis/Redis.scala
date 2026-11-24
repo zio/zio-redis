@@ -19,13 +19,41 @@ package zio.redis
 import zio._
 import zio.redis.internal._
 
+/**
+ * Builds the Redis clients. Each layer needs a `CodecSupplier`. `singleNode` also needs a `RedisConfig`, and `cluster`
+ * a `RedisClusterConfig`.
+ * `local` and `singleNode` provide `Redis` and `AsyncRedis`; `cluster` provides `Redis` only.
+ *
+ * {{{
+ * import zio._
+ *
+ * val layer: ZLayer[Any, RedisError.IOError, Redis & AsyncRedis] =
+ *   ZLayer.succeed(CodecSupplier.utf8) ++ ZLayer.succeed(RedisConfig("localhost", 6379)) >>> Redis.singleNode
+ * }}}
+ *
+ * @see [[https://zio.dev/zio-redis/ ZIO Redis]]
+ */
 object Redis {
+
+  /**
+   * A client for a Redis cluster, built from a `RedisClusterConfig`. It provides only `Redis`. A command goes to the
+   * node that serves the slot of its first key. `MOVED` and `ASK` replies are followed. A command whose keys are in
+   * different slots fails with `CrossSlot` after the retries of `RetryClusterConfig`.
+   */
   lazy val cluster: ZLayer[CodecSupplier & RedisClusterConfig, RedisError, Redis] =
     ZLayer.makeSome[CodecSupplier & RedisClusterConfig, Redis](ClusterExecutor.layer, makeLayer)
 
+  /**
+   * A client for the Redis server at `localhost` on port 6379. It provides `Redis` and `AsyncRedis`. The connection
+   * opens when the layer is built, and the layer fails with `RedisError.IOError` when the connection cannot be opened.
+   */
   lazy val local: ZLayer[CodecSupplier, RedisError.IOError, Redis & AsyncRedis] =
     SingleNodeExecutor.local >>> makeLayer
 
+  /**
+   * A client for the Redis server in the `RedisConfig`. It provides `Redis` and `AsyncRedis`. Like `local`, it opens
+   * the connection when the layer is built. It sends the `AUTH` command when the config has credentials.
+   */
   lazy val singleNode: ZLayer[CodecSupplier & RedisConfig, RedisError.IOError, Redis & AsyncRedis] =
     SingleNodeExecutor.layer >>> makeLayer
   private def makeLayer: URLayer[CodecSupplier & RedisExecutor, AsyncRedis & Redis]                =

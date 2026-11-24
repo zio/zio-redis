@@ -22,6 +22,10 @@ import zio.redis.Output._
 import zio.redis.internal.{RedisCommand, RedisEnvironment}
 import zio.schema.Schema
 
+/**
+ * The `PUBLISH` command and the `PUBSUB CHANNELS`, `PUBSUB NUMPAT` and `PUBSUB NUMSUB` commands. `G` wraps each
+ * result: `IO[RedisError, A]` for `Redis`, `UIO[IO[RedisError, A]]` for `AsyncRedis`.
+ */
 trait Publishing[G[+_]] extends RedisEnvironment[G] {
   import Publishing._
 

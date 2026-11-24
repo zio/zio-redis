@@ -24,6 +24,21 @@ import zio.schema.Schema
 import zio.stream.Stream
 import zio.{Chunk, IO, UIO, ZIO}
 
+/**
+ * Commands for publish and subscribe. The subscribe methods return a stream of the messages for their channels or
+ * patterns. The unsubscribe methods stop the subscriptions.
+ *
+ * {{{
+ * import zio.redis._
+ * import zio.redis.api.Subscription
+ * import zio.stream.Stream
+ *
+ * def news(sub: Subscription): Stream[RedisError, String] =
+ *   sub.subscribe("news").returning[String].map(_._2)
+ * }}}
+ *
+ * @see [[https://zio.dev/zio-redis/pub-sub/ Pub/sub]]
+ */
 trait Subscription extends SubscribeEnvironment {
 
   /**
@@ -43,10 +58,11 @@ trait Subscription extends SubscribeEnvironment {
    * @param channel
    *   Channel name to subscribe to.
    * @param onSubscribe
-   *   Callback for given channel name and the number of subscribers of channel from upstream when subscribed.
+   *   Callback for the channel name and the number of channels and patterns subscribed after the subscribe.
    * @param onUnsubscribe
-   *   Callback for given channel name and the number of subscribers of channel from upstream when unsubscribed.
+   *   Callback for the channel name and the number of channels and patterns subscribed after the unsubscribe.
    * @return
+   *   Returns stream that only emits published value for the given channel.
    */
   final def subscribeSingleWith(channel: String)(
     onSubscribe: PubSubCallback = NoopCallback,
@@ -85,9 +101,9 @@ trait Subscription extends SubscribeEnvironment {
    * @param channels
    *   Channel names to subscribe to consecutively.
    * @param onSubscribe
-   *   Callback for given channel name and the number of subscribers of channel from upstream when subscribed.
+   *   Callback for the channel name and the number of channels and patterns subscribed after the subscribe.
    * @param onUnsubscribe
-   *   Callback for given channel name and the number of subscribers of channel from upstream when unsubscribed.
+   *   Callback for the channel name and the number of channels and patterns subscribed after the unsubscribe.
    * @return
    *   Returns stream that emits published value keyed by that channel name for the given channels.
    */
@@ -130,10 +146,11 @@ trait Subscription extends SubscribeEnvironment {
    * @param patterns
    *   Patterns to subscribing to matching channels consecutively.
    * @param onSubscribe
-   *   Callback for given pattern and the number of subscribers of pattern from upstream when subscribed.
+   *   Callback for the pattern and the number of channels and patterns subscribed after the subscribe.
    * @param onUnsubscribe
-   *   Callback for given pattern and the number of subscribers of pattern from upstream when unsubscribed.
+   *   Callback for the pattern and the number of channels and patterns subscribed after the unsubscribe.
    * @return
+   *   Returns stream that emits published value keyed by the matching channel name.
    */
   final def pSubscribeWith(pattern: String, patterns: String*)(
     onSubscribe: PubSubCallback = NoopCallback,
@@ -172,12 +189,35 @@ trait Subscription extends SubscribeEnvironment {
 
 }
 
+/**
+ * The command names that the subscription methods send, and the callback type that they accept.
+ */
 object Subscription {
+
+  /**
+   * A callback for a subscribe or unsubscribe confirmation. It receives the channel or pattern name and the number of
+   * channels and patterns that the connection is subscribed to after the change, and returns `UIO[Unit]`.
+   */
   type PubSubCallback = (String, Long) => UIO[Unit]
 
-  final val Subscribe    = "SUBSCRIBE"
-  final val Unsubscribe  = "UNSUBSCRIBE"
-  final val PSubscribe   = "PSUBSCRIBE"
+  /**
+   * The `SUBSCRIBE` command name.
+   */
+  final val Subscribe = "SUBSCRIBE"
+
+  /**
+   * The `UNSUBSCRIBE` command name.
+   */
+  final val Unsubscribe = "UNSUBSCRIBE"
+
+  /**
+   * The `PSUBSCRIBE` command name.
+   */
+  final val PSubscribe = "PSUBSCRIBE"
+
+  /**
+   * The `PUNSUBSCRIBE` command name.
+   */
   final val PUnsubscribe = "PUNSUBSCRIBE"
 
   private final val NoopCallback: PubSubCallback = (_, _) => ZIO.unit

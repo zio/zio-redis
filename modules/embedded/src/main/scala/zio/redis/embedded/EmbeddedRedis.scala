@@ -23,6 +23,9 @@ import zio.redis.RedisConfig
 import java.io.IOException
 import java.net.ServerSocket
 
+/**
+ * Starts a Redis server for tests, using the `embedded-redis` library. The server listens on a free port.
+ */
 object EmbeddedRedis {
 
   private def findFreePort: Task[Int] =
@@ -34,6 +37,10 @@ object EmbeddedRedis {
       findFreePort
     }
 
+  /**
+   * A layer that starts an embedded Redis server on a free port and provides a `RedisConfig` for `localhost` at that
+   * port. The server stops when the scope of the layer closes. An error while stopping is logged.
+   */
   lazy val layer: ZLayer[Any, Throwable, RedisConfig] =
     ZLayer.scoped {
       for {
