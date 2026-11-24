@@ -27,8 +27,34 @@ package object redis
     with options.Streams
     with options.Scripting {
 
+  /**
+   * The identity type constructor: `Id[A]` is `A`. `subscribeSingle` uses it, so its stream emits bare values.
+   */
   type Id[+A] = A
 
+  /**
+   * The asynchronous client. A command returns `UIO[IO[RedisError, A]]`. Running the outer effect sends the command,
+   * and the inner effect waits for its reply, so several commands can be sent before their replies are read.
+   *
+   * {{{
+   * import zio._
+   * import zio.redis._
+   *
+   * def start(redis: AsyncRedis): UIO[IO[RedisError, Option[String]]] =
+   *   redis.get("key").returning[String]
+   * }}}
+   */
   type AsyncRedis = GenRedis[GenRedis.Async]
+  /**
+   * The synchronous client. A command returns `IO[RedisError, A]`, which sends the command and waits for its reply.
+   *
+   * {{{
+   * import zio._
+   * import zio.redis._
+   *
+   * def read(redis: Redis): IO[RedisError, Option[String]] =
+   *   redis.get("key").returning[String]
+   * }}}
+   */
   type Redis      = GenRedis[GenRedis.Sync]
 }
